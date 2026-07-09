@@ -3,6 +3,7 @@ import { useState, useRef, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { adminAPI } from '../../api/admin'
+import { post } from '../../api/request'
 import PageHeader from '../../components/admin/common/PageHeader'
 import ErrorRetry from '../../components/admin/common/ErrorRetry'
 import { useTranslation } from '../../i18n'
@@ -356,7 +357,7 @@ export default function AdminImport() {
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = (await adminAPI.importProducts(formData)) as { task_id?: string; message?: string }
+      const res = (await post('/goods/spu/import/', formData)) as { task_id?: string; message?: string }
 
       setResult({
         success: true,

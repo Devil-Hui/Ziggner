@@ -133,3 +133,18 @@ export const FocusRing = {
   style: `0 0 0 3px rgba(26, 86, 219, 0.25)`,
   offset: '2px',
 } as const
+
+// ── 聚合导出 ───────────────────────────────────────────
+// 兼容部分组件使用 import { tokens } from './tokens' 的模式
+export const tokens = {
+  Color,
+  Spacing,
+  Radius,
+  Shadow,
+  FontSize,
+  FontWeight,
+  Layout,
+  Breakpoint,
+  Transition,
+  FocusRing,
+} as const

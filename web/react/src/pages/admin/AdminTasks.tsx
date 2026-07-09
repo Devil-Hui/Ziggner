@@ -88,7 +88,7 @@ export default function AdminTasks() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = (await adminAPI.getMyTasks()) as { items: TaskItem[] } | TaskItem[]
+      const res = (await adminAPI.getMyTasks()) as unknown as { items: TaskItem[] } | TaskItem[]
 
       let taskList: TaskItem[]
       if (Array.isArray(res)) {

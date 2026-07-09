@@ -36,7 +36,8 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
   const loadOrder = async () => {
     try {
       setLoading(true);
-      const data = await orderAPI.getDetail(order_no);
+      if (!order_no) return;
+      const data = await orderAPI.detail(order_no);
       setOrder(data);
     } catch (err: any) {
       setError(err.message || 'Failed to load order');
@@ -339,7 +340,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
               {item.spec_desc && <div style={{ color: '#7f8c8d', fontSize: 12 }}>{item.spec_desc}</div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
                 <span>¥{parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
-                <span style={{ fontWeight: 600 }}>¥{parseFloat(item.price * item.quantity).toFixed(2)}</span>
+                <span style={{ fontWeight: 600 }}>¥{(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
               </div>
             </div>
           </div>

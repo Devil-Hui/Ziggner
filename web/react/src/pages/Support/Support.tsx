@@ -707,8 +707,8 @@ export default function Support() {
             <SidebarHeader>
               <SidebarTitle>{isZh ? '客服消息' : 'Support'}</SidebarTitle>
               <Button
-                variant="text"
-                size="small"
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowNewConv(true)}
               >
                 {isZh ? '+ 新对话' : '+ New'}
@@ -756,8 +756,8 @@ export default function Support() {
                       />
                       <div style={{ flex: 1 }} />
                       <Button
-                        variant="text"
-                        size="small"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setShowNewConv(false)
                           setNewSubject('')
@@ -825,12 +825,12 @@ export default function Support() {
                   <ChatTitle>{activeConv.subject || `${isZh ? '对话' : 'Conversation'} #${activeConv.id}`}</ChatTitle>
                   <ChatHeaderActions>
                     {activeConv.spu_info && (
-                      <Button variant="text" size="small" onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
+                      <Button variant="ghost" size="sm" onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
                         {isZh ? '查看商品' : 'View Product'}
                       </Button>
                     )}
                     {activeConv.status === 'open' && (
-                      <Button variant="text" size="small" onClick={handleClose}>
+                      <Button variant="ghost" size="sm" onClick={handleClose}>
                         {isZh ? '关闭对话' : 'Close'}
                       </Button>
                     )}

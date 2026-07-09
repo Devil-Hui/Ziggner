@@ -1,6 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Color, StatusColor } from '../../theme/tokens';
+import { Color } from '../../theme/tokens';
 
 const Wrapper = styled.div`
   display: flex;

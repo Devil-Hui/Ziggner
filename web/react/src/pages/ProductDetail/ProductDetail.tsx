@@ -118,7 +118,7 @@ const SpecOption = styled.button<{ $selected: boolean }>`
   border: 2px solid ${p => p.$selected ? Color.primary : Color.border.medium};
   border-radius: ${Radius.md}px;
   background: ${p => p.$selected ? Color.primary + '10' : Color.bg.card};
-  color: ${p => p.$selected ? Color.primary : Color.text.primary};
+  color: ${p => p.$selected ? Color.primary : Color.text.heading};
   cursor: pointer;
   font-size: 0.9rem;
   transition: all 0.15s;
@@ -185,7 +185,7 @@ const SpecTable = styled.table`
     font-weight: normal;
     width: 140px;
   }
-  td { color: ${Color.text.primary}; }
+  td { color: ${Color.text.heading}; }
 `
 
 const ReviewCard = styled.div`
@@ -389,19 +389,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!selectedSku || !product) return
-    addItem({
-      id: selectedSku.id,
-      spuId: product.id,
-      name: product.name,
-      image: product.main_image || '',
-      price: String(price),
-      spec: selectedSku.spec_values
-        ? Object.entries(selectedSku.spec_values).map(([k, v]) => `${k}: ${v}`).join(', ')
-        : '',
-      skuId: selectedSku.id,
-      maxQuantity: selectedSku.stock,
-      quantity: qty,
-    })
+    addItem(selectedSku.id, qty, product.name, Number(price), product.main_image || '')
     setAddedMsg(t('store.product.addedToCart'))
     setTimeout(() => setAddedMsg(''), 2000)
   }
@@ -569,7 +557,7 @@ export default function ProductDetail() {
           {reviews.map(r => (
             <ReviewCard key={r.id}>
               <ReviewHeader>
-                <span className="name">{r.username}</span>
+                <span className="name">{r.content}</span>
                 <span className="date">{new Date(r.created_at).toLocaleDateString()}</span>
               </ReviewHeader>
               <Stars>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</Stars>

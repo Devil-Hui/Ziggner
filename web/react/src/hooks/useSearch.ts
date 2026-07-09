@@ -6,7 +6,7 @@ export function useSearch() {
   const [results, setResults] = useState<PublicSPU[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [total, setTotal] = useState(0);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const search = useCallback(async (keyword: string, categoryId?: number, page = 1) => {
     if (timer.current) clearTimeout(timer.current);

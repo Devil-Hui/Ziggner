@@ -105,7 +105,7 @@ export default function AdminRecycleBin() {
     setLoading(true)
     setError(null)
     try {
-      const res = (await adminAPI.getRecycleList()) as { items: RecycleItem[] } | RecycleItem[]
+      const res = (await adminAPI.getRecycleList()) as unknown as { items: RecycleItem[] } | RecycleItem[]
       const data = Array.isArray(res) ? res : (res as { items: RecycleItem[] }).items || []
       setItems(data)
     } catch (err: unknown) {

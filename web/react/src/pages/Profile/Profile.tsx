@@ -418,7 +418,7 @@ const LoginDesc = styled.p`
 const browseHistory: any[] = []
 const coupons: any[] = []
 
-type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews'
+type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'notifications' | 'favorites'
 
 export default function Profile() {
   const { t } = useTranslation()

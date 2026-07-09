@@ -756,7 +756,7 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
 // ── 组件主体 ────────────────────────────────────────
 export default function Checkout() {
   const { items, total, clearCart } = useCart()
-  const { isLoggedIn } = useUser()
+  const { isLoggedIn, isLoading } = useUser()
   const navigate = useNavigate()
   const { t } = useTranslation()
 
@@ -843,7 +843,7 @@ export default function Checkout() {
         idempotency_key: idempotencyKey,
       })
 
-      const orderNo = orderRes.order_no || orderRes.id
+      const orderNo = orderRes.order_no
       clearCart()
 
       const successUrl = `${window.location.origin}/payment/return?success=1&order_no=${orderNo}`

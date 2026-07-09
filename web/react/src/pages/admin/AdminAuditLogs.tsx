@@ -201,7 +201,7 @@ export default function AdminAuditLogs() {
         breadcrumb={[{ label: t('admin.auditLogs.subtitle') }, { label: t('admin.auditLogs.title') }]}
       />
 
-      <FilterBar searchPlaceholder="" onSearchChange={undefined}>
+      <FilterBar>
         <SearchInput
           type="text"
           placeholder={t('admin.auditLogs.searchPlaceholder')}
@@ -235,12 +235,6 @@ export default function AdminAuditLogs() {
         emptyTitle={t('admin.auditLogs.noLogs')}
         emptyIcon="logs"
         rowKey="id"
-        pagination={{
-          current: page,
-          total: total,
-          pageSize: pageSize,
-          onChange: (p: number) => setPage(p),
-        }}
       />
     </PageContainer>
   )
