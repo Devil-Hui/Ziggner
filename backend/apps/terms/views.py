@@ -1,6 +1,5 @@
 from rest_framework.response import Response
 from rest_framework import status
-from drf_spectacular.utils import extend_schema
 from utils.api_base_view import PublicApiView, AdminApiView
 from utils.api_base_pagination import parse_pagination
 from utils.response_codes import Messages

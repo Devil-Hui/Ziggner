@@ -19,6 +19,7 @@ import Chat from '../pages/Chat/Chat'
 import OrderDetail from '../pages/OrderDetail/OrderDetail'
 import Notifications from '../pages/Notifications/Notifications'
 import Favorites from '../pages/Favorites/Favorites'
+import { TermsPage } from '../pages/TermsPage/TermsPage'
 import { RoleProtectedRoute } from '../components/admin/ProtectedRoute'
 
 // Admin pages — lazy loaded
@@ -38,6 +39,7 @@ const AdminAuditLogs = lazy(() => import('../pages/admin/AdminAuditLogs'))
 const AdminRecycleBin = lazy(() => import('../pages/admin/AdminRecycleBin'))
 const AdminGroups = lazy(() => import('../pages/admin/AdminGroups'))
 const AdminTasks = lazy(() => import('../pages/admin/AdminTasks'))
+const AdminTermsRedirect = lazy(() => import('../pages/admin/AdminTermsRedirect'))
 const AdminChatList = lazy(() => import('../pages/admin/AdminChatList'))
 const AdminChatDetail = lazy(() => import('../pages/admin/AdminChatDetail'))
 
@@ -76,6 +78,9 @@ export const routes: RouteObject[] = [
   { path: '/order/:order_no', element: <OrderDetail /> },
   { path: '/notifications', element: <Notifications /> },
   { path: '/favorites', element: <Favorites /> },
+  { path: '/terms/:type/', element: <TermsPage /> },
+  { path: '/privacy-policy', element: <TermsPage type="privacy" /> },
+  { path: '/terms-of-service', element: <TermsPage type="terms" /> },
 
   // ── Admin login (standalone, no layout) ──
   {
@@ -113,6 +118,8 @@ export const routes: RouteObject[] = [
       { path: 'audit-logs', element: <Suspense fallback={<PageLoading />}><AdminAuditLogs /></Suspense> },
       { path: 'recycle-bin', element: <Suspense fallback={<PageLoading />}><AdminRecycleBin /></Suspense> },
       { path: 'groups', element: <Suspense fallback={<PageLoading />}><AdminGroups /></Suspense> },
+      { path: 'tasks', element: <Suspense fallback={<PageLoading />}><AdminTasks /></Suspense> },
+      { path: 'terms', element: <Suspense fallback={<PageLoading />}><AdminTermsRedirect /></Suspense> },
       { path: 'chat', element: <Suspense fallback={<PageLoading />}><AdminChatList /></Suspense> },
       { path: 'chat/:id', element: <Suspense fallback={<PageLoading />}><AdminChatDetail /></Suspense> },
       { path: '*', element: <Navigate to="/admin/products" replace /> },
