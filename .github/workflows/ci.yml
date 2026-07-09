@@ -70,7 +70,7 @@ jobs:
         run: pip install -r backend/requirements/dev.txt
 
       - name: Run Django tests
-        run: cd backend && python manage.py test --settings=project.config.settings.dev --parallel
+        run: cd backend && mkdir -p logs && python manage.py test --settings=project.config.settings.dev --parallel
         env:
           DB_HOST: localhost
           DB_PORT: 3306
