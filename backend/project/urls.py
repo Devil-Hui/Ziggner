@@ -40,6 +40,7 @@ urlpatterns = [
     path("api/tracking/", include("apps.tracking.urls")),
     path("api/support/", include("apps.support.urls")),
     path("api/chat/", include("apps.customer_service.urls")),
+    path("api/terms/", include("apps.terms.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     # === v1 版本路由（规范，与上面指向同一 View，未来 /api/v2/ 可独立演进） ===
     path("api/v1/users/", include("apps.users.urls")),
@@ -55,6 +56,7 @@ urlpatterns = [
     path("api/v1/tracking/", include("apps.tracking.urls")),
     path("api/v1/support/", include("apps.support.urls")),
     path("api/v1/chat/", include("apps.customer_service.urls")),
+    path("api/v1/terms/", include("apps.terms.urls")),
     # Swagger UI
     path("api/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     # ReDoc 文档

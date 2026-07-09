@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'apps.lovegoods.apps.LovegoodsConfig',
     'apps.tracking.apps.TrackingConfig',
     'apps.logistics.apps.LogisticsConfig',
+    'apps.terms.apps.TermsConfig',
     'apps.health',
     'channels',
     'drf_spectacular',
