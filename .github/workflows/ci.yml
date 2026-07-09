@@ -1,0 +1,99 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ master ]
+  push:
+    branches: [ master ]
+
+jobs:
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/react/package-lock.json
+
+      - name: Install frontend dependencies
+        run: cd web/react && npm ci
+
+      - name: TypeScript check
+        run: cd web/react && npx tsc --noEmit
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements/dev.txt
+
+      - name: Django check
+        run: cd backend && python manage.py check --settings=project.config.settings.dev --deploy
+
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: test
+          MYSQL_DATABASE: ziggner_test
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements/dev.txt
+
+      - name: Run Django tests
+        run: cd backend && python manage.py test --settings=project.config.settings.dev --parallel
+        env:
+          DB_HOST: localhost
+          DB_PORT: 3306
+          DB_NAME: ziggner_test
+          DB_USER: root
+          DB_PASSWORD: test
+          REDIS_URL: redis://localhost:6379
+          DJANGO_SECRET_KEY: ci-test-key-not-for-production
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+          cache-dependency-path: web/react/package-lock.json
+
+      - name: Install dependencies
+        run: cd web/react && npm ci
+
+      - name: Build
+        run: cd web/react && npm run build
