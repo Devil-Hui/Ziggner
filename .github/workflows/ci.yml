@@ -35,7 +35,7 @@ jobs:
         run: pip install -r backend/requirements/dev.txt
 
       - name: Django check
-        run: cd backend && python manage.py check --settings=project.config.settings.dev --deploy
+        run: cd backend && mkdir -p logs && python manage.py check --settings=project.config.settings.dev --deploy
         env:
           DJANGO_SECRET_KEY: ci-test-key-not-for-production
 
