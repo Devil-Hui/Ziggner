@@ -36,6 +36,8 @@ jobs:
 
       - name: Django check
         run: cd backend && python manage.py check --settings=project.config.settings.dev --deploy
+        env:
+          DJANGO_SECRET_KEY: ci-test-key-not-for-production
 
   test-backend:
     name: Backend Tests
