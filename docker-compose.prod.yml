@@ -176,15 +176,34 @@ services:
     cpus: "0.25"
     oom_score_adj: -600
     command:
-      - --innodb-buffer-pool-size=64M
+      - --innodb-buffer-pool-size=128M
       - --innodb-log-buffer-size=8M
-      - --max-connections=30
+      - --innodb-sort-buffer-size=2M
+      # ── InnoDB Redo Log（MySQL 8.0.30+ 使用容量模式）──
+      - --innodb-adaptive-hash-index=ON
+      - --max-connections=50
+      - --max-connect-errors=100
+      - --thread-cache-size=8
       - --performance-schema=OFF
-      - --skip-log-bin
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --slow-query-log=ON
-      - --long-query-time=0.5
+      - --long-query-time=2
+      - --log-queries-not-using-indexes=ON
+      - --default-time-zone=-05:00
+      - --tmp-table-size=16M
+      - --max-heap-table-size=16M
+      - --table-open-cache=200
+      - --table-definition-cache=200
+      - --innodb-flush-log-at-trx-commit=2
+      - --innodb-flush-method=O_DIRECT
+      - --innodb-io-capacity=200
+      # ── 二进制日志（阿里巴巴规范：生产环境必须开启 ROW 格式）──
+      - --log-bin=/var/lib/mysql/binlog/ziggner-bin
+      - --binlog-format=ROW
+      - --sync-binlog=1
+      - --wait-timeout=600
+      - --interactive-timeout=600
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
       interval: 15s
@@ -202,15 +221,34 @@ services:
       - redis-server
       - --port 6379
       - --requirepass ${REDIS_PASSWORD:-redis-change-me}
+      # ── 内存控制 ──
       - --maxmemory 48mb
       - --maxmemory-policy allkeys-lru
-      - --save ""
-      - --appendonly no
+      - --maxmemory-samples 5
+      # ── 持久化：缓存为主，轻量 RDB 兜底 ──
+      - --save 900 1
+      - --save 300 10
+      # ── 连接管理 ──
       - --tcp-keepalive 60
       - --timeout 300
       - --maxclients 200
+      # ── 惰性释放（防止大 key 阻塞）──
       - --lazyfree-lazy-eviction yes
       - --lazyfree-lazy-expire yes
+      # ── 监控与慢查询 ──
+      - --slowlog-log-slower-than 10000
+      - --slowlog-max-len 128
+      # ── 内存结构优化 ──
+      - --hash-max-ziplist-entries 512
+      - --hash-max-ziplist-value 64
+      # ── 客户端缓冲 ──
+      - --client-output-buffer-limit normal 0 0 0
+      - --client-output-buffer-limit pubsub 8mb 4mb 60
+      # ── 安全：危险命令改名防误操作（改为复杂前缀 + 运维可知）──
+      - --rename-command FLUSHALL z_ziggner_FLUSHALL
+      - --rename-command FLUSHDB z_ziggner_FLUSHDB
+      - --rename-command KEYS z_ziggner_KEYS
+      - --rename-command SHUTDOWN z_ziggner_SHUTDOWN
     volumes:
       - redis_data:/data
     networks:

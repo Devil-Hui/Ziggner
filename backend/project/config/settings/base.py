@@ -205,7 +205,7 @@ CORS_ALLOWED_ORIGINS = [
 
 LANGUAGE_CODE = 'zh-hans'
 
-TIME_ZONE = 'Asia/Shanghai'
+TIME_ZONE = 'America/New_York'
 
 SIMPLEUI_DEFAULT_THEME = 'admin.lte.css'
 
