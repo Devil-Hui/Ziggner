@@ -1,0 +1,8 @@
+// Ziggner — Cloudflare Pages
+name = "ziggner-frontend"
+compatibility_date = "2026-07-01"
+pages_build_output_dir = "dist"
+
+[env.production]
+# Deploys to ziggner.com (configurable in Cloudflare Pages dashboard)
+# VITE_APP_VERSION injected by GitHub Actions

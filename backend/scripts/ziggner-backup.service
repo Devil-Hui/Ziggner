@@ -1,0 +1,38 @@
+# ============================================================================
+# systemd 服务单元：Ziggner 数据库备份
+# ----------------------------------------------------------------------------
+# 安装步骤（需 root）：
+#   1) 将本文件与 ziggner-backup.timer 复制到 /etc/systemd/system/
+#   2) 将 backup_db.sh 放到 ExecStart 指向的路径并赋予可执行权限：
+#        install -m 0755 /opt/ziggner/backend/scripts/backup_db.sh /usr/local/bin/ziggner-backup.sh
+#   3) 确认 EnvironmentFile 指向真实的 .env.production
+#   4) systemctl daemon-reload
+#      systemctl enable --now ziggner-backup.timer
+#
+# 说明：脚本内部也会自行 source 同一份 .env.production，二者取其一即可；
+#       即使不配置 EnvironmentFile，只要系统环境或脚本默认路径存在该文件即可。
+# ============================================================================
+
+[Unit]
+Description=Ziggner MySQL 数据库每日备份（本地 + Cloudflare R2）
+Documentation=file:///opt/ziggner/backend/docs/backup-runbook.md
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+# 通过 EnvironmentFile 注入 R2 / MySQL 凭证（禁止硬编码）
+# 请将路径替换为你的 .env.production 实际位置
+EnvironmentFile=/opt/ziggner/.env.production
+# 脚本默认路径；若部署在别处请同步修改下面两行
+ExecStartPre=/usr/bin/test -x /usr/local/bin/ziggner-backup.sh
+ExecStart=/usr/local/bin/ziggner-backup.sh
+Nice=10
+IOSchedulingClass=best-effort
+# 大库备份可能较久，放宽超时；脚本自身有日志与 logger 报警
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

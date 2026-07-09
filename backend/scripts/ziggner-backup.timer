@@ -1,0 +1,31 @@
+# ============================================================================
+# systemd 定时器单元：每日 03:00 触发 Ziggner 数据库备份
+# ----------------------------------------------------------------------------
+# 安装与启用（需 root）：
+#   cp ziggner-backup.service ziggner-backup.timer /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable --now ziggner-backup.timer
+#
+# 查看状态：
+#   systemctl status ziggner-backup.timer
+#   systemctl list-timers ziggner-backup.timer
+#   journalctl -u ziggner-backup.service -e
+#
+# 若偏好 cron（替代本 timer），可执行 `crontab -e` 并添加：
+#   0 3 * * * /usr/local/bin/ziggner-backup.sh >> /var/log/ziggner/backup.cron.log 2>&1
+# ============================================================================
+
+[Unit]
+Description=每日 03:00 触发 Ziggner 数据库备份
+
+[Timer]
+# 每日凌晨 3 点执行（按宿主机时区）
+OnCalendar=*-*-* 03:00:00
+# 若上次错过（如关机 / 重启），开机后补跑一次
+Persistent=true
+# 随机延迟，避免多机同时打满 R2 带宽
+RandomizedDelaySec=300
+Unit=ziggner-backup.service
+
+[Install]
+WantedBy=timers.target

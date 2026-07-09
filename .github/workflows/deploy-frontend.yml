@@ -1,0 +1,26 @@
+name: Deploy Frontend to Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+    paths: ['web/react/**']
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: cd web/react && npm ci && npm run build
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_API_BASE_URL: https://api.ziggner.com
+      - uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
+          accountId: ${{ secrets.CF_ACCOUNT_ID }}
+          projectName: ziggner-frontend
+          directory: web/react/dist
+          branch: main

@@ -1,0 +1,103 @@
+/** MediaPreviewTabs —— 文字标签 Tab 切换预览 */
+import { useState } from 'react'
+import * as S from './MediaManager.styles'
+import type { PreviewTab } from './MediaManager.types'
+import type { StagedMediaItem } from '../../../../utils/mediaStaging'
+
+interface Props {
+  items: StagedMediaItem[]
+}
+
+const TAB_CONFIG: { key: PreviewTab; label: string }[] = [
+  { key: 1, label: '缩略图预览' },
+  { key: 2, label: '列表图预览' },
+  { key: 3, label: '原图/视频预览' },
+]
+
+export default function MediaPreviewTabs({ items }: Props) {
+  const [activeTab, setActiveTab] = useState<PreviewTab>(1)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+
+  const images = items.filter((i) => i.mediaType === 'image')
+  const videos = items.filter((i) => i.mediaType === 'video')
+
+  if (items.length === 0) {
+    return <S.EmptyHint>暂无媒体</S.EmptyHint>
+  }
+
+  return (
+    <S.PreviewArea>
+      <S.TabBar>
+        {TAB_CONFIG.map((tab) => (
+          <S.TabBtn key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
+            {tab.label}
+          </S.TabBtn>
+        ))}
+      </S.TabBar>
+
+      {/* Tab 1: 缩略图 + 大图并排 */}
+      {activeTab === 1 && (
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ flex: '0 0 auto', maxHeight: 300, overflowY: 'auto' }}>
+            {images.map((item, idx) => (
+              <S.PreviewImg
+                key={item.id ?? idx}
+                src={item.previewDataUrl || (item.thumbBlob ? URL.createObjectURL(item.thumbBlob) : '')}
+                style={{ width: 60, height: 60, objectFit: 'cover', cursor: 'pointer', marginBottom: 4, border: selectedIndex === idx ? '2px solid #e74c3c' : '2px solid transparent' }}
+                onClick={() => setSelectedIndex(idx)}
+              />
+            ))}
+          </div>
+          <div style={{ flex: 1 }}>
+            {images[selectedIndex] && (
+              <S.PreviewImg
+                src={images[selectedIndex].previewDataUrl || (images[selectedIndex].largeBlob ? URL.createObjectURL(images[selectedIndex].largeBlob!) : '')}
+                style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }}
+              />
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Tab 2: 列表图 */}
+      {activeTab === 2 && (
+        <S.PreviewGrid>
+          {images.map((item, idx) => (
+            <S.PreviewCard key={item.id ?? idx} $size={200}>
+              <S.PreviewImg
+                src={item.previewDataUrl || (item.listBlob ? URL.createObjectURL(item.listBlob) : '')}
+                style={{ width: 200, height: 200, objectFit: 'cover' }}
+              />
+              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
+            </S.PreviewCard>
+          ))}
+        </S.PreviewGrid>
+      )}
+
+      {/* Tab 3: 原图/原视频 */}
+      {activeTab === 3 && (
+        <S.PreviewGrid>
+          {images.map((item, idx) => (
+            <S.PreviewCard key={item.id ?? idx} $size={300}>
+              <S.PreviewImg
+                src={item.previewDataUrl || (item.originalBlob ? URL.createObjectURL(item.originalBlob) : '')}
+                style={{ maxWidth: 300, maxHeight: 300, objectFit: 'contain' }}
+              />
+              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
+            </S.PreviewCard>
+          ))}
+          {videos.map((item, idx) => (
+            <S.PreviewCard key={item.id ?? idx} $size={300}>
+              <video
+                src={item.previewDataUrl || (item.videoBlob ? URL.createObjectURL(item.videoBlob) : '')}
+                controls
+                style={{ maxWidth: 300, maxHeight: 300 }}
+              />
+              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
+            </S.PreviewCard>
+          ))}
+        </S.PreviewGrid>
+      )}
+    </S.PreviewArea>
+  )
+}

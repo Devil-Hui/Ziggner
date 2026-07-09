@@ -1,0 +1,758 @@
+import time as _time
+import uuid
+import logging
+
+from django.conf import settings
+from django.db.models import Q, Count
+from django.utils import timezone
+from rest_framework.response import Response
+from rest_framework import status
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
+
+from utils.api_base_view import BaseApiView
+from utils.storage import get_storage
+from .models import Conversation, Message
+from .serializers import (
+    ConversationListSerializer, ConversationDetailSerializer,
+    CreateConversationSerializer, SendMessageSerializer,
+    UpdateConversationSerializer, MessageSerializer,
+    ProductSearchSerializer, SPUCardSerializer,
+    AgentSerializer, ProductDetailSerializer,
+)
+
+logger = logging.getLogger(__name__)
+
+# ── 限流配置（从 Django settings 读取） ──
+_CS_WINDOW = getattr(settings, 'CS_RATE_LIMIT_WINDOW', 60)       # 窗口 60 秒
+_CS_MAX = getattr(settings, 'CS_RATE_LIMIT_MAX', 30)           # 用户端每分钟最多 30 条
+
+def _check_user_rate_limit(user_id: int) -> bool:
+    """
+    Redis 滑动窗口限流计数器
+    用户每分钟最多 30 条消息
+    """
+    try:
+        from django_redis import get_redis_connection
+        redis_client = get_redis_connection('default')
+        key = f'cs:rate_limit:user:{user_id}'
+        now = _time.time()
+        window_start = now - _CS_WINDOW
+
+        # 清理过期条目
+        redis_client.zremrangebyscore(key, 0, window_start)
+
+        # 计数
+        count = redis_client.zcard(key)
+
+        if count >= _CS_MAX:
+            return False
+
+        # 添加当前请求
+        redis_client.zadd(key, {str(now): now})
+        redis_client.expire(key, _CS_WINDOW + 10)
+
+        return True
+    except Exception as e:
+        logger.error(f'Rate limit check error: {e}')
+        return True  # 降级：Redis 故障时放行
+
+# ── 文件上传配置（从 Django settings 读取） ──
+_IMG_TYPES = getattr(settings, 'CS_ALLOWED_IMAGE_TYPES', {'image/jpeg', 'image/png', 'image/gif'})
+_VID_TYPES = getattr(settings, 'CS_ALLOWED_VIDEO_TYPES', {'video/mp4'})
+_IMG_SIZE = getattr(settings, 'CS_IMAGE_MAX_SIZE', 10 * 1024 * 1024)   # 10 MB
+_VID_SIZE = getattr(settings, 'CS_VIDEO_MAX_SIZE', 50 * 1024 * 1024)   # 50 MB
+
+
+# ═══════════════════════════════════════════════════════════════
+# 权限 & 组工具函数
+# ═══════════════════════════════════════════════════════════════
+
+def _is_cs_staff(user) -> bool:
+    """用户是否是客服人员（管理组成员或超管）"""
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return user.admin_group_memberships.filter(status=1).exists()
+
+
+def _is_superuser(user) -> bool:
+    return user.is_authenticated and user.is_superuser
+
+
+def _get_user_admin_group(user):
+    """返回用户所属 AdminGroup，如果不在任何组返回 None"""
+    if not user.is_authenticated:
+        return None
+    from apps.goods.models import AdminGroupMember
+    membership = AdminGroupMember.objects.filter(
+        user=user, status=1
+    ).select_related('group').first()
+    return membership.group if membership else None
+
+
+def _get_group_member_user_ids(group):
+    """获取管理组内所有活跃成员的 user id 列表"""
+    if not group:
+        return []
+    from apps.goods.models import AdminGroupMember
+    return list(
+        AdminGroupMember.objects
+        .filter(group=group, status=1)
+        .values_list('user_id', flat=True)
+    )
+
+
+def _apply_group_filter(qs, user):
+    """
+    对会话 queryset 应用组级过滤：
+    - Superuser: 返回全部
+    - 管理组成员: 仅返回本组会话
+    - 普通用户: 由调用方自行过滤（仅自己的会话）
+    """
+    if _is_superuser(user):
+        return qs
+    group = _get_user_admin_group(user)
+    if group:
+        return qs.filter(group=group)
+    # 不在任何组的 staff 看不到任何 admin 会话
+    return qs.none()
+
+
+def _get_conv_for_user(conv_id, user):
+    """
+    获取会话 — 组级权限隔离：
+    - Superuser: 可访问全部
+    - Admin（管理组成员）: 仅本组会话
+    - 普通用户: 仅自己的会话
+    """
+    if _is_superuser(user):
+        return Conversation.objects.filter(id=conv_id).first()
+    if _is_cs_staff(user):
+        group = _get_user_admin_group(user)
+        if group:
+            return Conversation.objects.filter(id=conv_id, group=group).first()
+        return None
+    return Conversation.objects.filter(id=conv_id, user=user).first()
+
+
+def _strip_card_data_to_refs(card_data: dict) -> dict:
+    """
+    将 card_data 精简为仅引用字段（spu_id + order_id）。
+    product_name/price/status 等展示时从 SPU 实时查询，不存储 snapshot。
+    """
+    if not card_data or not isinstance(card_data, dict):
+        return card_data or {}
+    refs = {}
+    spu_id = card_data.get('spu_id') or card_data.get('product_id')
+    if spu_id:
+        refs['spu_id'] = spu_id
+    order_id = card_data.get('order_id')
+    if order_id:
+        refs['order_id'] = order_id
+    sku_id = card_data.get('sku_id')
+    if sku_id:
+        refs['sku_id'] = sku_id
+    return refs
+
+
+# ═══════════════════════════════════════════════════════════════
+# 文件上传
+# ═══════════════════════════════════════════════════════════════
+
+class UploadFileView(BaseApiView):
+    """上传图片/视频文件"""
+
+    @extend_schema(
+        description='上传客服消息附件（图片 JPG/PNG/GIF ≤10MB，视频 MP4 ≤50MB）',
+        request=OpenApiTypes.OBJECT,
+        responses={200: OpenApiResponse(description='File uploaded successfully')},
+    )
+    def post(self, request):
+        file = request.FILES.get('file')
+        if not file:
+            return Response({'detail': '请选择文件'}, status=status.HTTP_400_BAD_REQUEST)
+
+        content_type = file.content_type
+
+        # 类型校验
+        if content_type in _IMG_TYPES:
+            max_size = _IMG_SIZE
+            folder = getattr(settings, 'CS_IMAGE_UPLOAD_FOLDER', 'chat/images')
+        elif content_type in _VID_TYPES:
+            max_size = _VID_SIZE
+            folder = getattr(settings, 'CS_VIDEO_UPLOAD_FOLDER', 'chat/videos')
+        else:
+            return Response(
+                {'detail': f'不支持的文件类型: {content_type}，仅支持 JPG/PNG/GIF/MP4'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 大小校验
+        if file.size > max_size:
+            max_mb = max_size // (1024 * 1024)
+            return Response(
+                {'detail': f'文件大小超过 {max_mb}MB 限制'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 生成唯一文件名
+        ext = file.name.rsplit('.', 1)[-1] if '.' in file.name else ''
+        filename = f'{folder}/{uuid.uuid4().hex}.{ext}'
+
+        try:
+            storage = get_storage()
+            result = storage.upload(filename, file.read(), content_type=content_type)
+            if result.get('url'):
+                return Response({
+                    'url': result['url'],
+                    'filename': filename,
+                    'content_type': content_type,
+                    'size': file.size,
+                })
+            return Response(
+                {'detail': result.get('message', '上传失败')},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+        except Exception as e:
+            logger.error(f'文件上传失败: {e}')
+            return Response(
+                {'detail': f'上传失败: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+# ═══════════════════════════════════════════════════════════════
+# 商品搜索（Admin 端）
+# ═══════════════════════════════════════════════════════════════
+
+class ProductSearchView(BaseApiView):
+    """Admin 搜索商品，返回可发送为卡片的 SPU 列表"""
+
+    @extend_schema(
+        description='管理员搜索商品 SPU，用于发送商品卡片消息。返回 SPU 列表及其 SKU 信息。',
+        parameters=[ProductSearchSerializer],
+        responses={200: SPUCardSerializer(many=True)},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request):
+        if not _is_cs_staff(request.user):
+            return Response({'detail': '无权限'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = ProductSearchSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+        q = serializer.validated_data['q']
+
+        from apps.goods.models import SPU, SKU
+
+        spus = (
+            SPU.objects
+            .filter(
+                Q(name__icontains=q) | Q(description__icontains=q),
+                deleted_at__isnull=True,
+            )
+            .select_related('category', 'brand')
+            .prefetch_related('skus')
+            .order_by('-id')[:getattr(settings, 'CS_PRODUCT_SEARCH_LIMIT', 50)]
+        )
+
+        results = []
+        for spu in spus:
+            skus = spu.skus.filter(shelf_status='on')
+            # 价格范围
+            sku_prices = [s.price for s in skus if s.price is not None]
+            price = min(sku_prices) if sku_prices else 0
+            discount_prices = [s.discount_price for s in skus if s.discount_price is not None]
+            display_price = min(discount_prices) if discount_prices else price
+
+            results.append({
+                'spu_id': spu.id,
+                'spu_name': spu.name,
+                'main_image': spu.main_image or '',
+                'price': str(display_price),
+                'category_path': spu.category_path,
+                'status': spu.status,
+                'skus': [
+                    {
+                        'sku_id': sku.id,
+                        'sku_code': sku.sku_code,
+                        'spec_values': sku.spec_values,
+                        'price': str(sku.price),
+                        'discount_price': str(sku.discount_price) if sku.discount_price else None,
+                        'stock': sku.stock,
+                        'image_url': sku.image_url,
+                    }
+                    for sku in skus
+                ],
+            })
+
+        return Response(results)
+
+
+# ═══════════════════════════════════════════════════════════════
+# 商品详情（实时查询）
+# ═══════════════════════════════════════════════════════════════
+
+class ProductDetailView(BaseApiView):
+    """
+    实时查询商品当前状态，返回 product_name/price/status — 不做 snapshot。
+    GET /api/chat/product/{spu_id}/detail
+    """
+
+    @extend_schema(
+        description='查询商品当前状态（on_sale/off_sale/suspended 等），展示时实时调用，避免数据不一致',
+        responses={200: ProductDetailSerializer},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request, spu_id):
+        from apps.goods.models import SPU
+
+        spu = SPU.objects.filter(id=spu_id, deleted_at__isnull=True).select_related('category', 'brand').first()
+        if not spu:
+            return Response({'detail': '商品不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        skus = spu.skus.filter(shelf_status='on')
+        sku_prices = [s.price for s in skus if s.price is not None]
+        discount_prices = [s.discount_price for s in skus if s.discount_price is not None]
+        price_min = min(discount_prices) if discount_prices else (min(sku_prices) if sku_prices else 0)
+
+        return Response({
+            'spu_id': spu.id,
+            'spu_name': spu.name,
+            'main_image': spu.main_image or '',
+            'status': spu.status,
+            'status_display': spu.get_status_display(),
+            'description': spu.description or '',
+            'category_path': spu.category_path or '',
+            'brand_name': spu.brand.name if spu.brand else '',
+            'price_min': str(price_min),
+            'skus': [
+                {
+                    'sku_id': sku.id,
+                    'sku_code': sku.sku_code,
+                    'spec_values': sku.spec_values,
+                    'price': str(sku.price),
+                    'discount_price': str(sku.discount_price) if sku.discount_price else None,
+                    'stock': sku.stock,
+                    'image_url': sku.image_url,
+                }
+                for sku in skus
+            ],
+        })
+
+
+# ═══════════════════════════════════════════════════════════════
+# 客服列表（组级）
+# ═══════════════════════════════════════════════════════════════
+
+class AgentListView(BaseApiView):
+    """
+    返回当前用户所在管理组的客服列表，供分配给会话使用。
+    GET /api/chat/agents/
+    """
+
+    @extend_schema(
+        description='返回当前用户所在管理组的客服列表（含分配中会话数）',
+        responses={200: AgentSerializer(many=True)},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request):
+        if not _is_cs_staff(request.user):
+            return Response({'detail': '无权限'}, status=status.HTTP_403_FORBIDDEN)
+
+        from apps.goods.models import AdminGroupMember
+
+        # Superuser: 返回所有管理组成员
+        if _is_superuser(request.user):
+            memberships = AdminGroupMember.objects.filter(
+                status=1
+            ).select_related('user', 'group').order_by('group', 'id')
+        else:
+            group = _get_user_admin_group(request.user)
+            if not group:
+                return Response([], status=status.HTTP_200_OK)
+            memberships = AdminGroupMember.objects.filter(
+                group=group, status=1
+            ).select_related('user', 'group').order_by('id')
+
+        # 统计每个客服当前处理的会话数
+        member_user_ids = [m.user_id for m in memberships]
+        assignment_counts = dict(
+            Conversation.objects
+            .filter(admin_id__in=member_user_ids, status='open')
+            .values('admin_id')
+            .annotate(count=Count('id'))
+            .values_list('admin_id', 'count')
+        )
+
+        results = []
+        for m in memberships:
+            results.append({
+                'id': m.user_id,
+                'username': m.user.username,
+                'email': m.user.email or '',
+                'role': m.role,
+                'status': m.status,
+                'status_display': m.get_status_display(),
+                'assignment_count': assignment_counts.get(m.user_id, 0),
+            })
+
+        return Response(results)
+
+
+# ═══════════════════════════════════════════════════════════════
+# 会话列表 & 创建
+# ═══════════════════════════════════════════════════════════════
+
+class ConversationListView(BaseApiView):
+    """会话列表 / 创建"""
+
+    @extend_schema(
+        description='用户端：我的会话列表；Admin 端：本组会话（Super Admin 可看全部）。支持搜索和按状态筛选。返回 unread_count。',
+        responses={200: ConversationListSerializer(many=True)},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request):
+        if _is_cs_staff(request.user):
+            # Admin: 组级过滤
+            qs = _apply_group_filter(Conversation.objects.all(), request.user)
+
+            # 搜索：按用户名 / 主题
+            search = request.query_params.get('search', '').strip()
+            if search:
+                qs = qs.filter(
+                    Q(user__username__icontains=search) |
+                    Q(user__email__icontains=search) |
+                    Q(subject__icontains=search)
+                )
+
+            # 按状态筛选
+            status_filter = request.query_params.get('status', '').strip()
+            if status_filter in ('open', 'closed'):
+                qs = qs.filter(status=status_filter)
+
+            qs = qs.order_by('-updated_at')
+        else:
+            qs = Conversation.objects.filter(user=request.user).order_by('-updated_at')
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = ConversationListSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ConversationListSerializer(qs, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    @extend_schema(
+        description='创建新会话（可选附带首条消息，支持 product_card 类型）。自动绑定用户所属管理组。',
+        request=CreateConversationSerializer,
+        responses={201: ConversationDetailSerializer},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='Create')})
+    def post(self, request):
+        serializer = CreateConversationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # 自动绑定管理组：通过用户查找关联的管理组
+        # 常规用户也可能在某管理组下（如果项目结构支持），尝试绑定
+        group = _get_user_admin_group(request.user)
+
+        conv = Conversation.objects.create(
+            user=request.user,
+            subject=data.get('subject', ''),
+            group=group,
+        )
+
+        # 创建首条消息（如果有内容）
+        content = data.get('content', '')
+        file_url = data.get('file_url', '')
+        raw_card_data = data.get('card_data', {})
+        if content or file_url or raw_card_data:
+            # 精简 card_data 为引用（spu_id + order_id）
+            card_data = _strip_card_data_to_refs(raw_card_data)
+            Message.objects.create(
+                conversation=conv,
+                sender=request.user,
+                sender_type='user',
+                content=content,
+                msg_type=data.get('msg_type', 'text'),
+                file_url=file_url,
+                card_data=card_data,
+                metadata=data.get('metadata', {}),
+            )
+            conv.increment_msg_count()
+
+        return Response(
+            ConversationDetailSerializer(conv).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+# ═══════════════════════════════════════════════════════════════
+# 释放对话（管理员主动释放）
+# ═══════════════════════════════════════════════════════════════
+
+class ConversationReleaseView(BaseApiView):
+    """释放对话（管理员主动释放），允许其他管理员接听。"""
+    permission_classes = []  # 在 _is_cs_staff 中手动鉴权
+
+    @extend_schema(
+        description='释放对话（管理员主动释放），允许其他管理员接听',
+        responses={200: OpenApiResponse(description='Conversation released')},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='Release')})
+    def post(self, request, conv_id):
+        if not _is_cs_staff(request.user):
+            return Response({'detail': '无权限'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            conv = Conversation.objects.get(id=conv_id, status='open')
+        except Conversation.DoesNotExist:
+            return Response({'detail': '对话不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if conv.handled_by != request.user and not request.user.is_superuser:
+            return Response({'detail': '无权释放此对话'}, status=status.HTTP_403_FORBIDDEN)
+
+        conv.handled_by = None
+        conv.handled_at = None
+        conv.save(update_fields=['handled_by', 'handled_at'])
+        return Response({'detail': '已释放，其他客服可接听'})
+
+
+# ═══════════════════════════════════════════════════════════════
+# 会话详情 & 更新
+# ═══════════════════════════════════════════════════════════════
+
+class ConversationDetailView(BaseApiView):
+    """会话详情 / 更新"""
+
+    @extend_schema(
+        description='获取会话详情（含消息列表），Admin 仅能查看本组会话',
+        responses={200: ConversationDetailSerializer},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request, conv_id):
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(ConversationDetailSerializer(conv).data)
+
+    @extend_schema(
+        description='更新会话状态 / 分配客服（仅 Admin，且目标客服需在同一管理组）',
+        request=UpdateConversationSerializer,
+        responses={200: ConversationDetailSerializer},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='Partial update')})
+    def patch(self, request, conv_id):
+        if not _is_cs_staff(request.user):
+            return Response({'detail': '无权限'}, status=status.HTTP_403_FORBIDDEN)
+
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        # 一对一锁定检查：如果会话已被其他客服处理，拒绝操作
+        if conv.handled_by and conv.handled_by_id != request.user.id:
+            return Response(
+                {'detail': f'该会话正在由 {conv.handled_by.username} 处理中'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = UpdateConversationSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        update_fields = []
+        if 'status' in data:
+            conv.status = data['status']
+            update_fields.append('status')
+            # 关闭会话时清除处理人
+            if data['status'] == 'closed':
+                conv.handled_by = None
+                conv.handled_at = None
+                update_fields.extend(['handled_by', 'handled_at'])
+
+        if 'admin_id' in data:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+
+            # 验证目标客服与管理组关系
+            new_admin = User.objects.filter(id=data['admin_id'], is_staff=True).first()
+            if not new_admin:
+                return Response({'detail': '指定客服不存在或不是管理员'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # 组级校验：分配的客服必须与当前操作者在同一管理组
+            if not _is_superuser(request.user) and conv.group:
+                new_admin_group = _get_user_admin_group(new_admin)
+                if not new_admin_group or new_admin_group.id != conv.group_id:
+                    return Response(
+                        {'detail': '只能分配同一管理组的客服'},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            conv.admin = new_admin
+            update_fields.append('admin')
+
+        # 如果当前没有处理人，设置为当前用户
+        if conv.handled_by is None:
+            conv.handled_by = request.user
+            conv.handled_at = timezone.now()
+            update_fields.extend(['handled_by', 'handled_at'])
+
+        if update_fields:
+            conv.save(update_fields=update_fields)
+
+        return Response(ConversationDetailSerializer(conv).data)
+
+
+# ═══════════════════════════════════════════════════════════════
+# 消息列表 & 发送
+# ═══════════════════════════════════════════════════════════════
+
+class MessageView(BaseApiView):
+    """消息列表 & 发送"""
+
+    @extend_schema(
+        description='获取会话历史消息（分页，按时间正序）。支持 ?since=<ISO timestamp> 拉取离线消息。',
+        responses={200: MessageSerializer(many=True)},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    def get(self, request, conv_id):
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        qs = conv.messages.all().order_by('created_at')
+
+        # ── 离线消息支持：?since=<ISO timestamp> ──
+        since = request.query_params.get('since', '').strip()
+        if since:
+            from django.utils.dateparse import parse_datetime
+            since_dt = parse_datetime(since)
+            if since_dt:
+                qs = qs.filter(created_at__gt=since_dt)
+
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = MessageSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = MessageSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @extend_schema(
+        description='发送消息。Admin 回复时自动分配为当前会话的客服。支持 product_card 类型（card_data 仅存 spu_id+order_id 引用）。',
+        request=SendMessageSerializer,
+        responses={201: MessageSerializer},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='Create')})
+    def post(self, request, conv_id):
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+        if conv.status == 'closed':
+            return Response({'detail': '对话已关闭'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 一对一锁定检查：admin 发送消息时，如果会话已被其他客服处理，拒绝操作
+        if _is_cs_staff(request.user) and conv.handled_by and conv.handled_by_id != request.user.id:
+            return Response(
+                {'detail': f'该会话正在由 {conv.handled_by.username} 处理中'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        serializer = SendMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        # ── 限流检查（仅用户端，Redis 滑动窗口） ──
+        if not _is_cs_staff(request.user):
+            if not _check_user_rate_limit(request.user.id):
+                return Response(
+                    {'detail': '消息发送过于频繁，请稍后再试（每分钟最多 30 条）'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+        # ── 5 条消息限制（仅用户端生效） ──
+        if not _is_cs_staff(request.user):
+            if conv.has_admin_reply:
+                # 客服已回复 → 重置计数器
+                conv.reset_msg_count()
+            elif conv.user_msg_count >= getattr(settings, 'CS_USER_MSG_LIMIT_BEFORE_REPLY', 5):
+                return Response(
+                    {'detail': '客服尚未回复，您最多只能发送 5 条消息，请耐心等待'},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+
+        sender_type = 'admin' if _is_cs_staff(request.user) else 'user'
+
+        # ── Admin 回复时自动分配为当前会话的客服 ──
+        if sender_type == 'admin' and not conv.admin:
+            conv.admin = request.user
+            conv.save(update_fields=['admin'])
+
+        # ── Admin 回复时自动设为处理人 ──
+        if sender_type == 'admin' and conv.handled_by is None:
+            conv.handled_by = request.user
+            conv.handled_at = timezone.now()
+            conv.save(update_fields=['handled_by', 'handled_at'])
+
+        # ── card_data 精简为引用（spu_id + order_id） ──
+        raw_card_data = data.get('card_data', {})
+        card_data = _strip_card_data_to_refs(raw_card_data)
+
+        # ── 管理员发送商品卡片时，自动补充订单信息 ──
+        if sender_type == 'admin' and data.get('msg_type') == 'product_card' and card_data:
+            card_data = self._enrich_admin_card_data(conv, card_data)
+
+        msg = Message.objects.create(
+            conversation=conv,
+            sender=request.user,
+            sender_type=sender_type,
+            content=data.get('content', ''),
+            msg_type=data.get('msg_type', 'text'),
+            file_url=data.get('file_url', ''),
+            card_data=card_data,
+            metadata=data.get('metadata', {}),
+        )
+
+        # 用户消息 → 递增计数；admin 消息不计数
+        if sender_type == 'user':
+            conv.increment_msg_count()
+
+        return Response(
+            MessageSerializer(msg).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def _enrich_admin_card_data(self, conv, card_data: dict) -> dict:
+        """
+        管理员发送商品卡片时，自动补充用户订单信息。
+        card_data 仅存储 spu_id + order_id + sku_id 引用。
+        """
+        spu_id = card_data.get('spu_id') or card_data.get('product_id')
+        if not spu_id or not conv:
+            return card_data
+
+        try:
+            from apps.order.models import OrderItem
+            order_item = (
+                OrderItem.objects
+                .filter(
+                    sku__spu_id=spu_id,
+                    order__user=conv.user,
+                )
+                .select_related('order', 'sku')
+                .order_by('-order__created_at')
+                .first()
+            )
+
+            if order_item:
+                card_data['spu_id'] = order_item.sku.spu_id
+                card_data['sku_id'] = order_item.sku_id
+                card_data['order_id'] = order_item.order_id
+                card_data['order_status'] = order_item.order.status
+        except Exception as e:
+            logger.warning(f'Enrich card_data error: {e}')
+
+        return card_data

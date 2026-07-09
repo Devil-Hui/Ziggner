@@ -1,0 +1,323 @@
+"""媒体管理 API —— 列表 / 删除 / 排序 / 信息更新 / 编辑模式上传"""
+
+import os
+import uuid
+
+from django.conf import settings
+from django.core.files.storage import default_storage
+from rest_framework.response import Response
+from rest_framework import status
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
+
+from utils.api_base_view import BaseApiView
+from ..models import ProductMedia, SPU
+from ..admin_permissions import IsStaffOrAbove, can_operate_spu
+from ..media_service import MediaService
+from ..serializers import (
+    ProductMediaSerializer,
+    MediaUpdateRequestSerializer,
+    MediaUpdateResponseSerializer,
+    MediaReorderRequestSerializer,
+)
+from ..services import GoodsCacheService
+
+
+def _serialize_media(m: ProductMedia) -> dict:
+    """序列化单个 ProductMedia 为响应 dict（含 alt_text）。"""
+    item = {
+        'id': m.id,
+        'media_type': m.media_type,
+        'sort_order': m.sort_order,
+        'status': m.status,
+        'alt_text': m.alt_text,
+        'file_size': m.file_size,
+        'created_at': m.created_at.isoformat() if m.created_at else None,
+    }
+    if m.media_type == 'image':
+        item.update({
+            'thumb_url': m.thumb_url,
+            'list_url': m.list_url,
+            'large_url': m.large_url,
+            'original_url': m.original_url,
+        })
+    else:
+        item.update({
+            'video_url': m.video_url,
+            'video_thumb_url': m.video_thumb_url,
+            'video_list_url': m.video_list_url,
+            'video_large_url': m.video_large_url,
+        })
+    return item
+
+
+def _remove_local_file(url: str) -> None:
+    """根据媒体 URL 清理本地存储文件（FILE_STORAGE=='local' 时生效）。
+
+    Args:
+        url: 媒体文件 URL，如 '/media/product_media/xxx.jpg'。
+    """
+    if getattr(settings, 'FILE_STORAGE', 'local') != 'local':
+        return
+    if not url:
+        return
+    # URL 形如 '/media/product_media/xxx.jpg' → 本地路径 MEDIA_ROOT/product_media/xxx.jpg
+    media_root = getattr(settings, 'MEDIA_ROOT', '')
+    rel = url
+    if rel.startswith('/media/'):
+        rel = rel[len('/media/'):]
+    elif rel.startswith('/'):
+        rel = rel.lstrip('/')
+    local_path = os.path.join(media_root, rel)
+    if os.path.exists(local_path):
+        try:
+            os.remove(local_path)
+        except OSError as e:
+            _logger.warning('删除本地文件失败 path=%s error=%s', local_path, e)
+
+
+class MediaListBySPUView(BaseApiView):
+    """获取 SPU 的媒体列表（含审核状态、alt_text）"""
+    permission_classes = [IsStaffOrAbove]
+
+    @extend_schema(responses={200: ProductMediaSerializer})
+    def get(self, request, spu_id):
+        try:
+            spu = SPU.objects.get(id=spu_id, deleted_at__isnull=True)
+        except SPU.DoesNotExist:
+            return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+        if not can_operate_spu(request.user, spu):
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        media_qs = ProductMedia.objects.filter(spu_id=spu_id).order_by('sort_order', 'id')
+        data = [_serialize_media(m) for m in media_qs]
+        return Response(data)
+
+
+class MediaDeleteView(BaseApiView):
+    """删除单个媒体（pending / rejected / active 均可删除，active 需前端二次确认）。
+
+    删除时同步清理本地文件 + Redis 暂存 + 失效媒体列表缓存。
+    """
+    permission_classes = [IsStaffOrAbove]
+
+    @extend_schema(
+        request=None,
+        responses={200: OpenApiResponse(description='Media deleted')}
+    )
+    def delete(self, request, media_id):
+        try:
+            media = ProductMedia.objects.get(id=media_id)
+        except ProductMedia.DoesNotExist:
+            return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        spu_id = media.spu_id
+        if spu_id:
+            try:
+                spu = SPU.objects.get(id=spu_id)
+            except SPU.DoesNotExist:
+                return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+            if not can_operate_spu(request.user, spu):
+                return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 清理本地文件（thumb/list/large/original 或视频）
+        if media.media_type == 'image':
+            for url in (media.thumb_url, media.list_url, media.large_url, media.original_url):
+                _remove_local_file(url)
+        else:
+            for url in (media.video_url, media.video_thumb_url, media.video_list_url, media.video_large_url):
+                _remove_local_file(url)
+
+        # 清理 Redis 暂存（创建模式遗留）
+        if media.redis_key:
+            MediaService.delete_media_from_redis(
+                media.redis_key,
+                is_video=(media.media_type == 'video'),
+            )
+        media.delete()
+
+        # 失效媒体列表缓存
+        if spu_id:
+            GoodsCacheService.invalidate_media_list(spu_id)
+            # 同步 main_image
+            MediaService.sync_main_image(spu_id)
+        return Response({'detail': '已删除'})
+
+
+class MediaReorderView(BaseApiView):
+    """调整媒体排序"""
+    permission_classes = [IsStaffOrAbove]
+
+    @extend_schema(
+        request=MediaReorderRequestSerializer,
+        responses={200: OpenApiResponse(description='Media reordered')}
+    )
+    def post(self, request):
+        media_ids = request.data.get('media_ids', [])
+        if not media_ids:
+            return Response({'detail': 'media_ids 不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 组隔离：验证所有媒体项所属 SPU 是否可操作
+        for mid in media_ids:
+            try:
+                media = ProductMedia.objects.select_related('spu').get(id=mid)
+                if not can_operate_spu(media.spu, request.user):
+                    return Response({'detail': f'媒体 {mid} 所属 SPU 不在您的管理范围内'}, status=status.HTTP_403_FORBIDDEN)
+            except ProductMedia.DoesNotExist:
+                return Response({'detail': f'媒体 {mid} 不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        spu_ids = set()
+        for idx, media_id in enumerate(media_ids):
+            updated = ProductMedia.objects.filter(id=media_id).update(sort_order=idx)
+            if updated:
+                spu_ids.add(
+                    ProductMedia.objects.filter(id=media_id).values_list('spu_id', flat=True).first()
+                )
+        # 失效涉及的 SPU 媒体缓存
+        for sid in spu_ids:
+            if sid:
+                GoodsCacheService.invalidate_media_list(sid)
+        return Response({'detail': '排序已更新', 'count': len(media_ids)})
+
+
+class MediaUpdateView(BaseApiView):
+    """更新媒体信息（alt_text / sort_order）"""
+    permission_classes = [IsStaffOrAbove]
+
+    @extend_schema(
+        request=MediaUpdateRequestSerializer,
+        responses={200: MediaUpdateResponseSerializer}
+    )
+    def patch(self, request, media_id):
+        try:
+            media = ProductMedia.objects.get(id=media_id)
+        except ProductMedia.DoesNotExist:
+            return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if media.spu_id:
+            try:
+                spu = SPU.objects.get(id=media.spu_id)
+            except SPU.DoesNotExist:
+                return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+            if not can_operate_spu(request.user, spu):
+                return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        update_fields = []
+        if 'alt_text' in request.data:
+            alt_text = str(request.data['alt_text'] or '')
+            if len(alt_text) > 200:
+                return Response({'detail': 'alt_text 长度不能超过 200'}, status=status.HTTP_400_BAD_REQUEST)
+            media.alt_text = alt_text
+            update_fields.append('alt_text')
+        if 'sort_order' in request.data:
+            try:
+                sort_order = int(request.data['sort_order'])
+            except (TypeError, ValueError):
+                return Response({'detail': 'sort_order 必须为整数'}, status=status.HTTP_400_BAD_REQUEST)
+            if sort_order < 0:
+                return Response({'detail': 'sort_order 不能为负数'}, status=status.HTTP_400_BAD_REQUEST)
+            media.sort_order = sort_order
+            update_fields.append('sort_order')
+
+        if update_fields:
+            media.save(update_fields=update_fields)
+            # 失效媒体列表缓存
+            if media.spu_id:
+                GoodsCacheService.invalidate_media_list(media.spu_id)
+
+        return Response({
+            'id': media.id,
+            'alt_text': media.alt_text,
+            'sort_order': media.sort_order,
+            'message': '更新成功',
+        })
+
+
+class MediaCreateView(BaseApiView):
+    """编辑模式：向已有 SPU 上传图片。
+
+    接收前端 ImageCropper 裁剪后的四尺寸图片（thumb/list/large/original），
+    保存到本地存储并创建 ProductMedia 记录（status='active'）。
+    路由: POST /goods/media/spu/<spu_id>/upload
+    """
+    permission_classes = [IsStaffOrAbove]
+
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={201: ProductMediaSerializer}
+    )
+    def post(self, request, spu_id):
+        try:
+            spu = SPU.objects.get(id=spu_id, deleted_at__isnull=True)
+        except SPU.DoesNotExist:
+            return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not can_operate_spu(request.user, spu):
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 数量校验
+        if not MediaService.validate_media_count(spu_id, 'image'):
+            return Response(
+                {'detail': f'图片数量已达上限 ({settings.MEDIA_MAX_IMAGES_PER_SPU} 张)'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 读取四尺寸文件
+        thumb = request.FILES.get('thumb')
+        list_file = request.FILES.get('list')
+        large = request.FILES.get('large')
+        original = request.FILES.get('original')
+        if not all([thumb, list_file, large, original]):
+            return Response(
+                {'detail': '请上传 thumb/list/large/original 四尺寸图片'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 校验类型 / 大小
+        allowed = getattr(settings, 'FILE_STORAGE_ALLOWED_TYPES', [])
+        max_size = getattr(settings, 'MEDIA_MAX_FILE_SIZE_MB', 10) * 1024 * 1024
+        for f in (thumb, list_file, large, original):
+            if f.content_type and allowed and f.content_type not in allowed:
+                return Response(
+                    {'detail': f'不支持的文件类型: {f.content_type}'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if f.size > max_size:
+                return Response(
+                    {'detail': f'文件大小超过限制 ({getattr(settings, "MEDIA_MAX_FILE_SIZE_MB", 10)}MB)'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        # 保存文件到本地存储
+        def _save_file(f):
+            ext = os.path.splitext(f.name)[1].lower() or '.jpg'
+            safe_name = f'{uuid.uuid4().hex}{ext}'
+            path = default_storage.save(f'product_media/{safe_name}', f)
+            return f'/media/{path}'
+
+        thumb_url = _save_file(thumb)
+        list_url = _save_file(list_file)
+        large_url = _save_file(large)
+        original_url = _save_file(original)
+
+        total_size = thumb.size + list_file.size + large.size + original.size
+        sort_order = MediaService.get_next_sort_order(spu_id, 'image')
+        alt_text = str(request.data.get('alt_text', '') or '')
+
+        media = ProductMedia.objects.create(
+            spu=spu,
+            media_type='image',
+            thumb_url=thumb_url,
+            list_url=list_url,
+            large_url=large_url,
+            original_url=original_url,
+            sort_order=sort_order,
+            status='active',
+            file_size=total_size,
+            alt_text=alt_text,
+        )
+
+        # 同步 SPU main_image
+        MediaService.sync_main_image(spu_id)
+        # 失效媒体列表缓存
+        GoodsCacheService.invalidate_media_list(spu_id)
+
+        return Response(_serialize_media(media), status=status.HTTP_201_CREATED)

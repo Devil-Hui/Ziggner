@@ -1,0 +1,106 @@
+# =============================================================================
+# Ziggner Backend — Production Multi-Stage Dockerfile
+# Target: 2 vCPU / 4GB RAM Server
+# Strategy: Build in full image → run in slim runtime, non-root user
+#
+# Build with Chinese mirrors:
+#   docker build --build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
+#                --build-arg PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple \
+#                -t ziggner-django -f Dockerfile.prod .
+# =============================================================================
+
+# ── Args (usable in all stages) ──────────────────────────────────────────────
+ARG APT_MIRROR=deb.debian.org
+ARG PIP_INDEX=https://pypi.org/simple
+
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM python:3.10.16-slim-bookworm AS builder
+
+ARG APT_MIRROR
+ARG PIP_INDEX
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Replace apt sources with mirror for faster downloads
+RUN sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i "s|http://deb.debian.org|http://${APT_MIRROR}|g" /etc/apt/sources.list 2>/dev/null || true
+
+# Install build-time system deps (mysqlclient needs these)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    gcc \
+    python3-dev \
+    default-libmysqlclient-dev \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create venv for isolated dependency install
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy only requirements first → cache layer
+COPY requirements/ requirements/
+RUN pip install --upgrade pip "setuptools<70" wheel \
+    -i ${PIP_INDEX} \
+    && pip install -r requirements/base.txt \
+    -i ${PIP_INDEX} \
+    && pip install gunicorn==20.1.0 \
+    -i ${PIP_INDEX}
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM python:3.10.16-slim-bookworm
+
+ARG APT_MIRROR
+
+# Runtime env
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_ENV=prod \
+    PATH="/opt/venv/bin:$PATH"
+
+# Replace apt sources with mirror
+RUN sed -i "s|deb.debian.org|${APT_MIRROR}|g" /etc/apt/sources.list.d/debian.sources 2>/dev/null || \
+    sed -i "s|http://deb.debian.org|http://${APT_MIRROR}|g" /etc/apt/sources.list 2>/dev/null || true
+
+# Install ONLY runtime system deps (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb-dev-compat \
+    procps \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user (non-root!)
+RUN groupadd -r appuser -g 1000 \
+    && useradd -r -u 1000 -g appuser -d /app -s /sbin/nologin -c "App User" appuser \
+    && mkdir -p /app /app/logs /app/media /app/static \
+    && chown -R appuser:appuser /app
+
+WORKDIR /app
+
+# Copy venv from builder
+COPY --from=builder --chown=appuser:appuser /opt/venv /opt/venv
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Ensure scripts are executable
+RUN chmod +x setup.sh
+
+# Switch to non-root
+USER appuser
+
+# Health check (via Django health endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -sf http://localhost:8000/health/ || exit 1
+
+EXPOSE 8000
+
+# entrypoint handles migrate + collectstatic + gunicorn/celery
+ENTRYPOINT ["./setup.sh"]

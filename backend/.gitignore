@@ -1,0 +1,60 @@
+# Python 编译文件
+__pycache__/
+*.py[cod]
+*$py.class
+
+.DS_Store
+*.DS_Store
+
+# Django 特定文件
+*.log
+*.pot
+*.pyc
+*.pyo
+*.sqlite3
+db.sqlite3
+media/
+staticfiles/
+
+# 配置文件（避免泄露敏感信息）
+.env
+*.env
+secrets.json
+
+# temp文件夹
+temp/
+
+# 日志文件
+logs/
+*.log
+gunicorn_access.log
+gunicorn_error.log
+
+# 虚拟环境
+venv/
+env/
+.venv/
+
+# IDE 相关
+.vscode/
+.idea/
+*.sublime-workspace
+
+# Node.js 相关（如果有前端）
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Docker 相关
+*.pid
+*.tar
+docker-compose.override.yml
+
+# MySQL / Redis / Postgres 数据
+*.db
+*.sql
+*.sqlite3
+dump.rdb
+dump-resque.rdb
+
+project/static/*

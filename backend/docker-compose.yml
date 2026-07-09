@@ -1,0 +1,177 @@
+version: '3.9'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-backend}
+      MYSQL_USER: ${DB_USER:-admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-admin123456}
+    # Note: Port 3306 only exposed internally within Docker network (dev safety)
+    expose:
+      - "3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    mem_limit: 300m
+    memswap_limit: 300m
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    restart: unless-stopped
+    command: redis-server --port 6379 --maxmemory 256mb --maxmemory-policy allkeys-lru --save "" --appendonly no
+    ports:
+      - "6379:6379"
+    mem_limit: 256m
+    memswap_limit: 256m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: rabbitmq-broker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123456
+      RABBITMQ_VM_MEMORY_HIGH_WATERMARK: 0.4
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    mem_limit: 150m
+    memswap_limit: 150m
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: django-app
+    restart: unless-stopped
+    environment:
+      - SERVICE_TYPE=django
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=backend
+      - DB_USER=admin
+      - DB_PASSWORD=${DB_PASSWORD:-admin123456}
+      - REDIS_MASTER_URL=redis://redis-cache:6379
+      - RABBITMQ_HOST=rabbitmq
+      - DEL_ENV=dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/backend
+      - media_data:/backend/media
+      - static_data:/backend/static
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    mem_limit: 400m
+    memswap_limit: 400m
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-worker
+    restart: unless-stopped
+    environment:
+      - SERVICE_TYPE=celery_worker
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=backend
+      - DB_USER=admin
+      - DB_PASSWORD=${DB_PASSWORD:-admin123456}
+      - REDIS_MASTER_URL=redis://redis-cache:6379
+      - RABBITMQ_HOST=rabbitmq
+      - DEL_ENV=dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
+    volumes:
+      - .:/backend
+      - media_data:/backend/media
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    mem_limit: 350m
+    memswap_limit: 350m
+    healthcheck:
+      test: ["CMD", "celery", "-A", "project", "inspect", "ping", "-d", "celery@$HOSTNAME"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: celery-beat
+    restart: unless-stopped
+    environment:
+      - SERVICE_TYPE=celery_beat
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_NAME=backend
+      - DB_USER=admin
+      - DB_PASSWORD=${DB_PASSWORD:-admin123456}
+      - REDIS_MASTER_URL=redis://redis-cache:6379
+      - RABBITMQ_HOST=rabbitmq
+      - DEL_ENV=dev
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
+    volumes:
+      - .:/backend
+    depends_on:
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_started
+    mem_limit: 150m
+    memswap_limit: 150m
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery beat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  mysql_data:
+  media_data:
+  static_data:

@@ -1,0 +1,55 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# ── IDE ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Git ──
+.git/
+.gitignore
+.gitattributes
+
+# ── Docker ──
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──
+logs/*.log
+*.log
+
+# ── Media & Static (mounted at runtime) ──
+media/*
+!media/.gitkeep
+static/*
+!static/.gitkeep
+
+# ── Test ──
+.tox/
+.coverage
+htmlcov/
+.pytest_cache/
+test-results/
+playwright-report/
+
+# ── OS ──
+.DS_Store
+Thumbs.db

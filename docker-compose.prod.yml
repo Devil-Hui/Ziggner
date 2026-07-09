@@ -1,0 +1,282 @@
+
+version: '3.9'
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "3"
+    compress: "true"
+
+x-healthcheck-defaults: &healthcheck-defaults
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+services:
+
+  nginx:
+    build:
+      context: ./web/react
+      dockerfile: Dockerfile
+    image: ziggner-nginx:latest
+    container_name: ziggner-nginx
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "80:80"
+    volumes:
+      - static_data:/var/www/static
+      - ./web/react/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      django-app:
+        condition: service_healthy
+    networks:
+      - ziggner-net
+    mem_limit: 64m
+    mem_reservation: 32m
+    cpus: "0.15"
+    oom_score_adj: -800
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+
+  django-app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    image: ziggner-django:latest
+    container_name: ziggner-django
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      - SERVICE_TYPE=django
+      - DJANGO_ENV=prod
+      - STATIC_ROOT=/app/static
+    env_file:
+      - .env.production
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/static
+      - django_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - ziggner-net
+    mem_limit: 512m
+    mem_reservation: 350m
+    cpus: "0.40"
+    oom_score_adj: 0
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health/"]
+      <<: *healthcheck-defaults
+      start_period: 45s
+
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    image: ziggner-django:latest
+    container_name: ziggner-celery-worker
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      - SERVICE_TYPE=celery_worker
+      - DJANGO_ENV=prod
+    env_file:
+      - .env.production
+    volumes:
+      - media_data:/app/media
+      - celery_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - ziggner-net
+    mem_limit: 256m
+    mem_reservation: 150m
+    cpus: "0.25"
+    oom_score_adj: 200
+    healthcheck:
+      test: ["CMD-SHELL", "ps aux | grep -q '[c]elery.*worker' || exit 1"]
+      <<: *healthcheck-defaults
+      start_period: 20s
+
+
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    image: ziggner-django:latest
+    container_name: ziggner-celery-beat
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      - SERVICE_TYPE=celery_beat
+      - DJANGO_ENV=prod
+    env_file:
+      - .env.production
+    volumes:
+      - beat_logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - ziggner-net
+    mem_limit: 256m
+    mem_reservation: 128m
+    cpus: "0.10"
+    oom_score_adj: 400
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery"]
+      <<: *healthcheck-defaults
+      start_period: 20s
+
+
+  db:
+    image: mysql:8.0.36-debian
+    container_name: ziggner-db
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ziggner
+      MYSQL_USER: ziggner
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/mysql/my.cnf:/etc/mysql/conf.d/my.cnf:ro
+    networks:
+      - ziggner-net
+    mem_limit: 384m
+    mem_reservation: 256m
+    cpus: "0.25"
+    oom_score_adj: -600
+    command:
+      - --innodb-buffer-pool-size=64M
+      - --innodb-log-buffer-size=8M
+      - --max-connections=30
+      - --performance-schema=OFF
+      - --skip-log-bin
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --slow-query-log=ON
+      - --long-query-time=0.5
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$$MYSQL_ROOT_PASSWORD"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+
+  redis:
+    image: redis:7.2.7-alpine3.21
+    container_name: ziggner-redis
+    restart: unless-stopped
+    logging: *default-logging
+    command:
+      - redis-server
+      - --port 6379
+      - --requirepass ${REDIS_PASSWORD:-redis-change-me}
+      - --maxmemory 48mb
+      - --maxmemory-policy allkeys-lru
+      - --save ""
+      - --appendonly no
+      - --tcp-keepalive 60
+      - --timeout 300
+      - --maxclients 200
+      - --lazyfree-lazy-eviction yes
+      - --lazyfree-lazy-expire yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - ziggner-net
+    mem_limit: 64m
+    mem_reservation: 32m
+    cpus: "0.15"
+    oom_score_adj: -400
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  rabbitmq:
+    image: rabbitmq:3.12.14-management-alpine
+    container_name: ziggner-rabbitmq
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      RABBITMQ_DEFAULT_USER: ziggner
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RABBITMQ_PASSWORD is required}
+      RABBITMQ_DEFAULT_VHOST: /
+      RABBITMQ_DISK_FREE_LIMIT: 50MB
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+      - ./backend/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - ziggner-net
+    mem_limit: 384m
+    mem_reservation: 192m
+    cpus: "0.10"
+    oom_score_adj: -200
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,base64;req=urllib.request.Request('http://127.0.0.1:15672/api/aliveness-test/%2F',headers={'Authorization':'Basic '+base64.b64encode(b'ziggner:ziggner-mq-pwd-change-me').decode()});exit(0 if urllib.request.urlopen(req,timeout=5).status==200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Named Volumes
+# ═══════════════════════════════════════════════════════════════════════════════
+volumes:
+  mysql_data:
+    name: ziggner_mysql_data
+  redis_data:
+    name: ziggner_redis_data
+  rabbitmq_data:
+    name: ziggner_rabbitmq_data
+  media_data:
+    name: ziggner_media
+  static_data:
+    name: ziggner_static
+  django_logs:
+    name: ziggner_django_logs
+  celery_logs:
+    name: ziggner_celery_logs
+  beat_logs:
+    name: ziggner_beat_logs
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Networks
+# ═══════════════════════════════════════════════════════════════════════════════
+networks:
+  ziggner-net:
+    name: ziggner_net
+    driver: bridge

@@ -1,0 +1,127 @@
+# =============================================================================
+# Ziggner Security Scanning Pipeline
+# Runs on every PR to main and weekly scheduled scans
+# =============================================================================
+
+name: Ziggner Security Scan
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday 06:00 UTC
+
+jobs:
+  # ── 1. SAST — Static Application Security Testing ──────────────────────────
+  sast:
+    name: Static Analysis (Semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: >-
+            p/owasp-top-ten
+            p/cwe-top-25
+            p/python
+            p/javascript
+          audit-on: push
+        env:
+          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
+
+  # ── 2. Secrets Detection ──────────────────────────────────────────────────
+  secrets-scan:
+    name: Secrets Detection (Gitleaks)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── 3. Dependency Audit ───────────────────────────────────────────────────
+  dep-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Scan Python dependencies (pip-audit)
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements/prod.txt --desc on
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Scan Node dependencies (npm audit)
+        run: |
+          cd web/react
+          npm audit --audit-level=high
+
+  # ── 4. Infrastructure as Code Scan ────────────────────────────────────────
+  iac-scan:
+    name: IaC Scan (Trivy)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy scan on Docker configs
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: 'backend/'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ── 5. Docker Image Scan ──────────────────────────────────────────────────
+  docker-scan:
+    name: Docker Image Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t ziggner-backend:scan -f backend/Dockerfile.prod backend/
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'ziggner-backend:scan'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'  # Non-blocking for now
+          format: 'table'

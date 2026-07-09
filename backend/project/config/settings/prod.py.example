@@ -1,0 +1,17 @@
+from .base import *  # 继承 base.py
+import os
+
+print("Loaded production settings!")  # 调试信息
+# 生产环境关闭 DEBUG
+DEBUG = False
+
+# 允许的域名（从环境变量获取）
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+
+# 文件存储配置
+FILE_STORAGE = os.getenv('FILE_STORAGE', 'local')  # 可选 'local' 或 'tencent'
+MEDIA_PATH = os.getenv('MEDIA_PATH', 'media')
+MEDIA_URL = os.path.join('/', MEDIA_PATH, '/')
+MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_PATH)
+FILE_STORAGE_MAX_SIZE = os.getenv('FILE_STORAGE_MAX_SIZE', 5)  # 5MB
+FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', ["image/jpeg", "image/png"])
