@@ -45,3 +45,7 @@ logs/
 web/react/dist/
 backend/media/
 backend/static/
+
+# Python caches (in case backend/.gitignore misses)
+*.pyc
+__pycache__/

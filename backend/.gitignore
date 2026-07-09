@@ -11,8 +11,6 @@ __pycache__/
 *.pot
 *.pyc
 *.pyo
-*.sqlite3
-db.sqlite3
 media/
 staticfiles/
 
@@ -53,7 +51,6 @@ docker-compose.override.yml
 # MySQL / Redis / Postgres 数据
 *.db
 *.sql
-*.sqlite3
 dump.rdb
 dump-resque.rdb
 
