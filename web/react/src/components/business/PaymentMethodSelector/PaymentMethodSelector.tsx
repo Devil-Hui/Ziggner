@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import type { PaymentMethodType } from '../../types/payment';
+import type { PaymentMethodType } from '../../../types/payment';
 import { tokens } from '../../../theme/tokens';
 
 const Wrapper = styled.div`
@@ -9,9 +9,9 @@ const Wrapper = styled.div`
 const Card = styled.button<{ $selected: boolean }>`
   flex: 1;
   padding: 24px;
-  border: 2px solid ${p => p.$selected ? tokens.Color.primary : tokens.Color.border};
+  border: 2px solid ${p => p.$selected ? tokens.Color.primary : tokens.Color.border.light};
   border-radius: ${tokens.Radius.md};
-  background: ${p => p.$selected ? `${tokens.Color.primary}08` : tokens.Color.bg};
+  background: ${p => p.$selected ? `${tokens.Color.primary}08` : tokens.Color.bg.page};
   cursor: pointer;
   text-align: center;
   transition: border-color 0.2s;
@@ -24,11 +24,11 @@ const Icon = styled.div`
 const Label = styled.div`
   font-size: ${tokens.FontSize.md};
   font-weight: ${tokens.FontWeight.semibold};
-  color: ${tokens.Color.text};
+  color: ${tokens.Color.text.heading};
 `;
 const Desc = styled.div`
   font-size: ${tokens.FontSize.sm};
-  color: ${tokens.Color.textSecondary};
+  color: ${tokens.Color.text.secondary};
   margin-top: 4px;
 `;
 

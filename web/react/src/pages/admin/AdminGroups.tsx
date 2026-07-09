@@ -17,7 +17,7 @@ interface AdminGroup {
 }
 
 interface GroupMember {
-  user_id: number;
+  id: number;
   username: string;
   role: 'leader' | 'member';
 }
@@ -368,7 +368,7 @@ export default function AdminGroups() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getAdminGroups();
+      const data: any = await adminAPI.getAdminGroups();
       const list = Array.isArray(data) ? data : (data.items || data.results || []);
       setGroups(list);
     } catch (err: any) {
@@ -420,7 +420,7 @@ export default function AdminGroups() {
     try {
       setMembersLoading(true);
       setMembersError(null);
-      const data = await adminAPI.getGroupMembers(groupId);
+      const data: any = await adminAPI.getGroupMembers(groupId);
       const list = Array.isArray(data) ? data : data.members || [];
       setMembers(list);
     } catch (err: any) {
@@ -457,7 +457,7 @@ export default function AdminGroups() {
     }
     try {
       setAddingMember(true);
-      await adminAPI.addGroupMember(expandedGroupId, { user_id: userId });
+      await adminAPI.addGroupMember(expandedGroupId, { user_id: userId, role: 'member' });
       showMsg('success', t('admin.groups.memberAdded'));
       setAddMemberUserId('');
       fetchMembers(expandedGroupId);
@@ -471,7 +471,7 @@ export default function AdminGroups() {
   const handleRemoveMember = async () => {
     if (!removeMemberTarget || removeMemberGroupId === null) return;
     try {
-      await adminAPI.removeGroupMember(removeMemberGroupId, removeMemberTarget.user_id);
+      await adminAPI.removeGroupMember(removeMemberGroupId, removeMemberTarget.id);
       showMsg('success', t('admin.groups.memberRemoved'));
       setRemoveMemberTarget(null);
       setRemoveMemberGroupId(null);
@@ -586,8 +586,8 @@ export default function AdminGroups() {
               </MemberThead>
               <tbody>
                 {members.map((m) => (
-                  <MemberTr key={m.user_id}>
-                    <MemberTd>{m.user_id}</MemberTd>
+                  <MemberTr key={m.id}>
+                    <MemberTd>{m.id}</MemberTd>
                     <MemberTd>{m.username || '-'}</MemberTd>
                     <MemberTd>
                       <RoleBadge $role={m.role}>
@@ -666,7 +666,7 @@ export default function AdminGroups() {
       {removeMemberTarget && removeMemberGroupId !== null && (
         <ConfirmDialog
           title={t('admin.groups.removeMember')}
-          message={t('admin.groups.confirmRemoveMember').replace('{group}', expandedGroup?.name || '').replace('{user}', removeMemberTarget.username || String(removeMemberTarget.user_id))}
+          message={t('admin.groups.confirmRemoveMember').replace('{group}', expandedGroup?.name || '').replace('{user}', removeMemberTarget.username || String(removeMemberTarget.id))}
           confirmLabel={t('admin.groups.confirmRemove')}
           danger
           onConfirm={handleRemoveMember}

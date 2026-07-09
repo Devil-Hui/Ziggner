@@ -397,7 +397,7 @@ export default function AdminProductAudit() {
       setLoading(true);
       setError(null);
       const data = await adminAPI.getSPU(Number(id));
-      setSpu(data);
+      setSpu(data as unknown as SPUDetail);
     } catch (err: any) {
       setError(err.message || t('admin.productAudit.loadFailed'));
     } finally {

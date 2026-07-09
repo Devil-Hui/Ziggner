@@ -197,7 +197,7 @@ export default function AdminTags() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getTags();
+      const data: any = await adminAPI.getTags();
       const list = Array.isArray(data) ? data : data.results || [];
       setTags(list);
     } catch (err: any) {

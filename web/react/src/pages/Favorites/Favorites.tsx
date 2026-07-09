@@ -24,7 +24,7 @@ const Wrapper = styled.div`
 const ModuleTitle = styled.div`
   font-size: ${FontSize.xl}px;
   font-weight: 700;
-  color: ${Color.text.primary};
+  color: ${Color.text.heading};
 `
 
 const Grid = styled.div`
@@ -42,7 +42,7 @@ const Card = styled.div`
   transition: transform 0.2s, box-shadow 0.2s;
   &:hover {
     transform: translateY(-2px);
-    box-shadow: ${Shadow.hover || '0 4px 16px rgba(0,0,0,0.12)'};
+    box-shadow: ${Shadow.dropdown || '0 4px 16px rgba(0,0,0,0.12)'};
   }
 `
 
@@ -60,7 +60,7 @@ const CardBody = styled.div`
 const CardName = styled.div`
   font-size: ${FontSize.sm}px;
   font-weight: 500;
-  color: ${Color.text.primary};
+  color: ${Color.text.heading};
   margin-bottom: 6px;
   display: -webkit-box;
   -webkit-line-clamp: 2;

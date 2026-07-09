@@ -4,16 +4,16 @@ import { tokens } from '../../../theme/tokens';
 
 const Card = styled.div<{ $selected: boolean }>`
   padding: 16px;
-  border: 2px solid ${p => p.$selected ? tokens.Color.primary : tokens.Color.border};
+  border: 2px solid ${p => p.$selected ? tokens.Color.primary : tokens.Color.border.light};
   border-radius: ${tokens.Radius.md};
   cursor: pointer;
   transition: border-color 0.2s;
   &:hover { border-color: ${tokens.Color.primary}; }
 `;
 const Name = styled.div` font-weight: ${tokens.FontWeight.semibold}; `;
-const Phone = styled.span` color: ${tokens.Color.textSecondary}; margin-left: 8px; `;
-const Street = styled.div` color: ${tokens.Color.textSecondary}; font-size: ${tokens.FontSize.sm}; `;
-const City = styled.div` color: ${tokens.Color.textSecondary}; font-size: ${tokens.FontSize.sm}; `;
+const Phone = styled.span` color: ${tokens.Color.text.secondary}; margin-left: 8px; `;
+const Street = styled.div` color: ${tokens.Color.text.secondary}; font-size: ${tokens.FontSize.sm}; `;
+const City = styled.div` color: ${tokens.Color.text.secondary}; font-size: ${tokens.FontSize.sm}; `;
 
 interface Props {
   address: ShippingAddress;

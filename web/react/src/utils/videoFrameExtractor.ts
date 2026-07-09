@@ -16,7 +16,7 @@ export interface VideoFrameResult {
 function generateFrameSizes(
   video: HTMLVideoElement,
   currentTime: number
-): Promise<VideoFrameResult['thumb' | 'list' | 'large']> {
+): Promise<{ thumb: { blob: Blob; dataUrl: string }; list: { blob: Blob; dataUrl: string }; large: { blob: Blob; dataUrl: string } }> {
   return new Promise((resolve) => {
     video.currentTime = currentTime
     video.onseeked = () => {

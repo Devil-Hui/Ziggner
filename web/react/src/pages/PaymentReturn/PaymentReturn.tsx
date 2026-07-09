@@ -55,7 +55,7 @@ const Message = styled.p`
 
 const OrderNo = styled.span`
   font-weight: bold;
-  color: ${Color.text.primary};
+  color: ${Color.text.heading};
   font-family: monospace;
 `
 

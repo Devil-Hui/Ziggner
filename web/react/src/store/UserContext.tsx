@@ -22,6 +22,7 @@ const UserContext = createContext<UserContextValue>({
   login: async () => ({ success: false, error: 'not initialized' }),
   register: async () => ({ success: false, error: 'not initialized' }),
   logout: () => {},
+  socialLogin: async () => ({ success: false, error: 'not initialized' }),
   refreshUser: async () => {},
 })
 

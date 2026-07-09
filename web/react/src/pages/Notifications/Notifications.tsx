@@ -31,7 +31,7 @@ const ModuleHeader = styled.div`
 const ModuleTitle = styled.div`
   font-size: ${FontSize.xl}px;
   font-weight: 700;
-  color: ${Color.text.primary};
+  color: ${Color.text.heading};
 `
 
 const MarkAllBtn = styled.button`
@@ -42,7 +42,7 @@ const MarkAllBtn = styled.button`
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
   cursor: pointer;
-  &:hover { color: ${Color.text.primary}; border-color: ${Color.text.primary}; }
+  &:hover { color: ${Color.text.heading}; border-color: ${Color.text.heading}; }
 `
 
 const NotificationCard = styled.div<{ $isRead: boolean }>`
@@ -58,7 +58,7 @@ const NotificationCard = styled.div<{ $isRead: boolean }>`
 const NotifTitle = styled.div`
   font-size: ${FontSize.md}px;
   font-weight: 600;
-  color: ${Color.text.primary};
+  color: ${Color.text.heading};
   margin-bottom: 6px;
 `
 
@@ -98,7 +98,7 @@ const LoadMoreBtn = styled.button`
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
   cursor: pointer;
-  &:hover { color: ${Color.text.primary}; }
+  &:hover { color: ${Color.text.heading}; }
 `
 
 export default function Notifications() {

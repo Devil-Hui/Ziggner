@@ -3,7 +3,7 @@
  * Supports Google and Facebook authentication flow.
  */
 
-import { post, get } from '../../api/request'
+import { post, get } from './request'
 
 export interface SocialProvider {
   provider: string

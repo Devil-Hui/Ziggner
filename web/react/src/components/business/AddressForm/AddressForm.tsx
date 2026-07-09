@@ -10,17 +10,17 @@ const Form = styled.form`
 const Row = styled.div`
   display: flex;
   gap: 12px;
-  @media (max-width: ${tokens.Breakpoint.md}) { flex-direction: column; }
+  @media (max-width: ${tokens.Breakpoint.mobile}px) { flex-direction: column; }
 `;
 const Field = styled.input`
   flex: 1;
   padding: 10px 12px;
-  border: 1px solid ${tokens.Color.border};
+  border: 1px solid ${tokens.Color.border.medium};
   border-radius: ${tokens.Radius.sm};
   font-size: ${tokens.FontSize.md};
   &:focus { outline: none; border-color: ${tokens.Color.primary}; }
 `;
-const Error = styled.span` color: ${tokens.Color.danger}; font-size: ${tokens.FontSize.xs}; `;
+const Error = styled.span` color: ${tokens.Color.status.error}; font-size: ${tokens.FontSize.xs}; `;
 const Submit = styled.button`
   padding: 12px;
   background: ${tokens.Color.primary};
@@ -81,7 +81,7 @@ export function AddressForm({ onSubmit, onCancel }: Props) {
       </Row>
       <Row>
         <Submit type="submit">Save Address</Submit>
-        <Submit as="button" type="button" onClick={onCancel} style={{ background: tokens.Color.border, color: tokens.Color.text }}>
+        <Submit as="button" type="button" onClick={onCancel} style={{ background: tokens.Color.border.light, color: tokens.Color.text.secondary }}>
           Cancel
         </Submit>
       </Row>

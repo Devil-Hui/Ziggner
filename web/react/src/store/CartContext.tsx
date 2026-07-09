@@ -66,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try {
       const data = await publicAPI.getCart()
       // 后端返回格式可能是数组 [...] 或 { items: [...] }
-      const items = Array.isArray(data) ? data : (data as { items: Record<string, unknown>[] }).items
+      const items = Array.isArray(data) ? data : (data as unknown as { items: Record<string, unknown>[] }).items
       const mapped = (items || []).map(mapBackendItem)
       setItems(mapped)
     } catch {
