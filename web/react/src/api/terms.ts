@@ -18,10 +18,10 @@ export interface Term {
 
 /** 获取所有生效中的条款 */
 export function getActiveTerms() {
-  return get<Term[]>('/terms/');
+  return get<{ code: number; data: Term[] }>('/terms/');
 }
 
 /** 按类型获取条款（如 privacy, terms, refund, shipping, cookies） */
 export function getTermByType(type: string) {
-  return get<Term>(`/terms/${type}/`);
+  return get<{ code: number; data: Term }>(`/terms/${type}/`);
 }

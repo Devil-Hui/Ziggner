@@ -77,11 +77,7 @@ export function TermsPage({ type: propType }: { type?: string }) {
     setLoading(true);
     setError('');
     getTermByType(type)
-      .then(res => {
-        // Handle both {code, data} envelope and direct response
-        const data = res.data || res;
-        setTerm(data);
-      })
+      .then(res => { setTerm(res.data); })
       .catch(() => setError('加载失败，请稍后重试'))
       .finally(() => setLoading(false));
   }, [type]);
@@ -90,9 +86,8 @@ export function TermsPage({ type: propType }: { type?: string }) {
     // Load all available types for navigation
     getActiveTerms()
       .then(res => {
-        const items = res.data || (res as any);
-        if (Array.isArray(items)) {
-          setAllTypes(items.map((t: Term) => t.type));
+        if (Array.isArray(res.data)) {
+          setAllTypes(res.data.map((t: Term) => t.type));
         }
       })
       .catch(() => {});
