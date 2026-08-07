@@ -1,0 +1,126 @@
+# =============================================================================
+# Ziggner Backend — Production Multi-Stage Dockerfile
+# Target: 2 vCPU / 4GB RAM Server
+# Strategy: Build in full image → run in slim runtime, non-root user
+#
+# Build with Chinese mirrors:
+#   docker build --build-arg APT_MIRROR=mirrors.tuna.tsinghua.edu.cn \
+#                --build-arg PIP_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple \
+#                -t ziggner-django -f Dockerfile.prod .
+# =============================================================================
+
+# ── Args (usable in all stages) ──────────────────────────────────────────────
+ARG PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.12-slim-bookworm
+ARG DEBIAN_MIRROR=mirrors.aliyun.com
+ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple/
+ARG APP_VERSION=dev
+ARG GIT_COMMIT=unknown
+
+# ── Stage 1: Builder ─────────────────────────────────────────────────────────
+FROM ${PYTHON_IMAGE} AS builder
+
+ARG DEBIAN_MIRROR
+ARG PIP_INDEX_URL
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /build
+
+# Replace apt sources with mirror for faster downloads
+RUN sed -i \
+    -e "s|http://deb.debian.org/debian|https://${DEBIAN_MIRROR}/debian|g" \
+    -e "s|http://security.debian.org/debian-security|https://${DEBIAN_MIRROR}/debian-security|g" \
+    /etc/apt/sources.list.d/debian.sources
+
+# Install build-time system deps (mysqlclient needs these)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    gcc \
+    python3-dev \
+    default-libmysqlclient-dev \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create venv for isolated dependency install
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy only requirements first → cache layer
+COPY requirements/ requirements/
+# 使用 requirements/base.txt 钉死的 gunicorn==23.0.0，禁止二次降级
+RUN pip install --upgrade pip "setuptools<70" wheel \
+    --index-url "${PIP_INDEX_URL}" \
+    && pip install -r requirements/base.txt \
+    --index-url "${PIP_INDEX_URL}"
+
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
+FROM ${PYTHON_IMAGE}
+
+ARG DEBIAN_MIRROR
+ARG APP_VERSION
+ARG GIT_COMMIT
+
+LABEL org.opencontainers.image.version="${APP_VERSION}" \
+      org.opencontainers.image.revision="${GIT_COMMIT}"
+
+# Runtime env
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DJANGO_ENV=prod \
+    APP_VERSION="${APP_VERSION}" \
+    GIT_COMMIT="${GIT_COMMIT}" \
+    PATH="/opt/venv/bin:$PATH"
+
+# Replace apt sources with mirror
+RUN sed -i \
+    -e "s|http://deb.debian.org/debian|https://${DEBIAN_MIRROR}/debian|g" \
+    -e "s|http://security.debian.org/debian-security|https://${DEBIAN_MIRROR}/debian-security|g" \
+    /etc/apt/sources.list.d/debian.sources
+
+# Install ONLY runtime system deps (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmariadb-dev-compat \
+    default-mysql-client \
+    procps \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create app user (non-root!)
+RUN groupadd -r appuser -g 1000 \
+    && useradd -r -u 1000 -g appuser -d /app -s /sbin/nologin -c "App User" appuser \
+    && mkdir -p /app /app/logs /app/media /app/static \
+    && chown -R appuser:appuser /app
+
+WORKDIR /app
+
+# Copy venv from builder
+COPY --from=builder --chown=appuser:appuser /opt/venv /opt/venv
+
+# Detect corrupted BuildKit layers before accepting a production image.
+RUN python -c "import django, pymysql; assert callable(pymysql.install_as_MySQLdb); print(django.get_version())"
+
+# Copy application code
+COPY --chown=appuser:appuser . .
+
+# Fail the build if a Windows junction/file-sharing issue produced empty source files.
+RUN test -s manage.py \
+    && test -s setup.sh \
+    && test -s project/runtime_env.py \
+    && chmod +x setup.sh
+
+# Switch to non-root
+USER appuser
+
+# Health check (via Django health endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -sf http://localhost:8000/health/ || exit 1
+
+EXPOSE 8000
+
+# Database migration and collectstatic are explicit deployment gates.
+ENTRYPOINT ["./setup.sh"]

@@ -1,0 +1,16 @@
+FROM node:22-alpine
+
+# 国内 npm 加速（如不需要可删此行）
+RUN npm config set registry https://registry.npmmirror.com
+
+WORKDIR /app
+
+# 先装依赖（利用镜像层缓存；node_modules 由 compose 匿名卷保留，不被源码挂载覆盖）
+COPY package*.json ./
+RUN npm install
+
+# 复制源码（compose 会用宿主机源码挂载覆盖此处，实现 HMR 热更新）
+COPY . .
+
+EXPOSE 12700
+CMD ["npm", "run", "dev"]

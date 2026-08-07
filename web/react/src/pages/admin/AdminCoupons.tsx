@@ -1,0 +1,786 @@
+// TypeScript strict mode enabled
+import { useState, useEffect, useCallback } from 'react';
+import styled from 'styled-components'
+import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import PageHeader from '../../components/admin/common/PageHeader';
+import DataTable from '../../components/admin/common/DataTable';
+import type { Column } from '../../components/admin/common/DataTable';
+import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
+import Pagination from '../../components/admin/common/Pagination';
+import { adminAPI, Coupon, CouponFormData } from '../../api/admin';
+import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
+import { useTranslation } from '../../i18n';
+
+// ==================== Styled Components ====================
+
+const FormOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+
+const FormDialog = styled.div`
+  background: ${Color.bg.card};
+  border-radius: ${Radius.sm}px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+  width: 560px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: ${Spacing.xxl}px;
+`;
+
+const FormTitle = styled.h3`
+  font-size: 16px;
+  font-weight: 600;
+  color: ${Color.text.heading};
+  margin: 0 0 20px 0;
+`;
+
+const FormGroup = styled.div`
+  margin-bottom: 16px;
+`;
+
+const FormRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+const Label = styled.label`
+  display: block;
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.secondary};
+  margin-bottom: 6px;
+`;
+
+const Input = styled.input`
+  width: 100%;
+  height: 36px;
+  padding: 0 ${Spacing.sm}px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 2px;
+  color: ${Color.primaryHover};
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #e74c3c;
+  }
+`;
+
+const Select = styled.select`
+  width: 100%;
+  height: 36px;
+  padding: 0 ${Spacing.sm}px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 2px;
+  color: ${Color.primaryHover};
+  background: ${Color.bg.card};
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #e74c3c;
+  }
+`;
+
+const ToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+`;
+
+const ToggleSwitch = styled.label`
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+`;
+
+const ToggleInput = styled.input`
+  opacity: 0;
+  width: 0;
+  height: 0;
+
+  &:checked + span {
+    background: #e74c3c;
+  }
+
+  &:checked + span::before {
+    transform: translateX(18px);
+  }
+`;
+
+const ToggleSlider = styled.span`
+  position: absolute;
+  inset: 0;
+  background: ${Color.border.dark};
+  border-radius: 22px;
+  cursor: pointer;
+  transition: ${Transition.normal};
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: ${Color.bg.card};
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+`;
+
+const ToggleLabel = styled.span`
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.secondary};
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 20px;
+`;
+
+const CodeRow = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  input {
+    flex: 1;
+  }
+`;
+
+const GenerateBtn = styled.button`
+  padding: 0 16px;
+  height: 36px;
+  font-size: 12px;
+  border: 1px solid ${Color.border.medium};
+  background: ${Color.bg.card};
+  color: ${Color.primaryHover};
+  border-radius: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: #e74c3c;
+    color: #e74c3c;
+  }
+`;
+
+const PrimaryBtn = styled.button`
+  padding: 8px 20px;
+  font-size: ${FontSize.sm}px;
+  border: none;
+  background: #e74c3c;
+  color: ${Color.text.inverse};
+  border-radius: 2px;
+  cursor: pointer;
+
+  &:hover {
+    background: #c0392b;
+  }
+`;
+
+const SecondaryBtn = styled.button`
+  padding: 8px 20px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  border-radius: 2px;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${Color.border.dark};
+    color: ${Color.primaryHover};
+  }
+`;
+
+const Toast = styled.div<{ $type: 'success' | 'error' }>`
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  border-radius: 2px;
+  font-size: ${FontSize.sm}px;
+  background: ${({ $type }) => ($type === 'success' ? '#e8f5e9' : '#fde8e8')};
+  color: ${({ $type }) => ($type === 'success' ? '#2e7d32' : '#c62828')};
+`;
+
+const Badge = styled.span<{ $variant: 'fixed' | 'percent' }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: ${FontSize.xs}px;
+  font-weight: 500;
+  background: ${({ $variant }) =>
+    $variant === 'fixed' ? '#f5f5f5' : '#e3f2fd'};
+  color: ${({ $variant }) =>
+    $variant === 'fixed' ? '#c62828' : '#1565c0'};
+`;
+
+const StatusBadge = styled.span<{ $active: boolean }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: ${FontSize.xs}px;
+  background: ${({ $active }) => ($active ? '#e8f5e9' : '#eee')};
+  color: ${({ $active }) => ($active ? '#2e7d32' : '#999')};
+`;
+
+const StackableText = styled.span<{ $stackable: boolean }>`
+  color: ${({ $stackable }) => ($stackable ? '#2e7d32' : '#999')};
+`;
+
+const SearchBar = styled.div`
+  margin-bottom: 12px;
+`;
+
+const SearchInput = styled.input`
+  height: 32px;
+  padding: 0 ${Spacing.sm}px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 2px;
+  width: 200px;
+  outline: none;
+  color: ${Color.primaryHover};
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: ${Color.border.dark};
+  }
+
+  &:focus {
+    border-color: #e74c3c;
+  }
+`;
+
+// ==================== Constants ====================
+
+const PAGE_SIZE = 20;
+
+const INITIAL_FORM: CouponFormData = {
+  code: '',
+  discount_type: 'fixed',
+  amount: 0,
+  min_amount: 0,
+  max_discount: null,
+  stackable: false,
+  is_active: true,
+  start_time: '',
+  end_time: '',
+  total_count: 0,
+};
+
+// ==================== Component ====================
+
+export default function AdminCoupons() {
+  const { t } = useTranslation();
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Form
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [formData, setFormData] = useState<CouponFormData>(INITIAL_FORM);
+
+  // Delete
+  const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null);
+
+  // ==================== Data Fetching ====================
+
+  const fetchCoupons = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await adminAPI.getCoupons({ page, search: searchText });
+      if (data && Array.isArray(data.results)) {
+        setCoupons(data.results);
+        setTotal(data.count || 0);
+      } else if (data && Array.isArray(data.items)) {
+        setCoupons(data.items);
+        setTotal(data.total || 0);
+      } else {
+        setCoupons([]);
+        setTotal(0);
+      }
+    } catch (err: any) {
+      setError(err.message || t('admin.coupons.loadFailed'));
+    } finally {
+      setLoading(false);
+    }
+  }, [page, searchText, t]);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
+
+  // ==================== Toast ====================
+
+  const showMsg = (type: 'success' | 'error', msg: string) => {
+    setToast({ type, msg });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  // Random coupon code generator (matches backend: 8 chars, uppercase + digits)
+  const generateCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) {
+      code += chars[Math.floor(Math.random() * chars.length)];
+    }
+    updateFormField('code', code);
+  };
+
+  // ==================== Form Handlers ====================
+
+  const openCreate = () => {
+    setEditingId(null);
+    setFormData({
+      ...INITIAL_FORM,
+      start_time: new Date().toISOString().slice(0, 16),
+      end_time: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 16),
+    });
+    setShowForm(true);
+  };
+
+  const openEdit = (coupon: Coupon) => {
+    setEditingId(coupon.id);
+    setFormData({
+      code: coupon.code,
+      discount_type: coupon.discount_type,
+      amount: coupon.amount,
+      min_amount: coupon.min_amount,
+      max_discount: coupon.max_discount,
+      stackable: coupon.stackable,
+      is_active: (coupon as unknown as Record<string, unknown>).is_active !== false,
+      start_time: coupon.start_time,
+      end_time: coupon.end_time,
+      total_count: coupon.total_count,
+    });
+    setShowForm(true);
+  };
+
+  const updateFormField = (field: keyof CouponFormData, value: any) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSave = async () => {
+    const code = formData.code || '';
+    if (!code.trim()) {
+      showMsg('error', t('admin.coupons.codeRequired'));
+      return;
+    }
+    if (formData.amount <= 0) {
+      showMsg('error', t('admin.coupons.amountRequired'));
+      return;
+    }
+    try {
+      if (editingId) {
+        await adminAPI.updateCoupon(editingId, {
+          ...formData,
+          code: code.trim(),
+        });
+        showMsg('success', t('admin.coupons.updateSuccess'));
+      } else {
+        await adminAPI.createCoupon({
+          ...formData,
+          code: code.trim(),
+        });
+        showMsg('success', t('admin.coupons.createSuccess'));
+      }
+      setShowForm(false);
+      fetchCoupons();
+    } catch (err: any) {
+      showMsg('error', err.message || t('admin.coupons.operationFailed'));
+    }
+  };
+
+  const { execute: debouncedSave, isPending: isSaving } = useDebounceSubmit(handleSave, 800);
+
+  // ==================== Delete Handler ====================
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      await adminAPI.deleteCoupon(deleteTarget.id);
+      showMsg('success', t('admin.coupons.deleteSuccess'));
+      setDeleteTarget(null);
+      fetchCoupons();
+    } catch (err: any) {
+      showMsg('error', err.message || t('admin.coupons.deleteFailed'));
+      setDeleteTarget(null);
+    }
+  };
+
+  // ==================== Helpers ====================
+
+  const formatDiscount = (record: Coupon): string => {
+    if (record.discount_type === 'fixed') {
+      return t('admin.coupons.discountFormat').replace('{amount}', String(record.amount));
+    }
+    return `-${record.amount}%`;
+  };
+
+  const isCouponActive = (record: Coupon): boolean => {
+    const now = new Date().getTime();
+    const start = new Date(record.start_time).getTime();
+    const end = new Date(record.end_time).getTime();
+    return now >= start && now <= end;
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchText(value);
+    setPage(1);
+  };
+
+  // ==================== Columns ====================
+
+  const columns: Column<Coupon>[] = [
+    { key: 'id', title: 'ID', width: '60px' },
+    {
+      key: 'code',
+      title: t('admin.coupons.columnCode'),
+      width: '150px',
+      render: (val) => <strong>{String(val)}</strong>,
+    },
+    {
+      key: 'discount_type',
+      title: t('admin.coupons.columnType'),
+      width: '90px',
+      render: (val) => (
+        <Badge $variant={val as 'fixed' | 'percent'}>
+          {val === 'fixed' ? t('admin.coupons.columnFixed') : t('admin.coupons.columnPercentage')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'amount',
+      title: t('admin.coupons.columnDiscount'),
+      width: '90px',
+      render: (_, record) => formatDiscount(record),
+    },
+    {
+      key: 'min_amount',
+      title: t('admin.coupons.columnMinSpend'),
+      width: '90px',
+      render: (val) => `${val}${t('admin.coupons.columnYuan')}`,
+    },
+    {
+      key: 'max_discount',
+      title: t('admin.coupons.columnMaxDiscount'),
+      width: '90px',
+      render: (val) => (val != null ? `${val}${t('admin.coupons.columnYuan')}` : '-'),
+    },
+    {
+      key: 'stackable',
+      title: t('admin.coupons.columnStackable'),
+      width: '70px',
+      render: (val) => (
+        <StackableText $stackable={Boolean(val)}>
+          {val ? t('admin.coupons.columnYes') : t('admin.coupons.columnNo')}
+        </StackableText>
+      ),
+    },
+    {
+      key: 'start_time',
+      title: t('admin.coupons.columnValidity'),
+      width: '260px',
+      render: (_, record) => (
+        <span style={{ color: '#999' }}>
+          {new Date(record.start_time).toLocaleDateString('zh-CN')} ~ {new Date(record.end_time).toLocaleDateString('zh-CN')}
+        </span>
+      ),
+    },
+    {
+      key: 'used_count',
+      title: t('admin.coupons.columnUsage'),
+      width: '80px',
+      render: (_, record) => (
+        <span>
+          已用 {record.used_count ?? 0}/{record.total_count}
+        </span>
+      ),
+    },
+    {
+      key: 'status',
+      title: t('admin.coupons.columnStatus'),
+      width: '80px',
+      render: (_, record) => (
+        <StatusBadge $active={isCouponActive(record)}>
+          {isCouponActive(record) ? t('admin.coupons.columnActive') : t('admin.coupons.columnExpired')}
+        </StatusBadge>
+      ),
+    },
+    {
+      key: 'actions',
+      title: t('admin.coupons.columnActions'),
+      width: '120px',
+      render: (_, record) => (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            style={{
+              padding: '4px 10px', fontSize: 12, border: '1px solid ${Color.border.medium}',
+              background: '#fff', color: '#666', borderRadius: 2, cursor: 'pointer',
+            }}
+            onClick={() => openEdit(record)}
+          >
+            {t('admin.coupons.edit')}
+          </button>
+          <button
+            style={{
+              padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c',
+              background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer',
+            }}
+            onClick={() => setDeleteTarget(record)}
+          >
+            {t('admin.coupons.delete')}
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  // ==================== Render ====================
+
+  return (
+    <div>
+      <PageHeader
+        title={t('admin.coupons.title')}
+        breadcrumb={[{ label: t('admin.coupons.subtitle') }, { label: t('admin.coupons.title') }]}
+        actions={<PrimaryBtn onClick={openCreate}>{t('admin.coupons.createCoupon')}</PrimaryBtn>}
+      />
+
+      {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}
+
+      <SearchBar>
+        <SearchInput
+          type="text"
+          placeholder={t('admin.coupons.searchPlaceholder')}
+          value={searchText}
+          onChange={(e) => handleSearchChange(e.target.value)}
+        />
+      </SearchBar>
+
+      <DataTable
+        columns={columns}
+        data={coupons}
+        loading={loading}
+        error={error}
+        onRetry={fetchCoupons}
+        emptyTitle={t('admin.coupons.noCoupons')}
+        emptyIcon="coupons"
+        rowKey="id"
+      />
+
+      <Pagination
+        current={page}
+        total={total}
+        pageSize={PAGE_SIZE}
+        onChange={setPage}
+      />
+
+      {/* Create / Edit Form Dialog */}
+      {showForm && (
+        <FormOverlay onClick={() => setShowForm(false)}>
+          <FormDialog onClick={(e) => e.stopPropagation()}>
+            <FormTitle>{editingId ? t('admin.coupons.editCoupon') : t('admin.coupons.newCoupon')}</FormTitle>
+
+            <FormGroup>
+              <Label>{t('admin.coupons.codeLabel')} *</Label>
+              <CodeRow>
+                <Input
+                  value={formData.code}
+                  onChange={(e) => updateFormField('code', e.target.value)}
+                  placeholder={t('admin.coupons.codePlaceholder')}
+                />
+                {!editingId && (
+                  <GenerateBtn type="button" onClick={generateCode}>
+                    {t('admin.coupons.generateCode')}
+                  </GenerateBtn>
+                )}
+              </CodeRow>
+            </FormGroup>
+
+            <FormRow>
+              <FormGroup>
+                <Label>{t('admin.coupons.discountType')}</Label>
+                <Select
+                  value={formData.discount_type}
+                  onChange={(e) =>
+                    updateFormField('discount_type', e.target.value)
+                  }
+                >
+                  <option value="fixed">{t('admin.coupons.fixedAmount')}</option>
+                  <option value="percent">{t('admin.coupons.percentage')}</option>
+                </Select>
+              </FormGroup>
+
+              <FormGroup>
+                <Label>
+                  {formData.discount_type === 'fixed'
+                    ? t('admin.coupons.amountLabel')
+                    : t('admin.coupons.percentLabel')}
+                </Label>
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder={
+                    formData.discount_type === 'fixed' ? t('admin.coupons.amountPlaceholder') : t('admin.coupons.percentPlaceholder')
+                  }
+                  value={formData.amount}
+                  onChange={(e) =>
+                    updateFormField('amount', Number(e.target.value))
+                  }
+                />
+              </FormGroup>
+            </FormRow>
+
+            <FormRow>
+              <FormGroup>
+                <Label>{t('admin.coupons.minSpendLabel')}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder={t('admin.coupons.minSpendPlaceholder')}
+                  value={formData.min_amount}
+                  onChange={(e) =>
+                    updateFormField('min_amount', Number(e.target.value))
+                  }
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>{t('admin.coupons.maxDiscountLabel')}</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder={t('admin.coupons.maxDiscountHint')}
+                  value={formData.max_discount ?? ''}
+                  onChange={(e) =>
+                    updateFormField(
+                      'max_discount',
+                      e.target.value === '' ? null : Number(e.target.value),
+                    )
+                  }
+                />
+              </FormGroup>
+            </FormRow>
+
+            <ToggleRow>
+              <ToggleSwitch>
+                <ToggleInput
+                  type="checkbox"
+                  checked={formData.stackable}
+                  onChange={(e) =>
+                    updateFormField('stackable', e.target.checked)
+                  }
+                />
+                <ToggleSlider />
+              </ToggleSwitch>
+              <ToggleLabel>{t('admin.coupons.stackable')}</ToggleLabel>
+            </ToggleRow>
+
+            <ToggleRow>
+              <ToggleSwitch>
+                <ToggleInput
+                  type="checkbox"
+                  checked={formData.is_active !== false}
+                  onChange={(e) =>
+                    updateFormField('is_active', e.target.checked)
+                  }
+                />
+                <ToggleSlider />
+              </ToggleSwitch>
+              <ToggleLabel>{t('admin.coupons.enabled')}</ToggleLabel>
+            </ToggleRow>
+
+            <FormRow>
+              <FormGroup>
+                <Label>{t('admin.coupons.startTime')}</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.start_time}
+                  onChange={(e) =>
+                    updateFormField('start_time', e.target.value)
+                  }
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Label>{t('admin.coupons.endTime')}</Label>
+                <Input
+                  type="datetime-local"
+                  value={formData.end_time}
+                  onChange={(e) =>
+                    updateFormField('end_time', e.target.value)
+                  }
+                />
+              </FormGroup>
+            </FormRow>
+
+            <FormGroup>
+              <Label>{t('admin.coupons.totalQuantity')}</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                placeholder={t('admin.coupons.totalQuantityPlaceholder')}
+                value={formData.total_count}
+                onChange={(e) =>
+                  updateFormField('total_count', Number(e.target.value))
+                }
+              />
+            </FormGroup>
+
+            <ButtonGroup>
+              <SecondaryBtn onClick={() => setShowForm(false)}>
+                {t('admin.coupons.cancel')}
+              </SecondaryBtn>
+              <PrimaryBtn onClick={debouncedSave} disabled={isSaving}>
+                {isSaving ? t('common.saving') : editingId ? t('admin.coupons.save') : t('admin.coupons.create')}
+              </PrimaryBtn>
+            </ButtonGroup>
+          </FormDialog>
+        </FormOverlay>
+      )}
+
+      {/* Delete Confirmation */}
+      {deleteTarget && (
+        <ConfirmDialog
+          title={t('admin.coupons.deleteCoupon')}
+          message={t('admin.coupons.confirmDeleteCoupon').replace('{code}', deleteTarget.code)}
+          confirmLabel={t('admin.coupons.confirmDelete')}
+          danger
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+    </div>
+  );
+}

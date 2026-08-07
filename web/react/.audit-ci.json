@@ -1,0 +1,8 @@
+{
+  "high": true,
+  "report-type": "summary",
+  "registry": "https://registry.npmjs.org",
+  "allowlist": [
+    "GHSA-qwww-vcr4-c8h2"
+  ]
+}

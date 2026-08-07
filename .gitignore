@@ -1,0 +1,52 @@
+# Environment files
+.env
+.env.*
+!.env.example
+!web/react/.env.production
+secrets.json
+
+# Node
+node_modules/
+web/react/node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Build output & artifacts
+dist/
+.webpack/
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Logs
+*.log
+logs/
+
+# Media (user uploaded files)
+web/react/dist/
+backend/media/
+backend/static/
+
+# Python caches (in case backend/.gitignore misses)
+*.pyc
+__pycache__/

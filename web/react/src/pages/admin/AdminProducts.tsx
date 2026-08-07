@@ -1,0 +1,390 @@
+// TypeScript strict mode enabled
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import styled from 'styled-components'
+import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { adminAPI } from '../../api/admin'
+import { useAdminAuth } from '../../store/AdminAuthContext'
+import { useTranslation } from '../../i18n'
+import ChatLink from '../../components/admin/ChatLink'
+import ChatFloatWidget from '../../components/admin/common/ChatFloatWidget'
+
+// ── Styled Components ──
+
+const PageHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`
+
+const Title = styled.h2`
+  font-size: 1.25rem;
+  color: ${Color.text.heading};
+  font-weight: 600;
+`
+
+const Actions = styled.div`
+  display: flex;
+  gap: 8px;
+`
+
+const Button = styled.button<{ $variant?: 'primary' | 'danger' }>`
+  padding: 8px 16px;
+  border: 1px solid ${({ $variant }) => ($variant === 'danger' ? '#e74c3c' : '#ddd')};
+  background: ${({ $variant }) => ($variant === 'primary' ? '#e74c3c' : '#fff')};
+  color: ${({ $variant }) => ($variant === 'primary' ? '#fff' : '#333')};
+  border-radius: 6px;
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: ${Transition.fast};
+
+  &:hover {
+    background: ${({ $variant }) => ($variant === 'primary' ? '#c0392b' : '#f5f5f5')};
+  }
+`
+
+const FilterBar = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+`
+
+const Select = styled.select`
+  padding: 8px 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 6px;
+  font-size: 0.813rem;
+  background: ${Color.bg.card};
+  color: ${Color.primaryHover};
+`
+
+const SearchInput = styled.input`
+  padding: 8px 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 6px;
+  font-size: 0.813rem;
+  background: ${Color.bg.card};
+  color: ${Color.primaryHover};
+  min-width: 200px;
+`
+
+const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  background: ${Color.bg.card};
+  border-radius: ${Radius.md}px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+`
+
+const Th = styled.th`
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: ${Color.text.muted};
+  text-transform: uppercase;
+  border-bottom: 1px solid ${Color.border.light};
+  background: ${Color.primaryLight};
+`
+
+const Td = styled.td`
+  padding: 12px 16px;
+  font-size: 0.875rem;
+  color: ${Color.primaryHover};
+  border-bottom: 1px solid ${Color.border.light};
+`
+
+const StatusBadge = styled.span<{ $status: string }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: ${({ $status }) => {
+    switch ($status) {
+      case 'on_sale': return '#e8f5e9'
+      case 'draft': return '#f5f5f5'
+      case 'submitted': return '#fff3e0'
+      case 'approved': return '#e3f2fd'
+      case 'rejected': return '#ffebee'
+      case 'suspended': return '#fce4ec'
+      case 'off_sale': return '#f5f5f5'
+      default: return '#f5f5f5'
+    }
+  }};
+  color: ${({ $status }) => {
+    switch ($status) {
+      case 'on_sale': return '#2e7d32'
+      case 'draft': return '#999'
+      case 'submitted': return '#e65100'
+      case 'approved': return '#1565c0'
+      case 'rejected': return '#c62828'
+      case 'suspended': return '#c2185b'
+      case 'off_sale': return '#999'
+      default: return '#999'
+    }
+  }};
+`
+
+const ActionBtn = styled.button<{ $danger?: boolean }>`
+  padding: 4px 10px;
+  border: 1px solid ${({ $danger }) => ($danger ? '#e74c3c' : '#ddd')};
+  background: ${Color.bg.card};
+  color: ${({ $danger }) => ($danger ? '#e74c3c' : '#333')};
+  border-radius: ${Radius.sm}px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  margin-right: 4px;
+  transition: ${Transition.fast};
+
+  &:hover {
+    background: ${({ $danger }) => ($danger ? '#e74c3c' : '#f5f5f5')};
+    color: ${({ $danger }) => ($danger ? '#fff' : '#333')};
+  }
+`
+
+const Pagination = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+`
+
+const PageBtn = styled.button<{ $active?: boolean }>`
+  padding: 6px 12px;
+  border: 1px solid ${({ $active }) => ($active ? '#e74c3c' : '#ddd')};
+  background: ${({ $active }) => ($active ? '#e74c3c' : '#fff')};
+  color: ${({ $active }) => ($active ? '#fff' : '#333')};
+  border-radius: ${Radius.sm}px;
+  font-size: 0.813rem;
+  cursor: pointer;
+`
+
+const Checkbox = styled.input.attrs({ type: 'checkbox' })`
+  margin: 0;
+`
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 48px;
+  color: ${Color.text.muted};
+  font-size: 0.875rem;
+`
+
+const LoadingState = styled.div`
+  text-align: center;
+  padding: 48px;
+  color: ${Color.text.muted};
+  font-size: 0.875rem;
+`
+
+// ── Component ──
+
+interface SPUItem {
+  id: number
+  name: string
+  brand_name: string
+  status: string
+  status_display: string
+  price_range: { min: string; max: string } | null
+  category_path: string
+  sku_count: number
+  created_at: string
+}
+
+export default function AdminProducts() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const { adminUser, isSuperAdmin, isGroupLeader, isGroupMember } = useAdminAuth()
+  const canSubmit = isSuperAdmin || isGroupLeader || isGroupMember
+  const canAudit = isSuperAdmin || isGroupLeader
+  const [items, setItems] = useState<SPUItem[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState('')
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<number[]>([])
+  const [loading, setLoading] = useState(true)
+  const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
+  const [error, setError] = useState('')
+
+  const doShelfAction = async (id: number, action: string) => {
+    setShelfingIds(prev => new Set(prev).add(id))
+    try { await adminAPI.shelfSPU(id, { action }) } catch {}
+    await fetchProducts()
+    setShelfingIds(prev => { const next = new Set(prev); next.delete(id); return next })
+  }
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const params: Record<string, unknown> = { page, page_size: 20 }
+      if (status) params.status = status
+      if (search) params.q = search
+      const response = await adminAPI.getSPUs(params)
+      setItems(response.items || [])
+      setTotal(response.total || 0)
+    } catch {
+      setError(t('admin.products.loadFailed'))
+    }
+    setLoading(false)
+  }, [page, status, search, t])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
+
+  const toggleSelect = (id: number) => {
+    setSelected((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])
+  }
+
+  const toggleAll = () => {
+    if (selected.length === items.length) {
+      setSelected([])
+    } else {
+      setSelected(items.map((i) => i.id))
+    }
+  }
+
+  const handleBatchAction = async (action: string) => {
+    if (!selected.length) return
+    try {
+      await adminAPI.batchSPU({ spu_ids: selected, action })
+      setSelected([])
+      fetchProducts()
+    } catch {
+      setError(t('admin.products.batchFailed'))
+    }
+  }
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm(t('admin.products.confirmDeleteProduct'))) return
+    try {
+      await adminAPI.deleteSPU(id)
+      fetchProducts()
+    } catch {
+      setError(t('admin.products.deleteFailed'))
+    }
+  }
+
+  const totalPages = Math.ceil(total / 20)
+
+  return (
+    <div>
+      <PageHeader>
+        <Title>{t('admin.products.title')} ({total})</Title>
+        <Actions>
+          <Button onClick={() => navigate('/admin/products/create')}>{t('admin.products.createProduct')}</Button>
+          <Button onClick={() => navigate('/admin/chat')}>{t('admin.layout.menu.chat')}</Button>
+        </Actions>
+      </PageHeader>
+
+      <FilterBar>
+        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
+          <option value="">{t('admin.products.filterAllStatus')}</option>
+          <option value="draft">{t('admin.products.statusDraft')}</option>
+          <option value="submitted">{t('admin.products.statusSubmitted')}</option>
+          <option value="approved">{t('admin.products.statusApproved')}</option>
+          <option value="rejected">{t('admin.products.statusRejected')}</option>
+          <option value="on_sale">{t('admin.products.statusOnSale')}</option>
+          <option value="suspended">{t('admin.products.statusSuspended')}</option>
+          <option value="off_sale">{t('admin.products.statusOffSale')}</option>
+        </Select>
+        <SearchInput
+          placeholder={t('admin.products.searchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && fetchProducts()}
+        />
+
+        {selected.length > 0 && (
+          <Actions>
+            <Button onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')}</Button>
+            <Button onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</Button>
+            <Button onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</Button>
+          </Actions>
+        )}
+      </FilterBar>
+
+      {error && <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: '0.875rem' }}>{error}</div>}
+
+      {loading ? (
+        <LoadingState>{t('common.loading')}</LoadingState>
+      ) : items.length === 0 ? (
+        <EmptyState>{t('admin.products.emptyState')}<Button onClick={() => navigate('/admin/products/create')}>{t('admin.products.createOne')}</Button></EmptyState>
+      ) : (
+        <>
+          <Table>
+            <thead>
+              <tr>
+                <Th style={{ width: 40 }}><Checkbox checked={selected.length === items.length && items.length > 0} onChange={toggleAll} /></Th>
+                <Th>{t('admin.products.columnProduct')}</Th>
+                <Th>{t('admin.products.columnPrice')}</Th>
+                <Th>{t('admin.products.columnStatus')}</Th>
+                <Th>{t('admin.products.columnCategory')}</Th>
+                <Th>{t('admin.products.columnActions')}</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id}>
+                  <Td><Checkbox checked={selected.includes(item.id)} onChange={() => toggleSelect(item.id)} /></Td>
+                  <Td>
+                    <div style={{ fontWeight: 500 }}>{item.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{item.brand_name} · {item.sku_count} SKUs</div>
+                  </Td>
+                  <Td>{item.price_range ? `$${item.price_range.min} - $${item.price_range.max}` : '-'}</Td>
+                  <Td><StatusBadge $status={item.status}>{item.status_display}</StatusBadge></Td>
+                  <Td style={{ fontSize: '0.75rem', color: '#999' }}>{item.category_path}</Td>
+                  <Td>
+                    <ActionBtn onClick={() => navigate(`/admin/products/${item.id}`)}>{t('common.edit')}</ActionBtn>
+                    {item.status === 'draft' && canSubmit && (
+                      <ActionBtn onClick={async () => { await adminAPI.submitAudit(item.id); fetchProducts() }}>{t('admin.products.submitReview')}</ActionBtn>
+                    )}
+                    {item.status === 'submitted' && canAudit && (
+                      <ActionBtn onClick={() => navigate(`/admin/products/${item.id}/audit`)}>{t('admin.products.review')}</ActionBtn>
+                    )}
+                    {item.status === 'on_sale' && (
+                      <>
+                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
+                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
+                      </>
+                    )}
+                    {item.status === 'suspended' && (
+                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
+                    )}
+                    {item.status === 'approved' && (
+                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+                    )}
+                    {isSuperAdmin && (
+                      <ActionBtn $danger onClick={() => handleDelete(item.id)}>{t('common.delete')}</ActionBtn>
+                    )}
+                    <ChatLink
+                      onClick={() => navigate(`/admin/chat?product_id=${item.id}`)}
+                    />
+                  </Td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PageBtn disabled={page <= 1} onClick={() => setPage(page - 1)}>{t('common.previous')}</PageBtn>
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = i + 1
+                return <PageBtn key={pageNum} $active={pageNum === page} onClick={() => setPage(pageNum)}>{pageNum}</PageBtn>
+              })}
+              <PageBtn disabled={page >= totalPages} onClick={() => setPage(page + 1)}>{t('common.next')}</PageBtn>
+            </Pagination>
+          )}
+        </>
+      )}
+      <ChatFloatWidget />
+    </div>
+  )
+}

@@ -1,0 +1,51 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "ziggner-backend",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "containers": [
+    {
+      "max_instances": 3,
+      "class_name": "DjangoContainer",
+      "image": "./Dockerfile.cf"
+    }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "DJANGO_CONTAINER",
+        "class_name": "DjangoContainer"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["DjangoContainer"]
+    }
+  ],
+
+  "vars": {
+    "DJANGO_ENV": "prod",
+    "ALLOWED_HOSTS": "ziggner-backend.workers.dev,ziggner.com,admin.ziggner.com,ziggner-frontend.pages.dev,localhost",
+    "CORS_ORIGINS": "https://ziggner.com,https://admin.ziggner.com,https://ziggner-frontend.pages.dev",
+    "FILE_STORAGE": "local",
+    "MEDIA_PATH": "media",
+    "GUNICORN_WORKERS": "1",
+    "GUNICORN_THREADS": "4",
+    "GUNICORN_TIMEOUT": "60",
+    "GUNICORN_LOG_LEVEL": "warning",
+    "CELERY_CONCURRENCY": "1",
+    "CELERY_MAX_TASKS_PER_CHILD": "40",
+    "CELERY_MAX_MEMORY_PER_CHILD": "120000"
+  },
+
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

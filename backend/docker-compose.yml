@@ -1,0 +1,128 @@
+services:
+  db:
+    build:
+      context: ./mysql
+      dockerfile: Dockerfile
+    image: ziggner-mysql:dev
+    restart: unless-stopped
+    env_file: [../.env]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-backend}
+      MYSQL_USER: ${DB_USER:-admin}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-admin123456}
+    expose: ["3306"]
+    volumes:
+      - mysql_data:/var/lib/mysql
+    mem_limit: 320m
+    memswap_limit: 320m
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: docker.m.daocloud.io/library/redis:7.4.2-alpine
+    restart: unless-stopped
+    command: >-
+      redis-server --port 6379 --maxmemory 96mb
+      --maxmemory-policy allkeys-lru --save "" --appendonly no
+    expose: ["6379"]
+    mem_limit: 96m
+    memswap_limit: 96m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  web:
+    hostname: web
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SERVICE_TYPE: django
+      DJANGO_ENV: dev
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-backend}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin123456}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+      STATIC_ROOT: /backend/static
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@ziggner.com}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-change-me-in-prod-123}
+    env_file: [../.env]
+    ports: ["8000:8000"]
+    volumes:
+      - .:/backend
+      - media_data:/backend/media
+      - static_data:/backend/static
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 448m
+    memswap_limit: 448m
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["celery_worker"]
+    environment:
+      DJANGO_ENV: dev
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ${DB_NAME:-backend}
+      DB_USER: ${DB_USER:-admin}
+      DB_PASSWORD: ${DB_PASSWORD:-admin123456}
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+      CELERY_CONCURRENCY: "1"
+      CELERY_BEAT_ENABLED: "true"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
+    volumes:
+      - .:/backend
+      - media_data:/backend/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 224m
+    memswap_limit: 224m
+
+  frontend:
+    hostname: frontend
+    build:
+      context: ../web/react
+      dockerfile: Dockerfile.dev
+    environment:
+      # 容器内通过 compose 服务名访问后端，不能用 localhost（那是 frontend 自己）
+      VITE_PROXY_TARGET: http://web:8000
+      # Windows/mac 共享文件系统下保证 HMR 文件监听生效
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "12700:12700"
+    volumes:
+      - ../web/react:/app
+      - /app/node_modules   # 匿名卷：保留镜像内装好的依赖，不被源码挂载覆盖
+    depends_on:
+      - web
+    mem_limit: 640m
+    memswap_limit: 640m
+
+volumes:
+  mysql_data:
+  media_data:
+  static_data:

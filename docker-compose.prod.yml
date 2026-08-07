@@ -1,0 +1,278 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+    compress: "true"
+
+x-healthcheck: &healthcheck
+  interval: 20s
+  timeout: 5s
+  retries: 3
+  start_period: 30s
+
+x-app-security: &app-security
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  nginx:
+    build:
+      context: ./web/react
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+        GIT_COMMIT: ${GIT_COMMIT:?GIT_COMMIT is required}
+        VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:?VITE_TURNSTILE_SITE_KEY is required}
+    image: ziggner-nginx:${APP_VERSION:?APP_VERSION is required}
+    restart: unless-stopped
+    logging: *default-logging
+    ports:
+      - "80:80"
+      - "443:443"
+    secrets:
+      - tls_cert
+      - tls_key
+    volumes:
+      - static_data:/var/www/static:ro
+      - media_data:/var/www/media:ro
+    tmpfs:
+      - /tmp:size=4m,mode=1777
+      - /var/cache/nginx:size=16m,uid=101,gid=101
+      - /var/log/nginx:size=8m,uid=101,gid=101
+    depends_on:
+      django-app:
+        condition: service_healthy
+    networks: [edge, internal]
+    mem_limit: 64m
+    mem_reservation: 32m
+    memswap_limit: 64m
+    cpus: "0.15"
+    pids_limit: 32
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  django-app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+      args:
+        APP_VERSION: ${APP_VERSION:?APP_VERSION is required}
+        GIT_COMMIT: ${GIT_COMMIT:?GIT_COMMIT is required}
+    image: ziggner-django:${APP_VERSION:?APP_VERSION is required}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SERVICE_TYPE: django
+      DJANGO_ENV: prod
+      DAPHNE_PORT: "8001"
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
+      R2_BUCKET: ${R2_BUCKET:-}
+      R2_BUCKET_NAME: ${R2_BUCKET_NAME:-}
+      R2_ENDPOINT: ${R2_ENDPOINT:-}
+      R2_PREFIX: ${R2_PREFIX:-}
+      AWS_REGION: ${AWS_REGION:-auto}
+      STATIC_ROOT: /app/static
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+      GUNICORN_WORKERS: "1"
+      GUNICORN_THREADS: "4"
+      GUNICORN_WORKER_CLASS: gthread
+      GUNICORN_MAX_REQUESTS: "800"
+      GUNICORN_MAX_REQUESTS_JITTER: "80"
+      GUNICORN_TIMEOUT: "45"
+      GUNICORN_GRACEFUL_TIMEOUT: "20"
+      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?TURNSTILE_SECRET_KEY is required}
+    env_file: [.env.production]
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/static
+      - django_logs:/app/logs
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [internal, egress]
+    mem_limit: 544m
+    mem_reservation: 384m
+    memswap_limit: 544m
+    cpus: "0.65"
+    pids_limit: 96
+    <<: *app-security
+    ulimits:
+      nofile:
+        soft: 8192
+        hard: 8192
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health/ >/dev/null && curl -fsS http://127.0.0.1:8001/health/ >/dev/null"]
+      <<: *healthcheck
+      start_period: 45s
+
+  celery-worker:
+    image: ziggner-django:${APP_VERSION:?APP_VERSION is required}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SERVICE_TYPE: celery_worker
+      DJANGO_ENV: prod
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+      CELERY_CONCURRENCY: "1"
+      CELERY_QUEUE: default,image_process,batch_import,ranking
+      CELERY_MAX_TASKS_PER_CHILD: "40"
+      CELERY_MAX_MEMORY_PER_CHILD: "160000"
+      CELERY_TASK_SOFT_TIME_LIMIT: "240"
+      CELERY_TASK_TIME_LIMIT: "300"
+    env_file: [.env.production]
+    volumes:
+      - media_data:/app/media
+      - celery_logs:/app/logs
+      - backup_data:/backups
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [internal, egress]
+    mem_limit: 256m
+    mem_reservation: 160m
+    memswap_limit: 256m
+    cpus: "0.25"
+    pids_limit: 48
+    <<: *app-security
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f '[c]elery.*worker' >/dev/null"]
+      <<: *healthcheck
+
+  celery-beat:
+    image: ziggner-django:${APP_VERSION:?APP_VERSION is required}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      SERVICE_TYPE: celery_beat
+      DJANGO_ENV: prod
+      REDIS_URL: redis://redis:6379/0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+    env_file: [.env.production]
+    volumes:
+      - beat_logs:/app/logs
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks: [internal]
+    mem_limit: 192m
+    mem_reservation: 128m
+    memswap_limit: 192m
+    cpus: "0.10"
+    pids_limit: 32
+    <<: *app-security
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f '[c]elery.*beat' >/dev/null"]
+      <<: *healthcheck
+
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    logging: *default-logging
+    command: >-
+      redis-server --port 6379 --maxmemory 96mb
+      --maxmemory-policy allkeys-lru --save "" --appendonly no
+      --tcp-backlog 128 --timeout 60
+    expose: ["6379"]
+    tmpfs:
+      - /data:size=8m,uid=999,gid=999
+    networks: [internal]
+    mem_limit: 96m
+    mem_reservation: 64m
+    memswap_limit: 96m
+    cpus: "0.15"
+    pids_limit: 24
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  db:
+    build:
+      context: ./backend/mysql
+      dockerfile: Dockerfile
+    image: ziggner-mysql:${APP_VERSION:?APP_VERSION is required}
+    restart: unless-stopped
+    logging: *default-logging
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD is required}
+      MYSQL_DATABASE: ${DB_NAME:-ziggner}
+      MYSQL_USER: ${DB_USER:-ziggner}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    expose: ["3306"]
+    networks: [internal]
+    mem_limit: 640m
+    mem_reservation: 384m
+    memswap_limit: 640m
+    cpus: "0.50"
+    pids_limit: 96
+    security_opt:
+      - no-new-privileges:true
+    command:
+      - --innodb-buffer-pool-size=384M
+      - --max-connections=40
+      - --performance-schema=OFF
+      - --local-infile=OFF
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  mysql_data:
+  media_data:
+  static_data:
+  django_logs:
+  celery_logs:
+  beat_logs:
+  backup_data:
+
+secrets:
+  tls_cert:
+    file: ${TLS_CERT_PATH:?TLS_CERT_PATH is required}
+  tls_key:
+    file: ${TLS_KEY_PATH:?TLS_KEY_PATH is required}
+
+networks:
+  edge:
+  egress: {}
+  internal:
+    internal: true

@@ -1,0 +1,51 @@
+from .base import *  # 继承 base.py
+
+print("Loaded development settings!")  # 调试信息
+
+DEBUG = True
+
+DOMAIN = os.getenv('DOMAIN', 'http://127.0.0.1:8000')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+
+print(f"BASE_DIR: {BASE_DIR}")
+print(os.getenv('ALLOWED_HOSTS', '').split(","))
+
+# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
+ALLOWED_HOSTS = ['0.0.0.0', '127.0.0.1', '172.20.10.2', 'localhost']
+
+
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+# STATICFILES_DIRS = [
+#      os.path.join(BASE_DIR, "static_new"),
+#  ]
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timezone.timedelta(days=9999),  # 访问令牌有效期1小时
+    'REFRESH_TOKEN_LIFETIME': timezone.timedelta(days=9999),  # 刷新令牌有效期7天
+    'ROTATE_REFRESH_TOKENS': True,  # 刷新令牌时自动更新刷新令牌
+    'BLACKLIST_AFTER_ROTATION': True,  # 刷新后将旧的刷新令牌加入黑名单
+    'UPDATE_LAST_LOGIN': True,  # 更新用户最后登录时间
+    'ALGORITHM': 'HS256',  # 使用的加密算法
+    'SIGNING_KEY': SECRET_KEY,  # 签名密钥，使用Django的SECRET_KEY
+    'VERIFYING_KEY': None,  # 验证密钥，使用对称加密时为None
+    'AUTH_HEADER_TYPES': ('Bearer',),  # 认证头类型
+    'AUTH_HEADER_NAME': 'Authorization',  # 认证头名称
+    'USER_ID_FIELD': 'id',  # 用户模型中用作用户ID的字段
+    'USER_ID_CLAIM': 'user_id',  # token中用户ID的声明名称
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'JTI_CLAIM': 'jti',  # JWT ID声明，用于防止重放攻击
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timezone.timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timezone.timedelta(days=1),
+}
+
+# 文件存储配置
+FILE_STORAGE = os.getenv('FILE_STORAGE', 'local')  # 可选 'local' 或 'tencent'
+MEDIA_PATH = os.getenv('MEDIA_PATH', 'media')
+MEDIA_URL = os.path.join('/', MEDIA_PATH, '/')
+MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_PATH)
+FILE_STORAGE_MAX_SIZE = os.getenv('FILE_STORAGE_MAX_SIZE', 5)  # 5MB
+FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', "image/jpeg,image/png").split(',')
