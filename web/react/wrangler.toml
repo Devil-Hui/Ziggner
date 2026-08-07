@@ -1,10 +1,6 @@
 # Ziggner — Cloudflare Workers + Static Assets
 name = "ziggner"
 compatibility_date = "2026-08-01"
-main = "functions/_middleware.js"
 
 [assets]
 directory = "./dist/"
-
-[env.production]
-# VITE_APP_VERSION injected by build environment
