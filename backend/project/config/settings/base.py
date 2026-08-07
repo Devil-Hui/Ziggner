@@ -380,6 +380,7 @@ ADMIN_DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Ziggner <deavenhui@1
 USER_EMAIL_HOST = os.getenv('USER_EMAIL_HOST', 'smtp.163.com')
 USER_EMAIL_PORT = int(os.getenv('USER_EMAIL_PORT', '465'))
 USER_EMAIL_USE_SSL = os.getenv('USER_EMAIL_USE_SSL', 'True').lower() == 'true'
+USER_EMAIL_USE_TLS = os.getenv('USER_EMAIL_USE_TLS', 'False').lower() == 'true'
 USER_EMAIL_HOST_USER = os.getenv('USER_EMAIL_HOST_USER', '')
 USER_EMAIL_HOST_PASSWORD = os.getenv('USER_EMAIL_HOST_PASSWORD', '')
 USER_DEFAULT_FROM_EMAIL = os.getenv('USER_DEFAULT_FROM_EMAIL', 'Ziggner <noreply@ziggner.com>')
