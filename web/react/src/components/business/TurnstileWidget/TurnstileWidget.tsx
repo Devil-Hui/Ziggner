@@ -81,6 +81,14 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
   const widgetIdRef = useRef<string>('')
   const scriptLoadedRef = useRef<boolean>(false)
 
+  // 用 ref 保存最新回调，避免父组件重渲染导致 useEffect 反复触发（死循环）
+  const onVerifyRef = useRef(onVerify)
+  const onErrorRef = useRef(onError)
+  const onExpireRef = useRef(onExpire)
+  onVerifyRef.current = onVerify
+  onErrorRef.current = onError
+  onExpireRef.current = onExpire
+
   // 动态加载 Turnstile 脚本（全局单例）
   const loadTurnstileScript = useCallback((): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -152,13 +160,13 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         sitekey: siteKey,
         action: 'turnstile-spin-v2',
         callback: (token: string) => {
-          onVerify(token)
+          onVerifyRef.current(token)
         },
         'error-callback': (error: Error) => {
-          onError?.(error)
+          onErrorRef.current?.(error)
         },
         'expired-callback': () => {
-          onExpire?.()
+          onExpireRef.current?.()
         },
         theme,
         size,
@@ -166,9 +174,9 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     } catch (err) {
       console.error('Turnstile render error:', err)
     }
-  }, [siteKey, onVerify, onError, onExpire, theme, size])
+  }, [siteKey, theme, size])
 
-  // 初始化和销毁
+  // 初始化和销毁（只依赖稳定值，父组件重渲染不会重新初始化）
   useEffect(() => {
     let cancelled = false
 
@@ -181,10 +189,10 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
       } catch (error) {
         if (cancelled) return
         if (siteKey === TURNSTILE_ALWAYS_PASS_TEST_SITE_KEY) {
-          onVerify(TURNSTILE_DUMMY_TEST_TOKEN)
+          onVerifyRef.current(TURNSTILE_DUMMY_TEST_TOKEN)
           return
         }
-        onError?.(error instanceof Error ? error : new Error('Turnstile verification failed.'))
+        onErrorRef.current?.(error instanceof Error ? error : new Error('Turnstile verification failed.'))
       }
     }
 
@@ -202,7 +210,7 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         widgetIdRef.current = ''
       }
     }
-  }, [loadTurnstileScript, onError, onVerify, renderWidget, siteKey])
+  }, [loadTurnstileScript, renderWidget, siteKey])
 
   return <WidgetContainer ref={containerRef} data-testid="turnstile-widget" />
 }
