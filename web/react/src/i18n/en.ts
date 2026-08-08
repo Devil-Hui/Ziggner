@@ -57,6 +57,15 @@ const en = {
       invalidCredentials: 'Invalid username or password, or no admin access',
       captcha: 'Captcha',
       captcha_placeholder: 'Enter captcha',
+      signingIn: 'Signing in...',
+      adminEmail: 'Admin Email',
+      verifyCode: 'Email Verification Code',
+      sendCode: 'Send Code',
+      sendingCode: 'Sending...',
+      codeSent: 'Verification code sent to your email',
+      sendFailed: 'Failed to send, please try again',
+      codeHint: 'Enter the admin email to receive the login code',
+      turnstileRequired: 'Please complete the security verification',
     },
 
     layout: {

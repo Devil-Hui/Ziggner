@@ -208,7 +208,7 @@ export default function AdminLogin() {
       const data = await response.json()
       if (response.ok) {
         setVerifyId(data.verify_id)
-        setSuccess('验证码已发送到您的邮箱')
+        setSuccess(t('admin.login.codeSent'))
         setCountdown(CONFIG.VERIFY_CODE_COUNTDOWN_SECONDS)
         const timer = setInterval(() => {
           setCountdown((prev) => {
@@ -220,10 +220,10 @@ export default function AdminLogin() {
           })
         }, 1000)
       } else {
-        setError(data.detail || '发送失败')
+        setError(data.detail || t('admin.login.sendFailed'))
       }
     } catch {
-      setError('发送失败，请稍后重试')
+      setError(t('admin.login.sendFailed'))
     } finally {
       setSendingCode(false)
     }
@@ -237,7 +237,7 @@ export default function AdminLogin() {
     e.preventDefault()
     if (!email || !verifyCode) return
     if (!turnstileToken) {
-      setError('请完成安全验证')
+      setError(t('admin.login.turnstileRequired'))
       return
     }
     setError('')
@@ -270,14 +270,14 @@ export default function AdminLogin() {
           />
           <Input
             type="email"
-            placeholder="管理员邮箱"
+            placeholder={t('admin.login.adminEmail')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
           <CodeRow>
             <CodeInput
               type="text"
-              placeholder="邮箱验证码"
+              placeholder={t('admin.login.verifyCode')}
               value={verifyCode}
               onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, ''))}
               maxLength={CONFIG.VERIFY_CODE_LENGTH}
@@ -288,10 +288,10 @@ export default function AdminLogin() {
               onClick={sendVerifyCode}
               disabled={!email || sendingCode || countdown > 0}
             >
-              {sendingCode ? '发送中...' : countdown > 0 ? `${countdown}s` : '发送验证码'}
+              {sendingCode ? t('admin.login.sendingCode') : countdown > 0 ? `${countdown}s` : t('admin.login.sendCode')}
             </SendCodeBtn>
           </CodeRow>
-          <Hint>请输入管理员邮箱以接收登录验证码</Hint>
+          <Hint>{t('admin.login.codeHint')}</Hint>
           <Input
             type="password"
             placeholder={t('admin.login.password')}
