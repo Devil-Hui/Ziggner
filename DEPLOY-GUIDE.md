@@ -39,10 +39,11 @@ git add -A && git commit -m "update" && git push origin master
 | 变量 | 值 |
 |------|-----|
 | `NODE_VERSION` | `22` |
-| `VITE_API_URL` | `http://64.176.219.125:8000/api/v1` |
-| `VITE_WS_URL` | `ws://64.176.219.125:8000` |
+| `VITE_API_URL` | 当前隧道地址：`https://agency-extras-phil-glasgow.trycloudflare.com/api/v1` |
+| `VITE_WS_URL` | `wss://agency-extras-phil-glasgow.trycloudflare.com` |
 
-> ⚠️ HTTPS 混合内容：如果浏览器报错，装 cloudflared 隧道，把 8000 套上 HTTPS，再换成 `https://xxx.trycloudflare.com/api/v1`
+> ⚠️ 隧道地址是临时的（重启电脑会变）。每次重启后运行 `cloudflared tunnel --url https://127.0.0.1:443 --no-tls-verify` 拿到新地址，更新上面两个变量并重新部署。
+> ⚠️ 以后有正式域名/公网 IP 时，换成 `https://api.ziggner.com/api/v1` 这类稳定地址。
 
 ---
 
@@ -66,9 +67,10 @@ cd D:\下载\浏览器下载\change\Ziggner\Ziggner
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 ```
 > ⚠️ 关键：必须加 `--env-file .env.production`，否则 compose 读不到配置会报错。
+> 容器操作：`docker compose -f docker-compose.prod.yml --env-file .env.production exec django-app bash`（服务名是 `django-app`，不是 `web`）
 
 ### 3.3 开放端口
-路由器/云服务器安全组放行 **8000**（或 80/443）。
+路由器/云服务器安全组放行 **443**（nginx 入口）。
 
 ---
 
@@ -84,7 +86,19 @@ docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 
 ---
 
-## 五、常见问题
+## 五、邮件模板管理（管理后台）
+
+**入口**：商城管理后台 `/admin/email-templates`（侧边栏「系统 · 安全」→「邮件模板」）
+
+**功能**：
+- 编辑验证码邮件的**主题**和 **HTML 正文**（支持 `{code}` 占位符）
+- 启停模板、恢复默认
+
+> 修改后保存即生效，下次发邮件用新模板。数据库存储，不依赖代码。
+
+---
+
+## 六、常见问题
 
 | 症状 | 原因 | 解决 |
 |------|------|------|
