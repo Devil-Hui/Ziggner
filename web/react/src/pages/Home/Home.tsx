@@ -168,22 +168,7 @@ const Hero = styled.section`
 const HeroBg = styled.div<{ $offset: number }>`
   position: absolute;
   inset: 0;
-  transform: translateY(${p => p.$offset * 0.22}px) scale(1.08);
-  background: linear-gradient(135deg, ${C.forest} 0%, ${C.clay} 100%);
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: url('/images/product-agent-cloud.jpg') center/cover no-repeat;
-    opacity: 0.85;
-  }
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, ${C.cream}cc 0%, ${C.cream}66 45%, transparent 80%),
-                linear-gradient(0deg, ${C.cream}cc 0%, transparent 50%);
-  }
+  background: ${C.cream};
 `
 
 const HeroInner = styled.div`
@@ -254,11 +239,11 @@ const ScrollHint = styled.div`
  *  MARQUEE — brand promises ticker
  * ─────────────────────────────────────────────────────────── */
 const MarqueeBar = styled.div`
-  background: ${C.ink};
-  color: ${C.cream};
+  background: ${C.card};
+  color: ${C.muted};
   overflow: hidden;
-  border-top: 1px solid ${C.ink};
-  border-bottom: 1px solid ${C.ink};
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
   padding: 1rem 0;
 `
 
@@ -401,10 +386,11 @@ const Placeholder = styled.div`
 const ForestPanel = styled.div`
   display: grid;
   grid-template-columns: 1fr;
-  border-radius: 2rem;
+  border-radius: 1rem;
   overflow: hidden;
-  background: ${C.forest};
-  color: ${C.cream};
+  background: ${C.card};
+  color: ${C.ink};
+  border: 1px solid #e5e7eb;
   @media (min-width: 768px) { grid-template-columns: 1fr 1fr; }
 `
 
@@ -415,22 +401,21 @@ const ForestText = styled.div`
 
 const ForestImg = styled.div`
   position: relative;
-  min-height: 18rem;
-  background: url('/images/product-agent-video.jpg') center/cover no-repeat;
+  min-height: 12rem;
 `
 
 const ForestBtn = styled.button`
   margin-top: 2rem;
   font-family: ui-sans-serif, system-ui, sans-serif;
-  background: none;
-  border: 1px solid ${C.cream}55;
+  background: ${C.ink};
+  border: none;
   color: ${C.cream};
   border-radius: 9999px;
   padding: 0.9rem 1.8rem;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.3s ease, color 0.3s ease;
-  &:hover { background: ${C.cream}; color: ${C.ink}; }
+  transition: opacity 0.2s ease;
+  &:hover { opacity: 0.85; }
 `
 
 /* ───────────────────────────────────────────────────────────
@@ -490,26 +475,27 @@ const CatGrid = styled.div`
 
 const CatCard = styled.div`
   position: relative;
-  border-radius: 1.25rem;
+  border-radius: 1rem;
   overflow: hidden;
   cursor: pointer;
   aspect-ratio: 4 / 3;
-  background: ${C.forest};
-  box-shadow: 0 2px 10px rgba(26, 23, 18, 0.08);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  &:hover { transform: translateY(-6px); }
-  img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1); }
-  &:hover img { transform: scale(1.06); }
+  background: ${C.card};
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+  &:hover { transform: translateY(-4px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+  &:hover img { transform: scale(1.04); }
 `
 
 const CatName = styled.div`
   position: absolute;
   left: 0; right: 0; bottom: 0;
-  padding: 1.5rem;
-  background: linear-gradient(0deg, ${C.ink}cc 0%, transparent 100%);
+  padding: 1.25rem;
+  background: ${C.ink};
   color: ${C.cream};
   font-family: ${SERIF};
-  font-size: 1.3rem;
+  font-size: 1.15rem;
+  text-align: center;
 `
 
 /* ───────────────────────────────────────────────────────────

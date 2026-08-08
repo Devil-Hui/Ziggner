@@ -29,6 +29,29 @@ const ArrowRight = () => (
   </svg>
 )
 
+const GlobeIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="2" y1="12" x2="22" y2="12"/>
+    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+  </svg>
+)
+
+const UserIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+)
+
+const ShopIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+    <line x1="3" y1="6" x2="21" y2="6"/>
+    <path d="M16 10a4 4 0 0 1-8 0"/>
+  </svg>
+)
+
 const Header = styled.header`
   background-color: ${Color.bg.header};
   border-bottom: 1px solid ${Color.border.light};
@@ -45,10 +68,14 @@ const TopBar = styled.div`
 `
 
 const Logo = styled.div`
-  font-size: 1.75rem;
-  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1.35rem;
+  font-weight: 700;
   color: ${Color.primaryHover};
   cursor: pointer;
+  letter-spacing: -0.5px;
 `
 
 const SearchBar = styled.form`
@@ -670,7 +697,7 @@ export default function Navigation() {
   return (
     <Header>
       <TopBar>
-        <Logo onClick={handleLogoClick}>{t('store.nav.logo')}</Logo>
+        <Logo onClick={handleLogoClick}><ShopIcon /> {t('store.nav.logo')}</Logo>
 
         <SearchBar role="search" onSubmit={handleSearchSubmit}>
           <input
@@ -690,7 +717,7 @@ export default function Navigation() {
               e.stopPropagation()
               setShowLangMenu(!showLangMenu)
             }}>
-              {t('store.nav.currentLang')} <ArrowDown />
+              <GlobeIcon />
             </DropButton>
             <LangMenu $show={showLangMenu}>
               <DropdownItem onClick={() => { setLang('en-US'); setShowLangMenu(false) }}>{t('store.nav.langEN')}</DropdownItem>
@@ -739,7 +766,7 @@ export default function Navigation() {
               </UserMenu>
             </Dropdown>
           ) : (
-            <DropButton onClick={handleLoginClick}>{t('store.nav.login')}</DropButton>
+            <DropButton onClick={handleLoginClick}><UserIcon /></DropButton>
           )}
         </NavActions>
       </TopBar>
