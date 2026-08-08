@@ -112,12 +112,12 @@ const MainImage = styled.img`
   object-fit: cover;
   border: 1px solid ${Color.border.light};
   border-radius: 2px;
-  background: ${Color.primaryLight};
+  background: rgba(26, 23, 18, 0.03);
 `;
 
 const Description = styled.p`
   font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
+  color: #8a8175;
   line-height: 1.6;
   white-space: pre-wrap;
 `;
@@ -131,10 +131,10 @@ const SkuTable = styled.table`
 const SkuTh = styled.th`
   padding: 8px 12px;
   text-align: left;
-  background: ${Color.primaryLight};
+  background: rgba(26, 23, 18, 0.03);
   border-bottom: 1px solid ${Color.border.light};
   font-weight: 500;
-  color: ${Color.text.secondary};
+  color: #8a8175;
   font-size: ${FontSize.xs}px;
 `;
 
@@ -155,7 +155,7 @@ const TagItem = styled.span`
   background: ${Color.border.light};
   border-radius: 2px;
   font-size: ${FontSize.xs}px;
-  color: ${Color.text.secondary};
+  color: #8a8175;
 `;
 
 const AuditSection = styled.div`
@@ -243,7 +243,7 @@ const RelatedChatLabel = styled.button`
   padding: 4px 12px;
   border: 1px solid ${Color.border.medium};
   background: ${Color.bg.card};
-  color: ${Color.text.secondary};
+  color: #8a8175;
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.xs}px;
   cursor: pointer;
@@ -307,7 +307,7 @@ const ChatPopupItem = styled.div`
   transition: background 0.15s;
 
   &:hover {
-    background: ${Color.primaryLight};
+    background: rgba(26, 23, 18, 0.03);
   }
 
   &:last-child {
