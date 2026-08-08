@@ -44,14 +44,6 @@ const UserIcon = () => (
   </svg>
 )
 
-const ShopIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-    <line x1="3" y1="6" x2="21" y2="6"/>
-    <path d="M16 10a4 4 0 0 1-8 0"/>
-  </svg>
-)
-
 const Header = styled.header`
   background-color: ${Color.bg.header};
   border-bottom: 1px solid ${Color.border.light};
@@ -67,15 +59,9 @@ const TopBar = styled.div`
   border-radius: 0 0 ${Radius.md}px ${Radius.md}px;
 `
 
-const Logo = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: ${Color.primaryHover};
+const Logo = styled.img`
+  height: 32px;
   cursor: pointer;
-  letter-spacing: -0.5px;
 `
 
 const SearchBar = styled.form`
@@ -697,7 +683,7 @@ export default function Navigation() {
   return (
     <Header>
       <TopBar>
-        <Logo onClick={handleLogoClick}><ShopIcon /> {t('store.nav.logo')}</Logo>
+        <Logo src="/logo.png" alt="Ziggner" onClick={handleLogoClick} />
 
         <SearchBar role="search" onSubmit={handleSearchSubmit}>
           <input
