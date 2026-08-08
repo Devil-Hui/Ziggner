@@ -199,13 +199,13 @@ function useMenuItems() {
       ],
     },
     {
-      section: '交易履约',
+      section: t('admin.layout.sidebar.fulfillment'),
       items: [
         { to: '/admin/orders', label: t('admin.layout.menu.orders'), icon: <IconBox><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y="6" /><path d="M16 10a4 4 0 0 1-8 0" /></IconBox> },
       ],
     },
     {
-      section: '互动沟通',
+      section: t('admin.layout.sidebar.communication'),
       items: [
         { to: '/admin/chat', label: t('admin.layout.menu.chat'), icon: <IconBox><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></IconBox> },
         { to: '/admin/notifications', label: t('admin.layout.menu.notifications'), icon: <IconBox><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></IconBox> },
@@ -213,14 +213,14 @@ function useMenuItems() {
       ],
     },
     {
-      section: '营销工具',
+      section: t('admin.layout.sidebar.marketing'),
       items: [
         { to: '/admin/coupons', label: t('admin.layout.menu.coupons'), icon: <IconBox><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></IconBox> },
         { to: '/admin/activities', label: t('admin.layout.menu.activities'), icon: <IconBox><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBox> },
       ],
     },
     {
-      section: '系统 · 安全',
+      section: t('admin.layout.sidebar.systemMgmt'),
       items: [
         { to: '/admin/groups', label: t('admin.layout.menu.groups'), icon: <IconBox><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconBox> },
         { to: '/admin/audit-logs', label: t('admin.layout.menu.auditLogs'), icon: <IconBox><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></IconBox> },
@@ -366,34 +366,37 @@ export default function AdminLayout() {
             <Breadcrumb>{(() => {
               const p = location.pathname;
               const map: Record<string, string> = {
-                '/admin': '控制台',
-                '/admin/products': '商品管理',
-                '/admin/categories': '分类管理',
-                '/admin/brands': '品牌管理',
-                '/admin/tags': '标签管理',
-                '/admin/orders': '订单管理',
-                '/admin/chat': '客服中心',
-                '/admin/notifications': '通知管理',
-                '/admin/applications': '申请管理',
-                '/admin/coupons': '优惠券',
-                '/admin/activities': '活动管理',
-                '/admin/audit-logs': '审计日志',
-                '/admin/recycle-bin': '回收站',
-                '/admin/groups': '用户组',
-                '/admin/tasks': '异步任务',
+                '/admin': 'admin.breadcrumb.home',
+                '/admin/products': 'admin.breadcrumb.products',
+                '/admin/categories': 'admin.breadcrumb.categories',
+                '/admin/brands': 'admin.breadcrumb.brands',
+                '/admin/tags': 'admin.breadcrumb.tags',
+                '/admin/orders': 'admin.breadcrumb.orders',
+                '/admin/chat': 'admin.breadcrumb.chat',
+                '/admin/notifications': 'admin.breadcrumb.notifications',
+                '/admin/applications': 'admin.breadcrumb.applications',
+                '/admin/coupons': 'admin.breadcrumb.coupons',
+                '/admin/activities': 'admin.breadcrumb.activities',
+                '/admin/audit-logs': 'admin.breadcrumb.auditLogs',
+                '/admin/recycle-bin': 'admin.breadcrumb.recycleBin',
+                '/admin/groups': 'admin.breadcrumb.groups',
+                '/admin/tasks': 'admin.breadcrumb.tasks',
+                '/admin/email-templates': 'admin.breadcrumb.emailTemplates',
               };
-              // build hierarchy: 首页 › 分组 › 页面
+              // build hierarchy: home › group › page
               const parts = p.split('/').filter(Boolean);
-              if (parts.length <= 1) return '首页';
-              const label = map[p] || parts[parts.length - 1];
+              if (parts.length <= 1) return t('admin.breadcrumb.home');
+              const labelKey = map[p] || parts[parts.length - 1];
+              const label = t(labelKey);
               const groupMap: Record<string, string> = {
-                'products': '内容管理', 'categories': '内容管理', 'brands': '内容管理', 'tags': '内容管理',
-                'orders': '交易履约', 'chat': '互动沟通', 'notifications': '互动沟通', 'applications': '互动沟通',
-                'coupons': '营销工具', 'activities': '营销工具',
-                'audit-logs': '系统 · 安全', 'recycle-bin': '系统 · 安全', 'groups': '系统 · 安全', 'tasks': '系统 · 安全',
+                'products': 'admin.layout.sidebar.productOps', 'categories': 'admin.layout.sidebar.productOps', 'brands': 'admin.layout.sidebar.productOps', 'tags': 'admin.layout.sidebar.productOps',
+                'orders': 'admin.layout.sidebar.fulfillment', 'chat': 'admin.layout.sidebar.communication', 'notifications': 'admin.layout.sidebar.communication', 'applications': 'admin.layout.sidebar.communication',
+                'coupons': 'admin.layout.sidebar.marketing', 'activities': 'admin.layout.sidebar.marketing',
+                'audit-logs': 'admin.layout.sidebar.systemMgmt', 'recycle-bin': 'admin.layout.sidebar.systemMgmt', 'groups': 'admin.layout.sidebar.systemMgmt', 'tasks': 'admin.layout.sidebar.systemMgmt',
               };
-              const group = groupMap[parts[1]] || '';
-              return group ? `首页 › ${group} › ${label}` : `首页 › ${label}`;
+              const groupKey = groupMap[parts[1]] || '';
+              const groupLabel = groupKey ? t(groupKey) : '';
+              return groupLabel ? `${t('admin.breadcrumb.home')} › ${groupLabel} › ${label}` : `${t('admin.breadcrumb.home')} › ${label}`;
             })()}</Breadcrumb>
           </HeaderLeft>
           <HeaderRight>
