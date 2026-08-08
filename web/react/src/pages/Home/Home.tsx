@@ -430,23 +430,18 @@ const ValueGrid = styled.div`
 
 const ValueCard = styled.div`
   background: ${C.card};
-  border: 1px solid ${C.ink}1a;
-  border-radius: 1.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
   padding: 2rem;
-  transition: box-shadow 0.4s ease, transform 0.4s ease;
-  &:hover { box-shadow: 0 20px 40px -20px rgba(26, 23, 18, 0.25); transform: translateY(-4px); }
+  transition: border-color 0.2s ease;
+  &:hover { border-color: ${C.ink}33; }
 `
 
 const ValueIcon = styled.div`
-  width: 3rem;
-  height: 3rem;
-  display: grid;
-  place-items: center;
-  border-radius: 9999px;
-  background: ${C.clay}1a;
-  color: ${C.clay};
-  font-size: 1.25rem;
-  margin-bottom: 1.2rem;
+  font-size: 1.5rem;
+  color: ${C.ink};
+  margin-bottom: 1rem;
+  line-height: 1;
 `
 
 const ValueTitle = styled.h3`
