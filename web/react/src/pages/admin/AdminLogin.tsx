@@ -5,6 +5,7 @@ import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../them
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
+import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
 
 const Container = styled.div`
   display: flex;
@@ -165,6 +166,7 @@ export default function AdminLogin() {
   const [countdown, setCountdown] = useState(0)
   const [verifyId, setVerifyId] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
 
   const sendVerifyCode = async () => {
     if (!email || sendingCode || countdown > 0) return
@@ -208,15 +210,20 @@ export default function AdminLogin() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!email || !verifyCode) return
+    if (!turnstileToken) {
+      setError('请完成安全验证')
+      return
+    }
     setError('')
     setLoading(true)
-    const ok = await login(email, verifyId, verifyCode)
+    const ok = await login(email, verifyId, verifyCode, turnstileToken)
     setLoading(false)
     if (ok) {
       navigate('/admin/products', { replace: true })
     } else {
       setError(t('admin.login.invalidCredentials'))
       setVerifyCode('')
+      setTurnstileToken(null)
     }
   }
 
@@ -265,9 +272,14 @@ export default function AdminLogin() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
+          <TurnstileWidget
+            siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+            onVerify={(token) => setTurnstileToken(token)}
+            onError={() => setTurnstileToken(null)}
+          />
           {success && <SuccessText>{success}</SuccessText>}
           {error && <ErrorText>{error}</ErrorText>}
-          <Button type="submit" $loading={loading} disabled={!username || !password || !verifyCode || loading}>
+          <Button type="submit" $loading={loading} disabled={!username || !password || !verifyCode || !turnstileToken || loading}>
             {loading ? t('admin.login.signingIn') : t('admin.login.signIn')}
           </Button>
         </Form>

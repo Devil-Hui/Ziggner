@@ -27,6 +27,7 @@ from apps.users.services import UserService
 from apps.users.sms_service import SMSService
 from utils.api_base_view import BaseApiView, PublicApiView
 from apps.users.session_auth import set_auth_cookies
+from apps.users.turnstile import TurnstileUnavailable, verify_turnstile
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -62,6 +63,7 @@ class AdminLoginView(PublicApiView):
         email = request.data.get('email', '').strip()
         verify_id = request.data.get('verify_id', '')
         code = request.data.get('code', '')
+        turnstile_token = request.data.get('turnstile_token', '')
 
         if not email:
             return Response({'detail': '邮箱不能为空'}, status=status.HTTP_400_BAD_REQUEST)
@@ -72,6 +74,16 @@ class AdminLoginView(PublicApiView):
 
         if not EmailVerifyService.verify_code(verify_id, code):
             return Response({'detail': '验证码错误或已过期'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Cloudflare Turnstile 人机验证
+        if not turnstile_token:
+            return Response({'detail': '请完成安全验证'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            verified = verify_turnstile(turnstile_token)
+        except TurnstileUnavailable:
+            return Response({'detail': '安全验证服务暂时不可用，请稍后重试'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+        if not verified:
+            return Response({'detail': '安全验证失败，请重试'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 验证码通过 → 签发 JWT
         from django.contrib.auth import get_user_model
