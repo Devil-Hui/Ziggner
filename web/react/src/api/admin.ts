@@ -470,6 +470,23 @@ export const adminAPI = {
     del(`/promotion/activity/${id}/delete`),
   setActivitySKUs: (id: number, data: { sku_ids: number[]; activity_price: number }) =>
     post(`/promotion/activity/${id}/skus`, data),
+
+  // Email Templates
+  getEmailTemplates: () =>
+    get<{ code: number; data: EmailTemplateItem[] }>('/users/email/templates/'),
+  updateEmailTemplate: (templateType: string, data: { subject: string; html_body: string; text_body: string; is_active: boolean }) =>
+    post(`/users/email/templates/${templateType}/`, data),
+  resetEmailTemplate: (templateType: string) =>
+    post(`/users/email/templates/${templateType}/reset/`),
 };
+
+export interface EmailTemplateItem {
+  template_type: string;
+  subject: string;
+  html_body: string;
+  text_body: string;
+  is_active: boolean;
+  updated_at: string | null;
+}
 
 export default adminAPI;

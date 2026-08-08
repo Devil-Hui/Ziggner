@@ -28,6 +28,11 @@ from apps.users.social_views import (
     SocialUnlinkView,
     SocialAccountsView,
 )
+from apps.users.views.admin_email_template import (
+    EmailTemplateListView,
+    EmailTemplateResetView,
+    EmailTemplateUpdateView,
+)
 from apps.users.session_auth import (
     BrowserLoginView,
     BrowserLogoutView,
@@ -72,6 +77,11 @@ urlpatterns = [
     path('social/login/', SocialLoginView.as_view(), name='social-login'),
     path('social/providers/', SocialProvidersView.as_view(), name='social-providers'),
     path('social/set-password/', SetPasswordView.as_view(), name='social-set-password'),
+
+    # 邮件模板管理（管理后台）
+    path('email/templates/', EmailTemplateListView.as_view(), name='email-template-list'),
+    path('email/templates/<str:template_type>/', EmailTemplateUpdateView.as_view(), name='email-template-update'),
+    path('email/templates/<str:template_type>/reset/', EmailTemplateResetView.as_view(), name='email-template-reset'),
     path('social/unlink/', SocialUnlinkView.as_view(), name='social-unlink'),
     path('social/accounts/', SocialAccountsView.as_view(), name='social-accounts'),
 ]

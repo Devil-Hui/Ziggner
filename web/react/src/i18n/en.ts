@@ -82,6 +82,7 @@ const en = {
         groups: 'Admin Groups',
         dataImport: 'Data Import',
         asyncTasks: 'Async Tasks',
+        emailTemplates: 'Email Templates',
 
       },
       header: {

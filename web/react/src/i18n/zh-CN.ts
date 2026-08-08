@@ -81,6 +81,7 @@ const zhCN = {
         groups: '管理员分组',
         dataImport: '数据导入',
         asyncTasks: '异步任务',
+        emailTemplates: '邮件模板',
       },
       header: {
         collapse: '收起',
