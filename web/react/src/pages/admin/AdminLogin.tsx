@@ -5,6 +5,7 @@ import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
+import { post } from '../../api/request'
 
 /* ── Lumiere editorial palette (aligned with storefront) ── */
 const CREAM = '#f7f4ef'
@@ -200,13 +201,9 @@ export default function AdminLogin() {
     setError('')
     setSuccess('')
     try {
-      const response = await fetch('/api/users/email/verify/send/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      })
-      const data = await response.json()
-      if (response.ok) {
+      // 走 request.ts（带 VITE_API_URL 后端地址），不要用相对路径 fetch —— 相对路径会发到前端域导致 405
+      const data: any = await post('/users/email/verify/send/', { email })
+      if (data && data.verify_id) {
         setVerifyId(data.verify_id)
         setSuccess(t('admin.login.codeSent'))
         setCountdown(CONFIG.VERIFY_CODE_COUNTDOWN_SECONDS)
@@ -220,10 +217,10 @@ export default function AdminLogin() {
           })
         }, 1000)
       } else {
-        setError(data.detail || t('admin.login.sendFailed'))
+        setError(t('admin.login.sendFailed'))
       }
-    } catch {
-      setError(t('admin.login.sendFailed'))
+    } catch (err: any) {
+      setError(err?.response?.data?.detail || t('admin.login.sendFailed'))
     } finally {
       setSendingCode(false)
     }

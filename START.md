@@ -4,7 +4,7 @@
 
 **创建容器**
 ```
-cd D:\下载\浏览器下载\change\Ziggner\Ziggner
+
 docker compose up -d
 ```
 
