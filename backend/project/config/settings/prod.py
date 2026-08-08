@@ -54,6 +54,7 @@ if R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET:
     AWS_QUERYSTRING_AUTH = False
     AWS_DEFAULT_ACL = None
     if R2_PUBLIC_URL:
+        AWS_S3_CUSTOM_DOMAIN = R2_PUBLIC_URL.replace('https://', '').replace('http://', '').rstrip('/')
         MEDIA_URL = f'{R2_PUBLIC_URL.rstrip(chr(47))}/{MEDIA_PATH.strip(chr(47))}/'
 
 
