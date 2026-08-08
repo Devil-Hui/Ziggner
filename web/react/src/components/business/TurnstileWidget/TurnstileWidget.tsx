@@ -150,6 +150,7 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     try {
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        action: 'turnstile-spin-v2',
         callback: (token: string) => {
           onVerify(token)
         },
