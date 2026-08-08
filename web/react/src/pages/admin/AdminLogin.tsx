@@ -1,102 +1,142 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
 
+/* ── Lumiere editorial palette (aligned with storefront) ── */
+const CREAM = '#f7f4ef'
+const INK = '#1a1712'
+const MUTED = '#6b6459'
+const CLAY = '#c8623a'
+const LINE = 'rgba(26, 23, 18, 0.10)'
+
 const Container = styled.div`
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: ${Color.bg.page};
+  background: ${CREAM};
+  padding: 2rem 1rem;
+  overflow: hidden;
+
+  /* soft decorative serif watermark */
+  &::before {
+    content: 'Z';
+    position: absolute;
+    right: -2rem;
+    bottom: -6rem;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 26rem;
+    line-height: 1;
+    color: rgba(26, 23, 18, 0.035);
+    pointer-events: none;
+    user-select: none;
+  }
 `
 
 const Card = styled.div`
-  width: 400px;
-  padding: 48px 40px;
-  background: ${Color.bg.card};
-  border-radius: ${Radius.md}px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 48px 40px 40px;
+  background: #fff;
+  border: 1px solid ${LINE};
+  border-radius: 20px;
+  box-shadow: 0 18px 50px -24px rgba(26, 23, 18, 0.18);
 `
 
-const Logo = styled.h1`
-  font-family: 'Playfair Display', serif;
-  font-size: 1.75rem;
-  color: ${Color.text.heading};
-  text-align: center;
-  margin-bottom: 8px;
+const Brand = styled.h1`
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  font-weight: 600;
   letter-spacing: -0.5px;
+  color: ${INK};
+  text-align: center;
+  margin: 0 0 6px;
+  span { color: ${CLAY}; }
 `
 
 const Subtitle = styled.p`
   text-align: center;
-  color: ${Color.text.muted};
+  color: ${MUTED};
   font-size: 0.875rem;
-  margin-bottom: 32px;
+  margin: 0 0 28px;
 `
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 `
 
 const Input = styled.input`
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
+  height: 46px;
+  padding: 0 16px;
+  border: 1px solid ${LINE};
+  border-radius: 10px;
   font-size: 0.938rem;
-  color: ${Color.text.heading};
-  background: ${Color.primaryLight};
+  color: ${INK};
+  background: #fff;
   outline: none;
-  transition: ${Transition.normal};
+  box-sizing: border-box;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:focus {
-    border-color: #e74c3c;
-    background: ${Color.bg.card};
+    border-color: ${CLAY};
+    box-shadow: 0 0 0 3px rgba(200, 98, 58, 0.12);
   }
 
   &::placeholder {
-    color: ${Color.border.dark};
+    color: #a89f92;
   }
 `
 
 const Button = styled.button<{ $loading?: boolean }>`
-  height: 44px;
+  height: 46px;
   border: none;
-  border-radius: 6px;
-  background: ${({ $loading }) => ($loading ? '#c0392b' : '#e74c3c')};
-  color: ${Color.text.inverse};
+  border-radius: 9999px;
+  background: ${CLAY};
+  color: #fff;
   font-size: 0.938rem;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
-  transition: ${Transition.normal};
-  opacity: ${({ $loading }) => ($loading ? 0.8 : 1)};
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, opacity 0.2s ease;
+  opacity: ${({ $loading }) => ($loading ? 0.75 : 1)};
 
   &:hover:not(:disabled) {
-    background: #c0392b;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 24px -10px rgba(200, 98, 58, 0.55);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0) scale(0.99);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 `
 
 const SendCodeBtn = styled.button<{ $disabled?: boolean }>`
-  height: 44px;
-  padding: 0 16px;
+  height: 46px;
+  padding: 0 18px;
   white-space: nowrap;
-  border: 1px solid #e74c3c;
-  border-radius: 6px;
-  background: ${({ $disabled }) => ($disabled ? Color.border.light : 'transparent')};
-  color: ${({ $disabled }) => ($disabled ? Color.text.muted : '#e74c3c')};
+  border: 1px solid ${CLAY};
+  border-radius: 10px;
+  background: ${({ $disabled }) => ($disabled ? '#f3efe7' : 'transparent')};
+  color: ${({ $disabled }) => ($disabled ? '#b5ab9d' : CLAY)};
   font-size: 0.875rem;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  transition: ${Transition.normal};
+  transition: background 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: #fdf0ef;
+    background: rgba(200, 98, 58, 0.08);
   }
 `
 
@@ -106,47 +146,33 @@ const CodeRow = styled.div`
   align-items: stretch;
 `
 
-const CodeInput = styled.input`
+const CodeInput = styled(Input)`
   flex: 1;
-  height: 44px;
-  padding: 0 14px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.938rem;
-  color: ${Color.text.heading};
-  background: ${Color.primaryLight};
-  outline: none;
-  transition: ${Transition.normal};
+  min-width: 0;
   letter-spacing: 4px;
   text-align: center;
 
-  &:focus {
-    border-color: #e74c3c;
-    background: ${Color.bg.card};
-  }
-
   &::placeholder {
-    color: ${Color.border.dark};
     letter-spacing: normal;
   }
 `
 
 const Hint = styled.p`
   font-size: 0.75rem;
-  color: ${Color.text.muted};
-  margin: -8px 0 0 0;
+  color: ${MUTED};
+  margin: -6px 0 0 0;
   text-align: left;
 `
 
 const ErrorText = styled.p`
-  color: #e74c3c;
+  color: #c0392b;
   font-size: 0.813rem;
   text-align: center;
   margin: 0;
 `
 
 const SuccessText = styled.p`
-  color: #27ae60;
+  color: #2e7d5b;
   font-size: 0.813rem;
   text-align: center;
   margin: 0;
@@ -230,7 +256,7 @@ export default function AdminLogin() {
   return (
     <Container>
       <Card>
-        <Logo>{t('admin.login.title')}</Logo>
+        <Brand>Zig<span>gner</span></Brand>
         <Subtitle>{t('admin.login.subtitle')}</Subtitle>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 24 }}>
           <LanguageSwitch position="login" />
