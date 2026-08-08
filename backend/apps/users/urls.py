@@ -28,7 +28,7 @@ from apps.users.social_views import (
     SocialUnlinkView,
     SocialAccountsView,
 )
-from apps.users.views.admin_email_template import (
+from apps.users.admin_email_template import (
     EmailTemplateListView,
     EmailTemplateResetView,
     EmailTemplateUpdateView,
