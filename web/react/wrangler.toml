@@ -4,3 +4,15 @@ compatibility_date = "2026-08-01"
 
 [assets]
 directory = "./dist/"
+
+[[routes]]
+pattern = "www.ziggner.com"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.ziggner.com"
+custom_domain = true
+
+[[routes]]
+pattern = "shop.ziggner.com"
+custom_domain = true
