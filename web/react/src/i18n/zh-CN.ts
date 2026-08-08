@@ -56,6 +56,15 @@ const zhCN = {
       invalidCredentials: '用户名或密码错误，或无后台访问权限',
       captcha: '验证码',
       captcha_placeholder: '请输入验证码',
+      signingIn: '登录中...',
+      adminEmail: '管理员邮箱',
+      verifyCode: '邮箱验证码',
+      sendCode: '发送验证码',
+      sendingCode: '发送中...',
+      codeSent: '验证码已发送到您的邮箱',
+      sendFailed: '发送失败，请稍后重试',
+      codeHint: '请输入管理员邮箱以接收登录验证码',
+      turnstileRequired: '请完成安全验证',
     },
 
     layout: {
