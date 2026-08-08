@@ -53,8 +53,9 @@ git add -A && git commit -m "update" && git push origin master
 | 变量 | 去哪拿 | 填到哪 |
 |------|--------|--------|
 | `DJANGO_SECRET_KEY` | 已填好 | `.env.production` |
-| `TURNSTILE_SECRET_KEY` | **https://dash.cloudflare.com/709ab53695022c72861726f1039193b2/turnstile** 创建站点 | `.env.production` |
-| `VITE_TURNSTILE_SITE_KEY` | 同上（站点密钥） | `.env.production` |
+| `DJANGO_SUPERUSER_PASSWORD` | 已填（强随机） | `.env.production` |
+| `TURNSTILE_SECRET_KEY` | 已填真实密钥 | `.env.production` |
+| `VITE_TURNSTILE_SITE_KEY` | 已填真实站点密钥 | `.env.production` |
 | `R2_ACCESS_KEY_ID` | **https://dash.cloudflare.com/709ab53695022c72861726f1039193b2/r2/api-tokens** | `.env.production`（已填） |
 | `R2_SECRET_ACCESS_KEY` | 同上（已填） | `.env.production` |
 | TLS 证书 | 已生成到 `certs/` | `.env.production` |
