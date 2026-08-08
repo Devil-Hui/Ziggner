@@ -16,8 +16,8 @@ function getInitialLang(): Language {
     const stored = localStorage.getItem(LANGUAGE_KEY)
     if (stored === 'en-US' || stored === 'zh-CN') return stored
   } catch { /* noop */ }
-  // Default to zh-CN as primary market is China
-  return 'zh-CN'
+  // Default to en-US
+  return 'en-US'
 }
 
 interface I18nContextValue {

@@ -1,5 +1,5 @@
 # Stage 1: Build React app
-FROM node:22-alpine AS builder
+FROM docker.m.daocloud.io/library/node:22-alpine AS builder
 
 RUN npm config set registry https://registry.npmmirror.com
 
@@ -18,7 +18,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Serve with nginx (极轻量，仅 64m mem_limit)
-FROM nginx:alpine
+FROM docker.m.daocloud.io/library/nginx:alpine
 
 COPY nginx/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/default.conf /etc/nginx/conf.d/default.conf

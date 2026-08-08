@@ -803,7 +803,7 @@ const zhCN = {
 
   store: {
     nav: {
-      logo: 'Logo',
+      logo: 'Ziggner',
       searchPlaceholder: '搜索商品...',
       share: '分享',
       setting: '设置',
