@@ -42,8 +42,8 @@ export default function NotificationFloat() {
       </button>
       {open && (
         <div style={{ position: 'absolute', right: 0, top: 40, width: 340, maxHeight: 400, background: '#fff', borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.12)', overflow: 'auto', zIndex: 10000 }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #eee', fontWeight: 600, fontSize: 14 }}>{t('admin.sidebar.notifications')}</div>
-          {notifs.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#999', fontSize: 13 }}>{t('notification.empty')}</div>}
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid #eee', fontWeight: 600, fontSize: 14 }}>{t('admin.notificationFloat.title')}</div>
+          {notifs.length === 0 && <div style={{ padding: 24, textAlign: 'center', color: '#999', fontSize: 13 }}>{t('admin.notificationFloat.empty')}</div>}
           {notifs.map(n => (
             <div key={n.id} onClick={() => markRead(n.id)} style={{ padding: '12px 16px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', opacity: n.is_read ? 0.6 : 1 }}>
               <div style={{ fontSize: 13, fontWeight: n.is_read ? 400 : 600, marginBottom: 4 }}>{n.title}</div>

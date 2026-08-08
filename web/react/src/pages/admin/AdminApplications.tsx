@@ -808,7 +808,7 @@ export default function AdminApplications() {
                 </FormGroup>
                 <FormGroup>
                   <Label><RequiredDot>*</RequiredDot>{t('admin.applications.formAmount')}</Label>
-                  <Input type="number" step="0.01" value={formData.amount || ''} onChange={(e) => handleFieldChange('amount', e.target.value)} placeholder={formData.discount_type === 'percent' ? '例：15' : '例：20.00'} />
+                  <Input type="number" step="0.01" value={formData.amount || ''} onChange={(e) => handleFieldChange('amount', e.target.value)} placeholder={formData.discount_type === 'percent' ? t('admin.applications.formAmountPlaceholderPercent') : t('admin.applications.formAmountPlaceholderFixed')} />
                   {formErrors.amount && <FieldError>{formErrors.amount}</FieldError>}
                 </FormGroup>
               </FormRow>

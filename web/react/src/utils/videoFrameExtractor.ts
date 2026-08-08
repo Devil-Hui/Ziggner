@@ -82,7 +82,7 @@ export function extractVideoFrames(file: File): Promise<VideoFrameResult> {
 
     video.onerror = () => {
       URL.revokeObjectURL(blobUrl)
-      reject(new Error('视频加载失败，请检查文件格式'))
+      reject(new Error('Failed to load video, please check the file format'))
     }
 
     video.src = blobUrl

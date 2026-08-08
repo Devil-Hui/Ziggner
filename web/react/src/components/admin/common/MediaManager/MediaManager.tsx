@@ -3,6 +3,7 @@
  * 编辑模式（有 spuId）：dropzone → 裁剪 → XHR 上传到已有 SPU；支持 hover 编辑/删除。
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useTranslation } from '../../../../i18n'
 import * as S from './MediaManager.styles'
 import MediaItem from './MediaItem'
 import MediaPreviewTabs from './MediaPreviewTabs'
@@ -39,6 +40,7 @@ export default function MediaManager({
   onMediaUpdate,
 }: MediaManagerProps) {
   const isEditMode = !!spuId
+  const { t } = useTranslation()
 
   // 创建模式暂存项
   const [items, setItems] = useState<StagedMediaItem[]>([])
@@ -129,7 +131,7 @@ export default function MediaManager({
       if (!isEditMode) {
         const remain = MAX_IMAGES - items.filter((item) => item.mediaType === 'image').length
         if (remain <= 0) {
-          alert('图片数量已达上限')
+          alert(t('admin.mediaManager.imageLimitReached'))
           return
         }
         selected = files.slice(0, remain)
@@ -170,7 +172,7 @@ export default function MediaManager({
           setSavedItems((prev) => [...prev, newMedia])
           advanceQueue()
         } catch (err) {
-          alert(err instanceof Error ? err.message : '上传失败')
+          alert(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'))
           advanceQueue()
         }
       } else {
@@ -237,13 +239,13 @@ export default function MediaManager({
         // 编辑模式：删除已保存媒体（active 需二次确认）
         const target = savedItems.find((mediaItem) => mediaItem.id === id)
         if (target && target.status === 'active') {
-          if (!window.confirm('此媒体已上线，确认删除？')) return
+          if (!window.confirm(t('admin.mediaManager.confirmDeleteActive'))) return
         }
         try {
           await adminAPI.deleteMedia(id)
           setSavedItems((prev) => prev.filter((mediaItem) => mediaItem.id !== id))
         } catch (err) {
-          alert(err instanceof Error ? err.message : '删除失败')
+          alert(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
         }
       } else {
         await deleteStagedItem(id)
@@ -276,7 +278,7 @@ export default function MediaManager({
         }
         setEditingMedia(null)
       } catch (err) {
-        alert(err instanceof Error ? err.message : '更新失败')
+        alert(err instanceof Error ? err.message : t('admin.mediaManager.updateFailed'))
       }
     },
     [editingMedia, onMediaUpdate, spuId]
@@ -302,9 +304,13 @@ export default function MediaManager({
     <S.Container>
       <S.Header>
         <div>
-          <S.Title>商品媒体</S.Title>
+          <S.Title>{t('admin.mediaManager.title')}</S.Title>
           <S.Hint>
-            (图片 {imageCount}/{MAX_IMAGES}，视频 {videoCount}/{MAX_VIDEOS})
+            {t('admin.mediaManager.mediaCount')
+              .replace('{imageCount}', String(imageCount))
+              .replace('{maxImages}', String(MAX_IMAGES))
+              .replace('{videoCount}', String(videoCount))
+              .replace('{maxVideos}', String(MAX_VIDEOS))}
           </S.Hint>
         </div>
         <S.ButtonGroup>
@@ -313,13 +319,13 @@ export default function MediaManager({
             disabled={imageCount >= MAX_IMAGES}
             onClick={() => fileInputRef.current?.click()}
           >
-            + 添加图片
+            + {t('admin.mediaManager.addImage')}
           </S.ActionBtn>
           <S.ActionBtn
             disabled={videoCount >= MAX_VIDEOS}
             onClick={() => setShowVideoDialog(true)}
           >
-            + 添加视频
+            + {t('admin.mediaManager.addVideo')}
           </S.ActionBtn>
         </S.ButtonGroup>
       </S.Header>
@@ -344,9 +350,10 @@ export default function MediaManager({
         onDrop={handleDrop}
       >
         <S.DropzoneIcon><Icon name="upload" size={36} color="#bbb" /></S.DropzoneIcon>
-        <S.DropzoneText>拖拽图片到此处，或点击选择</S.DropzoneText>
+        <S.DropzoneText>{t('admin.mediaManager.dropzoneHint')}</S.DropzoneText>
         <S.DropzoneSubText>
-          支持 JPG / PNG / WebP，单张最大 10MB{isEditMode ? '（编辑模式：裁剪后直接上传）' : '（裁剪后暂存，随表单提交）'}
+          {t('admin.mediaManager.formatHint')}
+          {isEditMode ? t('admin.mediaManager.editModeHint') : t('admin.mediaManager.createModeHint')}
         </S.DropzoneSubText>
       </S.Dropzone>
 
@@ -359,8 +366,8 @@ export default function MediaManager({
           <S.ProgressLabel>
             <span>
               {uploadQueue.status === 'done'
-                ? '处理完成'
-                : `处理中：${uploadQueue.currentFileName || ''}`}
+                ? t('admin.mediaManager.processingDone')
+                : t('admin.mediaManager.processingFile').replace('{name}', uploadQueue.currentFileName || '')}
             </span>
             <span>{uploadQueue.completed}/{uploadQueue.total}（{progressPercent}%）</span>
           </S.ProgressLabel>
@@ -371,7 +378,7 @@ export default function MediaManager({
       <S.MediaGrid>
         {isEditMode ? (
           savedItems.length === 0 && !showProgress ? (
-            <S.EmptyHint>暂无媒体，拖拽或点击上方区域添加</S.EmptyHint>
+            <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
           ) : (
             savedItems.map((item, idx) => (
               <MediaItem
@@ -385,7 +392,7 @@ export default function MediaManager({
           )
         ) : (
           items.length === 0 && !showProgress ? (
-            <S.EmptyHint>暂无媒体，拖拽或点击上方区域添加</S.EmptyHint>
+            <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
           ) : (
             items.map((item, idx) => (
               <MediaItem
@@ -418,7 +425,7 @@ export default function MediaManager({
         onConfirm={async (item: StagedMediaItem) => {
           if (isEditMode && spuId) {
             // 视频暂不支持编辑模式直接上传，提示
-            alert('编辑模式暂不支持新增视频，请通过创建模式上传')
+            alert(t('admin.mediaManager.videoNotSupported'))
           } else {
             const stagedId = await addStagedItem(item)
             const updated = [...items, { ...item, id: stagedId }]

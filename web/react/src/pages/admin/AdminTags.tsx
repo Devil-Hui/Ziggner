@@ -273,7 +273,7 @@ export default function AdminTags() {
     { key: 'name', title: t('admin.tags.nameLabel'), sortable: true },
     {
       key: 'color',
-      title: '颜色',
+      title: t('admin.tags.columnColor'),
       width: '80px',
       render: (val: unknown) => {
         const colorVal = (typeof val === 'string' && val) ? val : DEFAULT_TAG_COLOR
@@ -376,7 +376,7 @@ export default function AdminTags() {
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
             </FormGroup>
             <FormGroup>
-              <Label>标签颜色 <ColorPreview $color={formColor}>{formColor}</ColorPreview></Label>
+              <Label>{t('admin.tags.colorLabel')} <ColorPreview $color={formColor}>{formColor}</ColorPreview></Label>
               <ColorPalette>
                 {TAG_COLOR_PALETTE.map((c) => (
                   <ColorSwatch

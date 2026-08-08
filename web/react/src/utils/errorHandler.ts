@@ -39,7 +39,7 @@ export function extractAppError(error: AxiosError): AppError {
   const message =
     typeof data?.message === 'string' ? data.message
     : typeof data?.detail === 'string' ? data.detail
-    : error.message || '请求失败'
+    : error.message || 'Request failed'
   const detail = typeof data?.detail === 'string' ? data.detail : message
 
   return {

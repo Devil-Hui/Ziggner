@@ -591,7 +591,7 @@ export default function AdminGroups() {
                     <MemberTd>{m.username || '-'}</MemberTd>
                     <MemberTd>
                       <RoleBadge $role={m.role}>
-                        {m.role === 'leader' ? 'Leader' : 'Member'}
+                        {m.role === 'leader' ? t('admin.groups.roleLeader') : t('admin.groups.roleMember')}
                       </RoleBadge>
                     </MemberTd>
                     <MemberTd>

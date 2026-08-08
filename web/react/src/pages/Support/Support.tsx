@@ -430,7 +430,6 @@ export default function Support() {
   const [searchParams] = useSearchParams()
   const { isLoggedIn } = useUser()
   const { t, lang } = useTranslation()
-  const isZh = lang === 'zh-CN'
 
   const [conversations, setConversations] = useState<SupportConversationSummary[]>([])
   const [activeConv, setActiveConv] = useState<SupportConversation | null>(null)
@@ -526,10 +525,10 @@ export default function Support() {
   // Auto-fill product info from URL params
   useEffect(() => {
     if (spuId && spuName) {
-      setNewSubject(isZh ? `咨询商品：${spuName}` : `Product inquiry: ${spuName}`)
+      setNewSubject(t('store.support.productInquiry').replace('{name}', spuName))
       setShowNewConv(true)
     }
-  }, [spuId, spuName, isZh])
+  }, [spuId, spuName, lang])
 
   // Handle file upload
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>, isNew: boolean) => {
@@ -561,7 +560,7 @@ export default function Support() {
     try {
       setSending(true)
       const params: CreateConversationParams = {
-        subject: newSubject || (isZh ? '新对话' : 'New conversation'),
+        subject: newSubject || t('store.support.newConversationDefault'),
         content: newContent,
         attachments: newAttachments,
       }
@@ -705,13 +704,13 @@ export default function Support() {
           {/* Sidebar */}
           <Sidebar>
             <SidebarHeader>
-              <SidebarTitle>{isZh ? '客服消息' : 'Support'}</SidebarTitle>
+              <SidebarTitle>{t('store.support.title')}</SidebarTitle>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowNewConv(true)}
               >
-                {isZh ? '+ 新对话' : '+ New'}
+                {t('store.support.newButton')}
               </Button>
             </SidebarHeader>
 
@@ -720,12 +719,12 @@ export default function Support() {
                 <NewConvSection>
                   <NewConvForm>
                     <SubjectInput
-                      placeholder={isZh ? '对话主题（可选）' : 'Subject (optional)'}
+                      placeholder={t('store.support.subjectPlaceholder')}
                       value={newSubject}
                       onChange={e => setNewSubject(e.target.value)}
                     />
                     <TextInput
-                      placeholder={isZh ? '描述您的问题...' : 'Describe your issue...'}
+                      placeholder={t('store.support.contentPlaceholder')}
                       value={newContent}
                       onChange={e => setNewContent(e.target.value)}
                       onKeyDown={handleKeyDown}
@@ -745,7 +744,7 @@ export default function Support() {
                     )}
                     <ToolBar>
                       <ToolBtn onClick={() => newFileInputRef.current?.click()} disabled={uploading}>
-                        {uploading ? (isZh ? '上传中...' : 'Uploading...') : (isZh ? '图片/视频' : 'Image/Video')}
+                        {uploading ? t('store.support.uploading') : t('store.support.attachLabel')}
                       </ToolBtn>
                       <HiddenInput
                         ref={newFileInputRef}
@@ -765,13 +764,13 @@ export default function Support() {
                           setNewAttachments([])
                         }}
                       >
-                        {isZh ? '取消' : 'Cancel'}
+                        {t('store.support.cancel')}
                       </Button>
                       <SendBtn
                         onClick={handleCreateConversation}
                         disabled={sending || (!newContent.trim() && newAttachments.length === 0)}
                       >
-                        {sending ? (isZh ? '发送中...' : 'Sending...') : (isZh ? '发送' : 'Send')}
+                        {sending ? t('store.support.sending') : t('store.support.send')}
                       </SendBtn>
                     </ToolBar>
                   </NewConvForm>
@@ -779,13 +778,13 @@ export default function Support() {
               )}
 
               {loading && conversations.length === 0 && (
-                <LoadingMore>{isZh ? '加载中...' : 'Loading...'}</LoadingMore>
+                <LoadingMore>{t('store.support.loading')}</LoadingMore>
               )}
 
               {!loading && conversations.length === 0 && !showNewConv && (
                 <EmptyState>
                   <EmptyIcon>&#x1F4AC;</EmptyIcon>
-                  <EmptyText>{isZh ? '暂无对话' : 'No conversations'}</EmptyText>
+                  <EmptyText>{t('store.support.noConversations')}</EmptyText>
                 </EmptyState>
               )}
 
@@ -800,7 +799,7 @@ export default function Support() {
                 >
                   <ConvSubject>
                     <StatusDot $status={conv.status} />{' '}
-                    {conv.subject || `${isZh ? '对话' : 'Conversation'} #${conv.id}`}
+                    {conv.subject || `${t('store.support.conversation')} #${conv.id}`}
                   </ConvSubject>
                   <ConvLastMsg>
                     {conv.last_message ? (
@@ -809,7 +808,7 @@ export default function Support() {
                         {conv.unread_count > 0 && <ConvBadge>{conv.unread_count}</ConvBadge>}
                       </>
                     ) : (
-                      <span>{isZh ? '暂无消息' : 'No messages'}</span>
+                      <span>{t('store.support.noMessages')}</span>
                     )}
                   </ConvLastMsg>
                 </ConvItem>
@@ -822,16 +821,16 @@ export default function Support() {
             {activeConv && activeId ? (
               <>
                 <ChatHeader>
-                  <ChatTitle>{activeConv.subject || `${isZh ? '对话' : 'Conversation'} #${activeConv.id}`}</ChatTitle>
+                  <ChatTitle>{activeConv.subject || `${t('store.support.conversation')} #${activeConv.id}`}</ChatTitle>
                   <ChatHeaderActions>
                     {activeConv.spu_info && (
                       <Button variant="ghost" size="sm" onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
-                        {isZh ? '查看商品' : 'View Product'}
+                        {t('store.support.viewProduct')}
                       </Button>
                     )}
                     {activeConv.status === 'open' && (
                       <Button variant="ghost" size="sm" onClick={handleClose}>
-                        {isZh ? '关闭对话' : 'Close'}
+                        {t('store.support.closeConversation')}
                       </Button>
                     )}
                   </ChatHeaderActions>
@@ -839,12 +838,12 @@ export default function Support() {
 
                 <MessageList ref={msgListRef}>
                   {convLoading && (
-                    <LoadingMore>{isZh ? '加载中...' : 'Loading...'}</LoadingMore>
+                    <LoadingMore>{t('store.support.loading')}</LoadingMore>
                   )}
                   {activeConv.messages.map(renderMessage)}
                   {activeConv.status === 'closed' && (
                     <MessageBubble $from="system">
-                      {isZh ? '对话已关闭' : 'Conversation closed'}
+                      {t('store.support.conversationClosed')}
                     </MessageBubble>
                   )}
                 </MessageList>
@@ -865,7 +864,7 @@ export default function Support() {
                     )}
                     <InputRow>
                       <TextInput
-                        placeholder={isZh ? '输入消息...' : 'Type a message...'}
+                        placeholder={t('store.support.messagePlaceholder')}
                         value={inputText}
                         onChange={e => setInputText(e.target.value)}
                         onKeyDown={handleKeyDown}
@@ -874,12 +873,12 @@ export default function Support() {
                         onClick={handleSend}
                         disabled={sending || (!inputText.trim() && inputAttachments.length === 0)}
                       >
-                        {sending ? (isZh ? '发送中...' : 'Sending...') : (isZh ? '发送' : 'Send')}
+                        {sending ? t('store.support.sending') : t('store.support.send')}
                       </SendBtn>
                     </InputRow>
                     <ToolBar>
                       <ToolBtn onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                        {uploading ? (isZh ? '上传中...' : 'Uploading...') : (isZh ? '图片/视频' : 'Image/Video')}
+                        {uploading ? t('store.support.uploading') : t('store.support.attachLabel')}
                       </ToolBtn>
                       <HiddenInput
                         ref={fileInputRef}
@@ -896,10 +895,10 @@ export default function Support() {
               <EmptyState>
                 <EmptyIcon>&#x1F4AC;</EmptyIcon>
                 <EmptyText>
-                  {isZh ? '选择一个对话开始聊天，或创建新对话' : 'Select a conversation or start a new one'}
+                  {t('store.support.selectConversation')}
                 </EmptyText>
                 <Button variant="outline" onClick={() => setShowNewConv(true)}>
-                  {isZh ? '创建新对话' : 'New Conversation'}
+                  {t('store.support.startNewConversation')}
                 </Button>
               </EmptyState>
             )}

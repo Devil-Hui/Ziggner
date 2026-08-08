@@ -22,11 +22,11 @@ import { CONFIG } from '../../config/constants'
 
 type MsgFilter = 'all' | 'text' | 'image' | 'product_card'
 
-const FILTER_TABS: { key: MsgFilter; labelZh: string; labelEn: string }[] = [
-  { key: 'all', labelZh: '全部', labelEn: 'All' },
-  { key: 'text', labelZh: '文本', labelEn: 'Text' },
-  { key: 'image', labelZh: '图片', labelEn: 'Image' },
-  { key: 'product_card', labelZh: '商品卡片', labelEn: 'Card' },
+const FILTER_TABS: { key: MsgFilter; labelKey: string }[] = [
+  { key: 'all', labelKey: 'admin.chatDetail.filterAll' },
+  { key: 'text', labelKey: 'admin.chatDetail.filterText' },
+  { key: 'image', labelKey: 'admin.chatDetail.filterImage' },
+  { key: 'product_card', labelKey: 'admin.chatDetail.filterCard' },
 ]
 
 // ── Styled Components ──
@@ -572,7 +572,7 @@ const CartIcon = () => (
 
 // ── Helpers ──
 
-function formatTime(ts: string): string {
+function formatTime(ts: string, t: (key: string) => string): string {
   if (!ts) return '-'
   const date = new Date(ts)
   const now = new Date()
@@ -580,8 +580,8 @@ function formatTime(ts: string): string {
   const yesterday = new Date(today.getTime() - 86400000)
   const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (msgDay.getTime() === today.getTime()) return `今天 ${time}`
-  if (msgDay.getTime() === yesterday.getTime()) return `昨天 ${time}`
+  if (msgDay.getTime() === today.getTime()) return `${t('admin.chatDetail.today')} ${time}`
+  if (msgDay.getTime() === yesterday.getTime()) return `${t('admin.chatDetail.yesterday')} ${time}`
   return `${date.getMonth() + 1}/${date.getDate()} ${time}`
 }
 
@@ -590,9 +590,9 @@ function statusBadgeType(status: string) {
   return 'off_sale'
 }
 
-function statusLabel(status: string, isZh: boolean) {
-  if (status === 'open') return isZh ? '待处理' : 'Open'
-  if (status === 'closed') return isZh ? '已关闭' : 'Closed'
+function statusLabel(status: string, t: (key: string) => string) {
+  if (status === 'open') return t('admin.chatDetail.statusOpen')
+  if (status === 'closed') return t('admin.chatDetail.statusClosed')
   return status
 }
 
@@ -601,8 +601,7 @@ function statusLabel(status: string, isZh: boolean) {
 export default function AdminChatDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { lang } = useTranslation()
-  const isZh = lang === 'zh-CN'
+  const { t } = useTranslation()
   const { adminUser } = useAdminAuth()
 
   // Conversations list
@@ -910,12 +909,12 @@ export default function AdminChatDetail() {
       {/* Left: Conversation List */}
       <Sidebar>
         <SidebarHeader>
-          <span>{isZh ? '对话列表' : 'Conversations'}</span>
+          <span>{t('admin.chatDetail.conversationList')}</span>
           <SidebarCount>{conversations.length}</SidebarCount>
         </SidebarHeader>
         <ConvList>
           {listLoading && conversations.length === 0 && (
-            <LoadingMore>{isZh ? '加载中...' : 'Loading...'}</LoadingMore>
+            <LoadingMore>{t('admin.chatDetail.loading')}</LoadingMore>
           )}
           {conversations.map(conv => (
             <ConvItem
@@ -927,16 +926,16 @@ export default function AdminChatDetail() {
                 <ConvUser>{conv.user?.username}</ConvUser>
                 <StatusBadge
                   status={statusBadgeType(conv.status) as 'submitted' | 'approved' | 'off_sale'}
-                  label={statusLabel(conv.status, isZh)}
+                  label={statusLabel(conv.status, t)}
                 />
               </ConvTop>
-              <ConvSubject>{conv.subject || `${isZh ? '客服咨询' : 'Support'} #${conv.id}`}</ConvSubject>
+              <ConvSubject>{conv.subject || `${t('admin.chatDetail.support')} #${conv.id}`}</ConvSubject>
               <ConvBottom>
                 <ConvLastMsg>
-                  {conv.last_message?.content?.slice(0, 30) || (isZh ? '暂无消息' : 'No messages')}
+                  {conv.last_message?.content?.slice(0, 30) || t('admin.chatDetail.noMessages')}
                 </ConvLastMsg>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <ConvTime>{formatTime(conv.updated_at)}</ConvTime>
+                  <ConvTime>{formatTime(conv.updated_at, t)}</ConvTime>
                   {conv.unread_count > 0 && <UnreadBadge>{conv.unread_count}</UnreadBadge>}
                 </div>
               </ConvBottom>
@@ -951,22 +950,22 @@ export default function AdminChatDetail() {
           <>
             <DetailHeader>
               <DetailTitle>
-                {activeConv.subject || `${isZh ? '客服咨询' : 'Support'} #${activeConv.id}`}
+                {activeConv.subject || `${t('admin.chatDetail.support')} #${activeConv.id}`}
                 <DetailUser>{activeConv.user?.username}</DetailUser>
                 <StatusBadge
                   status={statusBadgeType(activeConv.status) as 'submitted' | 'approved' | 'off_sale'}
-                  label={statusLabel(activeConv.status, isZh)}
+                  label={statusLabel(activeConv.status, t)}
                 />
               </DetailTitle>
               <DetailActions>
                 {activeConv.status === 'open' && (
                   <ActionBtn $variant="primary" onClick={handleMarkReplied}>
-                    {isZh ? '标记已处理' : 'Mark Replied'}
+                    {t('admin.chatDetail.markReplied')}
                   </ActionBtn>
                 )}
                 {activeConv.status !== 'closed' && (
                   <ActionBtn $variant="danger" onClick={handleClose}>
-                    {isZh ? '关闭会话' : 'Close'}
+                    {t('admin.chatDetail.closeConversation')}
                   </ActionBtn>
                 )}
               </DetailActions>
@@ -978,9 +977,7 @@ export default function AdminChatDetail() {
                   <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                   <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                 </svg>
-                {isZh
-                  ? `该会话正在由 ${activeConv.handled_by_name || '其他管理员'} 处理中`
-                  : `This conversation is being handled by ${activeConv.handled_by_name || 'another admin'}`}
+                {t('admin.chatDetail.lockBanner').replace('{handler}', activeConv.handled_by_name || t('admin.chatDetail.otherAdmin'))}
               </LockBanner>
             )}
 
@@ -992,7 +989,7 @@ export default function AdminChatDetail() {
                   $active={msgFilter === tab.key}
                   onClick={() => setMsgFilter(tab.key)}
                 >
-                  {isZh ? tab.labelZh : tab.labelEn}
+                  {t(tab.labelKey)}
                 </FilterTab>
               ))}
             </FilterTabs>
@@ -1010,7 +1007,7 @@ export default function AdminChatDetail() {
                 initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
                 components={{
                   Header: () => convLoading ? (
-                    <LoadingMore>{isZh ? '加载中...' : 'Loading...'}</LoadingMore>
+                    <LoadingMore>{t('admin.chatDetail.loading')}</LoadingMore>
                   ) : null,
                   Footer: () => (
                     <>
@@ -1018,7 +1015,7 @@ export default function AdminChatDetail() {
                         <TypingIndicator name={activeConv.user?.username ?? ''} />
                       )}
                       {activeConv.status === 'closed' && (
-                        <SystemBubbleMessage content={isZh ? '对话已关闭' : 'Conversation closed'} />
+                        <SystemBubbleMessage content={t('admin.chatDetail.conversationClosed')} />
                       )}
                     </>
                   ),
@@ -1049,13 +1046,13 @@ export default function AdminChatDetail() {
                   <ToolBtn
                     onClick={() => setShowProductSearch(true)}
                     disabled={isInputDisabled}
-                    title={isZh ? '发送商品卡片' : 'Send product card'}
+                    title={t('admin.chatDetail.sendProductCard')}
                   >
                     <CartIcon />
                   </ToolBtn>
 
                   <TextInput
-                    placeholder={isZh ? '输入回复...' : 'Type a reply...'}
+                    placeholder={t('admin.chatDetail.inputPlaceholder')}
                     value={inputText}
                     onChange={e => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -1065,13 +1062,13 @@ export default function AdminChatDetail() {
                     onClick={handleSend}
                     disabled={isInputDisabled || sending || (!inputText.trim() && inputAttachments.length === 0)}
                   >
-                    {sending ? (isZh ? '发送中...' : 'Sending...') : <SendIcon />}
+                    {sending ? t('admin.chatDetail.sending') : <SendIcon />}
                   </SendBtn>
                 </InputRow>
                 <ToolBar>
                   <ToolBtn onClick={() => fileInputRef.current?.click()} disabled={isInputDisabled || uploading}>
                     <ImageIcon />
-                    {uploading ? (isZh ? '上传中...' : 'Uploading...') : (isZh ? '图片/视频' : 'Image/Video')}
+                    {uploading ? t('admin.chatDetail.uploading') : t('admin.chatDetail.mediaLabel')}
                   </ToolBtn>
                   <HiddenInput
                     ref={fileInputRef}
@@ -1086,7 +1083,7 @@ export default function AdminChatDetail() {
           </>
         ) : (
           <EmptyDetail>
-            {isZh ? '请从左侧选择一个对话' : 'Select a conversation from the left'}
+            {t('admin.chatDetail.selectConversationHint')}
           </EmptyDetail>
         )}
       </DetailArea>
@@ -1096,29 +1093,29 @@ export default function AdminChatDetail() {
         <ProductSearchOverlay onClick={() => setShowProductSearch(false)}>
           <ProductSearchPopover onClick={(e) => e.stopPropagation()}>
             <ProductSearchHeader>
-              <span>🛒 {isZh ? '选择商品' : 'Select Product'}</span>
+              <span>🛒 {t('admin.chatDetail.selectProduct')}</span>
               <ProductSearchClose onClick={() => setShowProductSearch(false)}>×</ProductSearchClose>
             </ProductSearchHeader>
 
             <ProductSearchInput
               ref={productSearchInputRef}
-              placeholder={isZh ? '搜索商品名称...' : 'Search products...'}
+              placeholder={t('admin.chatDetail.searchProductPlaceholder')}
               value={productSearchQuery}
               onChange={e => setProductSearchQuery(e.target.value)}
             />
 
             <ProductList>
               {productSearching && (
-                <LoadingMore>{isZh ? '搜索中...' : 'Searching...'}</LoadingMore>
+                <LoadingMore>{t('admin.chatDetail.searching')}</LoadingMore>
               )}
               {!productSearching && productResults.length === 0 && debouncedQuery && (
                 <ProductSearchEmpty>
-                  {isZh ? '未找到相关商品' : 'No products found'}
+                  {t('admin.chatDetail.noProductsFound')}
                 </ProductSearchEmpty>
               )}
               {!productSearching && !debouncedQuery && (
                 <ProductSearchEmpty>
-                  {isZh ? '输入关键词搜索商品' : 'Enter keywords to search products'}
+                  {t('admin.chatDetail.searchHint')}
                 </ProductSearchEmpty>
               )}
               {productResults.map(product => (
@@ -1139,7 +1136,7 @@ export default function AdminChatDetail() {
                     onClick={() => handleSendProductCard(product)}
                     style={{ flexShrink: 0 }}
                   >
-                    {isZh ? '发送卡片' : 'Send Card'}
+                    {t('admin.chatDetail.sendCard')}
                   </ActionBtn>
                 </ProductItem>
               ))}

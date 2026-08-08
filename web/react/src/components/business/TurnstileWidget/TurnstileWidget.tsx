@@ -10,7 +10,7 @@ export interface TurnstileWidgetProps {
   /** 验证成功回调，接收 token */
   onVerify: (token: string) => void
   /** 验证出错回调 */
-  onError?: (error: Error) => void
+  onError?: (error: unknown) => void
   /** token 过期回调 */
   onExpire?: () => void
   /** 自定义主题 */
@@ -29,7 +29,7 @@ declare global {
         options: {
           sitekey: string
           callback: (token: string) => void
-          'error-callback'?: (error: Error) => void
+          'error-callback'?: (error: number) => void
           'expired-callback'?: () => void
           theme?: 'light' | 'dark' | 'auto'
           size?: 'normal' | 'compact'
@@ -162,7 +162,7 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
         callback: (token: string) => {
           onVerifyRef.current(token)
         },
-        'error-callback': (error: Error) => {
+        'error-callback': (error: number) => {
           onErrorRef.current?.(error)
         },
         'expired-callback': () => {
