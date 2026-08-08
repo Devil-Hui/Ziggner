@@ -170,7 +170,6 @@ function formatDateTime(dateStr: string): string {
 
 export default function AdminNotifications() {
   const { t, lang } = useTranslation()
-  const isZh = lang === 'zh-CN'
 
   // Tab state
   const [activeTab, setActiveTab] = useState<TabKey>('all')
@@ -204,11 +203,11 @@ export default function AdminNotifications() {
       setNotifications(data.items || [])
       setNotifTotal(data.total || 0)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : (isZh ? '加载失败' : 'Load failed')
+      const message = err instanceof Error ? err.message : t('admin.notifications.loadFailed')
       setNotifError(message)
     }
     setNotifLoading(false)
-  }, [notifPage, activeTab, isZh])
+  }, [notifPage, activeTab, lang])
 
   // ── Fetch based on active tab ──
   useEffect(() => {
@@ -254,11 +253,11 @@ export default function AdminNotifications() {
   // ── Columns for notifications ──
   const getTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
-      system: isZh ? '系统' : 'System',
-      operation: isZh ? '操作' : 'Operation',
-      notification: isZh ? '通知' : 'Notification',
-      security: isZh ? '安全' : 'Security',
-      error: isZh ? '错误' : 'Error',
+      system: t('admin.notifications.tabSystem'),
+      operation: t('admin.notifications.tabOperation'),
+      notification: t('admin.notifications.tabNotification'),
+      security: t('admin.notifications.tabSecurity'),
+      error: t('admin.notifications.tabError'),
     }
     return labels[type] || type
   }
@@ -272,45 +271,45 @@ export default function AdminNotifications() {
     },
     {
       key: 'type',
-      title: isZh ? '类型' : 'Type',
+      title: t('admin.notifications.columnType'),
       width: '100px',
       render: (val: unknown) => <Badge $type={String(val ?? '')}>{getTypeLabel(String(val ?? ''))}</Badge>,
     },
     {
       key: 'title',
-      title: isZh ? '标题' : 'Title',
+      title: t('admin.notifications.columnTitle'),
       width: '200px',
     },
     {
       key: 'content',
-      title: isZh ? '内容' : 'Content',
+      title: t('admin.notifications.columnContent'),
       width: '300px',
     },
     {
       key: 'is_read',
-      title: isZh ? '状态' : 'Status',
+      title: t('admin.notifications.columnStatus'),
       width: '80px',
       render: (val: unknown) => (
         val
-          ? <span style={{ color: '#27ae60' }}>{isZh ? '已读' : 'Read'}</span>
-          : <span style={{ color: '#e74c3c' }}>{isZh ? '未读' : 'Unread'}</span>
+          ? <span style={{ color: '#27ae60' }}>{t('admin.notifications.statusRead')}</span>
+          : <span style={{ color: '#e74c3c' }}>{t('admin.notifications.statusUnread')}</span>
       ),
     },
     {
       key: 'created_at',
-      title: isZh ? '时间' : 'Time',
+      title: t('admin.notifications.columnTime'),
       width: '170px',
       render: (val: unknown) => <DateTime>{formatDateTime(String(val ?? ''))}</DateTime>,
     },
     {
       key: 'actions',
-      title: isZh ? '操作' : 'Actions',
+      title: t('admin.notifications.columnActions'),
       width: '100px',
       render: (_val: unknown, record?: NotificationItem) => {
         if (!record || record.is_read) return <span style={{ color: '#ccc' }}>—</span>
         return (
           <PrimaryBtn onClick={() => handleMarkRead(record.id)} style={{ padding: '4px 12px', fontSize: '12px' }}>
-            {isZh ? '标为已读' : 'Mark Read'}
+            {t('admin.notifications.markRead')}
           </PrimaryBtn>
         )
       },
@@ -341,11 +340,11 @@ export default function AdminNotifications() {
 
         <ActionsRow>
           <SecondaryBtn onClick={fetchNotifications}>
-            {isZh ? '刷新' : 'Refresh'}
+            {t('admin.notifications.refresh')}
           </SecondaryBtn>
           {hasUnread && (
             <PrimaryBtn onClick={handleMarkAllRead}>
-              {isZh ? '全部标记已读' : 'Mark All Read'}
+              {t('admin.notifications.markAllRead')}
             </PrimaryBtn>
           )}
         </ActionsRow>
@@ -357,7 +356,7 @@ export default function AdminNotifications() {
             loading={notifLoading}
             error={notifError}
             onRetry={fetchNotifications}
-            emptyTitle={isZh ? '暂无通知' : 'No notifications'}
+            emptyTitle={t('admin.notifications.emptyTitle')}
             emptyIcon="notifications"
             rowKey="id"
           />
