@@ -381,84 +381,6 @@ const Placeholder = styled.div`
 `
 
 /* ───────────────────────────────────────────────────────────
- *  EDITORIAL split (forest philosophy panel)
- * ─────────────────────────────────────────────────────────── */
-const ForestPanel = styled.div`
-  display: grid;
-  grid-template-columns: 1fr;
-  border-radius: 1rem;
-  overflow: hidden;
-  background: ${C.card};
-  color: ${C.ink};
-  border: 1px solid #e5e7eb;
-  @media (min-width: 768px) { grid-template-columns: 1fr 1fr; }
-`
-
-const ForestText = styled.div`
-  padding: 2.5rem;
-  @media (min-width: 768px) { padding: 4rem; }
-`
-
-const ForestImg = styled.div`
-  position: relative;
-  min-height: 12rem;
-`
-
-const ForestBtn = styled.button`
-  margin-top: 2rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  background: ${C.ink};
-  border: none;
-  color: ${C.cream};
-  border-radius: 9999px;
-  padding: 0.9rem 1.8rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-  transition: opacity 0.2s ease;
-  &:hover { opacity: 0.85; }
-`
-
-/* ───────────────────────────────────────────────────────────
- *  VALUE PROPS
- * ─────────────────────────────────────────────────────────── */
-const ValueGrid = styled.div`
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr;
-  @media (min-width: 768px) { grid-template-columns: repeat(3, 1fr); }
-`
-
-const ValueCard = styled.div`
-  background: ${C.card};
-  border: 1px solid #e5e7eb;
-  border-radius: 1rem;
-  padding: 2rem;
-  transition: border-color 0.2s ease;
-  &:hover { border-color: ${C.ink}33; }
-`
-
-const ValueIcon = styled.div`
-  font-size: 1.5rem;
-  color: ${C.ink};
-  margin-bottom: 1rem;
-  line-height: 1;
-`
-
-const ValueTitle = styled.h3`
-  font-family: ${SERIF};
-  font-size: 1.5rem;
-  margin: 0 0 0.5rem;
-  color: ${C.ink};
-`
-
-const ValueBody = styled.p`
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  color: ${C.muted};
-  line-height: 1.7;
-  margin: 0;
-`
-
-/* ───────────────────────────────────────────────────────────
  *  CATEGORY cards (editorial)
  * ─────────────────────────────────────────────────────────── */
 const CatGrid = styled.div`
@@ -486,55 +408,79 @@ const CatName = styled.div`
   position: absolute;
   left: 0; right: 0; bottom: 0;
   padding: 1.25rem;
-  background: ${C.ink};
-  color: ${C.cream};
+  color: ${C.ink};
   font-family: ${SERIF};
   font-size: 1.15rem;
-  text-align: center;
+  background: linear-gradient(0deg, ${C.cream}f2 0%, transparent 100%);
 `
 
 /* ───────────────────────────────────────────────────────────
- *  HORIZONTAL scroll (hot products)
+ *  HOT PRODUCTS — vfeed list (sample index.html style)
  * ─────────────────────────────────────────────────────────── */
-const HScroll = styled.div`
+const VFeed = styled.div`
   display: flex;
-  gap: 1.25rem;
-  overflow-x: auto;
-  padding-bottom: 1rem;
-  scrollbar-width: thin;
-  &::-webkit-scrollbar { height: 6px; }
-  &::-webkit-scrollbar-thumb { background: ${C.ink}33; border-radius: 3px; }
+  flex-direction: column;
+  background: ${C.card};
+  border: 1px solid #e5e7eb;
+  border-radius: 1rem;
+  overflow: hidden;
 `
 
-const HCard = styled.div`
-  flex: 0 0 200px;
+const VFeedRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 1rem 1.2rem;
+  border-bottom: 1px solid #e5e7eb;
   cursor: pointer;
-  .himg {
-    aspect-ratio: 1;
-    border-radius: 1rem;
-    overflow: hidden;
-    background: ${C.card};
-    box-shadow: 0 2px 10px rgba(26, 23, 18, 0.06);
-    img { width: 100%; height: 100%; object-fit: contain; transition: transform 0.5s ease; }
-  }
-  &:hover .himg img { transform: scale(1.05); }
+  transition: background 0.2s ease;
+  &:last-of-type { border-bottom: none; }
+  &:hover { background: rgba(0, 0, 0, 0.025); }
 `
 
-const HName = styled.div`
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.85rem;
-  font-weight: 500;
+const VFeedThumb = styled.div`
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  background: ${C.card};
+  border: 1px solid #e5e7eb;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  color: ${C.muted};
+  flex: none;
+  overflow: hidden;
+  img { width: 100%; height: 100%; object-fit: cover; }
+`
+
+const VFeedInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
+const VFeedName = styled.div`
+  font-family: ${SERIF};
+  font-size: 1.05rem;
   color: ${C.ink};
-  margin: 0.6rem 0 0.2rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `
 
-const HPrice = styled.div`
+const VFeedCat = styled.div`
   font-family: ui-sans-serif, system-ui, sans-serif;
-  color: ${C.clay};
+  font-size: 0.72rem;
+  color: ${C.muted};
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-top: 3px;
+`
+
+const VFeedPrice = styled.div`
+  font-family: ${SERIF};
   font-weight: 600;
+  color: ${C.ink};
+  white-space: nowrap;
 `
 
 /* ───────────────────────────────────────────────────────────
@@ -585,11 +531,6 @@ const MARQUEE_ITEMS = [
   '30-day easy returns',
   'Carbon-neutral delivery',
   'Designed to last a lifetime',
-]
-const VALUE_PROPS = [
-  { icon: '✦', title: 'Made to last', body: 'Solid materials and real craftsmanship. Everything we sell is built to outlive trends.' },
-  { icon: '❋', title: 'Small batches', body: 'We work with independent makers producing in limited runs, never mass-manufactured.' },
-  { icon: '◈', title: 'Considered impact', body: 'Carbon-neutral shipping, recyclable packaging, and materials we can stand behind.' },
 ]
 
 export default function Home() {
@@ -808,73 +749,43 @@ export default function Home() {
           <Section style={{ paddingTop: 0 }}>
             <Shell>
               <Reveal>
-                <Eyebrow>Trending now</Eyebrow>
-                <SectionTitle>{t('store.home.hotProducts').replace('🔥 ', '')}</SectionTitle>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <Eyebrow>Trending now</Eyebrow>
+                    <SectionTitle>{t('store.home.hotProducts').replace('🔥 ', '')}</SectionTitle>
+                  </div>
+                  <span style={{ fontFamily: 'ui-sans-serif, system-ui, sans-serif', fontSize: '0.82rem', color: C.muted }}>
+                    Scroll for more ↓
+                  </span>
+                </div>
               </Reveal>
               <div style={{ marginTop: '2.5rem' }}>
-                <HScroll>
+                <VFeed>
                   {hotProducts.map(sku => {
                     const spuId = Number((sku as any).spu_id || (sku as any).spu || 0)
                     const displayPrice = sku.discount_price ?? sku.price
                     return (
-                      <HCard key={sku.id} onClick={() => spuId && navigate(`/product/${spuId}`)}>
-                        <div className="himg">
+                      <VFeedRow key={sku.id} onClick={() => spuId && navigate(`/product/${spuId}`)}>
+                        <VFeedThumb>
                           {sku.image_url ? (
                             <img src={sku.image_url} alt={sku.name} loading="lazy" />
                           ) : (
-                            <span style={{ fontSize: '2.5rem', color: '#ccc', display: 'grid', placeItems: 'center', height: '100%' }}>📦</span>
+                            <span>📦</span>
                           )}
-                        </div>
-                        <HName>{sku.name}</HName>
-                        <HPrice>{displayPrice ? `$${Number(displayPrice).toFixed(2)}` : ''}</HPrice>
-                      </HCard>
+                        </VFeedThumb>
+                        <VFeedInfo>
+                          <VFeedName>{sku.name}</VFeedName>
+                          <VFeedCat>{(sku as any).spu_name || 'Ziggner'}</VFeedCat>
+                        </VFeedInfo>
+                        <VFeedPrice>{displayPrice ? `$${Number(displayPrice).toFixed(2)}` : ''}</VFeedPrice>
+                      </VFeedRow>
                     )
                   })}
-                </HScroll>
+                </VFeed>
               </div>
             </Shell>
           </Section>
         )}
-
-        {/* ── EDITORIAL (forest) ── */}
-        <Section>
-          <Shell>
-            <Reveal>
-              <ForestPanel>
-                <ForestText>
-                  <Eyebrow style={{ color: `${C.cream}80` }}>The philosophy</Eyebrow>
-                  <SectionTitle style={{ color: C.cream, marginTop: '1rem' }}>
-                    Fewer things, made <span style={{ fontStyle: 'italic', color: C.clay }}>beautifully</span>.
-                  </SectionTitle>
-                  <ValueBody style={{ marginTop: '1.5rem', maxWidth: '26rem' }}>
-                    We believe a home should be filled slowly, with objects that mean something.
-                    Every piece in our collection is chosen for how it feels, how it's made, and how
-                    it ages — never for how quickly it can be replaced.
-                  </ValueBody>
-                  <ForestBtn onClick={() => navigate('/category')}>Discover more →</ForestBtn>
-                </ForestText>
-                <ForestImg />
-              </ForestPanel>
-            </Reveal>
-          </Shell>
-        </Section>
-
-        {/* ── VALUE PROPS ── */}
-        <Section style={{ paddingTop: 0 }}>
-          <Shell>
-            <ValueGrid>
-              {VALUE_PROPS.map((v, i) => (
-                <Reveal key={v.title} delay={i * 120}>
-                  <ValueCard>
-                    <ValueIcon>{v.icon}</ValueIcon>
-                    <ValueTitle>{v.title}</ValueTitle>
-                    <ValueBody>{v.body}</ValueBody>
-                  </ValueCard>
-                </Reveal>
-              ))}
-            </ValueGrid>
-          </Shell>
-        </Section>
 
         {/* ── BRANDS ── */}
         {brands.length > 0 && (
