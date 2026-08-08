@@ -27,7 +27,7 @@ const BackButton = styled.button`
   transition: all ${Transition.normal};
 
   &:hover {
-    background: ${Color.background.secondary};
+    background: ${Color.bg.page};
     color: ${Color.primaryHover};
   }
 `
