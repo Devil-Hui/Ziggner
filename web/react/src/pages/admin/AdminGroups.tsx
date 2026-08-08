@@ -176,7 +176,7 @@ const MemberTable = styled.table`
 `;
 
 const MemberThead = styled.thead`
-  background: ${Color.primaryLight};
+  background: rgba(26, 23, 18, 0.03);
 `;
 
 const MemberTh = styled.th`

@@ -133,8 +133,8 @@ const PreviewTh = styled.th`
   padding: 8px 12px;
   text-align: left;
   font-weight: 600;
-  color: ${Color.text.secondary};
-  background: ${Color.primaryLight};
+  color: #8a8175;
+  background: rgba(26, 23, 18, 0.03);
   border-bottom: 1px solid ${Color.border.light};
   white-space: nowrap;
   font-size: ${FontSize.xs}px;

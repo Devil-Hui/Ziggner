@@ -106,29 +106,32 @@ const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'ghost' | 'ok' 
 
 const Table = styled.table`
   width: 100%;
-  border-collapse: collapse;
-  background: ${Color.bg.card};
-  border-radius: ${Radius.md}px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid rgba(26, 23, 18, 0.10);
+  border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 14px rgba(26, 23, 18, 0.06);
 `
 
 const Th = styled.th`
-  padding: 12px 16px;
+  padding: 14px 18px;
   text-align: left;
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 600;
-  color: ${Color.text.muted};
+  color: #8a8175;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  border-bottom: 1px solid ${Color.border.light};
-  background: ${Color.primaryLight};
+  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
+  background: rgba(26, 23, 18, 0.03);
 `
 
 const Td = styled.td`
-  padding: 12px 16px;
+  padding: 14px 18px;
   font-size: 0.875rem;
-  color: ${Color.primaryHover};
-  border-bottom: 1px solid ${Color.border.light};
+  color: #1a1712;
+  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
   vertical-align: top;
 `
 
