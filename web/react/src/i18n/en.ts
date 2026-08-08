@@ -806,7 +806,7 @@ const en = {
 
   store: {
     nav: {
-      logo: 'Logo',
+      logo: 'Ziggner',
       searchPlaceholder: 'Search products...',
       share: 'Share',
       setting: 'Setting',
