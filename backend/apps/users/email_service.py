@@ -228,7 +228,10 @@ class EmailVerifyService:
         message = f'Your verification code is: {code}\nValid for 10 minutes.'
         html_message = f'''
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="font-size:22px;font-weight:600;margin-bottom:24px;letter-spacing:-0.5px;">Ziggner</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
+    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
+  </div>
   <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
     Your verification code is:
   </div>
@@ -284,7 +287,10 @@ class EmailVerifyService:
 
         html = f'''
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="font-size:22px;font-weight:600;margin-bottom:24px;letter-spacing:-0.5px;">Ziggner</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
+    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
+  </div>
   <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
     Your verification code is:
   </div>
@@ -338,7 +344,10 @@ class EmailVerifyService:
 
         html = f'''
 <div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="font-size:22px;font-weight:600;margin-bottom:24px;letter-spacing:-0.5px;">Ziggner</div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
+    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
+  </div>
   <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
     Your verification code is:
   </div>
