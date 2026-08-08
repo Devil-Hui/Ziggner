@@ -42,6 +42,21 @@ R2_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY', '')
 R2_BUCKET = os.getenv('R2_BUCKET', 'ziggner-media')
 R2_PUBLIC_URL = os.getenv('R2_PUBLIC_URL', '')  # e.g. https://cdn.ziggner.com
 
+# ── R2 对象存储（凭据齐全时启用；否则回退本地磁盘）──
+if R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET:
+    STORAGES['default']['BACKEND'] = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_ACCESS_KEY_ID = R2_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY = R2_SECRET_ACCESS_KEY
+    AWS_STORAGE_BUCKET_NAME = R2_BUCKET
+    AWS_S3_ENDPOINT_URL = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
+    AWS_S3_REGION_NAME = 'auto'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = None
+    if R2_PUBLIC_URL:
+        MEDIA_URL = f'{R2_PUBLIC_URL.rstrip(chr(47))}/{MEDIA_PATH.strip(chr(47))}/'
+
+
 # ============================================================
 # HSTS 与 HTTPS 安全配置（仅生产环境）
 # ============================================================
