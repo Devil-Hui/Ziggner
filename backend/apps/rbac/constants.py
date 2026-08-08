@@ -56,6 +56,9 @@ PERMISSIONS: tuple[Perm, ...] = (
     Perm('goods.stats.read', 'goods', '查看商品统计'),
     Perm('goods.group.write', 'goods', '管理商品审核组'),
     Perm('goods.application.review', 'goods', '审批入驻申请'),
+    # ── 用户域 ──
+    Perm('users.email_template.read', 'users', '查看邮件模板'),
+    Perm('users.email_template.write', 'users', '编辑邮件模板'),
     # ── 订单域 ──
     Perm('order.read', 'order', '查看订单'),
     Perm('order.ship', 'order', '订单发货'),

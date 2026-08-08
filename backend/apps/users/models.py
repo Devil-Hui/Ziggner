@@ -208,3 +208,45 @@ class SocialAccount(models.Model):
     def __str__(self):
         return f'{self.provider}:{self.provider_id}'
 
+
+class EmailTemplate(models.Model):
+    """
+    邮件模板配置 —— 管理后台可编辑发送的邮件内容。
+    """
+    TEMPLATE_TYPES = [
+        ('verify_code', '邮箱验证码'),
+        ('order_notice', '订单通知'),
+        ('reset_password', '密码重置'),
+    ]
+    template_type = models.CharField(
+        max_length=32, unique=True, choices=TEMPLATE_TYPES,
+        verbose_name='模板类型',
+    )
+    subject = models.CharField(max_length=200, verbose_name='邮件主题')
+    # HTML 正文，支持 {code} 等占位符
+    html_body = models.TextField(verbose_name='HTML 正文', help_text='支持 {code} 占位符')
+    text_body = models.TextField(verbose_name='纯文本正文', blank=True, help_text='支持 {code} 占位符')
+    is_active = models.BooleanField(default=True, verbose_name='启用')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'users_email_template'
+        verbose_name = '邮件模板'
+        verbose_name_plural = verbose_name
+
+    def render(self, context: dict) -> dict:
+        """用上下文渲染主题与正文（占位符替换）"""
+        def _fill(text):
+            for k, v in context.items():
+                text = text.replace('{' + k + '}', str(v))
+            return text
+        return {
+            'subject': _fill(self.subject),
+            'html': _fill(self.html_body),
+            'text': _fill(self.text_body or ''),
+        }
+
+    def __str__(self):
+        return f'{self.get_template_type_display()} - {self.subject}'
+
+

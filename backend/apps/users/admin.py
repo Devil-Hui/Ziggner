@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from apps.users.models import UserProfile, ExpiringToken, SMSVerificationCode
+from apps.users.models import (
+    UserProfile, ExpiringToken, SMSVerificationCode, EmailTemplate,
+)
+
+
+@admin.register(EmailTemplate)
+class EmailTemplateAdmin(admin.ModelAdmin):
+    """邮件模板管理（管理后台可编辑发送内容）"""
+    list_display = ['template_type', 'subject', 'is_active', 'updated_at']
+    list_filter = ['is_active', 'template_type']
+    search_fields = ['subject', 'html_body']
 
 
 @admin.register(UserProfile)

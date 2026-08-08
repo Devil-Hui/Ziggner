@@ -18,6 +18,67 @@ from django.core.cache import caches
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 
+from apps.users.models import EmailTemplate
+
+
+def _get_template(template_type: str):
+    """从数据库读取邮件模板，缺省回退到内置默认值"""
+    try:
+        tpl = EmailTemplate.objects.filter(template_type=template_type, is_active=True).first()
+        if tpl:
+            return tpl
+    except Exception:
+        pass
+    return None
+
+
+def _render_template(template_type: str, context: dict) -> dict:
+    """渲染邮件内容：优先数据库模板，回退内置默认"""
+    tpl = _get_template(template_type)
+    if tpl:
+        return tpl.render(context)
+    # 内置默认（数据库模板未配置时）
+    code = context.get('code', '')
+    return {
+        'subject': 'Ziggner - Email Verification',
+        'html': f'''<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
+    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
+    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
+  </div>
+  <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
+    Your verification code is:
+  </div>
+  <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#1a56db;background:#f5f7ff;padding:16px 24px;border-radius:6px;text-align:center;margin-bottom:24px;">
+    {code}
+  </div>
+  <div style="font-size:12px;line-height:1.5;color:#888;">
+    This code is valid for 10 minutes. For security reasons, never share this code with anyone.
+  </div>
+  <div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px;font-size:11px;color:#aaa;text-align:center;">
+    Ziggner · Automated message. Please do not reply.
+  </div>
+</div>''',
+        'text': f'Your verification code is: {code}\nValid for 10 minutes.',
+    }
+
+
+def _send_verify_email(email: str, code: str, template_type: str = 'verify_code',
+                       from_email: str | None = None) -> None:
+    """按模板发送验证码邮件（复用 _render_template）"""
+    rendered = _render_template(template_type, {'code': code})
+    try:
+        send_mail(
+            subject=rendered['subject'],
+            message=rendered['text'],
+            html_message=rendered['html'],
+            from_email=from_email or settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[email],
+            fail_silently=False,
+        )
+    except Exception as e:
+        logger.warning(f'[EMAIL] Failed to send verification code to {email}: {e}')
+
 logger = logging.getLogger(__name__)
 
 _code_cache = caches['verification_code']
@@ -224,39 +285,7 @@ class EmailVerifyService:
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
 
         # 发送邮件
-        subject = 'Ziggner - Email Verification'
-        message = f'Your verification code is: {code}\nValid for 10 minutes.'
-        html_message = f'''
-<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
-    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
-  </div>
-  <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
-    Your verification code is:
-  </div>
-  <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#1a56db;background:#f5f7ff;padding:16px 24px;border-radius:6px;text-align:center;margin-bottom:24px;">
-    {code}
-  </div>
-  <div style="font-size:12px;line-height:1.5;color:#888;">
-    This code is valid for 10 minutes. For security reasons, never share this code with anyone.
-  </div>
-  <div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px;font-size:11px;color:#aaa;text-align:center;">
-    Ziggner · Automated message. Please do not reply.
-  </div>
-</div>'''
-
-        try:
-            send_mail(
-                subject=subject,
-                message=message,
-                html_message=html_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            logger.warning(f'[EMAIL] Failed to send verification code to {email}: {e}')
+        _send_verify_email(email, code, 'verify_code')
 
         result = {'verify_id': verify_id, 'expire_seconds': expire_sec, 'code': code}
         return result
@@ -285,34 +314,16 @@ class EmailVerifyService:
 
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
 
-        html = f'''
-<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
-    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
-  </div>
-  <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
-    Your verification code is:
-  </div>
-  <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#1a56db;background:#f5f7ff;padding:16px 24px;border-radius:6px;text-align:center;margin-bottom:24px;">
-    {code}
-  </div>
-  <div style="font-size:12px;line-height:1.5;color:#888;">
-    This code is valid for 10 minutes. For security reasons, never share this code with anyone.
-  </div>
-  <div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px;font-size:11px;color:#aaa;text-align:center;">
-    Ziggner · Automated message. Please do not reply.
-  </div>
-</div>'''
+        rendered = _render_template('verify_code', {'code': code})
 
         msg = EmailMultiAlternatives(
-            subject='Ziggner - Email Verification',
-            body=f'Your verification code is: {code}',
+            subject=rendered['subject'],
+            body=rendered['text'] or f'Your verification code is: {code}',
             from_email=settings.ADMIN_DEFAULT_FROM_EMAIL,
             to=[email],
             connection=None,
         )
-        msg.attach_alternative(html, 'text/html')
+        msg.attach_alternative(rendered['html'], 'text/html')
 
         conn = get_connection(
             backend='django.core.mail.backends.smtp.EmailBackend',
@@ -342,34 +353,16 @@ class EmailVerifyService:
 
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
 
-        html = f'''
-<div style="max-width:480px;margin:0 auto;padding:32px 24px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;border-radius:8px;">
-  <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px;">
-    <svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><rect width="32" height="32" rx="6" fill="#1a56db"/><text x="16" y="23" text-anchor="middle" fill="#ffffff" font-size="18" font-family="Arial, sans-serif" font-weight="bold">Z</text></svg>
-    <div style="font-size:22px;font-weight:600;letter-spacing:-0.5px;">Ziggner</div>
-  </div>
-  <div style="font-size:14px;line-height:1.6;color:#444;margin-bottom:20px;">
-    Your verification code is:
-  </div>
-  <div style="font-size:32px;font-weight:700;letter-spacing:6px;color:#1a56db;background:#f5f7ff;padding:16px 24px;border-radius:6px;text-align:center;margin-bottom:24px;">
-    {code}
-  </div>
-  <div style="font-size:12px;line-height:1.5;color:#888;">
-    This code is valid for 10 minutes. For security reasons, never share this code with anyone.
-  </div>
-  <div style="border-top:1px solid #eee;margin-top:24px;padding-top:16px;font-size:11px;color:#aaa;text-align:center;">
-    Ziggner · Automated message. Please do not reply.
-  </div>
-</div>'''
+        rendered = _render_template('verify_code', {'code': code})
 
         msg = EmailMultiAlternatives(
-            subject='Ziggner - Email Verification',
-            body=f'Your verification code is: {code}',
+            subject=rendered['subject'],
+            body=rendered['text'] or f'Your verification code is: {code}',
             from_email=settings.USER_DEFAULT_FROM_EMAIL,
             to=[email],
             connection=None,
         )
-        msg.attach_alternative(html, 'text/html')
+        msg.attach_alternative(rendered['html'], 'text/html')
 
         conn = get_connection(
             backend='django.core.mail.backends.smtp.EmailBackend',
