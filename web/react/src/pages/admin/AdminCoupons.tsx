@@ -521,7 +521,9 @@ export default function AdminCoupons() {
       width: '80px',
       render: (_, record) => (
         <span>
-          已用 {record.used_count ?? 0}/{record.total_count}
+          {t('admin.coupons.usedCountFormat')
+            .replace('{used}', String(record.used_count ?? 0))
+            .replace('{total}', String(record.total_count))}
         </span>
       ),
     },

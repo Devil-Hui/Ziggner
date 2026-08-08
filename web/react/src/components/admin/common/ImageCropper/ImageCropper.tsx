@@ -6,6 +6,7 @@
  */
 
 import { useRef, useEffect, useState, useCallback } from 'react'
+import { useTranslation } from '../../../../i18n'
 import type { ImageCropperProps, MultiSizeCropResult } from './ImageCropper.types'
 import * as S from './ImageCropper.styles'
 
@@ -35,6 +36,7 @@ export default function ImageCropper({
   maxWidth = 800,
   canvasWidth = 400,
 }: ImageCropperProps) {
+  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
@@ -260,8 +262,8 @@ export default function ImageCropper({
     <S.Overlay onClick={onCancel}>
       <S.Dialog onClick={e => e.stopPropagation()}>
         <S.Header>
-          <S.Title>裁剪图片</S.Title>
-          <S.Info>拖拽移动 · 四角缩放 · 宽高比 {aspectRatio}:1</S.Info>
+          <S.Title>{t('admin.imageCropper.title')}</S.Title>
+          <S.Info>{t('admin.imageCropper.info').replace('{ratio}', String(aspectRatio))}</S.Info>
         </S.Header>
         <S.CanvasContainer>
           <S.Canvas
@@ -273,8 +275,8 @@ export default function ImageCropper({
           />
         </S.CanvasContainer>
         <S.Actions>
-          <S.Btn onClick={onCancel}>取消</S.Btn>
-          <S.Btn $primary onClick={handleConfirm}>确认裁剪</S.Btn>
+          <S.Btn onClick={onCancel}>{t('admin.imageCropper.cancel')}</S.Btn>
+          <S.Btn $primary onClick={handleConfirm}>{t('admin.imageCropper.confirm')}</S.Btn>
         </S.Actions>
       </S.Dialog>
     </S.Overlay>
