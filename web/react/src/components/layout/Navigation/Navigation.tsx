@@ -15,6 +15,12 @@ import {
   type OpenCartDropdownDetail,
 } from '../../../utils/cartEvents'
 
+// Lumiere editorial palette — keep header in sync with the storefront
+const CREAM = '#f7f4ef'
+const INK = '#1a1712'
+const CLAY = '#c8623a'
+const LINE = 'rgba(26, 23, 18, 0.10)'
+
 // ── SVG icons ──
 
 const ArrowDown = () => (
@@ -45,8 +51,8 @@ const UserIcon = () => (
 )
 
 const Header = styled.header`
-  background-color: ${Color.bg.header};
-  border-bottom: 1px solid ${Color.border.light};
+  background-color: ${CREAM};
+  border-bottom: 1px solid ${LINE};
   position: relative;
   z-index: ${zIndex.header};
 `
@@ -77,13 +83,13 @@ const SearchBar = styled.form`
     border: 1px solid transparent;
     border-radius: 20px 0 0 20px;
     font-size: 1rem;
-    background: #f5f5f5;
+    background: rgba(26, 23, 18, 0.05);
     outline: none;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
     &:focus {
-      border-color: ${Color.border.medium};
-      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.04);
+      border-color: ${CLAY};
+      box-shadow: 0 0 0 2px rgba(200, 98, 58, 0.12);
     }
   }
 
@@ -91,10 +97,10 @@ const SearchBar = styled.form`
     min-width: 64px;
     min-height: 44px;
     padding: 0 16px;
-    border: 1px solid ${Color.primaryHover};
+    border: 1px solid ${CLAY};
     border-radius: 0 20px 20px 0;
-    background: ${Color.primaryHover};
-    color: ${Color.text.inverse};
+    background: ${CLAY};
+    color: #fff;
     cursor: pointer;
     font-weight: 600;
   }
@@ -112,12 +118,12 @@ const NavActions = styled.div`
 `
 
 const DropButton = styled.button`
-  background: ${Color.primaryLight};
-  border: 1px solid ${Color.border.medium};
+  background: transparent;
+  border: 1px solid ${LINE};
   padding: 0 ${Spacing.md};
   height: 40px;
   min-width: 40px;
-  border-radius: ${Radius.sm};
+  border-radius: ${Radius.full}px;
   cursor: pointer;
   font-size: 1rem;
   white-space: nowrap;
@@ -125,9 +131,11 @@ const DropButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 0.5vw;
+  transition: border-color 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background: ${Color.border.light};
+    border-color: ${CLAY};
+    color: ${CLAY};
   }
 `
 
@@ -363,17 +371,23 @@ const BottomNav = styled.nav`
 `
 
 const CategoryButton = styled.button`
-  background: ${Color.primaryHover};
-  color: ${Color.text.inverse};
-  padding: 1.2vh 2.5vw;
+  background: ${CLAY};
+  color: #fff;
+  padding: 10px 20px;
+  margin-left: 1.5vw;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   white-space: nowrap;
   border: none;
-  border-radius: 0;
+  border-radius: ${Radius.full}px;
+  display: flex;
+  align-items: center;
+  gap: 0.5vw;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 
   &:hover {
-    background: #555;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px -8px rgba(200, 98, 58, 0.6);
   }
 `
 
@@ -435,7 +449,7 @@ const AlphabetNav = styled.div`
     cursor: pointer;
 
     &:hover {
-      color: ${Color.primaryHover};
+      color: ${CLAY};
     }
   }
 `
@@ -478,7 +492,7 @@ const MenuLink = styled.div`
 
   &:hover, &.active {
     background: ${Color.bg.card};
-    color: #ff4646;
+    color: ${CLAY};
     font-weight: bold;
   }
 `
@@ -685,6 +699,13 @@ export default function Navigation() {
       <TopBar>
         <Logo src="/logo.png" alt="Ziggner" onClick={handleLogoClick} />
 
+        <CategoryButton onClick={() => {
+          if (!showMegaMenu) { setActiveLevel1(-1); setActiveLevel2(0) }
+          setShowMegaMenu(!showMegaMenu)
+        }}>
+          {t('store.nav.categories')} <ArrowDown />
+        </CategoryButton>
+
         <SearchBar role="search" onSubmit={handleSearchSubmit}>
           <input
             type="search"
@@ -758,13 +779,6 @@ export default function Navigation() {
       </TopBar>
 
       <BottomNav ref={megaRef}>
-        <CategoryButton onClick={() => {
-          if (!showMegaMenu) { setActiveLevel1(-1); setActiveLevel2(0) }
-          setShowMegaMenu(!showMegaMenu)
-        }}>
-          {t('store.nav.categories')} <ArrowDown />
-        </CategoryButton>
-
         <MegaMenu $active={showMegaMenu}>
           <MenuSidebar>
             {categoryTree.map((category, index) => (
