@@ -150,7 +150,7 @@ const CodeInput = styled(Input)`
   flex: 1;
   min-width: 0;
   letter-spacing: 4px;
-  text-align: center;
+  text-align: left;
 
   &::placeholder {
     letter-spacing: normal;
