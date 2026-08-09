@@ -114,6 +114,12 @@ class RegisterSerializer(serializers.Serializer):
 
     def validate(self, data):
         """跨字段校验：token 优先（邮箱流程），code 次之（手机流程）"""
+        # 两步流程：视图已用 verify_id+code 校验并注入已验证邮箱，直接采用
+        verified_email = self.context.get('verified_email')
+        if verified_email:
+            data['_verified_email'] = verified_email
+            return data
+
         token = data.get('verification_token', '')
         code = data.get('verification_code', '')
         country_code = data.get('country_code', '')

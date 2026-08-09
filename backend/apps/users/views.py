@@ -165,21 +165,36 @@ class RegisterView(PublicApiView):
         }
     )
     def post(self, request):
-        # 邮箱验证码校验
+        # 邮箱验证：兼容两种流程
+        #   A. 两步流程（前端现状）：verify_id + verify_code → 校验通过后从缓存取回邮箱
+        #   B. 三阶段流程：仅携带 verification_token（含已验证邮箱）
         verify_id = request.data.get('verify_id', '')
         code = request.data.get('verify_code', '')
-        if not verify_id or not code:
+        verification_token = request.data.get('verification_token', '')
+
+        verified_email = ''
+        if verify_id and code:
+            if not EmailVerifyService.verify_code(verify_id, code):
+                return Response(
+                    {'detail': '验证码错误或已过期'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            verified_email = EmailVerifyService.get_verify_email(verify_id)
+            if not verified_email:
+                return Response(
+                    {'detail': '验证码会话缺失，请重新发送验证码'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        elif not verification_token:
             return Response(
                 {'detail': '请先完成邮箱验证'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        if not EmailVerifyService.verify_code(verify_id, code):
-            return Response(
-                {'detail': '验证码错误或已过期'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
 
-        serializer = RegisterSerializer(data=request.data)
+        serializer = RegisterSerializer(
+            data=request.data,
+            context={'verified_email': verified_email or None},
+        )
         serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data

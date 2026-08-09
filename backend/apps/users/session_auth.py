@@ -18,12 +18,17 @@ REFRESH_COOKIE = 'ziggner_refresh'
 
 
 def _cookie_kwargs():
-    return {
+    kwargs = {
         'httponly': True,
         'secure': settings.SESSION_COOKIE_SECURE,
         'samesite': settings.SESSION_COOKIE_SAMESITE,
         'path': '/',
     }
+    # 与 csrftoken 保持一致，落到父域 .ziggner.com，跨子域（admin/www/shop → api）自动携带
+    domain = getattr(settings, 'CSRF_COOKIE_DOMAIN', None)
+    if domain:
+        kwargs['domain'] = domain
+    return kwargs
 
 
 def set_auth_cookies(response, refresh):
@@ -43,11 +48,11 @@ def set_auth_cookies(response, refresh):
 
 def clear_auth_cookies(response):
     for name in (ACCESS_COOKIE, REFRESH_COOKIE):
-        response.delete_cookie(
-            name,
-            path='/',
-            samesite=settings.SESSION_COOKIE_SAMESITE,
-        )
+        kwargs = {'path': '/', 'samesite': settings.SESSION_COOKIE_SAMESITE}
+        domain = getattr(settings, 'CSRF_COOKIE_DOMAIN', None)
+        if domain:
+            kwargs['domain'] = domain
+        response.delete_cookie(name, **kwargs)
 
 
 class CookieJWTAuthentication(UsersJWTAuthentication):

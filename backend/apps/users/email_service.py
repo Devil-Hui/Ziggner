@@ -283,12 +283,19 @@ class EmailVerifyService:
 
         # 存储验证码
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
+        # 同时记录邮箱，供注册两步流程（verify_id+code → email）使用
+        _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
 
         # 发送邮件
         _send_verify_email(email, code, 'verify_code')
 
         result = {'verify_id': verify_id, 'expire_seconds': expire_sec, 'code': code}
         return result
+
+    @staticmethod
+    def get_verify_email(verify_id: str) -> str:
+        """根据 verify_id 取回发送验证码时的邮箱（两步流程用）"""
+        return _code_cache.get(f'email_verify_email:{verify_id}') or ''
 
     @staticmethod
     def verify_code(verify_id: str, code: str) -> bool:
@@ -313,6 +320,7 @@ class EmailVerifyService:
         expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE', 600)
 
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
+        _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
 
         rendered = _render_template('verify_code', {'code': code})
 
