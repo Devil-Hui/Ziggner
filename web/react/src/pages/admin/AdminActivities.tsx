@@ -437,12 +437,15 @@ const AdminActivities: React.FC = () => {
   };
 
   const resetForm = () => {
+    // 预填默认时间窗（现在 ~ 7 天后），避免必填校验静默拦截导致"点击无响应"
+    const now = new Date();
+    const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
     setFormData({
       name: '',
       type: 'full_reduction',
       rule: [{ min_amount: 0, discount: 0 }],
-      start_time: '',
-      end_time: '',
+      start_time: now.toISOString(),
+      end_time: end.toISOString(),
     });
     setFormErrors({});
     setEditingActivity(null);
@@ -478,7 +481,11 @@ const AdminActivities: React.FC = () => {
 
   /* ---- submit ---- */
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      // 校验失败给出可见汇总提示，避免"点了没反应"的假象
+      setFormErrors((prev) => ({ ...prev, submit: t('admin.activities.fieldsRequired') }));
+      return;
+    }
     setFormErrors({});
     try {
       if (editingActivity) {

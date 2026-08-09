@@ -628,6 +628,7 @@ const zhCN = {
       searchPlaceholder: '搜索活动名称...',
       loadFailed: '加载失败，请稍后重试',
       noActivities: '暂无折扣活动',
+      fieldsRequired: '请检查必填项：活动名称、开始/结束时间、满减规则',
       nameRequired: '请输入活动名称',
       startTimeRequired: '请选择开始时间',
       endTimeRequired: '请选择结束时间',

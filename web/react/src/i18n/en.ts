@@ -635,6 +635,7 @@ const en = {
       searchPlaceholder: 'Search activity name...',
       loadFailed: 'Failed to load, please try again later',
       noActivities: 'No discount activities',
+      fieldsRequired: 'Please check required fields: name, start/end time, rules',
       nameRequired: 'Activity name is required',
       startTimeRequired: 'Start time is required',
       endTimeRequired: 'End time is required',
