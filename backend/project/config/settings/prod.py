@@ -75,6 +75,10 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
+# 跨子域会话：csrftoken / sessionid cookie 落在父域 .ziggner.com，
+# 使 admin/www/shop 页面都能读到 csrftoken 并随 axios 写请求回传（否则 host-only cookie 读不到 → 403 CSRF Failed）
+CSRF_COOKIE_DOMAIN = '.ziggner.com'
+SESSION_COOKIE_DOMAIN = '.ziggner.com'
 # 跨子域会话：admin/www/shop/api 子域之间的 CSRF 校验来源
 CSRF_TRUSTED_ORIGINS = [
     'https://www.ziggner.com',

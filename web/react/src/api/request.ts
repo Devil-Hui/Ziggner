@@ -15,6 +15,8 @@ const api = axios.create({
   withCredentials: true,
   xsrfCookieName: 'csrftoken',
   xsrfHeaderName: 'X-CSRFToken',
+  // 跨子域（admin/www/shop → api）也始终附加 X-CSRFToken，避免 403 CSRF Failed
+  withXSRFToken: true,
   headers: { 'Content-Type': 'application/json' },
 })
 
@@ -70,6 +72,7 @@ async function refreshBrowserSession(): Promise<boolean> {
       withCredentials: true,
       xsrfCookieName: 'csrftoken',
       xsrfHeaderName: 'X-CSRFToken',
+      withXSRFToken: true,
     },
   ).then(() => true).catch(() => false).finally(() => {
     refreshPromise = null
