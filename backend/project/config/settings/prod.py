@@ -75,4 +75,12 @@ SESSION_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
+# 跨子域会话：admin/www/shop/api 子域之间的 CSRF 校验来源
+CSRF_TRUSTED_ORIGINS = [
+    'https://www.ziggner.com',
+    'https://admin.ziggner.com',
+    'https://shop.ziggner.com',
+    'https://api.ziggner.com',
+    'https://ziggner.huigeli666.workers.dev',
+]
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'

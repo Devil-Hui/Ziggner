@@ -5,3 +5,16 @@ compatibility_date = "2026-08-01"
 [assets]
 directory = "./dist/"
 not_found_handling = "single-page-application"
+
+# ── 自定义域路由（Cloudflare 边缘按这些域名分发到 Worker）──
+[[routes]]
+pattern = "www.ziggner.com"
+custom_domain = true
+
+[[routes]]
+pattern = "admin.ziggner.com"
+custom_domain = true
+
+[[routes]]
+pattern = "shop.ziggner.com"
+custom_domain = true

@@ -479,6 +479,18 @@ export const adminAPI = {
     post(`/users/email/templates/${templateType}/`, data),
   resetEmailTemplate: (templateType: string) =>
     post(`/users/email/templates/${templateType}/reset/`),
+
+  // RBAC — 角色 × 权限矩阵 + 用户角色
+  getRbacMatrix: () =>
+    get<RbacMatrix>('/rbac/matrix'),
+  updateRbacRole: (role: string, permCodes: string[]) =>
+    put<{ role: string; perm_codes: string[] }>('/rbac/matrix', { role, perm_codes }),
+  getRbacUsers: (params?: { role?: string; search?: string; page?: number; size?: number }) =>
+    get<PaginatedData<RbacUser>>('/rbac/users', params),
+  getUserRoles: (userId: number) =>
+    get<{ roles: string[] }>(`/rbac/users/${userId}/roles`),
+  updateUserRoles: (userId: number, roles: string[]) =>
+    put<{ roles: string[] }>(`/rbac/users/${userId}/roles`, { roles }),
 };
 
 export interface EmailTemplateItem {
@@ -488,6 +500,38 @@ export interface EmailTemplateItem {
   text_body: string;
   is_active: boolean;
   updated_at: string | null;
+}
+
+export interface RbacRole {
+  value: string;
+  label: string;
+}
+
+export interface RbacPermission {
+  code: string;
+  label: string;
+}
+
+export interface RbacDomain {
+  domain: string;
+  permissions: RbacPermission[];
+}
+
+export interface RbacMatrix {
+  roles: RbacRole[];
+  domains: RbacDomain[];
+  grants: Record<string, string[]>;
+  superadmin_implicit: boolean;
+  orphaned: string[];
+}
+
+export interface RbacUser {
+  id: number;
+  username: string;
+  email: string;
+  is_active: boolean;
+  is_superuser: boolean;
+  roles: string[];
 }
 
 export default adminAPI;

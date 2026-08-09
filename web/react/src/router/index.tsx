@@ -44,6 +44,7 @@ const AdminOrders = lazy(() => import('../pages/admin/AdminOrders'))
 const AdminChatList = lazy(() => import('../pages/admin/AdminChatList'))
 const AdminChatDetail = lazy(() => import('../pages/admin/AdminChatDetail'))
 const AdminEmailTemplates = lazy(() => import('../pages/admin/AdminEmailTemplates'))
+const AdminRbac = lazy(() => import('../pages/admin/AdminRbac'))
 
 const PageLoading = () => (
   <div style={{
@@ -59,8 +60,13 @@ const PageLoading = () => (
 )
 
 export const routes: RouteObject[] = [
-  // ── Public routes ──
-  { path: '/', element: <Home /> },
+  // ── admin.ziggner.com → 自动跳转管理登录 ──
+  {
+    path: '/',
+    element: typeof window !== 'undefined' && window.location.hostname === 'admin.ziggner.com'
+      ? <Navigate to="/admin/login" replace />
+      : <Home />,
+  },
   { path: '/category', element: <Category /> },
   { path: '/product/:id', element: <ProductDetail /> },
   { path: '/cart', element: <Cart /> },
@@ -120,6 +126,8 @@ export const routes: RouteObject[] = [
       { path: 'audit-logs', element: <Suspense fallback={<PageLoading />}><AdminAuditLogs /></Suspense> },
       { path: 'recycle-bin', element: <Suspense fallback={<PageLoading />}><AdminRecycleBin /></Suspense> },
       { path: 'groups', element: <Suspense fallback={<PageLoading />}><AdminGroups /></Suspense> },
+      { path: 'tasks', element: <Suspense fallback={<PageLoading />}><AdminTasks /></Suspense> },
+      { path: 'rbac', element: <Suspense fallback={<PageLoading />}><AdminRbac /></Suspense> },
       { path: 'chat', element: <Suspense fallback={<PageLoading />}><AdminChatList /></Suspense> },
       { path: 'chat/:id', element: <Suspense fallback={<PageLoading />}><AdminChatDetail /></Suspense> },
       { path: 'email-templates', element: <Suspense fallback={<PageLoading />}><AdminEmailTemplates /></Suspense> },

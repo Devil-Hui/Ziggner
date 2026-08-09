@@ -150,12 +150,70 @@ const HeaderRight = styled.div`
 `
 
 const UserMenu = styled.div`
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 0.875rem;
   color: ${Color.primaryHover};
   cursor: pointer;
+`
+
+const UserDropdown = styled.div`
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 180px;
+  background: #fff;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  box-shadow: ${Shadow.md};
+  padding: 6px 0;
+  z-index: 100;
+`
+
+const UserDropdownInfo = styled.div`
+  padding: 8px 14px;
+  border-bottom: 1px solid ${Color.border.light};
+`
+
+const UserDropdownName = styled.div`
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: ${Color.text.primary};
+`
+
+const UserDropdownRole = styled.div`
+  font-size: 0.75rem;
+  color: ${Color.text.muted};
+  margin-top: 2px;
+`
+
+const UserDropdownItem = styled.button`
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  text-align: left;
+  font-size: 0.8125rem;
+  color: ${Color.text.primary};
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  &:hover {
+    background: ${Color.primaryLight};
+  }
+`
+
+const UserDropdownDivider = styled.div`
+  height: 1px;
+  background: ${Color.border.light};
+  margin: 4px 0;
+`
+
+const DropdownBackdrop = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 99;
 `
 
 const Content = styled.main`
@@ -226,6 +284,7 @@ function useMenuItems() {
         { to: '/admin/audit-logs', label: t('admin.layout.menu.auditLogs'), icon: <IconBox><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></IconBox> },
         { to: '/admin/recycle-bin', label: t('admin.layout.menu.recycleBin'), icon: <IconBox><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></IconBox> },
         { to: '/admin/tasks', label: t('admin.layout.menu.asyncTasks'), icon: <IconBox><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></IconBox> },
+        { to: '/admin/rbac', label: t('admin.layout.menu.rbac'), icon: <IconBox><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z" /></IconBox> },
         { to: '/admin/email-templates', label: t('admin.layout.menu.emailTemplates'), icon: <IconBox><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></IconBox> },
       ],
     },
@@ -247,6 +306,7 @@ export default function AdminLayout() {
   const location = useLocation()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('admin_sidebar_collapsed') === 'true')
   const [chatOpenCount, setChatOpenCount] = useState(0)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const isMountedRef = useRef(true)
 
   // Auto-collapse sidebar on viewport < 1366px
@@ -381,6 +441,7 @@ export default function AdminLayout() {
                 '/admin/recycle-bin': 'admin.breadcrumb.recycleBin',
                 '/admin/groups': 'admin.breadcrumb.groups',
                 '/admin/tasks': 'admin.breadcrumb.tasks',
+                '/admin/rbac': 'admin.breadcrumb.rbac',
                 '/admin/email-templates': 'admin.breadcrumb.emailTemplates',
               };
               // build hierarchy: home › group › page
@@ -392,7 +453,7 @@ export default function AdminLayout() {
                 'products': 'admin.layout.sidebar.productOps', 'categories': 'admin.layout.sidebar.productOps', 'brands': 'admin.layout.sidebar.productOps', 'tags': 'admin.layout.sidebar.productOps',
                 'orders': 'admin.layout.sidebar.fulfillment', 'chat': 'admin.layout.sidebar.communication', 'notifications': 'admin.layout.sidebar.communication', 'applications': 'admin.layout.sidebar.communication',
                 'coupons': 'admin.layout.sidebar.marketing', 'activities': 'admin.layout.sidebar.marketing',
-                'audit-logs': 'admin.layout.sidebar.systemMgmt', 'recycle-bin': 'admin.layout.sidebar.systemMgmt', 'groups': 'admin.layout.sidebar.systemMgmt', 'tasks': 'admin.layout.sidebar.systemMgmt',
+                'audit-logs': 'admin.layout.sidebar.systemMgmt', 'recycle-bin': 'admin.layout.sidebar.systemMgmt', 'groups': 'admin.layout.sidebar.systemMgmt', 'tasks': 'admin.layout.sidebar.systemMgmt', 'rbac': 'admin.layout.sidebar.systemMgmt',
               };
               const groupKey = groupMap[parts[1]] || '';
               const groupLabel = groupKey ? t(groupKey) : '';
@@ -403,11 +464,31 @@ export default function AdminLayout() {
             <LanguageSwitch position="header" />
             <NotificationBell />
             <NotificationFloat />
-            <UserMenu onClick={handleLogout}>
+            <UserMenu onClick={() => setUserMenuOpen((v) => !v)}>
               {adminUser?.username}
               <span style={{ color: '#999', fontSize: '0.75rem' }}>
                 ({roleLabel})
               </span>
+              {userMenuOpen && (
+                <>
+                  <DropdownBackdrop onClick={() => setUserMenuOpen(false)} />
+                  <UserDropdown>
+                    <UserDropdownInfo>
+                      <UserDropdownName>{adminUser?.username}</UserDropdownName>
+                      <UserDropdownRole>{roleLabel}</UserDropdownRole>
+                    </UserDropdownInfo>
+                    <UserDropdownDivider />
+                    <UserDropdownItem
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleLogout()
+                      }}
+                    >
+                      {t('admin.layout.header.logout')}
+                    </UserDropdownItem>
+                  </UserDropdown>
+                </>
+              )}
             </UserMenu>
           </HeaderRight>
         </Header>
