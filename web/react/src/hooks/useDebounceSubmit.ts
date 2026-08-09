@@ -44,41 +44,32 @@ export function useDebounceSubmit<T extends unknown[]>(
       pendingRef.current = true;
       setIsPending(true);
 
+      // 统一解锁函数：请求完成（成功/失败/同步异常）后立即解锁，
+      // 不再额外等待 delay —— 避免成功后可重试的间隙被吞掉
+      const unlock = () => {
+        if (!mountedRef.current) return;
+        if (timerRef.current) clearTimeout(timerRef.current);
+        timerRef.current = null;
+        pendingRef.current = false;
+        setIsPending(false);
+      };
+
+      // 超时兜底：若 callback 返回的 Promise 一直 hang（如网络挂起），
+      // delay+2000ms 后强制解锁，避免 pendingRef 永久卡死导致后续点击被静默丢弃（0 请求）
+      timerRef.current = setTimeout(unlock, delay + 2000);
+
       try {
         const result = callback(...args);
 
         // 如果 callback 返回 Promise，等待完成后恢复
         if (result instanceof Promise) {
-          result
-            .then(() => {
-              timerRef.current = setTimeout(() => {
-                if (mountedRef.current) {
-                  pendingRef.current = false;
-                  setIsPending(false);
-                }
-              }, delay);
-            })
-            .catch(() => {
-              // 失败时立即恢复，允许重试
-              if (mountedRef.current) {
-                pendingRef.current = false;
-                setIsPending(false);
-              }
-            });
+          result.then(unlock).catch(unlock);
         } else {
-          timerRef.current = setTimeout(() => {
-            if (mountedRef.current) {
-              pendingRef.current = false;
-              setIsPending(false);
-            }
-          }, delay);
+          unlock();
         }
       } catch {
         // 同步异常时立即恢复
-        if (mountedRef.current) {
-          pendingRef.current = false;
-          setIsPending(false);
-        }
+        unlock();
       }
     },
     [callback, delay],

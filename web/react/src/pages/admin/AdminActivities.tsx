@@ -804,12 +804,13 @@ const AdminActivities: React.FC = () => {
           <FormInput
             type="datetime-local"
             value={toDatetimeLocal(formData.start_time)}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                start_time: new Date(e.target.value).toISOString(),
-              })
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) return; // 清空不更新，保留默认值
+              const d = new Date(v);
+              if (isNaN(d.getTime())) return; // 无效值（如原生 setter 注入伪影）不进入 state
+              setFormData({ ...formData, start_time: d.toISOString() });
+            }}
           />
           {formErrors.start_time && (
             <FormError>{formErrors.start_time}</FormError>
@@ -821,12 +822,13 @@ const AdminActivities: React.FC = () => {
           <FormInput
             type="datetime-local"
             value={toDatetimeLocal(formData.end_time)}
-            onChange={(e) =>
-              setFormData({
-                ...formData,
-                end_time: new Date(e.target.value).toISOString(),
-              })
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) return; // 清空不更新，保留默认值
+              const d = new Date(v);
+              if (isNaN(d.getTime())) return; // 无效值（如原生 setter 注入伪影）不进入 state
+              setFormData({ ...formData, end_time: d.toISOString() });
+            }}
           />
           {formErrors.end_time && (
             <FormError>{formErrors.end_time}</FormError>
