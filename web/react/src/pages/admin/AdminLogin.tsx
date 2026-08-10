@@ -233,6 +233,11 @@ export default function AdminLogin() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!email || !verifyCode) return
+    if (!verifyId) {
+      // 未点 Send Code（或刷新后 verify_id 丢失）→ 明确提示，避免向后端发无意义请求
+      setError(t('admin.login.sendCodeFirst'))
+      return
+    }
     if (!password) {
       setError(t('admin.login.passwordRequired'))
       return

@@ -64,6 +64,7 @@ const zhCN = {
       codeSent: '验证码已发送到您的邮箱',
       sendFailed: '发送失败，请稍后重试',
       codeHint: '请输入管理员邮箱以接收登录验证码',
+      sendCodeFirst: '请先点击发送验证码，再输入邮箱收到的验证码',
       turnstileRequired: '请完成安全验证',
       passwordRequired: '请输入密码',
     },
