@@ -94,6 +94,7 @@ def _send_with_account(account: dict, recipient: str, code: str, template_type: 
         username=account.get('user', ''),
         password=account.get('password', ''),
         use_ssl=bool(account.get('use_ssl', True)),
+        use_tls=bool(account.get('use_tls', False)),
     )
     msg.connection = conn
     msg.send(fail_silently=False)

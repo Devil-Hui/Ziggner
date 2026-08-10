@@ -403,6 +403,7 @@ if _EMAIL_ACCOUNTS_RAW:
         for _acc in EMAIL_ACCOUNTS:
             _acc.setdefault('port', int(_acc.get('port', 465)))
             _acc.setdefault('use_ssl', True)
+            _acc.setdefault('use_tls', False)
             _acc.setdefault('daily_limit', int(_acc.get('daily_limit', 500)))
     except Exception:
         EMAIL_ACCOUNTS = []
