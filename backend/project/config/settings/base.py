@@ -132,10 +132,19 @@ WSGI_APPLICATION = 'project.wsgi.application'
 ASGI_APPLICATION = 'project.asgi.application'
 
 # ── Django Channels 配置 ──
-# MySQL-only / 单机：进程内 Channel Layer（单 Gunicorn/Daphne 进程；多副本 WS 需另配）
+# 关键：REST 由 gunicorn 处理、WebSocket 由 daphne 处理，二者是不同进程。
+# 进程内 InMemoryChannelLayer 无法跨进程广播，导致「客服发消息 → 买家 WS 收不到实时推送」。
+# 改用 Redis Channel Layer（复用已部署的 Redis，独立 DB /4 避免与缓存 /0、CELERY /2,/3 冲突）。
+_CHANNEL_REDIS_BASE = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0').rsplit('/', 1)[0]
+CHANNEL_REDIS_URL = os.getenv('CHANNEL_REDIS_URL', _CHANNEL_REDIS_BASE + '/4')
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [CHANNEL_REDIS_URL],
+            'capacity': 1500,
+            'expiry': 3600,
+        },
     },
 }
 

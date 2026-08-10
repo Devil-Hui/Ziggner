@@ -57,6 +57,17 @@ export interface ConversationSummary {
   updated_at: string
 }
 
+export interface OrderInfo {
+  order_id: number
+  order_no: string
+  status: string
+  status_label: string
+  created_at: string
+  total_amount: string
+  sku_name: string
+  quantity: number
+}
+
 export interface ConversationDetail extends ConversationSummary {
   messages: ChatMessage[]
   /** 当前处理该会话的管理员 ID（null = 无人处理） */
@@ -65,6 +76,8 @@ export interface ConversationDetail extends ConversationSummary {
   handled_by_name: string | null
   /** 当前登录管理员是否可在此会话发言 */
   can_reply: boolean
+  /** 买家在该会话关联商品上的最近订单（宏观查看用） */
+  order_info?: OrderInfo[]
 }
 
 export interface CreateConversationParams {
@@ -154,6 +167,7 @@ interface CsConversation {
     created_at?: string
   } | null
   messages?: CsMessage[]
+  order_info?: OrderInfo[] | undefined
   created_at?: string
   updated_at?: string
 }
@@ -206,6 +220,7 @@ function transformDetail(c: CsConversation): ConversationDetail {
     handled_by: c.handled_by ?? null,
     handled_by_name: c.handled_by_name ?? null,
     can_reply: c.can_reply ?? true,
+    order_info: (c.order_info as OrderInfo[] | undefined) ?? undefined,
   }
 }
 

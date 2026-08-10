@@ -81,7 +81,8 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             return
 
         # 4. 验证会话访问权限
-        if not await self._can_access_conversation():
+        allowed = await self._can_access_conversation()
+        if not allowed:
             await self.close(code=4004, reason='Access denied')
             return
 

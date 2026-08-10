@@ -30,6 +30,17 @@ const FILTER_TABS: { key: MsgFilter; labelKey: string }[] = [
   { key: 'product_card', labelKey: 'store.chatDetail.filterCard' },
 ]
 
+// 订单状态 → 徽标配色（与后端 Order.status 对齐）
+const ORDER_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
+  pending_payment: { bg: '#fff7ed', color: '#f59e0b' },
+  paid: { bg: '#eff6ff', color: '#2563eb' },
+  shipped: { bg: '#ecfdf5', color: '#059669' },
+  delivered: { bg: '#ecfeff', color: '#0891b2' },
+  completed: { bg: '#ecfdf5', color: '#047857' },
+  cancelled: { bg: '#f3f4f6', color: '#9ca3af' },
+  refunding: { bg: '#fef2f2', color: '#e74c3c' },
+}
+
 // ── Styled Components ──
 
 const Layout = styled.div`
@@ -675,6 +686,50 @@ export default function AdminChatDetail() {
     }
   }, [id, loadDetail])
 
+  // ── 实时 WebSocket：接收买家新消息即时刷新（客服侧实时推送）──
+  useEffect(() => {
+    if (!id) return
+    const convId = parseInt(id)
+    const wsBase = import.meta.env.VITE_WS_URL ||
+      `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+    let ws: WebSocket | null = null
+    let closedByUs = false
+    let retry = 0
+    let retryTimer: ReturnType<typeof setTimeout> | null = null
+
+    const connect = () => {
+      try {
+        ws = new WebSocket(`${wsBase}/ws/chat/${convId}/`)
+        ws.onopen = () => { retry = 0 }
+        ws.onmessage = (e) => {
+          try {
+            const data = JSON.parse(e.data)
+            if (data.type === 'ping') { ws?.send(JSON.stringify({ type: 'pong' })); return }
+            if (data.type === 'message' || data.type === 'new_message' || data.type === 'read_receipt') {
+              loadDetail(convId)
+            }
+          } catch { /* ignore */ }
+        }
+        ws.onclose = () => {
+          if (closedByUs || retry >= CONFIG.WS_MAX_RECONNECT_ATTEMPTS) return
+          const delay = Math.min(
+            CONFIG.WS_RECONNECT_BASE_DELAY * Math.pow(2, retry),
+            CONFIG.WS_RECONNECT_MAX_DELAY,
+          )
+          retry++
+          retryTimer = setTimeout(connect, delay)
+        }
+        ws.onerror = () => { /* onclose 随后触发 */ }
+      } catch { /* ignore */ }
+    }
+    connect()
+    return () => {
+      closedByUs = true
+      if (retryTimer) clearTimeout(retryTimer)
+      ws?.close()
+    }
+  }, [id, loadDetail])
+
   // ── Product search ──
   useEffect(() => {
     if (!debouncedQuery.trim()) {
@@ -1001,6 +1056,46 @@ export default function AdminChatDetail() {
                   </ActionBtn>
                 )}
               </LockBanner>
+            )}
+
+            {/* 订单信息：买家在该会话关联商品上的最近订单（宏观查看用） */}
+            {activeConv?.order_info && activeConv.order_info.length > 0 && (
+              <div style={{ padding: '8px 16px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: '#b45309', marginBottom: 6 }}>
+                  📦 订单信息（{activeConv.order_info.length}）
+                </div>
+                {activeConv.order_info.map((o) => {
+                  const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
+                  return (
+                    <div
+                      key={o.order_id}
+                      onClick={() => navigate(`/profile/orders/${o.order_id}`)}
+                      style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        gap: 12, padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
+                        background: '#fff', marginBottom: 4, border: '1px solid #fde68a',
+                      }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {o.order_no}
+                        </div>
+                        <div style={{ fontSize: 11, color: '#999' }}>
+                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                        </div>
+                      </div>
+                      <span
+                        style={{
+                          flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px',
+                          borderRadius: 4, background: st.bg, color: st.color,
+                        }}
+                      >
+                        {o.status_label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
             )}
 
             {/* Filter tabs */}

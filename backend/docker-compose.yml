@@ -52,6 +52,7 @@ services:
       DB_USER: ${DB_USER:-admin}
       DB_PASSWORD: ${DB_PASSWORD:-admin123456}
       REDIS_URL: redis://redis:6379/0
+      CHANNEL_REDIS_URL: "redis://redis:6379/4"
       CELERY_BROKER_URL: redis://redis:6379/2
       CELERY_RESULT_BACKEND: redis://redis:6379/3
       STATIC_ROOT: /backend/static
@@ -110,6 +111,8 @@ services:
     environment:
       # 容器内通过 compose 服务名访问后端，不能用 localhost（那是 frontend 自己）
       VITE_PROXY_TARGET: http://web:8000
+      # WebSocket 走 daphne(ASGI):8001（gunicorn:8000 是 WSGI 不支持 WS）
+      VITE_WS_PROXY_TARGET: http://web:8001
       # Windows/mac 共享文件系统下保证 HMR 文件监听生效
       CHOKIDAR_USEPOLLING: "true"
     ports:

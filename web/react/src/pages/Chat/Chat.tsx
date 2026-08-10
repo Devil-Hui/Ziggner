@@ -469,10 +469,12 @@ function useChatWebSocket(
 
     setWsStatus('connecting')
 
-    const defaultWsBase = window.location.hostname === 'localhost'
-      ? 'ws://localhost:8000'
-      : `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
-    const wsBase = import.meta.env.VITE_WS_URL || defaultWsBase
+    // WS 必须与页面同源（经 nginx / Cloudflare 代理到 daphne:8001）。
+    // 不能硬编码 localhost:8000 —— 那是 gunicorn 的 REST(WSGI) 端口，不支持 WebSocket，
+    // 否则经 docker nginx(localhost) 访问时 WS 会绕过 nginx 直连 gunicorn 而彻底失败，
+    // 表现为「消息打不回去」。生产环境用 VITE_WS_URL 覆盖（如 wss://api.ziggner.com）。
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    const wsBase = import.meta.env.VITE_WS_URL || `${scheme}://${window.location.host}`
     const wsUrl = `${wsBase}/ws/chat/${convId}/`
 
     try {
@@ -584,12 +586,13 @@ export default function Chat() {
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // ── Auth check ──
+  // ── Auth check (guard with !isLoading to avoid racing ahead of getMe) ──
+  const { isLoading } = useUser()
   useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn && !isLoading) {
       navigate('/auth?tab=login')
     }
-  }, [isLoggedIn, navigate])
+  }, [isLoggedIn, isLoading, navigate])
 
   // ── Load conversations ──
   const loadConversations = useCallback(async () => {
@@ -607,6 +610,20 @@ export default function Chat() {
   useEffect(() => {
     if (isLoggedIn) loadConversations()
   }, [isLoggedIn, loadConversations])
+
+  // Auto-select first conversation when list loads and none is active
+  useEffect(() => {
+    if (!activeId && conversations.length > 0 && conversations[0]) {
+      setActiveId(conversations[0].id)
+    }
+  }, [conversations, activeId])
+
+  // Load conversation detail whenever activeId changes
+  useEffect(() => {
+    if (activeId) {
+      loadConversation(activeId)
+    }
+  }, [activeId])
 
   // ── Load conversation detail ──
   const loadConversation = useCallback(async (convId: number) => {

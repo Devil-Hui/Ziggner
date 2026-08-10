@@ -198,6 +198,33 @@ def _create_attachment_messages(conv, user, sender_type: str, attachments: list)
     return created
 
 
+def _broadcast_new_message(conv_id, message_obj, sender_type: str) -> None:
+    """
+    通过 Channel Layer 将新消息实时推送给会话组内所有 WebSocket 连接。
+
+    关键：REST 由 gunicorn 处理、WS 由 daphne 处理，二者跨进程，
+    必须用 Redis Channel Layer 才能把「保存成功的消息」实时投递到对方 WS。
+    失败仅告警（消息已落库），不影响发送主流程。
+    """
+    try:
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+
+        layer = get_channel_layer()
+        if not layer:
+            return
+        payload = MessageSerializer(message_obj).data
+        async_to_sync(layer.group_send)(f'chat_{conv_id}', {
+            'type': 'chat.message',
+            'payload': payload,
+            'msg_id': str(message_obj.id),
+            'timestamp': message_obj.created_at.isoformat(),
+            'sender_type': sender_type,
+        })
+    except Exception as e:
+        logger.warning(f'Broadcast new message (conv={conv_id}) failed: {e}')
+
+
 # ═══════════════════════════════════════════════════════════════
 # 文件上传
 # ═══════════════════════════════════════════════════════════════
@@ -822,6 +849,9 @@ class MessageView(BaseApiView):
         attachments = data.get('attachments') or []
         if attachments:
             _create_attachment_messages(conv, request.user, sender_type, attachments)
+
+        # 实时推送：让对方（买家/客服）的 WebSocket 立即收到新消息并刷新
+        _broadcast_new_message(conv.id, msg, sender_type)
 
         return Response(
             MessageSerializer(msg).data,

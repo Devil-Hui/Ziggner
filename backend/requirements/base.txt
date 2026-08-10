@@ -2,6 +2,9 @@ Django>=5.2.9,<5.3
 djangorestframework==3.15.2
 gunicorn==23.0.0
 django-redis==5.4.0
+# channels_redis 4.2.0 与 redis-py >=5.1/8.x 的 asyncio 连接池不兼容（长连接下
+# group_add 会卡死报 "Timeout reading from redis"）。固定到 5.0.1 可修复 WS 握手。
+redis==5.0.1
 mysqlclient==2.2.7
 PyMySQL==1.1.1
 python-dotenv==1.2.2
@@ -22,4 +25,5 @@ django-storages>=1.14.2
 stripe>=9.0.0,<10.0.0
 python-magic>=0.4.27
 channels[daphne]>=4.2.0
+channels_redis==4.2.0
 SQLAlchemy>=2.0,<3

@@ -84,6 +84,7 @@ services:
       AWS_REGION: ${AWS_REGION:-auto}
       STATIC_ROOT: /app/static
       REDIS_URL: redis://redis:6379/0
+      CHANNEL_REDIS_URL: "redis://redis:6379/4"
       CELERY_BROKER_URL: redis://redis:6379/2
       CELERY_RESULT_BACKEND: redis://redis:6379/3
       GUNICORN_WORKERS: "1"

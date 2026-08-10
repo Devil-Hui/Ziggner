@@ -18,7 +18,7 @@ export interface ProductCardData {
   name: string
   main_image: string
   price: string
-  order_status?: OrderStatus
+  order_status?: string
   order_id?: number
 }
 
@@ -30,14 +30,20 @@ export interface ProductCardProps {
 
 // ── Status config ──
 
-const STATUS_CONFIG: Record<OrderStatus, { label: string; bg: string; color: string }> = {
-  not_ordered:  { label: '未下单', bg: '#f3f4f6', color: '#999' },
-  pending_pay:  { label: '待付款', bg: '#fff7ed', color: '#f59e0b' },
-  paid:         { label: '已付款', bg: '#eff6ff', color: '#2563eb' },
-  shipped:      { label: '已发货', bg: '#ecfdf5', color: '#059669' },
-  received:     { label: '已签收', bg: '#ecfeff', color: '#0891b2' },
-  refunding:    { label: '退款中', bg: '#fef2f2', color: '#e74c3c' },
+const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
+  not_ordered:       { label: '未下单', bg: '#f3f4f6', color: '#999' },
+  pending_pay:       { label: '待付款', bg: '#fff7ed', color: '#f59e0b' },
+  pending_payment:   { label: '待付款', bg: '#fff7ed', color: '#f59e0b' },
+  paid:              { label: '已付款', bg: '#eff6ff', color: '#2563eb' },
+  shipped:           { label: '已发货', bg: '#ecfdf5', color: '#059669' },
+  delivered:         { label: '已签收', bg: '#ecfeff', color: '#0891b2' },
+  received:          { label: '已签收', bg: '#ecfeff', color: '#0891b2' },
+  completed:         { label: '已完成', bg: '#ecfdf5', color: '#047857' },
+  cancelled:         { label: '已取消', bg: '#f3f4f6', color: '#9ca3af' },
+  refunding:         { label: '退款中', bg: '#fef2f2', color: '#e74c3c' },
 }
+
+const DEFAULT_STATUS = { label: '订单', bg: '#f3f4f6', color: '#666' }
 
 // ── Animations ──
 
@@ -231,7 +237,7 @@ const BrokenImageIcon = () => (
 
 export default function ProductCard({ product, loading = false, imageError = false }: ProductCardProps) {
   const navigate = useNavigate()
-  const statusCfg = product.order_status ? STATUS_CONFIG[product.order_status] : null
+  const statusCfg = product.order_status ? (STATUS_CONFIG[product.order_status] ?? DEFAULT_STATUS) : null
   const [imgErr, setImgErr] = useState(false)
 
   if (loading) return <SkeletonCard />

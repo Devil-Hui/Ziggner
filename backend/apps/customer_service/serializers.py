@@ -296,16 +296,78 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     group_name = serializers.SerializerMethodField()
     spu_id = serializers.IntegerField(read_only=True, allow_null=True)
     spu_info = serializers.SerializerMethodField()
+    order_info = serializers.SerializerMethodField()
     handled_by = serializers.SerializerMethodField()
     handled_by_name = serializers.SerializerMethodField()
     can_reply = serializers.SerializerMethodField()
+
+    def get_order_info(self, obj):
+        """
+        买家在该会话关联商品上的最近订单（客服宏观查看用，只读）。
+        便于客服一眼看到买家对该商品的下单/物流状态，无需跳转。
+        """
+        if self.context.get('redact_sensitive'):
+            return []
+        if not obj.user_id:
+            return []
+        try:
+            from apps.order.models import OrderItem, OrderStatus
+
+            qs = OrderItem.objects.filter(order__user_id=obj.user_id)
+            if obj.spu_id:
+                qs = qs.filter(sku__spu_id=obj.spu_id)
+            items = qs.select_related('order', 'sku__spu').order_by('-order__created_at')[:5]
+
+            label_map = dict(OrderStatus.choices)
+
+            def sku_display(sku):
+                # SKU 模型本身没有 name 字段，展示名由 SPU.name + spec_values 拼接。
+                if not sku:
+                    return ''
+                name = ''
+                spu = getattr(sku, 'spu', None)
+                if spu and getattr(spu, 'name', None):
+                    name = spu.name
+                sv = getattr(sku, 'spec_values', None)
+                if isinstance(sv, dict):
+                    parts = [str(v) for v in sv.values() if v not in (None, '')]
+                elif isinstance(sv, list):
+                    parts = []
+                    for item in sv:
+                        if isinstance(item, dict):
+                            parts.append(str(item.get('value', item.get('name', ''))))
+                        else:
+                            parts.append(str(item))
+                else:
+                    parts = []
+                if parts:
+                    name = (name + ' ' + ' '.join(parts)).strip()
+                return name
+
+            result = []
+            for it in items:
+                order = it.order
+                result.append({
+                    'order_id': order.id,
+                    'order_no': order.order_no,
+                    'status': order.status,
+                    'status_label': label_map.get(order.status, order.status),
+                    'created_at': order.created_at.isoformat(),
+                    'total_amount': str(getattr(order, 'actual_amount', '') or ''),
+                    'sku_name': sku_display(it.sku),
+                    'quantity': it.quantity,
+                })
+            return result
+        except Exception as e:
+            logger.warning(f'Resolve order_info failed: {e}')
+            return []
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'user', 'user_name', 'admin', 'admin_name', 'agent_name',
             'subject', 'status', 'user_msg_count', 'messages',
-            'group_id', 'group_name', 'spu_id', 'spu_info',
+            'group_id', 'group_name', 'spu_id', 'spu_info', 'order_info',
             'handled_by', 'handled_by_name', 'can_reply',
             'created_at', 'updated_at',
         ]
