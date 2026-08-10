@@ -124,6 +124,35 @@ def _strip_card_data_to_refs(card_data: dict) -> dict:
     return refs
 
 
+def _create_attachment_messages(conv, user, sender_type: str, attachments: list) -> int:
+    """为会话批量创建附件消息（图片/视频）。返回创建的消息条数。"""
+    created = 0
+    for att in attachments or []:
+        if isinstance(att, dict):
+            url = att.get('url')
+            msg_type = att.get('msg_type', 'image')
+        else:
+            url = att
+            msg_type = 'image'
+        if not url:
+            continue
+        if msg_type not in ('image', 'video'):
+            msg_type = 'image'
+        Message.objects.create(
+            conversation=conv,
+            sender=user,
+            sender_type=sender_type,
+            content='',
+            msg_type=msg_type,
+            file_url=url,
+            metadata={'is_attachment': True},
+        )
+        if sender_type == 'user':
+            conv.increment_msg_count()
+        created += 1
+    return created
+
+
 # ═══════════════════════════════════════════════════════════════
 # 文件上传
 # ═══════════════════════════════════════════════════════════════
@@ -393,10 +422,10 @@ class ConversationListView(BaseApiView):
             if status_filter in ('open', 'closed'):
                 qs = qs.filter(status=status_filter)
 
-            qs = qs.select_related('user', 'admin', 'group')
+            qs = qs.select_related('user', 'admin', 'group', 'spu')
         else:
             qs = Conversation.objects.filter(user=request.user).select_related(
-                'user', 'admin', 'group',
+                'user', 'admin', 'group', 'spu',
             )
 
         qs = optimize_conversation_list_qs(qs, is_staff=is_staff).order_by('-updated_at')
@@ -434,6 +463,7 @@ class ConversationListView(BaseApiView):
             user=request.user,
             subject=data.get('subject', ''),
             group=group,
+            spu_id=data.get('spu_id'),
         )
 
         # 创建首条消息（如果有内容）
@@ -454,6 +484,11 @@ class ConversationListView(BaseApiView):
                 metadata=data.get('metadata', {}),
             )
             conv.increment_msg_count()
+
+        # 首条消息之外的附件（图片/视频）单独成消息
+        attachments = data.get('attachments') or []
+        if attachments:
+            _create_attachment_messages(conv, request.user, 'user', attachments)
 
         return Response(
             ConversationDetailSerializer(conv).data,
@@ -490,6 +525,39 @@ class ConversationReleaseView(BaseApiView):
         conv.handled_at = None
         conv.save(update_fields=['handled_by', 'handled_at'])
         return Response({'detail': '已释放，其他客服可接听'})
+
+
+class ConversationCloseView(BaseApiView):
+    """关闭对话（用户本人或客服均可）"""
+
+    @extend_schema(
+        description='关闭对话（用户本人或客服均可关闭）',
+        responses={200: OpenApiResponse(description='Conversation closed')},
+    )
+    @extend_schema(responses={200: OpenApiResponse(description='Close')})
+    def post(self, request, conv_id):
+        if ConversationAccessPolicy.is_ops(request.user):
+            return Response({'detail': '只读运维不能关闭会话'}, status=status.HTTP_403_FORBIDDEN)
+
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+        if conv.status == 'closed':
+            return Response({'detail': '会话已关闭'}, status=status.HTTP_400_BAD_REQUEST)
+
+        conv.status = 'closed'
+        conv.handled_by = None
+        conv.handled_at = None
+        conv.save(update_fields=['status', 'handled_by', 'handled_at'])
+
+        Message.objects.create(
+            conversation=conv,
+            sender=request.user,
+            sender_type='admin',
+            content='对话已关闭，如有需要请开启新对话。',
+            metadata={'is_system': True},
+        )
+        return Response({'detail': '对话已关闭'})
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -699,6 +767,11 @@ class MessageView(BaseApiView):
         # 用户消息 → 递增计数；admin 消息不计数
         if sender_type == 'user':
             conv.increment_msg_count()
+
+        # 本条消息之外的附件（图片/视频）单独成消息
+        attachments = data.get('attachments') or []
+        if attachments:
+            _create_attachment_messages(conv, request.user, sender_type, attachments)
 
         return Response(
             MessageSerializer(msg).data,

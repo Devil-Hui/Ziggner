@@ -196,6 +196,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             file_url = payload.get('file_url', '')
             card_data = payload.get('card_data', None)
             metadata = payload.get('metadata', {})
+            attachments = payload.get('attachments', None)
 
             # 管理员发送商品卡片时，自动填充 order/product 信息
             if self.is_admin and msg_type_field == 'product_card' and card_data:
@@ -211,6 +212,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
                 file_url=file_url,
                 card_data=card_data,
                 metadata=metadata,
+                attachments=attachments,
             )
 
             if not msg:
@@ -440,7 +442,8 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _save_message(self, content: str, msg_type: str, file_url: str,
-                      card_data: dict | None, metadata: dict) -> dict | None:
+                      card_data: dict | None, metadata: dict,
+                      attachments: list | None = None) -> dict | None:
         """保存消息到数据库 — admin 回复时自动分配为客服"""
         from .models import Conversation, Message
 
@@ -471,6 +474,31 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             # 更新用户消息计数
             if sender_type == 'user':
                 conv.increment_msg_count()
+
+            # ── 附件消息（图片/视频）单独成消息 ──
+            for att in attachments or []:
+                if isinstance(att, dict):
+                    url = att.get('url')
+                    amt = att.get('msg_type', 'image')
+                else:
+                    url = att
+                    amt = 'image'
+                if not url:
+                    continue
+                if amt not in ('image', 'video'):
+                    amt = 'image'
+                Message.objects.create(
+                    conversation=conv,
+                    sender=self.user,
+                    sender_type=sender_type,
+                    content='',
+                    msg_type=amt,
+                    file_url=url,
+                    metadata={'is_attachment': True},
+                    is_read=False,
+                )
+                if sender_type == 'user':
+                    conv.increment_msg_count()
 
             # 构造返回数据
             return {

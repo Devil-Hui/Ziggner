@@ -78,6 +78,35 @@ def _resolve_card_data(card_data: dict) -> dict:
     return resolved
 
 
+def _resolve_spu_info(spu) -> dict | None:
+    """将 SPU 实时解析为精简信息（id/name/main_image/price），用于会话商品上下文展示。"""
+    if not spu:
+        return None
+    try:
+        skus = spu.skus.filter(shelf_status='on')
+        discount_prices = [s.discount_price for s in skus if s.discount_price is not None]
+        regular_prices = [s.price for s in skus if s.price is not None]
+        if discount_prices:
+            price = str(min(discount_prices))
+        elif regular_prices:
+            price = str(min(regular_prices))
+        else:
+            price = '0'
+        return {
+            'id': spu.id,
+            'name': spu.name,
+            'main_image': spu.main_image or '',
+            'price': price,
+        }
+    except Exception:
+        return {
+            'id': spu.id,
+            'name': getattr(spu, 'name', ''),
+            'main_image': getattr(spu, 'main_image', '') or '',
+            'price': '0',
+        }
+
+
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.SerializerMethodField()
     card_data = serializers.SerializerMethodField()
@@ -121,13 +150,15 @@ class ConversationListSerializer(serializers.ModelSerializer):
     agent_name = serializers.SerializerMethodField()
     group_id = serializers.IntegerField(read_only=True, allow_null=True)
     group_name = serializers.SerializerMethodField()
+    spu_id = serializers.IntegerField(read_only=True, allow_null=True)
+    spu_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'user', 'user_name', 'admin', 'agent_name', 'subject', 'status',
             'user_msg_count', 'last_message', 'unread_count',
-            'group_id', 'group_name',
+            'group_id', 'group_name', 'spu_id', 'spu_info',
             'created_at', 'updated_at',
         ]
 
@@ -193,6 +224,9 @@ class ConversationListSerializer(serializers.ModelSerializer):
     def get_group_name(self, obj):
         return obj.group.name if obj.group else ''
 
+    def get_spu_info(self, obj):
+        return _resolve_spu_info(obj.spu)
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('redact_sensitive'):
@@ -207,13 +241,15 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     agent_name = serializers.SerializerMethodField()
     group_id = serializers.IntegerField(read_only=True, allow_null=True)
     group_name = serializers.SerializerMethodField()
+    spu_id = serializers.IntegerField(read_only=True, allow_null=True)
+    spu_info = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
         fields = [
             'id', 'user', 'user_name', 'admin', 'admin_name', 'agent_name',
             'subject', 'status', 'user_msg_count', 'messages',
-            'group_id', 'group_name',
+            'group_id', 'group_name', 'spu_id', 'spu_info',
             'created_at', 'updated_at',
         ]
 
@@ -233,6 +269,9 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     def get_group_name(self, obj):
         return obj.group.name if obj.group else ''
 
+    def get_spu_info(self, obj):
+        return _resolve_spu_info(obj.spu)
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('redact_sensitive'):
@@ -243,12 +282,22 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
 class CreateConversationSerializer(serializers.Serializer):
     subject = serializers.CharField(required=False, allow_blank=True, default='')
     content = serializers.CharField(required=False, allow_blank=True, default='')
+    spu_id = serializers.IntegerField(required=False, allow_null=True)
     msg_type = serializers.ChoiceField(
         choices=Message.MSG_TYPE_CHOICES, required=False, default='text',
     )
     file_url = serializers.CharField(required=False, allow_blank=True, default='')
+    attachments = serializers.ListField(required=False, default=list)
     card_data = serializers.JSONField(required=False, default=dict)
     metadata = serializers.JSONField(required=False, default=dict)
+
+    def validate_spu_id(self, value):
+        if value is None:
+            return value
+        from apps.goods.models import SPU
+        if not SPU.objects.filter(id=value, deleted_at__isnull=True).exists():
+            raise serializers.ValidationError('关联商品不存在')
+        return value
 
 
 class SendMessageSerializer(serializers.Serializer):
@@ -257,6 +306,7 @@ class SendMessageSerializer(serializers.Serializer):
         choices=Message.MSG_TYPE_CHOICES, required=False, default='text',
     )
     file_url = serializers.CharField(required=False, allow_blank=True, default='')
+    attachments = serializers.ListField(required=False, default=list)
     card_data = serializers.JSONField(required=False, default=dict)
     metadata = serializers.JSONField(required=False, default=dict)
 
@@ -264,6 +314,24 @@ class SendMessageSerializer(serializers.Serializer):
         if value and not isinstance(value, dict):
             raise serializers.ValidationError('card_data 必须是一个 JSON 对象')
         return value
+
+    def validate_attachments(self, value):
+        """Normalize attachments to a list of {url, msg_type}.
+
+        Accepts either:
+          - ["https://.../a.jpg", ...]            (plain URL strings → treated as image)
+          - [{"url": "...", "msg_type": "image"|"video"}, ...]
+        """
+        normalized = []
+        for item in value or []:
+            if isinstance(item, str):
+                normalized.append({'url': item, 'msg_type': 'image'})
+            elif isinstance(item, dict) and item.get('url'):
+                mt = item.get('msg_type', 'image')
+                if mt not in ('image', 'video'):
+                    mt = 'image'
+                normalized.append({'url': item['url'], 'msg_type': mt})
+        return normalized
 
 
 class UpdateConversationSerializer(serializers.Serializer):

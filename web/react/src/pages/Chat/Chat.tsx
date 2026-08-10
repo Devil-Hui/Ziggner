@@ -7,7 +7,7 @@ import { useUser } from '../../store/UserContext'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { ChatBubble, SystemBubbleMessage, TypingIndicator } from '../../components/business/ChatBubble'
-import type { ProductSnapshot, CartItem, ProductCardData } from '../../components/business/ChatBubble'
+import type { ProductSnapshot, ProductCardData, CartItem } from '../../components/business/ChatBubble'
 import {
   chatAPI,
   type ConversationSummary,
@@ -769,21 +769,32 @@ export default function Chat() {
 
   // ── Map backend message to ChatBubble props ──
   const mapMessage = (msg: ChatMessage) => {
-    const oldMsg = msg as unknown as Record<string, unknown>
-    if (oldMsg.is_system) {
-      return { isSystem: true, content: msg.content || '', id: msg.id }
-    }
-
-    const isMine: boolean = msg.sender === 'user'
+    const isMine: boolean = msg.sender_type === 'user'
     const type = (msg.msg_type || 'text') as 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share'
-    let fileUrl: string | undefined
-    const attachments = oldMsg.attachments as string[] | undefined
+    const fileUrl: string | undefined = msg.file_url || undefined
 
-    if (type === 'image' && attachments?.length) {
-      fileUrl = attachments[0]
-    }
-    if (type === 'video' && attachments?.length) {
-      fileUrl = attachments[0]
+    // 商品卡片 / 商品快照：customer_service 的 card_data 为引用 + 实时解析结果
+    let productSnapshot: ProductSnapshot | null = null
+    let productCardData: ProductCardData | null = null
+    const card = msg.card_data as
+      | { spu_id?: number; product_name?: string; main_image?: string; price?: string; order_status?: string; order_id?: number }
+      | null
+      | undefined
+    if (card) {
+      productSnapshot = {
+        id: card.spu_id || 0,
+        name: card.product_name || '',
+        main_image: card.main_image || '',
+        price: card.price || '0',
+      }
+      productCardData = {
+        id: card.spu_id || 0,
+        name: card.product_name || '',
+        main_image: card.main_image || '',
+        price: card.price || '0',
+        order_status: (card.order_status as ProductCardData['order_status']) || undefined,
+        order_id: card.order_id,
+      }
     }
 
     return {
@@ -793,9 +804,9 @@ export default function Chat() {
       isMine,
       timestamp: msg.created_at,
       fileUrl,
-      productSnapshot: oldMsg.product_snapshot as ProductSnapshot | null | undefined,
-      productCardData: oldMsg.product_card as ProductCardData | null | undefined,
-      cartItems: oldMsg.cart_items as CartItem[] | undefined,
+      productSnapshot,
+      productCardData,
+      cartItems: undefined,
       isRead: msg.is_read === true,
     }
   }

@@ -24,6 +24,11 @@ class Conversation(models.Model):
         verbose_name='归属管理组',
     )
     subject = models.CharField(max_length=255, blank=True, default='', verbose_name='主题')
+    spu = models.ForeignKey(
+        'goods.SPU', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='cs_conversations',
+        verbose_name='关联商品',
+    )
     status = models.CharField(
         max_length=16, choices=STATUS_CHOICES, default='open', verbose_name='状态',
     )
@@ -47,6 +52,7 @@ class Conversation(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['admin', 'status']),
             models.Index(fields=['group', 'status']),
+            models.Index(fields=['spu', 'status']),
         ]
 
     def __str__(self):

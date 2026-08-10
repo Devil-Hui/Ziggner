@@ -175,6 +175,26 @@ const DetailUser = styled.span`
   color: ${Color.text.secondary};
 `
 
+const ProductChip = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #e74c3c;
+  background: #fef2f2;
+  border: 1px solid #fde2e2;
+  border-radius: 10px;
+  padding: 1px 8px;
+  cursor: pointer;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &:hover { background: #fde2e2; }
+`
+
 const DetailActions = styled.div`
   display: flex;
   gap: ${Spacing.sm}px;
@@ -922,6 +942,11 @@ export default function AdminChatDetail() {
               <DetailTitle>
                 {activeConv.subject || `${t('admin.chatDetail.support')} #${activeConv.id}`}
                 <DetailUser>{activeConv.user?.username}</DetailUser>
+                {activeConv.spu_info && (
+                  <ProductChip onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
+                    🛍️ {activeConv.spu_info.name}
+                  </ProductChip>
+                )}
                 <StatusBadge
                   status={statusBadgeType(activeConv.status) as 'submitted' | 'approved' | 'off_sale'}
                   label={statusLabel(activeConv.status, t)}

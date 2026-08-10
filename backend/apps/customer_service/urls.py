@@ -7,6 +7,7 @@ from .views import (
     ConversationListView,
     ConversationDetailView,
     ConversationReleaseView,
+    ConversationCloseView,
     MessageView,
 )
 
@@ -26,6 +27,7 @@ urlpatterns = [
     # 会话
     path('conversations/', ConversationListView.as_view(), name='cs-conversation-list'),
     path('conversations/<int:conv_id>/', ConversationDetailView.as_view(), name='cs-conversation-detail'),
+    path('conversations/<int:conv_id>/close/', ConversationCloseView.as_view(), name='cs-conversation-close'),
 
     # 消息（GET 历史 + 离线拉取 / POST 发送）
     path('conversations/<int:conv_id>/messages/', MessageView.as_view(), name='cs-messages'),
