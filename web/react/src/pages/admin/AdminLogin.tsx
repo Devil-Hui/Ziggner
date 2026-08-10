@@ -239,14 +239,23 @@ export default function AdminLogin() {
     }
     setError('')
     setLoading(true)
-    const ok = await login(email, verifyId, verifyCode, turnstileToken)
-    setLoading(false)
-    if (ok) {
-      navigate('/admin/products', { replace: true })
-    } else {
-      setError(t('admin.login.invalidCredentials'))
+    try {
+      const ok = await login(email, verifyId, verifyCode, turnstileToken)
+      if (ok) {
+        navigate('/admin/products', { replace: true })
+      } else {
+        setError(t('admin.login.invalidCredentials'))
+        setVerifyCode('')
+        setTurnstileToken(null)
+      }
+    } catch (err: unknown) {
+      // 展示后端具体失败原因（验证码错误/过期、安全验证失败、非管理员等）
+      const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      setError(detail || t('admin.login.invalidCredentials'))
       setVerifyCode('')
       setTurnstileToken(null)
+    } finally {
+      setLoading(false)
     }
   }
 

@@ -79,8 +79,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         return false
       }
       return true
-    } catch {
-      return false
+    } catch (err) {
+      // 透传后端具体错误（验证码过期/安全验证失败/非管理员等），由调用方展示 detail
+      throw err
     }
   }
 

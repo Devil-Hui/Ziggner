@@ -346,6 +346,8 @@ class EmailVerifyService:
             msg.send(fail_silently=False)
         except Exception as e:
             logger.warning(f'[EMAIL] Failed to send admin verify code to {email}: {e}')
+            # 邮件发送失败必须向上抛，否则接口会假装"发送成功"，用户永远收不到验证码
+            raise
 
         return {'verify_id': verify_id, 'expire_seconds': expire_sec}
 
@@ -385,5 +387,7 @@ class EmailVerifyService:
             msg.send(fail_silently=False)
         except Exception as e:
             logger.warning(f'[EMAIL] Failed to send user verify code to {email}: {e}')
+            # 邮件发送失败必须向上抛，否则接口会假装"发送成功"，用户永远收不到验证码
+            raise
 
         return {'verify_id': verify_id, 'expire_seconds': expire_sec}
