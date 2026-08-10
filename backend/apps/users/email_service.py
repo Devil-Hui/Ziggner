@@ -63,21 +63,74 @@ def _render_template(template_type: str, context: dict) -> dict:
     }
 
 
-def _send_verify_email(email: str, code: str, template_type: str = 'verify_code',
-                       from_email: str | None = None) -> None:
-    """按模板发送验证码邮件（复用 _render_template）"""
+def _account_day_key(account_user: str) -> str:
+    """发件账号当日用量 key（按自然日 UTC 计数，每 24h 重置）"""
+    today = datetime.now(dt_timezone.utc).strftime('%Y%m%d')
+    return f'email_account_sent:{account_user}:{today}'
+
+
+def _account_usage(account: dict) -> int:
+    """账号当日已发送数"""
+    return _code_cache.get(_account_day_key(account.get('user', '')), 0)
+
+
+def _send_with_account(account: dict, recipient: str, code: str, template_type: str) -> None:
+    """用指定账号发送验证码邮件（SMTP 失败会抛异常，由调用方切换账号）"""
+    from django.core.mail import EmailMultiAlternatives, get_connection
+
     rendered = _render_template(template_type, {'code': code})
-    try:
-        send_mail(
-            subject=rendered['subject'],
-            message=rendered['text'],
-            html_message=rendered['html'],
-            from_email=from_email or settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-            fail_silently=False,
-        )
-    except Exception as e:
-        logger.warning(f'[EMAIL] Failed to send verification code to {email}: {e}')
+    msg = EmailMultiAlternatives(
+        subject=rendered['subject'],
+        body=rendered['text'] or f'Your verification code is: {code}',
+        from_email=account.get('from_email') or account.get('user') or settings.DEFAULT_FROM_EMAIL,
+        to=[recipient],
+        connection=None,
+    )
+    msg.attach_alternative(rendered['html'], 'text/html')
+    conn = get_connection(
+        backend='django.core.mail.backends.smtp.EmailBackend',
+        host=account.get('host', 'smtp.163.com'),
+        port=int(account.get('port', 465)),
+        username=account.get('user', ''),
+        password=account.get('password', ''),
+        use_ssl=bool(account.get('use_ssl', True)),
+    )
+    msg.connection = conn
+    msg.send(fail_silently=False)
+
+
+def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verify_code') -> None:
+    """多发件账号池：额度感知轮换发送。
+
+    - 跳过当日已达 daily_limit 的账号
+    - 按当日用量升序优先选最空闲账号
+    - 发送失败自动切换下一个账号
+    - 全部失败抛异常（调用方返回 500，不再假装成功）
+    """
+    accounts = list(getattr(settings, 'EMAIL_ACCOUNTS', None) or [])
+    if not accounts:
+        raise RuntimeError('no email account configured')
+
+    # 按当日用量升序（最空闲优先），额度用完的排最后（仍允许失败切换尝试）
+    accounts.sort(key=lambda a: _account_usage(a))
+    errors = []
+    for account in accounts:
+        usage = _account_usage(account)
+        if usage >= int(account.get('daily_limit', 500)):
+            errors.append(f"{account.get('user')}: daily limit {usage} reached")
+            continue
+        try:
+            _send_with_account(account, recipient, code, template_type)
+        except Exception as e:
+            logger.warning(f'[EMAIL] account {account.get("user")} failed to send to {recipient}: {e}')
+            errors.append(f"{account.get('user')}: {e}")
+            continue
+        # 发送成功 → 记录该账号当日用量
+        _code_cache.set(_account_day_key(account.get('user', '')), usage + 1, timeout=86400)
+        return
+    msg = 'all email accounts failed: ' + ('; '.join(errors) if errors else 'no usable account')
+    raise RuntimeError(msg)
+
 
 logger = logging.getLogger(__name__)
 
@@ -369,8 +422,8 @@ class EmailVerifyService:
         _code_cache.set(EmailVerifyService._active_key(email), verify_id, timeout=expire_sec)
         EmailVerifyService._mark_sent(email)
 
-        # 发送邮件
-        _send_verify_email(email, code, 'verify_code')
+        # 发送邮件（账号池轮换，失败抛异常由视图返回 500）
+        _deliver_verify_email(email, code, 'verify_code')
 
         result = {'verify_id': verify_id, 'expire_seconds': expire_sec}
         return result
@@ -401,10 +454,7 @@ class EmailVerifyService:
 
     @staticmethod
     def send_admin_verify_code(email: str) -> dict:
-        """使用管理后台邮箱发送验证码（验证码仅发邮件，不返回给客户端；含发送频率限制）。"""
-        from django.core.mail import EmailMultiAlternatives
-        from django.core.mail import get_connection
-
+        """发送管理员登录验证码（验证码仅发邮件，不返回给客户端；含发送频率限制 + 账号池轮换）。"""
         EmailVerifyService._enforce_send_limit(email)
 
         code = generate_numeric_verification_code()
@@ -418,72 +468,27 @@ class EmailVerifyService:
         _code_cache.set(EmailVerifyService._active_key(email), verify_id, timeout=expire_sec)
         EmailVerifyService._mark_sent(email)
 
-        rendered = _render_template('verify_code', {'code': code})
-
-        msg = EmailMultiAlternatives(
-            subject=rendered['subject'],
-            body=rendered['text'] or f'Your verification code is: {code}',
-            from_email=settings.ADMIN_DEFAULT_FROM_EMAIL,
-            to=[email],
-            connection=None,
-        )
-        msg.attach_alternative(rendered['html'], 'text/html')
-
-        conn = get_connection(
-            backend='django.core.mail.backends.smtp.EmailBackend',
-            host=settings.ADMIN_EMAIL_HOST,
-            port=settings.ADMIN_EMAIL_PORT,
-            username=settings.ADMIN_EMAIL_HOST_USER,
-            password=settings.ADMIN_EMAIL_HOST_PASSWORD,
-            use_ssl=settings.ADMIN_EMAIL_USE_SSL,
-        )
-        msg.connection = conn
-        try:
-            msg.send(fail_silently=False)
-        except Exception as e:
-            logger.warning(f'[EMAIL] Failed to send admin verify code to {email}: {e}')
-            # 邮件发送失败必须向上抛，否则接口会假装"发送成功"，用户永远收不到验证码
-            raise
+        # 账号池轮换发送（失败抛异常，由视图返回 500）
+        _deliver_verify_email(email, code, 'verify_code')
 
         return {'verify_id': verify_id, 'expire_seconds': expire_sec}
 
     @staticmethod
     def send_user_verify_code(email: str) -> dict:
-        """使用用户注册邮箱发送验证码（暂用默认配置）。"""
-        from django.core.mail import EmailMultiAlternatives
-        from django.core.mail import get_connection
+        """发送用户注册验证码（含账号池轮换）。"""
+        EmailVerifyService._enforce_send_limit(email)
 
         code = generate_numeric_verification_code()
         verify_id = uuid.uuid4().hex[:12]
         expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE', 600)
 
+        EmailVerifyService._invalidate_previous(email)
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
+        _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
+        _code_cache.set(EmailVerifyService._active_key(email), verify_id, timeout=expire_sec)
+        EmailVerifyService._mark_sent(email)
 
-        rendered = _render_template('verify_code', {'code': code})
-
-        msg = EmailMultiAlternatives(
-            subject=rendered['subject'],
-            body=rendered['text'] or f'Your verification code is: {code}',
-            from_email=settings.USER_DEFAULT_FROM_EMAIL,
-            to=[email],
-            connection=None,
-        )
-        msg.attach_alternative(rendered['html'], 'text/html')
-
-        conn = get_connection(
-            backend='django.core.mail.backends.smtp.EmailBackend',
-            host=settings.USER_EMAIL_HOST,
-            port=settings.USER_EMAIL_PORT,
-            username=settings.USER_EMAIL_HOST_USER,
-            password=settings.USER_EMAIL_HOST_PASSWORD,
-            use_ssl=settings.USER_EMAIL_USE_SSL,
-        )
-        msg.connection = conn
-        try:
-            msg.send(fail_silently=False)
-        except Exception as e:
-            logger.warning(f'[EMAIL] Failed to send user verify code to {email}: {e}')
-            # 邮件发送失败必须向上抛，否则接口会假装"发送成功"，用户永远收不到验证码
-            raise
+        # 账号池轮换发送（失败抛异常，由视图返回 500）
+        _deliver_verify_email(email, code, 'verify_code')
 
         return {'verify_id': verify_id, 'expire_seconds': expire_sec}

@@ -388,6 +388,37 @@ USER_EMAIL_HOST_USER = os.getenv('USER_EMAIL_HOST_USER', '')
 USER_EMAIL_HOST_PASSWORD = os.getenv('USER_EMAIL_HOST_PASSWORD', '')
 USER_DEFAULT_FROM_EMAIL = os.getenv('USER_DEFAULT_FROM_EMAIL', 'Ziggner <noreply@ziggner.com>')
 
+# =============== 多发件账号池（额度感知轮换）===============
+# 格式（JSON 数组字符串，.env 里配 EMAIL_ACCOUNTS）：
+#   [{"host":"smtp.163.com","port":465,"user":"a@163.com","password":"授权码",
+#     "from_email":"Ziggner <a@163.com>","use_ssl":true,"daily_limit":500},
+#    {"host":"smtp.163.com","port":465,"user":"b@163.com","password":"授权码",
+#     "from_email":"Ziggner <b@163.com>","use_ssl":true,"daily_limit":500}]
+# 未配置时回退为单一账号（EMAIL_HOST_USER 等，兼容旧配置）。
+import json as _json
+_EMAIL_ACCOUNTS_RAW = os.getenv('EMAIL_ACCOUNTS', '')
+if _EMAIL_ACCOUNTS_RAW:
+    try:
+        EMAIL_ACCOUNTS = _json.loads(_EMAIL_ACCOUNTS_RAW)
+        for _acc in EMAIL_ACCOUNTS:
+            _acc.setdefault('port', int(_acc.get('port', 465)))
+            _acc.setdefault('use_ssl', True)
+            _acc.setdefault('daily_limit', int(_acc.get('daily_limit', 500)))
+    except Exception:
+        EMAIL_ACCOUNTS = []
+else:
+    EMAIL_ACCOUNTS = []
+if not EMAIL_ACCOUNTS:
+    EMAIL_ACCOUNTS = [{
+        'host': EMAIL_HOST,
+        'port': EMAIL_PORT,
+        'user': EMAIL_HOST_USER,
+        'password': EMAIL_HOST_PASSWORD,
+        'from_email': DEFAULT_FROM_EMAIL,
+        'use_ssl': EMAIL_USE_SSL,
+        'daily_limit': int(os.getenv('EMAIL_ACCOUNT_DAILY_LIMIT', '500')),
+    }]
+
 # Simple JWT settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timezone.timedelta(minutes=15),  # 访问令牌有效期15分钟 (F-003 修复)
