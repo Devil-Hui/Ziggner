@@ -253,16 +253,14 @@ export default function AdminLogin() {
       if (ok) {
         navigate('/admin/products', { replace: true })
       } else {
+        // 保留验证码与 Turnstile token，允许用户修正后直接重试（验证码 10 分钟有效）
         setError(t('admin.login.invalidCredentials'))
-        setVerifyCode('')
-        setTurnstileToken(null)
       }
     } catch (err: unknown) {
       // 展示后端具体失败原因（验证码错误/过期、安全验证失败、非管理员等）
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setError(detail || t('admin.login.invalidCredentials'))
-      setVerifyCode('')
-      setTurnstileToken(null)
+      // 不清空 verifyCode/turnstileToken：仅输错一点（如漏一位）时可直接修正重试
     } finally {
       setLoading(false)
     }

@@ -62,6 +62,7 @@ class AdminLoginView(PublicApiView):
         code = request.data.get('code', '')
         turnstile_token = request.data.get('turnstile_token', '')
         password = request.data.get('password', '')
+        username = request.data.get('username', '').strip()
 
         if not email:
             return Response({'detail': '邮箱不能为空'}, status=status.HTTP_400_BAD_REQUEST)
@@ -69,6 +70,10 @@ class AdminLoginView(PublicApiView):
         # 邮箱验证码校验
         if not verify_id or not code:
             return Response({'detail': '验证码不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 验证码必须与请求邮箱绑定（防止跨邮箱复用验证码）
+        if EmailVerifyService.get_verify_email(verify_id) != email:
+            return Response({'detail': '验证码与邮箱不匹配'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not EmailVerifyService.verify_code(verify_id, code):
             return Response({'detail': '验证码错误或已过期'}, status=status.HTTP_400_BAD_REQUEST)
@@ -96,6 +101,10 @@ class AdminLoginView(PublicApiView):
             user = User.objects.get(email=email, is_staff=True)
         except User.DoesNotExist:
             # 统一错误信息，避免泄露邮箱是否为管理员（防枚举）
+            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 用户名一致性（提供时校验，防呆）
+        if username and user.username != username:
             return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.check_password(password):
