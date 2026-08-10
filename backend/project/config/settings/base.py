@@ -350,6 +350,9 @@ USERS_SETTINGS = {
     'VERIFICATION_CODE_EXPIRE_SECONDS': 300,   # 5 分钟过期
     'VERIFICATION_RATE_LIMIT_SECONDS': 60,     # 60 秒发送间隔
     'VERIFICATION_MAX_ATTEMPTS': 5,     # 每条验证码最多尝试验证次数
+    # 全局发送额度（防恶意刷爆发件账号日额度；163 免费邮箱日额度约 500 封，保守留余量）
+    'VERIFICATION_GLOBAL_MINUTE_LIMIT': 10,   # 全系统每 60 秒最多发送验证码数
+    'VERIFICATION_GLOBAL_DAILY_LIMIT': 200,   # 全系统每 24 小时最多发送验证码数
     # 邮箱验证令牌
     'EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES': 15,  # 验证令牌有效期
     # 邮箱验证码（独立流程）

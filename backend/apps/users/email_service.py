@@ -293,15 +293,35 @@ class EmailVerifyService:
         return f'email_verify_day:{email}:{today}'
 
     @staticmethod
+    def _active_key(email):
+        # 该邮箱当前生效的 verify_id（发新码时作废旧码）
+        return f'email_verify_active:{email}'
+
+    @staticmethod
+    def _global_minute_key():
+        # 全系统 60s 窗口计数（防恶意刷，保护发件账号额度）
+        return 'email_verify_global_minute'
+
+    @staticmethod
+    def _global_day_key():
+        today = datetime.now(dt_timezone.utc).strftime('%Y%m%d')
+        return f'email_verify_global_day:{today}'
+
+    @staticmethod
     def _enforce_send_limit(email: str) -> None:
-        """发送频率限制：60s 冷却 + 每日上限（参考大厂标准：Gmail 24h/账号 2000 封，验证码接口收紧）"""
+        """发送频率限制：单邮箱 60s 冷却 + 单邮箱每日上限 + 全局限量（防刷爆发件账号额度）"""
         rate_sec = _cfg.get('VERIFICATION_RATE_LIMIT_SECONDS', 60)
         daily_max = _cfg.get('VERIFICATION_DAILY_LIMIT', 10)
+        g_min = _cfg.get('VERIFICATION_GLOBAL_MINUTE_LIMIT', 10)
+        g_day = _cfg.get('VERIFICATION_GLOBAL_DAILY_LIMIT', 200)
         if _code_cache.get(EmailVerifyService._rate_key(email)):
             raise EmailRateLimitError('发送过于频繁，请 60 秒后再试', retry_after=rate_sec)
-        daily_count = _code_cache.get(EmailVerifyService._daily_key(email), 0)
-        if daily_count >= daily_max:
+        if _code_cache.get(EmailVerifyService._daily_key(email), 0) >= daily_max:
             raise EmailRateLimitError('今日发送次数已达上限，请明天再试', retry_after=3600)
+        if _code_cache.get(EmailVerifyService._global_minute_key(), 0) >= g_min:
+            raise EmailRateLimitError('系统发送繁忙，请稍后再试', retry_after=rate_sec)
+        if _code_cache.get(EmailVerifyService._global_day_key(), 0) >= g_day:
+            raise EmailRateLimitError('今日验证码发送量已达上限，请明天再试', retry_after=3600)
 
     @staticmethod
     def _mark_sent(email: str) -> None:
@@ -312,6 +332,24 @@ class EmailVerifyService:
             _code_cache.get(EmailVerifyService._daily_key(email), 0) + 1,
             timeout=86400,
         )
+        _code_cache.set(
+            EmailVerifyService._global_minute_key(),
+            _code_cache.get(EmailVerifyService._global_minute_key(), 0) + 1,
+            timeout=60,
+        )
+        _code_cache.set(
+            EmailVerifyService._global_day_key(),
+            _code_cache.get(EmailVerifyService._global_day_key(), 0) + 1,
+            timeout=86400,
+        )
+
+    @staticmethod
+    def _invalidate_previous(email: str) -> None:
+        """发新码前作废该邮箱旧验证码（verify_id 换新，旧码立即失效）"""
+        old_verify_id = _code_cache.get(EmailVerifyService._active_key(email))
+        if old_verify_id:
+            _code_cache.delete(f'email_verify:{old_verify_id}')
+            _code_cache.delete(f'email_verify_email:{old_verify_id}')
 
     @staticmethod
     def send_verify_code(email: str) -> dict:
@@ -322,10 +360,13 @@ class EmailVerifyService:
         verify_id = uuid.uuid4().hex[:12]
         expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE', 600)  # 10分钟
 
+        # 发新作废旧：该邮箱旧验证码立即失效
+        EmailVerifyService._invalidate_previous(email)
         # 存储验证码
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
         # 同时记录邮箱，供注册两步流程（verify_id+code → email）使用
         _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
+        _code_cache.set(EmailVerifyService._active_key(email), verify_id, timeout=expire_sec)
         EmailVerifyService._mark_sent(email)
 
         # 发送邮件
@@ -354,6 +395,8 @@ class EmailVerifyService:
                 _code_cache.delete(key)  # 超限销毁验证码
             return False
         _code_cache.delete(key)
+        # 校验成功后清除活跃指针（后续发新码无需再作废）
+        _code_cache.delete(EmailVerifyService._active_key(EmailVerifyService.get_verify_email(verify_id)))
         return True
 
     @staticmethod
@@ -368,8 +411,11 @@ class EmailVerifyService:
         verify_id = uuid.uuid4().hex[:12]
         expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE', 600)
 
+        # 发新作废旧：该邮箱旧验证码立即失效
+        EmailVerifyService._invalidate_previous(email)
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
         _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
+        _code_cache.set(EmailVerifyService._active_key(email), verify_id, timeout=expire_sec)
         EmailVerifyService._mark_sent(email)
 
         rendered = _render_template('verify_code', {'code': code})
