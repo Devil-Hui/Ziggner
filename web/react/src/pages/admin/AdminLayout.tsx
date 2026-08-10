@@ -9,6 +9,7 @@ import { adminChatAPI } from '../../api/chat'
 import { useAllowedMenuPaths } from '../../components/admin/ProtectedRoute'
 import NotificationBell from '../../components/admin/NotificationBell'
 import NotificationFloat from '../../components/admin/common/NotificationFloat'
+import { Icon } from '../../components/admin/common/Icon'
 
 // ── Layout ──
 
@@ -233,12 +234,6 @@ const CollapseIcon = styled.span<{ $collapsed: boolean }>`
   }
 `
 
-const IconBox = ({ children }: { children: React.ReactNode }) => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    {children}
-  </svg>
-)
-
 // ── Menu Builder (uses t() inside component) ──
 
 function useMenuItems() {
@@ -250,42 +245,42 @@ function useMenuItems() {
     {
       section: t('admin.layout.sidebar.productOps'),
       items: [
-        { to: '/admin/products', label: t('admin.layout.menu.products'), icon: <IconBox><rect x="3" y="3" width="18" height="18" rx="2" /><path d="M3 9h18M9 21V9" /></IconBox> },
-        { to: '/admin/categories', label: t('admin.layout.menu.categories'), icon: <IconBox><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></IconBox> },
-        { to: '/admin/brands', label: t('admin.layout.menu.brands'), icon: <IconBox><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></IconBox> },
-        { to: '/admin/tags', label: t('admin.layout.menu.tags'), icon: <IconBox><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" /><line x1="7" y1="7" x2="7.01" y2="7" /></IconBox> },
+        { to: '/admin/products', label: t('admin.layout.menu.products'), icon: <Icon name="package" size={18} /> },
+        { to: '/admin/categories', label: t('admin.layout.menu.categories'), icon: <Icon name="grid" size={18} /> },
+        { to: '/admin/brands', label: t('admin.layout.menu.brands'), icon: <Icon name="tag" size={18} /> },
+        { to: '/admin/tags', label: t('admin.layout.menu.tags'), icon: <Icon name="tag" size={18} /> },
       ],
     },
     {
       section: t('admin.layout.sidebar.fulfillment'),
       items: [
-        { to: '/admin/orders', label: t('admin.layout.menu.orders'), icon: <IconBox><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" /><line x1="3" y1="6" x2="21" y="6" /><path d="M16 10a4 4 0 0 1-8 0" /></IconBox> },
+        { to: '/admin/orders', label: t('admin.layout.menu.orders'), icon: <Icon name="box" size={18} /> },
       ],
     },
     {
       section: t('admin.layout.sidebar.communication'),
       items: [
-        { to: '/admin/chat', label: t('admin.layout.menu.chat'), icon: <IconBox><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></IconBox> },
-        { to: '/admin/notifications', label: t('admin.layout.menu.notifications'), icon: <IconBox><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></IconBox> },
-        { to: '/admin/applications', label: t('admin.layout.menu.applications'), icon: <IconBox><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></IconBox> },
+        { to: '/admin/chat', label: t('admin.layout.menu.chat'), icon: <Icon name="message-circle" size={18} /> },
+        { to: '/admin/notifications', label: t('admin.layout.menu.notifications'), icon: <Icon name="bell" size={18} /> },
+        { to: '/admin/applications', label: t('admin.layout.menu.applications'), icon: <Icon name="file" size={18} /> },
       ],
     },
     {
       section: t('admin.layout.sidebar.marketing'),
       items: [
-        { to: '/admin/coupons', label: t('admin.layout.menu.coupons'), icon: <IconBox><rect x="1" y="4" width="22" height="16" rx="2" /><line x1="1" y1="10" x2="23" y2="10" /></IconBox> },
-        { to: '/admin/activities', label: t('admin.layout.menu.activities'), icon: <IconBox><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBox> },
+        { to: '/admin/coupons', label: t('admin.layout.menu.coupons'), icon: <Icon name="card" size={18} /> },
+        { to: '/admin/activities', label: t('admin.layout.menu.activities'), icon: <Icon name="trending" size={18} /> },
       ],
     },
     {
       section: t('admin.layout.sidebar.systemMgmt'),
       items: [
-        { to: '/admin/groups', label: t('admin.layout.menu.groups'), icon: <IconBox><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></IconBox> },
-        { to: '/admin/audit-logs', label: t('admin.layout.menu.auditLogs'), icon: <IconBox><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></IconBox> },
-        { to: '/admin/recycle-bin', label: t('admin.layout.menu.recycleBin'), icon: <IconBox><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></IconBox> },
-        { to: '/admin/tasks', label: t('admin.layout.menu.asyncTasks'), icon: <IconBox><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></IconBox> },
-        { to: '/admin/rbac', label: t('admin.layout.menu.rbac'), icon: <IconBox><path d="M12 15v2m-6 4h12a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm10-10V7a4 4 0 0 0-8 0v4h8z" /></IconBox> },
-        { to: '/admin/email-templates', label: t('admin.layout.menu.emailTemplates'), icon: <IconBox><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" /></IconBox> },
+        { to: '/admin/groups', label: t('admin.layout.menu.groups'), icon: <Icon name="users" size={18} /> },
+        { to: '/admin/audit-logs', label: t('admin.layout.menu.auditLogs'), icon: <Icon name="edit" size={18} /> },
+        { to: '/admin/recycle-bin', label: t('admin.layout.menu.recycleBin'), icon: <Icon name="trash" size={18} /> },
+        { to: '/admin/tasks', label: t('admin.layout.menu.asyncTasks'), icon: <Icon name="clock" size={18} /> },
+        { to: '/admin/rbac', label: t('admin.layout.menu.rbac'), icon: <Icon name="shield" size={18} /> },
+        { to: '/admin/email-templates', label: t('admin.layout.menu.emailTemplates'), icon: <Icon name="mail" size={18} /> },
       ],
     },
   ]
@@ -412,9 +407,7 @@ export default function AdminLayout() {
         </SidebarNav>
         <SidebarToggle onClick={toggleSidebar}>
           <CollapseIcon $collapsed={collapsed}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
+            <Icon name="chevron-left" size={14} />
           </CollapseIcon>
           {!collapsed && ` ${t('admin.layout.header.collapse')}`}
         </SidebarToggle>

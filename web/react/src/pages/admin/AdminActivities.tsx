@@ -1,6 +1,6 @@
 // TypeScript strict mode enabled
 import React, { useCallback, useEffect, useState } from 'react';
-import styled from 'styled-components'
+import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { adminAPI, Activity, ActivityFormData } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
@@ -12,6 +12,7 @@ import {
   SearchFilter,
 } from '../../components/admin/common';
 import type { Column } from '../../components/admin/common';
+import { KoboyoRefreshIcon } from '../../components/admin/common/Icon';
 
 // ==================== Theme ====================
 
@@ -115,7 +116,12 @@ const SkuSaveBtn = styled.button`
   }
 `;
 
-const RefreshBtn = styled.button`
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+const RefreshBtn = styled.button<{ $spinning?: boolean }>`
   display: flex;
   align-items: center;
   gap: 6px;
@@ -129,6 +135,9 @@ const RefreshBtn = styled.button`
   font-size: ${FontSize.sm}px;
   cursor: pointer;
   transition: ${Transition.normal};
+  svg {
+    ${({ $spinning }) => $spinning && `animation: ${spin} 0.8s linear infinite;`}
+  }
   &:hover {
     background: ${Color.primaryLight};
     color: ${Color.primaryHover};
@@ -719,8 +728,11 @@ const AdminActivities: React.FC = () => {
           onChange={handleSearchChange}
           placeholder={t('admin.activities.searchPlaceholder')}
         />
-        <RefreshBtn onClick={fetchActivities} disabled={loading}>
-          {t('admin.activities.refresh')}
+        <RefreshBtn onClick={fetchActivities} disabled={loading} $spinning={loading} aria-label={t('admin.activities.refresh')}>
+          <KoboyoRefreshIcon size={16} />
+          <span style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
+            {t('admin.activities.refresh')}
+          </span>
         </RefreshBtn>
       </Toolbar>
 

@@ -159,6 +159,8 @@ class ActivitySKUView(BaseApiView):
 
         sku_ids = request.data.get('sku_ids', [])
         activity_price = request.data.get('activity_price')
+        if activity_price is None or activity_price == '':
+            return Response({'detail': 'activity_price is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
         ActivitySKURelation.objects.filter(activity=activity).delete()
 

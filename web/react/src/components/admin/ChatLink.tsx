@@ -1,6 +1,7 @@
 // TypeScript strict mode enabled
 import styled from 'styled-components'
 import { Color, Radius, Transition } from '../../theme/tokens'
+import { Icon } from './common/Icon'
 
 // ── Styled Components ──
 
@@ -87,14 +88,6 @@ const Badge = styled.span`
   z-index: 2;
 `
 
-// ── Chat Icon SVG ──
-
-const ChatIcon = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-  </svg>
-)
-
 // ── Component ──
 
 export interface ChatLinkProps {
@@ -117,7 +110,7 @@ export default function ChatLink({
   return (
     <Wrapper className={className}>
       <ChatButton onClick={onClick} aria-label={tooltip} title={tooltip}>
-        <ChatIcon />
+        <Icon name="message-circle" size={14} />
       </ChatButton>
       {unreadCount > 0 && <Badge>{unreadCount > 99 ? '99+' : unreadCount}</Badge>}
       <Tooltip className="chatlink-tooltip">{tooltip}</Tooltip>

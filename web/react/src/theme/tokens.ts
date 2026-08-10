@@ -25,6 +25,7 @@ export const Color = {
 
   // 文字 (WCAG AA 合规: body≥4.5:1, text.muted≥4.5:1)
   text: {
+    primary: '#111827',
     heading: '#111827',
     body: '#374151',
     secondary: '#6b7280',
@@ -78,6 +79,8 @@ export const Radius = {
 // ── 阴影 ────────────────────────────────────────────
 export const Shadow = {
   card: '0 2px 5px rgba(0, 0, 0, 0.05)',
+  md: '0 4px 12px rgba(0, 0, 0, 0.1)',
+  lg: '0 8px 24px rgba(0, 0, 0, 0.15)',
   dropdown: '0 4px 12px rgba(0, 0, 0, 0.1)',
   modal: '0 8px 24px rgba(0, 0, 0, 0.15)',
   none: 'none',

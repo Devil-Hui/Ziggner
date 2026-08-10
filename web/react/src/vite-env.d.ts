@@ -7,6 +7,12 @@ declare module '*.svg?react' {
   export default SVGComponent
 }
 
+// SVG 原始字符串导入（相对路径引用本地 svg 文件，保留 currentColor 能力）
+declare module '*.svg?raw' {
+  const src: string
+  export default src
+}
+
 // 图片文件导入
 declare module '*.svg' {
   const src: string

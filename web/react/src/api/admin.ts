@@ -469,7 +469,7 @@ export const adminAPI = {
     put<ActivityItem>(`/promotion/activity/${id}/update`, data),
   deleteActivity: (id: number) =>
     del(`/promotion/activity/${id}/delete`),
-  setActivitySKUs: (id: number, data: { sku_ids: number[]; activity_price: number }) =>
+  setActivitySKUs: (id: number, data: { sku_ids: number[]; activity_price?: number }) =>
     post(`/promotion/activity/${id}/skus`, data),
 
   // Email Templates
@@ -484,7 +484,7 @@ export const adminAPI = {
   getRbacMatrix: () =>
     get<RbacMatrix>('/rbac/matrix'),
   updateRbacRole: (role: string, permCodes: string[]) =>
-    put<{ role: string; perm_codes: string[] }>('/rbac/matrix', { role, perm_codes }),
+    put<{ role: string; perm_codes: string[] }>('/rbac/matrix', { role, perm_codes: permCodes }),
   getRbacUsers: (params?: { role?: string; search?: string; page?: number; size?: number }) =>
     get<PaginatedData<RbacUser>>('/rbac/users', params),
   getUserRoles: (userId: number) =>
