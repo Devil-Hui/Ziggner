@@ -95,10 +95,11 @@ class AdminLoginView(PublicApiView):
         try:
             user = User.objects.get(email=email, is_staff=True)
         except User.DoesNotExist:
-            return Response({'detail': '该邮箱未注册管理员账号'}, status=status.HTTP_401_UNAUTHORIZED)
+            # 统一错误信息，避免泄露邮箱是否为管理员（防枚举）
+            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.check_password(password):
-            return Response({'detail': '密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)
         response = Response({'authenticated': True})
