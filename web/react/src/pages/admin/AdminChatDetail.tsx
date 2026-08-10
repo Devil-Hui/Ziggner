@@ -24,10 +24,10 @@ import { CONFIG } from '../../config/constants'
 type MsgFilter = 'all' | 'text' | 'image' | 'product_card'
 
 const FILTER_TABS: { key: MsgFilter; labelKey: string }[] = [
-  { key: 'all', labelKey: 'admin.chatDetail.filterAll' },
-  { key: 'text', labelKey: 'admin.chatDetail.filterText' },
-  { key: 'image', labelKey: 'admin.chatDetail.filterImage' },
-  { key: 'product_card', labelKey: 'admin.chatDetail.filterCard' },
+  { key: 'all', labelKey: 'store.chatDetail.filterAll' },
+  { key: 'text', labelKey: 'store.chatDetail.filterText' },
+  { key: 'image', labelKey: 'store.chatDetail.filterImage' },
+  { key: 'product_card', labelKey: 'store.chatDetail.filterCard' },
 ]
 
 // ── Styled Components ──
@@ -570,8 +570,8 @@ function formatTime(ts: string, t: (key: string) => string): string {
   const yesterday = new Date(today.getTime() - 86400000)
   const msgDay = new Date(date.getFullYear(), date.getMonth(), date.getDate())
   const time = date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false })
-  if (msgDay.getTime() === today.getTime()) return `${t('admin.chatDetail.today')} ${time}`
-  if (msgDay.getTime() === yesterday.getTime()) return `${t('admin.chatDetail.yesterday')} ${time}`
+  if (msgDay.getTime() === today.getTime()) return `${t('store.chatDetail.today')} ${time}`
+  if (msgDay.getTime() === yesterday.getTime()) return `${t('store.chatDetail.yesterday')} ${time}`
   return `${date.getMonth() + 1}/${date.getDate()} ${time}`
 }
 
@@ -581,8 +581,8 @@ function statusBadgeType(status: string) {
 }
 
 function statusLabel(status: string, t: (key: string) => string) {
-  if (status === 'open') return t('admin.chatDetail.statusOpen')
-  if (status === 'closed') return t('admin.chatDetail.statusClosed')
+  if (status === 'open') return t('store.chatDetail.statusOpen')
+  if (status === 'closed') return t('store.chatDetail.statusClosed')
   return status
 }
 
@@ -913,12 +913,12 @@ export default function AdminChatDetail() {
       {/* Left: Conversation List */}
       <Sidebar>
         <SidebarHeader>
-          <span>{t('admin.chatDetail.conversationList')}</span>
+          <span>{t('store.chatDetail.conversationList')}</span>
           <SidebarCount>{conversations.length}</SidebarCount>
         </SidebarHeader>
         <ConvList>
           {listLoading && conversations.length === 0 && (
-            <LoadingMore>{t('admin.chatDetail.loading')}</LoadingMore>
+            <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
           )}
           {conversations.map(conv => (
             <ConvItem
@@ -940,10 +940,10 @@ export default function AdminChatDetail() {
                   />
                 </div>
               </ConvTop>
-              <ConvSubject>{conv.subject || `${t('admin.chatDetail.support')} #${conv.id}`}</ConvSubject>
+              <ConvSubject>{conv.subject || `${t('store.chatDetail.support')} #${conv.id}`}</ConvSubject>
               <ConvBottom>
                 <ConvLastMsg>
-                  {conv.last_message?.content?.slice(0, 30) || t('admin.chatDetail.noMessages')}
+                  {conv.last_message?.content?.slice(0, 30) || t('store.chatDetail.noMessages')}
                 </ConvLastMsg>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <ConvTime>{formatTime(conv.updated_at, t)}</ConvTime>
@@ -961,7 +961,7 @@ export default function AdminChatDetail() {
           <>
             <DetailHeader>
               <DetailTitle>
-                {activeConv.subject || `${t('admin.chatDetail.support')} #${activeConv.id}`}
+                {activeConv.subject || `${t('store.chatDetail.support')} #${activeConv.id}`}
                 <DetailUser>{activeConv.user?.username}</DetailUser>
                 {activeConv.spu_info && (
                   <ProductChip onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
@@ -976,12 +976,12 @@ export default function AdminChatDetail() {
               <DetailActions>
                 {activeConv.status === 'open' && (
                   <ActionBtn $variant="primary" onClick={handleMarkReplied}>
-                    {t('admin.chatDetail.markReplied')}
+                    {t('store.chatDetail.markReplied')}
                   </ActionBtn>
                 )}
                 {activeConv.status !== 'closed' && (
                   <ActionBtn $variant="danger" onClick={handleClose}>
-                    {t('admin.chatDetail.closeConversation')}
+                    {t('store.chatDetail.closeConversation')}
                   </ActionBtn>
                 )}
               </DetailActions>
@@ -990,14 +990,14 @@ export default function AdminChatDetail() {
             {isHandledByOther && (
               <LockBanner>
                 <Icon name="lock" size={16} />
-                {t('admin.chatDetail.lockBanner').replace('{handler}', activeConv.handled_by_name || t('admin.chatDetail.otherAdmin'))}
+                {t('store.chatDetail.lockBanner').replace('{handler}', activeConv.handled_by_name || t('store.chatDetail.otherAdmin'))}
                 {canForceTakeover && (
                   <ActionBtn
                     $variant="primary"
                     onClick={handleForceTakeover}
                     style={{ marginLeft: 'auto' }}
                   >
-                    {t('admin.chatDetail.forceTakeover')}
+                    {t('store.chatDetail.forceTakeover')}
                   </ActionBtn>
                 )}
               </LockBanner>
@@ -1029,7 +1029,7 @@ export default function AdminChatDetail() {
                 initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
                 components={{
                   Header: () => convLoading ? (
-                    <LoadingMore>{t('admin.chatDetail.loading')}</LoadingMore>
+                    <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
                   ) : null,
                   Footer: () => (
                     <>
@@ -1037,7 +1037,7 @@ export default function AdminChatDetail() {
                         <TypingIndicator name={activeConv.user?.username ?? ''} />
                       )}
                       {activeConv.status === 'closed' && (
-                        <SystemBubbleMessage content={t('admin.chatDetail.conversationClosed')} />
+                        <SystemBubbleMessage content={t('store.chatDetail.conversationClosed')} />
                       )}
                     </>
                   ),
@@ -1068,13 +1068,13 @@ export default function AdminChatDetail() {
                   <ToolBtn
                     onClick={() => setShowProductSearch(true)}
                     disabled={isInputDisabled}
-                    title={t('admin.chatDetail.sendProductCard')}
+                    title={t('store.chatDetail.sendProductCard')}
                   >
                     <Icon name="cart" />
                   </ToolBtn>
 
                   <TextInput
-                    placeholder={t('admin.chatDetail.inputPlaceholder')}
+                    placeholder={t('store.chatDetail.inputPlaceholder')}
                     value={inputText}
                     onChange={e => setInputText(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -1084,13 +1084,13 @@ export default function AdminChatDetail() {
                     onClick={handleSend}
                     disabled={isInputDisabled || sending || (!inputText.trim() && inputAttachments.length === 0)}
                   >
-                    {sending ? t('admin.chatDetail.sending') : <Icon name="send" />}
+                    {sending ? t('store.chatDetail.sending') : <Icon name="send" />}
                   </SendBtn>
                 </InputRow>
                 <ToolBar>
                   <ToolBtn onClick={() => fileInputRef.current?.click()} disabled={isInputDisabled || uploading}>
                     <Icon name="image" />
-                    {uploading ? t('admin.chatDetail.uploading') : t('admin.chatDetail.mediaLabel')}
+                    {uploading ? t('store.chatDetail.uploading') : t('store.chatDetail.mediaLabel')}
                   </ToolBtn>
                   <HiddenInput
                     ref={fileInputRef}
@@ -1105,7 +1105,7 @@ export default function AdminChatDetail() {
           </>
         ) : (
           <EmptyDetail>
-            {t('admin.chatDetail.selectConversationHint')}
+            {t('store.chatDetail.selectConversationHint')}
           </EmptyDetail>
         )}
       </DetailArea>
@@ -1115,29 +1115,29 @@ export default function AdminChatDetail() {
         <ProductSearchOverlay onClick={() => setShowProductSearch(false)}>
           <ProductSearchPopover onClick={(e) => e.stopPropagation()}>
             <ProductSearchHeader>
-              <span>🛒 {t('admin.chatDetail.selectProduct')}</span>
+              <span>🛒 {t('store.chatDetail.selectProduct')}</span>
               <ProductSearchClose onClick={() => setShowProductSearch(false)}>×</ProductSearchClose>
             </ProductSearchHeader>
 
             <ProductSearchInput
               ref={productSearchInputRef}
-              placeholder={t('admin.chatDetail.searchProductPlaceholder')}
+              placeholder={t('store.chatDetail.searchProductPlaceholder')}
               value={productSearchQuery}
               onChange={e => setProductSearchQuery(e.target.value)}
             />
 
             <ProductList>
               {productSearching && (
-                <LoadingMore>{t('admin.chatDetail.searching')}</LoadingMore>
+                <LoadingMore>{t('store.chatDetail.searching')}</LoadingMore>
               )}
               {!productSearching && productResults.length === 0 && debouncedQuery && (
                 <ProductSearchEmpty>
-                  {t('admin.chatDetail.noProductsFound')}
+                  {t('store.chatDetail.noProductsFound')}
                 </ProductSearchEmpty>
               )}
               {!productSearching && !debouncedQuery && (
                 <ProductSearchEmpty>
-                  {t('admin.chatDetail.searchHint')}
+                  {t('store.chatDetail.searchHint')}
                 </ProductSearchEmpty>
               )}
               {productResults.map(product => (
@@ -1158,7 +1158,7 @@ export default function AdminChatDetail() {
                     onClick={() => handleSendProductCard(product)}
                     style={{ flexShrink: 0 }}
                   >
-                    {t('admin.chatDetail.sendCard')}
+                    {t('store.chatDetail.sendCard')}
                   </ActionBtn>
                 </ProductItem>
               ))}

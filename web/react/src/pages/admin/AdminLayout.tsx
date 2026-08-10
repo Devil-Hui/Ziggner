@@ -419,27 +419,27 @@ export default function AdminLayout() {
             <Breadcrumb>{(() => {
               const p = location.pathname;
               const map: Record<string, string> = {
-                '/admin': 'admin.breadcrumb.home',
-                '/admin/products': 'admin.breadcrumb.products',
-                '/admin/categories': 'admin.breadcrumb.categories',
-                '/admin/brands': 'admin.breadcrumb.brands',
-                '/admin/tags': 'admin.breadcrumb.tags',
-                '/admin/orders': 'admin.breadcrumb.orders',
-                '/admin/chat': 'admin.breadcrumb.chat',
-                '/admin/notifications': 'admin.breadcrumb.notifications',
-                '/admin/applications': 'admin.breadcrumb.applications',
-                '/admin/coupons': 'admin.breadcrumb.coupons',
-                '/admin/activities': 'admin.breadcrumb.activities',
-                '/admin/audit-logs': 'admin.breadcrumb.auditLogs',
-                '/admin/recycle-bin': 'admin.breadcrumb.recycleBin',
-                '/admin/groups': 'admin.breadcrumb.groups',
-                '/admin/tasks': 'admin.breadcrumb.tasks',
-                '/admin/rbac': 'admin.breadcrumb.rbac',
-                '/admin/email-templates': 'admin.breadcrumb.emailTemplates',
+                '/admin': 'admin.layout.breadcrumb.home',
+                '/admin/products': 'admin.layout.breadcrumb.products',
+                '/admin/categories': 'admin.layout.breadcrumb.categories',
+                '/admin/brands': 'admin.layout.breadcrumb.brands',
+                '/admin/tags': 'admin.layout.breadcrumb.tags',
+                '/admin/orders': 'admin.layout.breadcrumb.orders',
+                '/admin/chat': 'admin.layout.breadcrumb.chat',
+                '/admin/notifications': 'admin.layout.breadcrumb.notifications',
+                '/admin/applications': 'admin.layout.breadcrumb.applications',
+                '/admin/coupons': 'admin.layout.breadcrumb.coupons',
+                '/admin/activities': 'admin.layout.breadcrumb.activities',
+                '/admin/audit-logs': 'admin.layout.breadcrumb.auditLogs',
+                '/admin/recycle-bin': 'admin.layout.breadcrumb.recycleBin',
+                '/admin/groups': 'admin.layout.breadcrumb.groups',
+                '/admin/tasks': 'admin.layout.breadcrumb.tasks',
+                '/admin/rbac': 'admin.layout.breadcrumb.rbac',
+                '/admin/email-templates': 'admin.layout.breadcrumb.emailTemplates',
               };
               // build hierarchy: home › group › page
               const parts = p.split('/').filter(Boolean);
-              if (parts.length <= 1) return t('admin.breadcrumb.home');
+              if (parts.length <= 1) return t('admin.layout.breadcrumb.home');
               const labelKey = map[p] || parts[parts.length - 1];
               const label = t(labelKey);
               const groupMap: Record<string, string> = {
@@ -450,7 +450,7 @@ export default function AdminLayout() {
               };
               const groupKey = groupMap[parts[1]] || '';
               const groupLabel = groupKey ? t(groupKey) : '';
-              return groupLabel ? `${t('admin.breadcrumb.home')} › ${groupLabel} › ${label}` : `${t('admin.breadcrumb.home')} › ${label}`;
+              return groupLabel ? `${t('admin.layout.breadcrumb.home')} › ${groupLabel} › ${label}` : `${t('admin.layout.breadcrumb.home')} › ${label}`;
             })()}</Breadcrumb>
           </HeaderLeft>
           <HeaderRight>
