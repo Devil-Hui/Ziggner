@@ -42,6 +42,12 @@ export interface ConversationSummary {
   unread_count: number
   spu_id: number | null
   spu_info: { id: number; name: string; main_image: string; price: string } | null
+  /** 当前处理该会话的管理员 ID（null = 无人处理） */
+  handled_by?: number | null
+  /** 当前处理该会话的管理员名称 */
+  handled_by_name?: string | null
+  /** 当前登录管理员是否可在此会话发言（占线保护权威判定） */
+  can_reply?: boolean
   last_message: {
     content: string
     sender: string
@@ -57,6 +63,8 @@ export interface ConversationDetail extends ConversationSummary {
   handled_by: number | null
   /** 当前处理该会话的管理员名称 */
   handled_by_name: string | null
+  /** 当前登录管理员是否可在此会话发言 */
+  can_reply: boolean
 }
 
 export interface CreateConversationParams {
@@ -137,6 +145,7 @@ interface CsConversation {
   spu_info?: { id: number; name: string; main_image: string; price: string } | null
   handled_by?: number | null
   handled_by_name?: string | null
+  can_reply?: boolean
   last_message?: {
     id?: number
     content?: string
@@ -178,6 +187,9 @@ function transformSummary(c: CsConversation): ConversationSummary {
     unread_count: c.unread_count || 0,
     spu_id: c.spu_id ?? null,
     spu_info: c.spu_info ?? null,
+    handled_by: c.handled_by ?? null,
+    handled_by_name: c.handled_by_name ?? null,
+    can_reply: c.can_reply ?? true,
     last_message: lm
       ? { content: lm.content || '', sender: lm.sender_type || '', created_at: lm.created_at || '' }
       : null,
@@ -193,6 +205,7 @@ function transformDetail(c: CsConversation): ConversationDetail {
     messages: (c.messages || []).map(transformChatMessage),
     handled_by: c.handled_by ?? null,
     handled_by_name: c.handled_by_name ?? null,
+    can_reply: c.can_reply ?? true,
   }
 }
 
@@ -276,6 +289,10 @@ export const adminChatAPI = {
 
   /** Admin 标记为已回复（无独立状态，PATCH 空体刷新详情即可） */
   markReplied: (convId: number) =>
+    patch<ConversationDetail>(`/chat/conversations/${convId}/`, {}),
+
+  /** Admin 强制接手：超管/主管可将被其他客服占用的会话接管为本人处理 */
+  takeoverConversation: (convId: number) =>
     patch<ConversationDetail>(`/chat/conversations/${convId}/`, {}),
 
   /** Admin 关闭对话（走专用 close 端点，用户/客服均可） */

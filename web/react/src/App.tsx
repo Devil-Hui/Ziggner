@@ -9,6 +9,7 @@ import { CartProvider } from './store/CartContext'
 import { UserProvider } from './store/UserContext'
 import { routes } from './router'
 import AppErrorBoundary from './components/common/AppErrorBoundary/AppErrorBoundary'
+import CustomerServiceFAB from './components/common/CustomerServiceFAB'
 
 function AppRoutes() {
   return useRoutes(routes)
@@ -26,6 +27,7 @@ function App() {
         <AdminAuthProvider>
         <BrowserRouter>
           <AppRoutes />
+          <CustomerServiceFAB />
           <MiniCartToast />
         </BrowserRouter>
         </AdminAuthProvider>

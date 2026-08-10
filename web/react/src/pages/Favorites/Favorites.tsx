@@ -74,6 +74,22 @@ const CardPrice = styled.div`
   color: #e74c3c;
 `
 
+const ContactBtn = styled.button`
+  margin-top: 10px;
+  width: 100%;
+  padding: 7px 0;
+  border: 1px solid #ff6a3d;
+  border-radius: ${Radius.sm}px;
+  background: #fff;
+  color: #ff6a3d;
+  font-size: ${FontSize.xs}px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  &:hover { background: #ff6a3d; color: #fff; }
+  &:active { transform: scale(0.98); }
+`
+
 const RemoveBtn = styled.button`
   background: none;
   border: none;
@@ -127,6 +143,20 @@ export default function Favorites() {
     } catch { /* fail silently */ }
   }
 
+  const handleContact = (e: React.MouseEvent, f: FavoriteItem) => {
+    e.stopPropagation()
+    const id = f.spu_id || f.spu
+    const name = f.spu_name || ''
+    const image = f.spu_image || ''
+    const price = f.spu_price || ''
+    navigate(
+      `/support?spu_id=${id}` +
+      `&spu_name=${encodeURIComponent(name)}` +
+      `&spu_image=${encodeURIComponent(image)}` +
+      `&spu_price=${encodeURIComponent(price)}`,
+    )
+  }
+
   return (
     <PageLayout>
       <Container>
@@ -147,6 +177,9 @@ export default function Favorites() {
                     <RemoveBtn onClick={e => handleRemove(e, spuId)}>×</RemoveBtn>
                     <CardName>{f.spu_name || `Product #${spuId}`}</CardName>
                     <CardPrice>{f.spu_price ? `$${f.spu_price}` : ''}</CardPrice>
+                    <ContactBtn onClick={e => handleContact(e, f)}>
+                      {t('store.product.contactSupport')}
+                    </ContactBtn>
                   </CardBody>
                 </Card>
               )

@@ -61,6 +61,51 @@ def _is_superuser(user) -> bool:
     return has_role(user, Role.SUPERADMIN.value)
 
 
+def _is_cs_manager(user) -> bool:
+    """客服主管 / 超管 — 可强制接手被占用的会话"""
+    return has_role(user, Role.SUPERADMIN.value) or has_role(user, Role.ADMIN_LEADER.value)
+
+
+def _assign_timeout_minutes() -> int:
+    """占线自动释放时限（分钟），运维可在 settings 热改"""
+    return getattr(settings, 'CS_ASSIGN_TIMEOUT_MINUTES', 30)
+
+
+def _is_assignment_expired(conv) -> bool:
+    ttl = _assign_timeout_minutes()
+    return bool(
+        conv.handled_at
+        and (timezone.now() - conv.handled_at).total_seconds() > ttl * 60
+    )
+
+
+def _lock_check(conv, user):
+    """会话占线检查（一对一接待保护）。
+
+    返回 None 表示允许操作（含：超管/主管强接、会话未占用、占线已超时自动释放）；
+    返回 Response 表示拒绝（409）。
+    """
+    # 超管 / 主管 永远可强制接手
+    if _is_cs_manager(user):
+        return None
+    # 未占用 → 可直接认领
+    if not conv.handled_by_id:
+        return None
+    # 自己正在处理 → 放行
+    if conv.handled_by_id == user.id:
+        return None
+    # 占线已超时 → 自动释放，允许当前用户接手
+    if _is_assignment_expired(conv):
+        conv.handled_by = None
+        conv.handled_at = None
+        conv.save(update_fields=['handled_by', 'handled_at'])
+        return None
+    return Response(
+        {'detail': f'该会话正在由 {conv.handled_by.username} 接待中，暂不可接手（占线保护）'},
+        status=status.HTTP_409_CONFLICT,
+    )
+
+
 def _get_user_admin_group(user):
     """返回用户所属 AdminGroup，如果不在任何组返回 None"""
     if not user.is_authenticated:
@@ -422,10 +467,10 @@ class ConversationListView(BaseApiView):
             if status_filter in ('open', 'closed'):
                 qs = qs.filter(status=status_filter)
 
-            qs = qs.select_related('user', 'admin', 'group', 'spu')
+            qs = qs.select_related('user', 'admin', 'group', 'spu', 'handled_by')
         else:
             qs = Conversation.objects.filter(user=request.user).select_related(
-                'user', 'admin', 'group', 'spu',
+                'user', 'admin', 'group', 'spu', 'handled_by',
             )
 
         qs = optimize_conversation_list_qs(qs, is_staff=is_staff).order_by('-updated_at')
@@ -576,7 +621,12 @@ class ConversationDetailView(BaseApiView):
         conv = _get_conv_for_user(conv_id, request.user)
         if not conv:
             return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+        # 预取处理人，避免序列化器 N+1
+        conv = Conversation.objects.select_related(
+            'user', 'admin', 'group', 'spu', 'handled_by',
+        ).get(id=conv.id)
         return Response(ConversationDetailSerializer(conv, context={
+            'request': request,
             'redact_sensitive': ConversationAccessPolicy.redact_sensitive(request.user),
         }).data)
 
@@ -594,12 +644,10 @@ class ConversationDetailView(BaseApiView):
         if not conv:
             return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-        # 一对一锁定检查：如果会话已被其他客服处理，拒绝操作
-        if conv.handled_by and conv.handled_by_id != request.user.id:
-            return Response(
-                {'detail': f'该会话正在由 {conv.handled_by.username} 处理中'},
-                status=status.HTTP_409_CONFLICT,
-            )
+        # 占线保护：若会话被其他客服占用（未超时且非超管/主管），拒绝分配操作
+        lock_resp = _lock_check(conv, request.user)
+        if lock_resp is not None:
+            return lock_resp
 
         serializer = UpdateConversationSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
@@ -636,8 +684,8 @@ class ConversationDetailView(BaseApiView):
             conv.admin = new_admin
             update_fields.append('admin')
 
-        # 如果当前没有处理人，设置为当前用户
-        if conv.handled_by is None:
+        # 占线归属：未占用则认领；超管/主管强制接手则重设处理人
+        if conv.handled_by_id != request.user.id:
             conv.handled_by = request.user
             conv.handled_at = timezone.now()
             update_fields.extend(['handled_by', 'handled_at'])
@@ -645,7 +693,10 @@ class ConversationDetailView(BaseApiView):
         if update_fields:
             conv.save(update_fields=update_fields)
 
-        return Response(ConversationDetailSerializer(conv).data)
+        return Response(ConversationDetailSerializer(conv, context={
+            'request': request,
+            'redact_sensitive': ConversationAccessPolicy.redact_sensitive(request.user),
+        }).data)
 
 
 # ═══════════════════════════════════════════════════════════════
@@ -702,12 +753,11 @@ class MessageView(BaseApiView):
         if conv.status == 'closed':
             return Response({'detail': '对话已关闭'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 一对一锁定检查：admin 发送消息时，如果会话已被其他客服处理，拒绝操作
-        if _is_cs_staff(request.user) and conv.handled_by and conv.handled_by_id != request.user.id:
-            return Response(
-                {'detail': f'该会话正在由 {conv.handled_by.username} 处理中'},
-                status=status.HTTP_409_CONFLICT,
-            )
+        # 占线保护：admin 发送前检查会话是否被其他客服占用
+        if _is_cs_staff(request.user):
+            lock_resp = _lock_check(conv, request.user)
+            if lock_resp is not None:
+                return lock_resp
 
         serializer = SendMessageSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -734,14 +784,14 @@ class MessageView(BaseApiView):
 
         sender_type = 'admin' if _is_cs_staff(request.user) else 'user'
 
-        # ── Admin 回复时自动分配为当前会话的客服 ──
-        if sender_type == 'admin' and not conv.admin:
-            conv.admin = request.user
-            conv.save(update_fields=['admin'])
-
-        # ── Admin 回复时自动设为处理人 ──
-        if sender_type == 'admin' and conv.handled_by is None:
-            conv.handled_by = request.user
+        # ── Admin 回复时认领 / 刷新占线 ──
+        if sender_type == 'admin':
+            if not conv.admin:
+                conv.admin = request.user
+                conv.save(update_fields=['admin'])
+            # 占线归属：若非当前处理人则接管（含超管强接 / 超时释放后），并刷新时间戳
+            if conv.handled_by_id != request.user.id:
+                conv.handled_by = request.user
             conv.handled_at = timezone.now()
             conv.save(update_fields=['handled_by', 'handled_at'])
 

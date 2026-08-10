@@ -904,6 +904,7 @@ const en = {
       closeConversation: 'Close',
       lockBanner: 'This conversation is being handled by {handler}',
       otherAdmin: 'another admin',
+      forceTakeover: 'Force Takeover',
       conversationClosed: 'Conversation closed',
       sendProductCard: 'Send product card',
       inputPlaceholder: 'Type a reply...',

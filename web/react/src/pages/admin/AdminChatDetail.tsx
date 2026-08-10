@@ -592,7 +592,7 @@ export default function AdminChatDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { adminUser } = useAdminAuth()
+  const { adminUser, isSuperAdmin, isGroupLeader } = useAdminAuth()
 
   // Conversations list
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
@@ -774,6 +774,16 @@ export default function AdminChatDetail() {
     } catch { /* ignore */ }
   }
 
+  // ── Force takeover (superadmin / leader) ──
+  const handleForceTakeover = async () => {
+    if (!id) return
+    try {
+      await adminChatAPI.takeoverConversation(parseInt(id))
+      await loadDetail(parseInt(id))
+      await loadConversations()
+    } catch { /* ignore */ }
+  }
+
   // ── Upload ──
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -847,8 +857,12 @@ export default function AdminChatDetail() {
       })
   }, [activeConv?.messages, msgFilter])
 
-  const isLockedByOther = activeConv?.handled_by != null && activeConv.handled_by !== adminUser?.id
-  const isInputDisabled = activeConv?.status === 'closed' || isLockedByOther
+  const isHandledByOther = activeConv?.handled_by != null && activeConv.handled_by !== adminUser?.id
+  const canForceTakeover = (isSuperAdmin || isGroupLeader) && isHandledByOther
+  // 占线只读：被他人占用且当前管理员无权强制接手（can_reply 已含超时自动释放判定）
+  const isLockedReadOnly = isHandledByOther && !canForceTakeover
+  // 以服务端 can_reply 为准：买家/超管/未占用/本人/超时释放 → 可发；否则禁用
+  const isInputDisabled = activeConv?.status === 'closed' || !activeConv?.can_reply
 
   // ── Scrolling ──
   const scrollToBottom = useCallback(() => {
@@ -914,10 +928,17 @@ export default function AdminChatDetail() {
             >
               <ConvTop>
                 <ConvUser>{conv.user?.username}</ConvUser>
-                <StatusBadge
-                  status={statusBadgeType(conv.status) as 'submitted' | 'approved' | 'off_sale'}
-                  label={statusLabel(conv.status, t)}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {conv.handled_by_name && (
+                    <span style={{ fontSize: 11, color: '#c2410c', whiteSpace: 'nowrap' }}>
+                      🙋 {conv.handled_by_name}
+                    </span>
+                  )}
+                  <StatusBadge
+                    status={statusBadgeType(conv.status) as 'submitted' | 'approved' | 'off_sale'}
+                    label={statusLabel(conv.status, t)}
+                  />
+                </div>
               </ConvTop>
               <ConvSubject>{conv.subject || `${t('admin.chatDetail.support')} #${conv.id}`}</ConvSubject>
               <ConvBottom>
@@ -966,10 +987,19 @@ export default function AdminChatDetail() {
               </DetailActions>
             </DetailHeader>
 
-            {isLockedByOther && (
+            {isHandledByOther && (
               <LockBanner>
                 <Icon name="lock" size={16} />
                 {t('admin.chatDetail.lockBanner').replace('{handler}', activeConv.handled_by_name || t('admin.chatDetail.otherAdmin'))}
+                {canForceTakeover && (
+                  <ActionBtn
+                    $variant="primary"
+                    onClick={handleForceTakeover}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    {t('admin.chatDetail.forceTakeover')}
+                  </ActionBtn>
+                )}
               </LockBanner>
             )}
 

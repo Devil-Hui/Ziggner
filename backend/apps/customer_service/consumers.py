@@ -21,6 +21,7 @@ from channels.db import database_sync_to_async
 from django.conf import settings
 from django.core.cache import caches
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from apps.users.session_auth import ACCESS_COOKIE
 from .policies import ConversationAccessPolicy
@@ -206,7 +207,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
                 card_data = self._strip_card_data_to_refs(card_data)
 
             # 保存到数据库
-            msg = await self._save_message(
+            res = await self._save_message(
                 content=content,
                 msg_type=msg_type_field,
                 file_url=file_url,
@@ -215,12 +216,20 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
                 attachments=attachments,
             )
 
-            if not msg:
+            if not res:
                 await self.send(json.dumps({
                     'type': 'error',
                     'payload': '消息保存失败',
                 }))
                 return
+            if res.get('error') == 'locked':
+                await self.send(json.dumps({
+                    'type': 'error',
+                    'payload': res.get('detail', '会话占线，暂不可发送'),
+                }))
+                return
+
+            msg = res
 
             # 广播到会话组
             msg_id = msg['msg_id']
@@ -440,24 +449,51 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
                 is_read=False,
             ).update(is_read=True)
 
+    def _is_superadmin_sync(self) -> bool:
+        """同步判断当前用户是否超管（在 database_sync_to_async 内调用）"""
+        return ConversationAccessPolicy.is_superadmin(self.user)
+
     @database_sync_to_async
     def _save_message(self, content: str, msg_type: str, file_url: str,
                       card_data: dict | None, metadata: dict,
                       attachments: list | None = None) -> dict | None:
-        """保存消息到数据库 — admin 回复时自动分配为客服"""
+        """保存消息到数据库 — 强制占线保护 + admin 认领/刷新时间戳"""
         from .models import Conversation, Message
 
         try:
-            conv = Conversation.objects.filter(id=self.conv_id).first()
+            conv = Conversation.objects.filter(id=self.conv_id).select_related('handled_by').first()
             if not conv:
                 return None
 
             sender_type = 'admin' if self.is_admin else 'user'
 
-            # ── Admin 回复时自动分配为当前会话的客服 ──
-            if sender_type == 'admin' and not conv.admin:
-                conv.admin = self.user
-                conv.save(update_fields=['admin'])
+            # ── 占线保护（仅 admin）：被他人占用且未超时（非超管）则拒绝 ──
+            if sender_type == 'admin' and conv.handled_by_id and conv.handled_by_id != self.user.id:
+                if not self._is_superadmin_sync():
+                    ttl = getattr(settings, 'CS_ASSIGN_TIMEOUT_MINUTES', 30)
+                    expired = bool(
+                        conv.handled_at
+                        and (timezone.now() - conv.handled_at).total_seconds() > ttl * 60
+                    )
+                    if expired:
+                        conv.handled_by = None
+                        conv.handled_at = None
+                        conv.save(update_fields=['handled_by', 'handled_at'])
+                    else:
+                        return {
+                            'error': 'locked',
+                            'detail': f'该会话正在由 {conv.handled_by.username} 接待中，暂不可接手（占线保护）',
+                        }
+
+            # ── Admin 认领 / 刷新占线 ──
+            if sender_type == 'admin':
+                if not conv.admin:
+                    conv.admin = self.user
+                    conv.save(update_fields=['admin'])
+                if conv.handled_by_id != self.user.id:
+                    conv.handled_by = self.user
+                conv.handled_at = timezone.now()
+                conv.save(update_fields=['handled_by', 'handled_at'])
 
             msg = Message.objects.create(
                 conversation=conv,

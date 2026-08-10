@@ -897,6 +897,7 @@ const zhCN = {
       closeConversation: '关闭会话',
       lockBanner: '该会话正在由 {handler} 处理中',
       otherAdmin: '其他管理员',
+      forceTakeover: '强制接手',
       conversationClosed: '对话已关闭',
       sendProductCard: '发送商品卡片',
       inputPlaceholder: '输入回复...',

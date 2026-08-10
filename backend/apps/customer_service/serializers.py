@@ -1,10 +1,49 @@
 import logging
 
+from django.conf import settings
 from django.db.models import Count, OuterRef, Q, Subquery
+from django.utils import timezone
 from rest_framework import serializers
-from apps.rbac.services import has_role
+from apps.rbac.services import has_role, has_perm
 from apps.rbac.constants import Role
 from .models import Conversation, Message
+
+
+# ── 占线状态辅助（与 views._lock_check 保持同一套判定） ──
+def _cs_is_superuser(user) -> bool:
+    return has_role(user, Role.SUPERADMIN.value)
+
+
+def _cs_is_staff(user) -> bool:
+    """镜像 views._is_cs_staff：拥有 cs.conversation.read 且非只读运维"""
+    return (not has_role(user, Role.OPS.value)) and has_perm(user, 'cs.conversation.read')
+
+
+def _cs_assign_expired(conv) -> bool:
+    ttl = getattr(settings, 'CS_ASSIGN_TIMEOUT_MINUTES', 30)
+    return bool(
+        conv.handled_at
+        and (timezone.now() - conv.handled_at).total_seconds() > ttl * 60
+    )
+
+
+def _cs_can_reply(conv, user) -> bool:
+    """当前用户是否可在此会话发言（权威判定，供前端禁用输入）。"""
+    if not user or not getattr(user, 'is_authenticated', False):
+        return False
+    if conv.status == 'closed':
+        return False
+    if not _cs_is_staff(user):          # 买家侧：永远可发
+        return True
+    if _cs_is_superuser(user):          # 超管：强接
+        return True
+    if not conv.handled_by_id:          # 未占用：可认领
+        return True
+    if conv.handled_by_id == user.id:   # 本人接待中
+        return True
+    if _cs_assign_expired(conv):        # 占线已超时：可接手
+        return True
+    return False                         # 被其他客服占用且未超时
 
 logger = logging.getLogger(__name__)
 
@@ -152,6 +191,9 @@ class ConversationListSerializer(serializers.ModelSerializer):
     group_name = serializers.SerializerMethodField()
     spu_id = serializers.IntegerField(read_only=True, allow_null=True)
     spu_info = serializers.SerializerMethodField()
+    handled_by = serializers.SerializerMethodField()
+    handled_by_name = serializers.SerializerMethodField()
+    can_reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -159,6 +201,7 @@ class ConversationListSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'admin', 'agent_name', 'subject', 'status',
             'user_msg_count', 'last_message', 'unread_count',
             'group_id', 'group_name', 'spu_id', 'spu_info',
+            'handled_by', 'handled_by_name', 'can_reply',
             'created_at', 'updated_at',
         ]
 
@@ -227,6 +270,16 @@ class ConversationListSerializer(serializers.ModelSerializer):
     def get_spu_info(self, obj):
         return _resolve_spu_info(obj.spu)
 
+    def get_handled_by(self, obj):
+        return obj.handled_by_id
+
+    def get_handled_by_name(self, obj):
+        return obj.handled_by.username if obj.handled_by else ''
+
+    def get_can_reply(self, obj):
+        return _cs_can_reply(obj, self.context.get('request').user
+                             if self.context.get('request') else None)
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('redact_sensitive'):
@@ -243,6 +296,9 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     group_name = serializers.SerializerMethodField()
     spu_id = serializers.IntegerField(read_only=True, allow_null=True)
     spu_info = serializers.SerializerMethodField()
+    handled_by = serializers.SerializerMethodField()
+    handled_by_name = serializers.SerializerMethodField()
+    can_reply = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -250,6 +306,7 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_name', 'admin', 'admin_name', 'agent_name',
             'subject', 'status', 'user_msg_count', 'messages',
             'group_id', 'group_name', 'spu_id', 'spu_info',
+            'handled_by', 'handled_by_name', 'can_reply',
             'created_at', 'updated_at',
         ]
 
@@ -272,6 +329,16 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
     def get_spu_info(self, obj):
         return _resolve_spu_info(obj.spu)
 
+    def get_handled_by(self, obj):
+        return obj.handled_by_id
+
+    def get_handled_by_name(self, obj):
+        return obj.handled_by.username if obj.handled_by else ''
+
+    def get_can_reply(self, obj):
+        return _cs_can_reply(obj, self.context.get('request').user
+                             if self.context.get('request') else None)
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if self.context.get('redact_sensitive'):
@@ -280,8 +347,8 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
 
 
 class CreateConversationSerializer(serializers.Serializer):
-    subject = serializers.CharField(required=False, allow_blank=True, default='')
-    content = serializers.CharField(required=False, allow_blank=True, default='')
+    subject = serializers.CharField(required=False, allow_blank=True, default='', max_length=255)
+    content = serializers.CharField(required=False, allow_blank=True, default='', max_length=5000)
     spu_id = serializers.IntegerField(required=False, allow_null=True)
     msg_type = serializers.ChoiceField(
         choices=Message.MSG_TYPE_CHOICES, required=False, default='text',
@@ -301,7 +368,7 @@ class CreateConversationSerializer(serializers.Serializer):
 
 
 class SendMessageSerializer(serializers.Serializer):
-    content = serializers.CharField(required=False, allow_blank=True, default='')
+    content = serializers.CharField(required=False, allow_blank=True, default='', max_length=5000)
     msg_type = serializers.ChoiceField(
         choices=Message.MSG_TYPE_CHOICES, required=False, default='text',
     )
