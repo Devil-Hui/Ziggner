@@ -17,14 +17,11 @@ from apps.users.serializers import (
     LogoutSerializer,
     RegisterSerializer,
     SendEmailCodeSerializer,
-    SendSMSCodeSerializer,
     UserProfileSerializer,
     UserProfileUpdateSerializer,
     VerifyEmailCodeSerializer,
-    VerifySMSCodeSerializer,
 )
 from apps.users.services import UserService
-from apps.users.sms_service import SMSService
 from utils.api_base_view import BaseApiView, PublicApiView
 from apps.users.session_auth import set_auth_cookies
 from apps.users.turnstile import TurnstileUnavailable, verify_turnstile
@@ -149,12 +146,11 @@ class AdminLoginCodeView(PublicApiView):
 # ============================================================
 
 class RegisterView(PublicApiView):
-    """用户注册（邮箱或手机验证二选一）。"""
+    """用户注册（邮箱验证）。"""
     """
     POST /api/users/register/ —— 用户注册。
 
     邮箱流程:  {username, password, verification_token, country_code?, phone?}
-    手机流程:  {username, password, verification_code, country_code, phone}
     """
 
     @extend_schema(
@@ -201,9 +197,8 @@ class RegisterView(PublicApiView):
 
         # 邮箱从令牌解析
         email = data.pop('_verified_email', '')
-        # 令牌/验证码已校验，后续不再需要
+        # 令牌已校验，后续不再需要
         data.pop('verification_token', None)
-        data.pop('verification_code', None)
 
         try:
             user = UserService.create_user(
@@ -382,75 +377,6 @@ class ChangeUsernameView(BaseApiView):
 
 
 # ============================================================
-# 短信验证码
-# ============================================================
-
-class SendSMSCodeView(PublicApiView):
-    """发送短信验证码（需图片验证码）。"""
-    """POST /api/users/sms/send/ —— 发送短信验证码"""
-
-    @extend_schema(
-        request=SendSMSCodeSerializer,
-        responses={
-            200: OpenApiResponse(description='SMS code sent'),
-            429: OpenApiResponse(description='Rate limit exceeded'),
-        }
-    )
-    def post(self, request):
-        serializer = SendSMSCodeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        data = serializer.validated_data
-        result = SMSService.send_code(
-            phone=data['phone'],
-            country_code=data['country_code'],
-        )
-
-        if not result['success']:
-            return Response(
-                {'detail': result['message']},
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
-            )
-
-        response_data = {'detail': result['message']}
-        if settings.DEBUG:
-            _logger.info('DEBUG: 短信验证码 code=%s', result.get('code'))
-
-        return Response(response_data)
-
-
-class VerifySMSCodeView(PublicApiView):
-    """校验短信验证码。"""
-    """POST /api/users/sms/verify/ —— 校验短信验证码"""
-
-    @extend_schema(
-        request=VerifySMSCodeSerializer,
-        responses={
-            200: OpenApiResponse(description='SMS code verified'),
-            400: OpenApiResponse(description='Invalid code'),
-        }
-    )
-    def post(self, request):
-        serializer = VerifySMSCodeSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        data = serializer.validated_data
-        is_valid = SMSService.verify_code(
-            phone=data['phone'],
-            country_code=data['country_code'],
-            code=data['code'],
-        )
-
-        if not is_valid:
-            return Response(
-                {'detail': Messages.SMS_CODE_INVALID},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response({'detail': Messages.SMS_CODE_VERIFIED})
-
-
-# ============================================================
 # 邮箱验证码 —— 三阶段流程
 # ============================================================
 
@@ -479,7 +405,7 @@ class SendEmailCodeView(PublicApiView):
 
         response_data = {'detail': result['message']}
         if settings.DEBUG:
-            _logger.info('DEBUG: 短信验证码 code=%s', result.get('code'))
+            _logger.info('DEBUG: 邮箱验证码 code=%s', result.get('code'))
 
         return Response(response_data)
 

@@ -87,7 +87,6 @@ export default function RegisterForm() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
     code: '',
@@ -150,7 +149,6 @@ export default function RegisterForm() {
       formData.username,
       formData.password,
       formData.email || undefined,
-      formData.phone || undefined,
       verifyId || undefined,
       formData.code || undefined,
       turnstileToken,
@@ -186,12 +184,6 @@ export default function RegisterForm() {
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
           required
-        />
-        <Input
-          type="text"
-          placeholder={t('store.auth.phonePlaceholder')}
-          value={formData.phone}
-          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
         />
         <Input
           type="password"

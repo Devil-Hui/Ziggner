@@ -15,11 +15,9 @@ from apps.users.views import (
     LogoutView,
     RegisterView,
     SendEmailCodeView,
-    SendSMSCodeView,
     UserMeView,
     UserProfileView,
     VerifyEmailCodeView,
-    VerifySMSCodeView,
 )
 from apps.users.social_views import (
     SocialLoginView,
@@ -60,10 +58,6 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('username/', ChangeUsernameView.as_view(), name='user-change-username'),
     path('upload-avatar/', AvatarUploadView.as_view(), name='avatar-upload'),
-
-    # 短信验证码
-    path('sms/send/', SendSMSCodeView.as_view(), name='sms-send'),
-    path('sms/verify/', VerifySMSCodeView.as_view(), name='sms-verify'),
 
     # 邮箱验证码
     path('email/send/', SendEmailCodeView.as_view(), name='email-send'),

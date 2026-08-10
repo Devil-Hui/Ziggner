@@ -121,9 +121,9 @@ class EmailService:
         Returns:
             dict: {success, message, code}
         """
-        code_len = _cfg.get('SMS_CODE_LENGTH', 6)
-        expire_sec = _cfg.get('SMS_CODE_EXPIRE_SECONDS', 300)
-        rate_sec = _cfg.get('SMS_RATE_LIMIT_SECONDS', 60)
+        code_len = _cfg.get('VERIFICATION_CODE_LENGTH', 6)
+        expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE_SECONDS', 300)
+        rate_sec = _cfg.get('VERIFICATION_RATE_LIMIT_SECONDS', 60)
 
         # 频率限制
         if _code_cache.get(EmailService._rate_key(email)):
@@ -155,7 +155,7 @@ class EmailService:
         subject = 'Email Verification Code'
         message = (
             f'Your verification code is: {code}\n\n'
-            f'This code will expire in {_cfg.get("SMS_CODE_EXPIRE_SECONDS", 300) // 60} minutes.'
+            f'This code will expire in {_cfg.get("VERIFICATION_CODE_EXPIRE_SECONDS", 300) // 60} minutes.'
         )
         try:
             from apps.users.tasks import send_verification_email
@@ -189,7 +189,7 @@ class EmailService:
     @staticmethod
     def verify_code(email, code):
         """校验邮箱验证码，一次性使用，成功后删除"""
-        max_attempts = _cfg.get('SMS_MAX_VERIFY_ATTEMPTS', 5)
+        max_attempts = _cfg.get('VERIFICATION_MAX_ATTEMPTS', 5)
 
         # 爆破防护
         attempts = _code_cache.get(EmailService._attempt_key(email), 0)
@@ -205,7 +205,7 @@ class EmailService:
             _code_cache.set(
                 EmailService._attempt_key(email),
                 attempts + 1,
-                timeout=_cfg.get('SMS_CODE_EXPIRE_SECONDS', 300),
+                timeout=_cfg.get('VERIFICATION_CODE_EXPIRE_SECONDS', 300),
             )
             return False
 

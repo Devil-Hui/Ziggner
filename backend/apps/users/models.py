@@ -58,10 +58,6 @@ class UserProfile(models.Model):
         validators=[validate_phone],
         help_text='手机号（不含区号）',
     )
-    phone_verified = models.BooleanField(
-        default=False,
-        help_text='手机号是否已通过短信验证',
-    )
     username_changed_at = models.DateTimeField(
         null=True,
         blank=True,
@@ -133,41 +129,6 @@ class ExpiringToken(models.Model):
     def generate_key():
         import secrets
         return secrets.token_hex(20)
-
-
-class SMSVerificationCode(models.Model):
-    """
-    短信验证码存储。
-    5 分钟过期，一次性使用。
-    """
-    phone = models.CharField(max_length=20)
-    country_code = models.CharField(max_length=10)
-    code = models.CharField(max_length=6)
-    is_used = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField()
-
-    class Meta:
-        db_table = 'users_sms_verification_code'
-        verbose_name = '短信验证码'
-        verbose_name_plural = verbose_name
-        indexes = [
-            models.Index(fields=['phone', 'country_code', '-created_at']),
-        ]
-
-    def is_valid(self):
-        """验证码是否仍然有效（未使用且未过期）"""
-        return not self.is_used and timezone.now() < self.expires_at
-
-    @classmethod
-    def generate_code(cls, phone, country_code):
-        """生成一条新的 6 位数字验证码记录"""
-        return cls.objects.create(
-            phone=phone,
-            country_code=country_code,
-            code=get_random_string(length=6, allowed_chars='0123456789'),
-            expires_at=timezone.now() + timedelta(minutes=5),
-        )
 
 
 class SocialAccount(models.Model):

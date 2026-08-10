@@ -8,7 +8,7 @@ interface UserContextValue {
   isLoggedIn: boolean
   isLoading: boolean
   login: (username: string, password: string, turnstileToken: string) => Promise<{ success: boolean; error?: string }>
-  register: (username: string, password: string, email: string | undefined, phone: string | undefined, verifyId: string | undefined, verifyCode: string | undefined, turnstileToken: string) => Promise<{ success: boolean; error?: string }>
+  register: (username: string, password: string, email: string | undefined, verifyId: string | undefined, verifyCode: string | undefined, turnstileToken: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   socialLogin: (provider: string, accessToken: string) => Promise<any>
   refreshUser: () => Promise<void>
@@ -90,9 +90,9 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshUser])
 
-  const register = useCallback(async (username: string, password: string, email: string | undefined, phone: string | undefined, verifyId: string | undefined, verifyCode: string | undefined, turnstileToken: string) => {
+  const register = useCallback(async (username: string, password: string, email: string | undefined, verifyId: string | undefined, verifyCode: string | undefined, turnstileToken: string) => {
     try {
-      await publicAPI.register({ username, password, email, phone, verify_id: verifyId, verify_code: verifyCode })
+      await publicAPI.register({ username, password, email, verify_id: verifyId, verify_code: verifyCode })
       // 注册成功后自动登录
       return await login(username, password, turnstileToken)
     } catch (err: unknown) {

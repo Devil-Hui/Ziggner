@@ -212,7 +212,6 @@ export const publicAPI = {
     username: string;
     password: string;
     email?: string;
-    phone?: string;
     verify_id?: string;
     verify_code?: string;
   }) =>

@@ -30,6 +30,20 @@ function buildRequestKey(config: InternalAxiosRequestConfig): string {
   return `${config.method}:${config.url}:${params}`
 }
 
+/**
+ * 提取资源的"列表路径"前缀：
+ *   /promotion/activity/3/delete → /promotion/activity
+ *   /promotion/activity/create    → /promotion/activity
+ *   /promotion/activity?page=1    → /promotion/activity
+ * 用于 mutation 成功后失效对应列表的 GET 去重缓存。
+ */
+function resourceBase(url: string): string {
+  const clean = url.split('?')[0]
+    .replace(/\/(create|update|delete|restore|scope|skus|migrate|audit|permanent)$/i, '')
+    .replace(/\/\d+$/, '')
+  return clean
+}
+
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (config.method?.toLowerCase() !== 'get') return config
   const existing = pendingRequests.get(buildRequestKey(config))
@@ -82,6 +96,18 @@ async function refreshBrowserSession(): Promise<boolean> {
 
 api.interceptors.response.use(
   (res: AxiosResponse) => {
+    // mutation（非 GET）成功后，失效同资源的 GET 去重缓存，
+    // 避免删除/修改/创建后 refetch 仍命中旧缓存（列表不刷新）
+    if (res.config.method?.toLowerCase() !== 'get') {
+      const base = resourceBase(res.config.url || '')
+      if (base) {
+        for (const key of [...pendingRequests.keys()]) {
+          if (key.startsWith(`get:${base}`) || key.startsWith(`get:${base}/`)) {
+            pendingRequests.delete(key)
+          }
+        }
+      }
+    }
     if (res.config.method?.toLowerCase() === 'get') {
       const key = buildRequestKey(res.config)
       pendingRequests.set(key, Promise.resolve(res.data))

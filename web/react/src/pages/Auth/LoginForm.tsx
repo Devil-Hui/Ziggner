@@ -254,7 +254,7 @@ export default function LoginForm() {
     <Form onSubmit={handleSubmit} noValidate>
       <Input
         type="text"
-        placeholder={t('store.auth.mobilePlaceholder')}
+        placeholder={t('store.auth.emailPlaceholder')}
         value={formData.email}
         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
         required

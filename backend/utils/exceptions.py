@@ -55,7 +55,7 @@ class ErrorCategory:
     AUTH = 'AUTH'              # 认证 / 授权
     BUSINESS = 'BUSINESS'      # 业务规则错误（4xx 语义）
     SERVER = 'SERVER'          # 服务端错误（5xx）
-    THIRDPARTY = 'THIRDPARTY'  # 第三方服务（支付 / 短信等）
+    THIRDPARTY = 'THIRDPARTY'  # 第三方服务（支付等）
 
 
 # ============================================================

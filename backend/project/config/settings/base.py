@@ -345,11 +345,11 @@ USERS_SETTINGS = {
     'PASSWORD_REQUIRE_DIGIT': True,
     # 图片验证码
     'CAPTCHA_EXPIRE_SECONDS': 120,    # 2 分钟过期
-    # 短信验证码
-    'SMS_CODE_LENGTH': 6,
-    'SMS_CODE_EXPIRE_SECONDS': 300,   # 5 分钟过期
-    'SMS_RATE_LIMIT_SECONDS': 60,     # 60 秒发送间隔
-    'SMS_MAX_VERIFY_ATTEMPTS': 5,     # 每条验证码最多尝试验证次数
+    # 邮箱验证码（统一验证配置）
+    'VERIFICATION_CODE_LENGTH': 6,
+    'VERIFICATION_CODE_EXPIRE_SECONDS': 300,   # 5 分钟过期
+    'VERIFICATION_RATE_LIMIT_SECONDS': 60,     # 60 秒发送间隔
+    'VERIFICATION_MAX_ATTEMPTS': 5,     # 每条验证码最多尝试验证次数
     # 邮箱验证令牌
     'EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES': 15,  # 验证令牌有效期
     # 邮箱验证码（独立流程）

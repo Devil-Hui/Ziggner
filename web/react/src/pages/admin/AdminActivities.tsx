@@ -95,6 +95,26 @@ const CreateButton = styled.button`
   }
 `;
 
+const SkuSaveBtn = styled.button`
+  height: 38px;
+  padding: 0 16px;
+  white-space: nowrap;
+  border: none;
+  border-radius: 8px;
+  background: ${PRIMARY};
+  color: ${Color.text.inverse};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  transition: ${Transition.normal};
+  &:hover {
+    background: #c0392b;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const Toolbar = styled.div`
   display: flex;
   align-items: center;
@@ -384,6 +404,37 @@ const AdminActivities: React.FC = () => {
   /* ---- delete state ---- */
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   const [deleting, setDeleting] = useState(false);
+  /* ---- SKU link state ---- */
+  const [skuIds, setSkuIds] = useState('');
+  const [activityPrice, setActivityPrice] = useState('');
+  const [skuSaving, setSkuSaving] = useState(false);
+  const [skuToast, setSkuToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  const showSkuMsg = (type: 'success' | 'error', msg: string) => {
+    setSkuToast({ type, msg });
+    setTimeout(() => setSkuToast(null), 3000);
+  };
+
+  const handleSaveSKUs = async () => {
+    if (!editingActivity) return;
+    const ids = skuIds.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+    if (ids.length === 0) {
+      showSkuMsg('error', t('admin.activities.skuIdsRequired'));
+      return;
+    }
+    setSkuSaving(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, {
+        sku_ids: ids,
+        activity_price: activityPrice ? Number(activityPrice) : undefined,
+      });
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+    } finally {
+      setSkuSaving(false);
+    }
+  };
 
   /* ---- fetch ---- */
   const fetchActivities = useCallback(async () => {
@@ -420,6 +471,9 @@ const AdminActivities: React.FC = () => {
 
   const openEditDialog = (activity: Activity) => {
     setEditingActivity(activity);
+    setSkuIds('');
+    setActivityPrice('');
+    setSkuToast(null);
     setFormData({
       name: activity.name,
       type: activity.type,
@@ -834,6 +888,37 @@ const AdminActivities: React.FC = () => {
             <FormError>{formErrors.end_time}</FormError>
           )}
         </FormGroup>
+
+        {/* SKU 关联（仅编辑模式，后端 ActivitySKUView 能力入口） */}
+        {editingActivity && (
+          <FormGroup>
+            <FormLabel>{t('admin.activities.skuLinkTitle')}</FormLabel>
+            <FormInput
+              placeholder={t('admin.activities.skuIdsPlaceholder')}
+              value={skuIds}
+              onChange={(e) => setSkuIds(e.target.value)}
+            />
+            <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+              <FormInput
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder={t('admin.activities.activityPricePlaceholder')}
+                value={activityPrice}
+                onChange={(e) => setActivityPrice(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <SkuSaveBtn onClick={handleSaveSKUs} disabled={skuSaving}>
+                {t('admin.activities.saveSkus')}
+              </SkuSaveBtn>
+            </div>
+            {skuToast && (
+              <div style={{ color: skuToast.type === 'success' ? '#2ecc71' : '#e74c3c', fontSize: 12, marginTop: 6 }}>
+                {skuToast.msg}
+              </div>
+            )}
+          </FormGroup>
+        )}
 
         {formErrors.submit && <SubmitError>{formErrors.submit}</SubmitError>}
       </FormDialog>

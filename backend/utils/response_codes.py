@@ -71,19 +71,13 @@ class Messages:
     PHONE_ALREADY_TAKEN = 'This phone number is already in use.'
 
     # ============================================================
-    # 用户 —— 验证码（短信 + 邮箱共用）
+    # 用户 —— 验证码（邮箱）
     # ============================================================
     CODE_SENT = 'Verification code sent.'
     CODE_RATE_LIMITED = 'Please wait {seconds} seconds before requesting a new code.'
     CODE_INVALID = 'Invalid or expired verification code.'
     CODE_VERIFIED = 'Verification successful.'
     CODE_TOO_MANY_ATTEMPTS = 'Too many verification attempts. Please request a new code.'
-    # 保留旧名称以兼容
-    SMS_CODE_SENT = 'Verification code sent.'
-    SMS_RATE_LIMITED = 'Please wait {seconds} seconds before requesting a new code.'
-    SMS_CODE_INVALID = 'Invalid or expired verification code.'
-    SMS_CODE_VERIFIED = 'Phone number verified successfully.'
-    SMS_TOO_MANY_ATTEMPTS = 'Too many verification attempts. Please request a new code.'
 
     # ============================================================
     # 商品 (Goods)
