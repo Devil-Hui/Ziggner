@@ -272,12 +272,13 @@ export interface PaginatedData<T> {
 
 export const adminAPI = {
   // Auth
-  login: async (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string) => {
+  login: async (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string, password?: string) => {
     await ensureCSRFCookie();
     return post<LoginResult>('/users/login/', {
       email,
       ...(verifyId && verifyCode ? { verify_id: verifyId, code: verifyCode } : {}),
       ...(turnstileToken ? { turnstile_token: turnstileToken } : {}),
+      ...(password ? { password } : {}),
     });
   },
   logout: () => post('/users/session/logout/', {}),

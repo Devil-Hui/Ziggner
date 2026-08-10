@@ -22,7 +22,7 @@ interface AdminAuthContextType {
   isSuperAdmin: boolean
   isGroupLeader: boolean
   isGroupMember: boolean
-  login: (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string) => Promise<boolean>
+  login: (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string, password?: string) => Promise<boolean>
   logout: () => void
 }
 
@@ -68,9 +68,9 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void fetchUser() }, [fetchUser])
 
-  const login = async (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string) => {
+  const login = async (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string, password?: string) => {
     try {
-      const result = await adminAPI.login(email, verifyId, verifyCode, turnstileToken)
+      const result = await adminAPI.login(email, verifyId, verifyCode, turnstileToken, password)
       if (!result?.authenticated) return false
       const user = await fetchUser()
       if (!user || deriveRole(user) === 'none') {

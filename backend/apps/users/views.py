@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from apps.users.constants import Messages
-from apps.users.email_service import EmailService, EmailVerifyService
+from apps.users.email_service import EmailService, EmailVerifyService, EmailRateLimitError
 from apps.users.serializers import (
     ChangeUsernameSerializer,
     LogoutSerializer,
@@ -61,6 +61,7 @@ class AdminLoginView(PublicApiView):
         verify_id = request.data.get('verify_id', '')
         code = request.data.get('code', '')
         turnstile_token = request.data.get('turnstile_token', '')
+        password = request.data.get('password', '')
 
         if not email:
             return Response({'detail': '邮箱不能为空'}, status=status.HTTP_400_BAD_REQUEST)
@@ -82,6 +83,10 @@ class AdminLoginView(PublicApiView):
         if not verified:
             return Response({'detail': '安全验证失败，请重试'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 密码校验（邮箱验证码证明邮箱所有权 + 密码证明身份，双因子）
+        if not password:
+            return Response({'detail': '密码不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
         # 验证码通过 → 签发 JWT
         from django.contrib.auth import get_user_model
         from rest_framework_simplejwt.tokens import RefreshToken
@@ -91,6 +96,9 @@ class AdminLoginView(PublicApiView):
             user = User.objects.get(email=email, is_staff=True)
         except User.DoesNotExist:
             return Response({'detail': '该邮箱未注册管理员账号'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not user.check_password(password):
+            return Response({'detail': '密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
 
         refresh = RefreshToken.for_user(user)
         response = Response({'authenticated': True})
@@ -133,6 +141,8 @@ class AdminLoginCodeView(PublicApiView):
         try:
             result = EmailVerifyService.send_admin_verify_code(email)
             return Response(result, status=status.HTTP_200_OK)
+        except EmailRateLimitError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         except Exception as e:
             _logger.error('发送管理员登录验证码失败 email=%s error=%s', email, e)
             return Response(
@@ -476,6 +486,8 @@ class EmailVerifySendView(PublicApiView):
         try:
             result = EmailVerifyService.send_verify_code(email)
             return Response(result, status=status.HTTP_200_OK)
+        except EmailRateLimitError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
         except Exception as e:
             _logger.error('发送邮箱验证码失败 email=%s error=%s', email, e)
             return Response({'detail': '发送失败，请稍后重试'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

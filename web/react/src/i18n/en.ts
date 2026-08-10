@@ -66,6 +66,7 @@ const en = {
       sendFailed: 'Failed to send, please try again',
       codeHint: 'Enter the admin email to receive the login code',
       turnstileRequired: 'Please complete the security verification',
+      passwordRequired: 'Please enter your password',
     },
 
     layout: {

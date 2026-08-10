@@ -65,6 +65,7 @@ const zhCN = {
       sendFailed: '发送失败，请稍后重试',
       codeHint: '请输入管理员邮箱以接收登录验证码',
       turnstileRequired: '请完成安全验证',
+      passwordRequired: '请输入密码',
     },
 
     layout: {

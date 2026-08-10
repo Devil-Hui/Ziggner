@@ -233,6 +233,10 @@ export default function AdminLogin() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!email || !verifyCode) return
+    if (!password) {
+      setError(t('admin.login.passwordRequired'))
+      return
+    }
     if (!turnstileToken) {
       setError(t('admin.login.turnstileRequired'))
       return
@@ -240,7 +244,7 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
     try {
-      const ok = await login(email, verifyId, verifyCode, turnstileToken)
+      const ok = await login(email, verifyId, verifyCode, turnstileToken, password)
       if (ok) {
         navigate('/admin/products', { replace: true })
       } else {

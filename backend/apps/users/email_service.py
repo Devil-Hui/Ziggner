@@ -271,12 +271,53 @@ class EmailService:
 # EmailVerifyService — 独立验证码流程（用于注册等场景）
 # ============================================================
 
+class EmailRateLimitError(Exception):
+    """验证码发送频率超限（调用方应返回 429）"""
+
+    def __init__(self, message='发送过于频繁，请稍后重试', retry_after=60):
+        self.retry_after = retry_after
+        super().__init__(message)
+
+
 class EmailVerifyService:
     """发送6位数字验证码到指定邮箱，使用 verify_id 做键"""
 
     @staticmethod
+    def _rate_key(email):
+        return f'email_verify_rate:{email}'
+
+    @staticmethod
+    def _daily_key(email):
+        # 按自然日（UTC）计数，每 24h 重置
+        today = datetime.now(dt_timezone.utc).strftime('%Y%m%d')
+        return f'email_verify_day:{email}:{today}'
+
+    @staticmethod
+    def _enforce_send_limit(email: str) -> None:
+        """发送频率限制：60s 冷却 + 每日上限（参考大厂标准：Gmail 24h/账号 2000 封，验证码接口收紧）"""
+        rate_sec = _cfg.get('VERIFICATION_RATE_LIMIT_SECONDS', 60)
+        daily_max = _cfg.get('VERIFICATION_DAILY_LIMIT', 10)
+        if _code_cache.get(EmailVerifyService._rate_key(email)):
+            raise EmailRateLimitError('发送过于频繁，请 60 秒后再试', retry_after=rate_sec)
+        daily_count = _code_cache.get(EmailVerifyService._daily_key(email), 0)
+        if daily_count >= daily_max:
+            raise EmailRateLimitError('今日发送次数已达上限，请明天再试', retry_after=3600)
+
+    @staticmethod
+    def _mark_sent(email: str) -> None:
+        rate_sec = _cfg.get('VERIFICATION_RATE_LIMIT_SECONDS', 60)
+        _code_cache.set(EmailVerifyService._rate_key(email), 1, timeout=rate_sec)
+        _code_cache.set(
+            EmailVerifyService._daily_key(email),
+            _code_cache.get(EmailVerifyService._daily_key(email), 0) + 1,
+            timeout=86400,
+        )
+
+    @staticmethod
     def send_verify_code(email: str) -> dict:
-        """发送6位数字验证码到指定邮箱"""
+        """发送6位数字验证码到指定邮箱（验证码仅发邮件，不返回给客户端）"""
+        EmailVerifyService._enforce_send_limit(email)
+
         code = generate_numeric_verification_code()
         verify_id = uuid.uuid4().hex[:12]
         expire_sec = _cfg.get('VERIFICATION_CODE_EXPIRE', 600)  # 10分钟
@@ -285,11 +326,12 @@ class EmailVerifyService:
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
         # 同时记录邮箱，供注册两步流程（verify_id+code → email）使用
         _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
+        EmailVerifyService._mark_sent(email)
 
         # 发送邮件
         _send_verify_email(email, code, 'verify_code')
 
-        result = {'verify_id': verify_id, 'expire_seconds': expire_sec, 'code': code}
+        result = {'verify_id': verify_id, 'expire_seconds': expire_sec}
         return result
 
     @staticmethod
@@ -299,21 +341,28 @@ class EmailVerifyService:
 
     @staticmethod
     def verify_code(verify_id: str, code: str) -> bool:
-        """校验验证码，一次性使用"""
+        """校验验证码，一次性使用；每 verify_id 最多尝试 5 次，超限即销毁（防暴破）"""
         key = f'email_verify:{verify_id}'
         stored = _code_cache.get(key)
         if stored is None:
             return False
         if stored != code.strip():
+            attempt_key = f'email_verify_attempt:{verify_id}'
+            attempts = _code_cache.get(attempt_key, 0) + 1
+            _code_cache.set(attempt_key, attempts, timeout=600)
+            if attempts >= _cfg.get('VERIFICATION_MAX_ATTEMPTS', 5):
+                _code_cache.delete(key)  # 超限销毁验证码
             return False
         _code_cache.delete(key)
         return True
 
     @staticmethod
     def send_admin_verify_code(email: str) -> dict:
-        """使用管理后台邮箱发送验证码。"""
+        """使用管理后台邮箱发送验证码（验证码仅发邮件，不返回给客户端；含发送频率限制）。"""
         from django.core.mail import EmailMultiAlternatives
         from django.core.mail import get_connection
+
+        EmailVerifyService._enforce_send_limit(email)
 
         code = generate_numeric_verification_code()
         verify_id = uuid.uuid4().hex[:12]
@@ -321,6 +370,7 @@ class EmailVerifyService:
 
         _code_cache.set(f'email_verify:{verify_id}', code, timeout=expire_sec)
         _code_cache.set(f'email_verify_email:{verify_id}', email, timeout=expire_sec)
+        EmailVerifyService._mark_sent(email)
 
         rendered = _render_template('verify_code', {'code': code})
 
