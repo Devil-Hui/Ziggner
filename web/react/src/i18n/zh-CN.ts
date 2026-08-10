@@ -636,6 +636,7 @@ const zhCN = {
       skuIdsRequired: '请至少填写一个 SKU ID',
       skuSaveSuccess: 'SKU 关联已保存',
       skuSaveFailed: 'SKU 关联保存失败',
+      refresh: '刷新',
       nameRequired: '请输入活动名称',
       startTimeRequired: '请选择开始时间',
       endTimeRequired: '请选择结束时间',

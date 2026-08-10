@@ -643,6 +643,7 @@ const en = {
       skuIdsRequired: 'Enter at least one SKU ID',
       skuSaveSuccess: 'SKU link saved',
       skuSaveFailed: 'Failed to save SKU link',
+      refresh: 'Refresh',
       nameRequired: 'Activity name is required',
       startTimeRequired: 'Start time is required',
       endTimeRequired: 'End time is required',

@@ -115,6 +115,30 @@ const SkuSaveBtn = styled.button`
   }
 `;
 
+const RefreshBtn = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 8px;
+  background: #fff;
+  color: ${Color.text.secondary};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  transition: ${Transition.normal};
+  &:hover {
+    background: ${Color.primaryLight};
+    color: ${Color.primaryHover};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
 const Toolbar = styled.div`
   display: flex;
   align-items: center;
@@ -695,6 +719,9 @@ const AdminActivities: React.FC = () => {
           onChange={handleSearchChange}
           placeholder={t('admin.activities.searchPlaceholder')}
         />
+        <RefreshBtn onClick={fetchActivities} disabled={loading}>
+          {t('admin.activities.refresh')}
+        </RefreshBtn>
       </Toolbar>
 
       <DataTable<Activity>
