@@ -46,6 +46,10 @@ services:
     environment:
       SERVICE_TYPE: django
       DJANGO_ENV: dev
+      # 本机即生产源站：允许 Cloudflare Tunnel 公网域名访问（api.ziggner.com）
+      DJANGO_DEV_ALLOWED_HOSTS: ${DJANGO_DEV_ALLOWED_HOSTS:-api.ziggner.com}
+      # 邮件账号池（Gmail，.env 配置，用于验证码发送）
+      EMAIL_ACCOUNTS: ${EMAIL_ACCOUNTS:-}
       DB_HOST: db
       DB_PORT: "3306"
       DB_NAME: ${DB_NAME:-backend}
@@ -79,8 +83,12 @@ services:
       context: .
       dockerfile: Dockerfile
     command: ["celery_worker"]
+    mem_limit: 448m
+    memswap_limit: 448m
     environment:
       DJANGO_ENV: dev
+      # 邮件账号池（Gmail，.env 配置，验证码异步发送需要）
+      EMAIL_ACCOUNTS: ${EMAIL_ACCOUNTS:-}
       DB_HOST: db
       DB_PORT: "3306"
       DB_NAME: ${DB_NAME:-backend}
@@ -100,8 +108,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    mem_limit: 224m
-    memswap_limit: 224m
 
   frontend:
     hostname: frontend

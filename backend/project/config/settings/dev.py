@@ -13,6 +13,11 @@ ALLOWED_HOSTS = [
     'web',
     'django-app',
     'host.docker.internal',
+    # 本机即生产源站：允许 Cloudflare Tunnel 公网域名访问
+    'api.ziggner.com',
+    'ziggner.com',
+    'www.ziggner.com',
+    '.trycloudflare.com',
 ]
 ALLOWED_HOSTS.extend(
     host.strip()

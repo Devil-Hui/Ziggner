@@ -4,6 +4,8 @@
 !.env.example
 !web/react/.env.production
 secrets.json
+# 本机 tunnel 自签证书（敏感，不入库）
+deploy/nginx-certs/
 
 # Node
 node_modules/
