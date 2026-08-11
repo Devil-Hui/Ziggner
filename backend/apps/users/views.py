@@ -37,14 +37,17 @@ _logger = logging.getLogger(__name__)
 class AdminLoginView(PublicApiView):
     """管理员登录（邮箱验证码）。"""
     """
-    POST /api/admin/login/ —— 管理员登录。
+    POST /api/admin/login/ —— 管理员登录（双因子）。
 
-    请求体: {email, verify_id, code}
-    - email: 管理员邮箱
+    请求体: {username, email, verify_id, code, password, turnstile_token}
+    - username: 管理员登录名（必填，精确匹配）
+    - email: 管理员邮箱（必填，须与账号绑定邮箱一致）
     - verify_id: AdminLoginCodeView 返回的 verify_id
     - code: 邮箱中收到的6位数字验证码
+    - password: 账号密码
+    - turnstile_token: Cloudflare Turnstile 人机验证 token
 
-    在 username/password 校验前，先验证邮箱验证码。
+    四要素（用户名 / 密码 / 邮箱 / 验证码）全部正确才放行，逐项独立报错。
     """
 
     @extend_schema(
@@ -66,6 +69,9 @@ class AdminLoginView(PublicApiView):
 
         if not email:
             return Response({'detail': '邮箱不能为空'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not username:
+            return Response({'detail': '用户名不能为空'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 邮箱验证码校验
         if not verify_id or not code:
@@ -93,23 +99,26 @@ class AdminLoginView(PublicApiView):
         if not password:
             return Response({'detail': '密码不能为空'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 验证码通过 → 签发 JWT
+        # 四项全部显式校验：用户名 / 密码 / 邮箱 / 验证码 缺一不可，逐项独立报错
         from django.contrib.auth import get_user_model
         from rest_framework_simplejwt.tokens import RefreshToken
 
         User = get_user_model()
+        _logger.warning('[AdminLogin] email=%r username=%r pwd_len=%d', email, username, len(password))
         try:
-            user = User.objects.get(email=email, is_staff=True)
+            user = User.objects.get(username=username, is_staff=True)
         except User.DoesNotExist:
-            # 统一错误信息，避免泄露邮箱是否为管理员（防枚举）
-            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+            _logger.warning('[AdminLogin] FAIL: no staff user for username=%r', username)
+            return Response({'detail': '用户名不正确'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # 用户名一致性（提供时校验，防呆）
-        if username and user.username != username:
-            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+        # 邮箱必须与账号绑定邮箱一致（验证码已证明该邮箱可收信）
+        if user.email != email:
+            _logger.warning('[AdminLogin] FAIL: email mismatch user=%r email=%r', user.username, email)
+            return Response({'detail': '该邮箱不是该管理员账号的邮箱'}, status=status.HTTP_401_UNAUTHORIZED)
 
         if not user.check_password(password):
-            return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+            _logger.warning('[AdminLogin] FAIL: password wrong for user=%r', user.username)
+            return Response({'detail': '密码不正确'}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 全部校验通过 → 消费验证码（使其不可再用）
         EmailVerifyService.consume_code(verify_id)

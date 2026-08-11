@@ -251,7 +251,7 @@ export default function AdminLogin() {
     setError('')
     setLoading(true)
     try {
-      const ok = await login(email, verifyId, verifyCode, turnstileToken, password)
+      const ok = await login(email, verifyId, verifyCode, turnstileToken, password, username)
       if (ok) {
         navigate('/admin/products', { replace: true })
       } else {
