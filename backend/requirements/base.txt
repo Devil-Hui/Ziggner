@@ -27,3 +27,4 @@ python-magic>=0.4.27
 channels[daphne]>=4.2.0
 channels_redis==4.2.0
 SQLAlchemy>=2.0,<3
+PySocks>=1.7.1
