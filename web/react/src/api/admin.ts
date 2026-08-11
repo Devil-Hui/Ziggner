@@ -497,6 +497,12 @@ export const adminAPI = {
     post<PromoCodeItem[]>(`/promotion/coupon/${couponId}/promo-codes`, data),
   getPromoDashboard: (couponId: number) =>
     get<PromoCodeItem[]>(`/promotion/coupon/${couponId}/promo-dashboard`),
+  // 单码更新（启用/停用、改名改备注）
+  updatePromoCode: (id: number, data: Partial<Pick<PromoCodeItem, 'is_active' | 'name' | 'note'>>) =>
+    patch<PromoCodeItem>(`/promotion/coupon/promo/${id}/`, data),
+  // 单码删除
+  deletePromoCode: (id: number) =>
+    del<{ message: string }>(`/promotion/coupon/promo/${id}/`),
 
   // Activity
   getActivities: (params?: { page?: number; search?: string }) =>

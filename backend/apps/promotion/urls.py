@@ -12,7 +12,7 @@ from .admin_views import (
     CouponAdminListView, CouponAdminDetailView,
     ActivityAdminListView, ActivityAdminDetailView,
     CouponScopeView, ActivitySKUView,
-    PromoCodeAdminListView, PromoCodeDashboardView,
+    PromoCodeAdminListView, PromoCodeDashboardView, PromoCodeAdminDetailView,
 )
 
 urlpatterns = [
@@ -40,6 +40,7 @@ urlpatterns = [
     path('coupon/<int:pk>/scope', CouponScopeView.as_view(), name='promotion-coupon-scope'),
     path('coupon/<int:pk>/promo-codes', PromoCodeAdminListView.as_view(), name='promotion-promo-codes'),
     path('coupon/<int:pk>/promo-dashboard', PromoCodeDashboardView.as_view(), name='promotion-promo-dashboard'),
+    path('coupon/promo/<int:pk>/', PromoCodeAdminDetailView.as_view(), name='promotion-promo-detail-admin'),
 
     # Admin Activity CRUD
     path('activity', ActivityAdminListView.as_view(), name='promotion-activity-admin'),

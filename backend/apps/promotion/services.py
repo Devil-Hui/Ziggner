@@ -8,6 +8,7 @@ from utils.cache import Cache
 from .models import (
     Coupon, CouponApplication, CouponApprovalHistory, CouponScope,
     CouponTargetAudience, DiscountType, PromoCode, UserCoupon,
+    generate_promo_code,
 )
 
 _cache = Cache('promotion')

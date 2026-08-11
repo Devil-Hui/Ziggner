@@ -7,7 +7,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
 from apps.rbac.permissions import HasPerm
-from .models import Coupon, DiscountActivity, ActivitySKURelation
+from .models import Coupon, DiscountActivity, ActivitySKURelation, PromoCode
 from .serializers import (
     CouponAdminSerializer, ActivityAdminSerializer,
     CouponSerializer, ActivitySerializer,
@@ -245,3 +245,30 @@ class PromoCodeDashboardView(BaseApiView):
         coupon_id = request.query_params.get('coupon_id') or pk
         qs = PromoCodeService.dashboard(coupon_id=coupon_id)
         return Response(PromoCodeDetailSerializer(qs, many=True).data)
+
+
+class PromoCodeAdminDetailView(BaseApiView):
+    """管理端：单个推广码的启用/停用、改名改备注、删除。"""
+
+    permission_classes = [HasPerm('promotion.coupon.write')]
+
+    @extend_schema(request=PromoCodeSerializer, responses={200: PromoCodeDetailSerializer})
+    def patch(self, request, pk):
+        try:
+            pc = PromoCode.objects.get(pk=pk)
+        except PromoCode.DoesNotExist:
+            return Response({'detail': 'Promo code not found.'}, status=status.HTTP_404_NOT_FOUND)
+        # 仅允许修改业务字段；码值(code)/归属(coupon)等只读字段会被序列化器忽略
+        serializer = PromoCodeSerializer(pc, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(PromoCodeDetailSerializer(pc).data)
+
+    @extend_schema(request=None, responses={200: OpenApiResponse(description='Deleted')})
+    def delete(self, request, pk):
+        try:
+            pc = PromoCode.objects.get(pk=pk)
+        except PromoCode.DoesNotExist:
+            return Response({'detail': 'Promo code not found.'}, status=status.HTTP_404_NOT_FOUND)
+        pc.delete()
+        return Response({'message': 'Promo code deleted.'})

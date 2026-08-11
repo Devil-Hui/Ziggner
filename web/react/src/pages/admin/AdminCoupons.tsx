@@ -319,6 +319,8 @@ export default function AdminCoupons() {
   const [promoForm, setPromoForm] = useState<{ count: number; prefix: string; name: string; note: string }>({
     count: 1, prefix: '', name: '', note: '',
   });
+  const [promoBusyId, setPromoBusyId] = useState<number | null>(null);
+  const [promoDeleteTarget, setPromoDeleteTarget] = useState<PromoCodeItem | null>(null);
 
   const openPromo = async (coupon: Coupon) => {
     setPromoTarget(coupon);
@@ -350,6 +352,36 @@ export default function AdminCoupons() {
       showMsg('error', err?.message || t('admin.coupons.promoCreateFailed'));
     } finally {
       setPromoCreating(false);
+    }
+  };
+
+  // 启用 / 停用单个推广码
+  const handleTogglePromo = async (pc: PromoCodeItem) => {
+    try {
+      setPromoBusyId(pc.id);
+      await adminAPI.updatePromoCode(pc.id, { is_active: !pc.is_active });
+      showMsg('success', pc.is_active ? t('admin.coupons.promoDisableSuccess') : t('admin.coupons.promoEnableSuccess'));
+      if (promoTarget) await fetchPromo(promoTarget.id);
+    } catch (err: any) {
+      showMsg('error', err?.message || t('admin.coupons.promoToggleFailed'));
+    } finally {
+      setPromoBusyId(null);
+    }
+  };
+
+  // 删除单个推广码（二次确认）
+  const handleDeletePromo = async () => {
+    if (!promoDeleteTarget) return;
+    try {
+      setPromoBusyId(promoDeleteTarget.id);
+      await adminAPI.deletePromoCode(promoDeleteTarget.id);
+      showMsg('success', t('admin.coupons.promoDeleteSuccess'));
+      setPromoDeleteTarget(null);
+      if (promoTarget) await fetchPromo(promoTarget.id);
+    } catch (err: any) {
+      showMsg('error', err?.message || t('admin.coupons.promoDeleteFailed'));
+    } finally {
+      setPromoBusyId(null);
     }
   };
 
@@ -856,6 +888,18 @@ export default function AdminCoupons() {
         />
       )}
 
+      {/* Promo Code Delete Confirmation */}
+      {promoDeleteTarget && (
+        <ConfirmDialog
+          title={t('admin.coupons.promoDeleteConfirmTitle')}
+          message={t('admin.coupons.promoDeleteConfirmMsg').replace('{code}', promoDeleteTarget.code)}
+          confirmLabel={t('admin.coupons.confirmDelete')}
+          danger
+          onConfirm={handleDeletePromo}
+          onCancel={() => setPromoDeleteTarget(null)}
+        />
+      )}
+
       {/* Promo Code Management（专属券推广码 / 引流追踪） */}
       {promoTarget && (
         <FormOverlay onClick={() => setPromoTarget(null)}>
@@ -911,6 +955,7 @@ export default function AdminCoupons() {
                     <tr style={{ textAlign: 'left', color: Color.text.secondary }}>
                       <th style={thStyle}>{t('admin.coupons.promoColCode')}</th>
                       <th style={thStyle}>{t('admin.coupons.promoColName')}</th>
+                      <th style={thStyle}>{t('admin.coupons.promoColStatus')}</th>
                       <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColClaims')}</th>
                       <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColUsers')}</th>
                       <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColPaid')}</th>
@@ -923,6 +968,11 @@ export default function AdminCoupons() {
                       <tr key={pc.id} style={{ borderTop: `1px solid ${Color.border.light}` }}>
                         <td style={tdStyle}><strong>{pc.code}</strong></td>
                         <td style={tdStyle}>{pc.name || '-'}</td>
+                        <td style={tdStyle}>
+                          <StatusBadge $active={pc.is_active}>
+                            {pc.is_active ? t('admin.coupons.promoEnabled') : t('admin.coupons.promoDisabled')}
+                          </StatusBadge>
+                        </td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.claim_count}</td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.unique_users ?? '-'}</td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.paid_order_count}</td>
@@ -942,6 +992,33 @@ export default function AdminCoupons() {
                               style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, background: '#fff', borderRadius: 2, cursor: 'pointer' }}
                             >
                               {promoCopiedCode === pc.code ? t('admin.coupons.promoLinkCopied') : t('admin.coupons.promoCopyLink')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={promoBusyId === pc.id}
+                              onClick={() => handleTogglePromo(pc)}
+                              style={{
+                                padding: '4px 10px', fontSize: 12,
+                                border: `1px solid ${pc.is_active ? '#e74c3c' : '#2e7d32'}`,
+                                background: '#fff', borderRadius: 2, cursor: 'pointer',
+                                color: pc.is_active ? '#e74c3c' : '#2e7d32',
+                                opacity: promoBusyId === pc.id ? 0.5 : 1,
+                              }}
+                            >
+                              {pc.is_active ? t('admin.coupons.promoDisabled') : t('admin.coupons.promoEnabled')}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={promoBusyId === pc.id}
+                              onClick={() => setPromoDeleteTarget(pc)}
+                              style={{
+                                padding: '4px 10px', fontSize: 12,
+                                border: '1px solid #999', background: '#fff', borderRadius: 2,
+                                cursor: 'pointer', color: '#999',
+                                opacity: promoBusyId === pc.id ? 0.5 : 1,
+                              }}
+                            >
+                              {t('admin.coupons.promoDelete')}
                             </button>
                           </div>
                         </td>
