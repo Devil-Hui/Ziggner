@@ -211,4 +211,7 @@ class AdminImageUploadView(AdminApiView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         safe_name = f'{uuid.uuid4().hex}{ext}'
-        return Response({'url': f'/media/uploads/{safe_name}'})
+        from django.core.files.storage import default_storage
+        path = default_storage.save(f'uploads/{safe_name}', file)
+        # R2 启用时 default_storage.url() 返回绝对 CDN 地址；否则返回 /media/... 相对路径
+        return Response({'url': default_storage.url(path)})
