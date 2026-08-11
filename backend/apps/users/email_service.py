@@ -9,6 +9,7 @@
 验证码存 Redis (DB 2)，令牌为 JWT（无需 Redis）。
 """
 import logging
+import socket as _socket
 import uuid
 from datetime import datetime, timedelta, timezone as dt_timezone
 
@@ -17,6 +18,37 @@ from django.conf import settings
 from django.core.cache import caches
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
+
+
+def _patch_gmail_proxy() -> None:
+    """Gmail SMTP（smtp.gmail.com）在国内网络不可直连。
+
+    对发往 *.gmail.com 的连接走宿主机 HTTP 代理（host.docker.internal:10808）转发；
+    其余主机保持直连。smtplib 通过 socket.create_connection 建连，此处全局 patch 一次。
+    """
+    try:
+        import socks  # PySocks
+    except ImportError:
+        return
+    _orig_create_connection = _socket.create_connection
+    _PROXY_HOST = 'host.docker.internal'
+    _PROXY_PORT = 10808
+
+    def _proxied_create_connection(address, timeout=None, source_address=None):
+        host = address[0] if isinstance(address, tuple) else str(address)
+        if 'gmail.com' in host:
+            # PySocks 的 socksocket.settimeout 在部分版本有兼容问题，建连后由 smtplib 自行管理超时
+            sock = socks.socksocket()
+            sock.set_proxy(socks.HTTP, addr=_PROXY_HOST, port=_PROXY_PORT)
+            sock.connect(address)
+            return sock
+        return _orig_create_connection(address, timeout, source_address)
+
+    _socket.create_connection = _proxied_create_connection
+
+
+_patch_gmail_proxy()
+
 
 from apps.users.models import EmailTemplate
 
@@ -100,20 +132,42 @@ def _send_with_account(account: dict, recipient: str, code: str, template_type: 
     msg.send(fail_silently=False)
 
 
-def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verify_code') -> None:
-    """多发件账号池：额度感知轮换发送。
+# 国内邮箱域名集合（智能路由：国内收件人优先用国内账号发，国外用国外账号）
+_DOMESTIC_MAIL_DOMAINS = {
+    '163.com', '126.com', 'yeah.net', 'qq.com', 'foxmail.com', '139.com',
+    'sina.com', 'sohu.com', 'vip.qq.com', 'gmail.cn', 'outlook.cn',
+}
 
+
+def _is_domestic_email(email: str) -> bool:
+    """按收件/发件地址判断是否为国内邮箱（域名匹配或 .cn/.com.cn 后缀）"""
+    if '@' not in email:
+        return False
+    domain = email.rsplit('@', 1)[1].lower().strip()
+    return domain in _DOMESTIC_MAIL_DOMAINS or domain.endswith(('.cn', '.com.cn'))
+
+
+def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verify_code') -> None:
+    """多发件账号池：智能路由 + 额度感知轮换发送。
+
+    - 路由：收件人国内邮箱 → 国内账号优先（163）；国外邮箱 → 国外账号优先（Gmail），
+      各自走稳定通道（国内网络访问 Gmail 不稳定，反之亦然）
     - 跳过当日已达 daily_limit 的账号
-    - 按当日用量升序优先选最空闲账号
-    - 发送失败自动切换下一个账号
+    - 发送失败自动切换下一个账号（兜底保证送达）
     - 全部失败抛异常（调用方返回 500，不再假装成功）
     """
     accounts = list(getattr(settings, 'EMAIL_ACCOUNTS', None) or [])
     if not accounts:
         raise RuntimeError('no email account configured')
 
-    # 按当日用量升序（最空闲优先），额度用完的排最后（仍允许失败切换尝试）
-    accounts.sort(key=lambda a: _account_usage(a))
+    # 智能路由排序：账号地域与收件人地域匹配优先，其次按当日用量升序（最空闲优先）
+    domestic_recipient = _is_domestic_email(recipient)
+
+    def _route_key(acc: dict):
+        domestic_account = _is_domestic_email(str(acc.get('user', '')))
+        return (0 if domestic_account == domestic_recipient else 1, _account_usage(acc))
+
+    accounts.sort(key=_route_key)
     errors = []
     for account in accounts:
         usage = _account_usage(account)
