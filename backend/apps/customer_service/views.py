@@ -753,12 +753,25 @@ class MessageView(BaseApiView):
             if since_dt:
                 qs = qs.filter(created_at__gt=since_dt)
 
+        # ── 向上翻更早历史：?before_id=<id>（返回比该 id 更早的消息，按时间倒序分页后转正序）──
+        before_id = request.query_params.get('before_id', '').strip()
+        if before_id:
+            try:
+                before_id = int(before_id)
+                qs = qs.filter(id__lt=before_id).order_by('-created_at', '-id')
+            except ValueError:
+                before_id = None
+
         page = self.paginate_queryset(qs)
         if page is not None:
-            serializer = MessageSerializer(page, many=True, context={
+            items = list(reversed(page)) if before_id else page
+            serializer = MessageSerializer(items, many=True, context={
                 'redact_sensitive': ConversationAccessPolicy.redact_sensitive(request.user),
             })
-            return self.get_paginated_response(serializer.data)
+            resp = self.get_paginated_response(serializer.data)
+            if before_id:
+                resp.data['has_more_older'] = len(page) == self.paginator.get_page_size(request)
+            return resp
 
         serializer = MessageSerializer(qs, many=True, context={
             'redact_sensitive': ConversationAccessPolicy.redact_sensitive(request.user),

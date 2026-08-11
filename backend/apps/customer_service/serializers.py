@@ -9,6 +9,10 @@ from apps.rbac.constants import Role
 from .models import Conversation, Message
 
 
+# 会话详情一次返回的最近消息条数；更早的历史走 messages 端点 ?before_id= 分页加载
+HISTORY_PAGE_SIZE = 50
+
+
 # ── 占线状态辅助（与 views._lock_check 保持同一套判定） ──
 def _cs_is_superuser(user) -> bool:
     return has_role(user, Role.SUPERADMIN.value)
@@ -299,7 +303,8 @@ class ConversationListSerializer(serializers.ModelSerializer):
 
 
 class ConversationDetailSerializer(serializers.ModelSerializer):
-    messages = MessageSerializer(many=True, read_only=True)
+    messages = serializers.SerializerMethodField()
+    has_more_older = serializers.SerializerMethodField()
     user_name = serializers.SerializerMethodField()
     admin_name = serializers.SerializerMethodField()
     agent_name = serializers.SerializerMethodField()
@@ -377,7 +382,7 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
         model = Conversation
         fields = [
             'id', 'user', 'user_name', 'admin', 'admin_name', 'agent_name',
-            'subject', 'status', 'user_msg_count', 'messages',
+            'subject', 'status', 'user_msg_count', 'messages', 'has_more_older',
             'group_id', 'group_name', 'spu_id', 'spu_info', 'order_info',
             'handled_by', 'handled_by_name', 'can_reply',
             'created_at', 'updated_at',
@@ -417,6 +422,19 @@ class ConversationDetailSerializer(serializers.ModelSerializer):
         if self.context.get('redact_sensitive'):
             data.update({'user': None, 'admin': None, 'subject': '已脱敏'})
         return data
+
+    # ── 历史消息分页：detail 只返回最近 HISTORY_PAGE_SIZE 条，更早的走 messages 端点 ?before_id= ──
+    def get_messages(self, obj):
+        qs = list(obj.messages.order_by('-id')[:HISTORY_PAGE_SIZE + 1])
+        self._detail_has_more = len(qs) > HISTORY_PAGE_SIZE
+        recent = qs[:HISTORY_PAGE_SIZE]
+        recent.reverse()  # 按时间正序返回（最新在最后）
+        ctx = dict(self.context)
+        ctx.pop('request', None)
+        return MessageSerializer(recent, many=True, context=ctx).data
+
+    def get_has_more_older(self, obj):
+        return getattr(self, '_detail_has_more', False)
 
 
 class CreateConversationSerializer(serializers.Serializer):

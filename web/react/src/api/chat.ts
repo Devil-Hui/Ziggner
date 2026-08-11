@@ -75,6 +75,8 @@ export interface OrderInfo {
 
 export interface ConversationDetail extends ConversationSummary {
   messages: ChatMessage[]
+  /** 会话详情是否还有更早的历史消息（需调 getOlderMessages 分页拉取） */
+  has_more_older?: boolean
   /** 当前处理该会话的管理员 ID（null = 无人处理） */
   handled_by: number | null
   /** 当前处理该会话的管理员名称 */
@@ -172,6 +174,7 @@ interface CsConversation {
     created_at?: string
   } | null
   messages?: CsMessage[]
+  has_more_older?: boolean
   order_info?: OrderInfo[] | undefined
   created_at?: string
   updated_at?: string
@@ -274,6 +277,7 @@ function transformDetail(c: CsConversation): ConversationDetail {
   return {
     ...base,
     messages: (c.messages || []).map(transformChatMessage),
+    has_more_older: Boolean(c.has_more_older),
     handled_by: c.handled_by ?? null,
     handled_by_name: c.handled_by_name ?? null,
     can_reply: c.can_reply ?? true,
@@ -303,10 +307,28 @@ export const chatAPI = {
     return transformDetail(raw)
   },
 
-  /** 获取对话详情（含消息列表） */
+  /** 获取对话详情（含最近消息列表；更早历史用 getOlderMessages 分页拉取） */
   getMessages: async (convId: number): Promise<ConversationDetail> => {
     const raw = await get<CsConversation>(`/chat/conversations/${convId}/`)
     return transformDetail(raw)
+  },
+
+  /**
+   * 分页拉取更早的历史消息（向上翻页）。
+   * 返回比 beforeId 更早的一页消息（按时间正序），has_more_older 表示是否还有更早。
+   */
+  getOlderMessages: async (
+    convId: number,
+    beforeId: number,
+  ): Promise<{ results: ChatMessage[]; has_more_older: boolean }> => {
+    const raw = await get<{ results: CsMessage[]; has_more_older?: boolean }>(
+      `/chat/conversations/${convId}/messages/`,
+      { before_id: beforeId },
+    )
+    return {
+      results: (raw.results || []).map(transformChatMessage),
+      has_more_older: Boolean(raw.has_more_older),
+    }
   },
 
   /** 发送消息 */

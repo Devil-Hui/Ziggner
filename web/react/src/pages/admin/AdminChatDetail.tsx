@@ -10,6 +10,7 @@ import { useAdminAuth } from '../../store/AdminAuthContext'
 import { ChatBubble, SystemBubbleMessage, TypingIndicator } from '../../components/business/ChatBubble'
 import type { ProductSnapshot, CartItem, ProductCardData } from '../../components/business/ChatBubble'
 import {
+  chatAPI,
   adminChatAPI,
   type ConversationSummary,
   type ConversationDetail,
@@ -690,6 +691,26 @@ const LoadingMore = styled.div`
   font-size: 13px;
 `
 
+const LoadOlderBtn = styled.button`
+  border: 1px solid ${Color.border.light};
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  font-size: 12px;
+  border-radius: 14px;
+  padding: 5px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    border-color: ${Color.primary};
+    color: ${Color.primary};
+  }
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+`
+
 // ── Product Search Popup ──
 
 const ProductSearchOverlay = styled.div`
@@ -859,6 +880,7 @@ export default function AdminChatDetail() {
   const [inputAttachments, setInputAttachments] = useState<string[]>([])
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [loadingOlder, setLoadingOlder] = useState(false)
 
   // Virtual scroll
   const virtuosoRef = useRef<VirtuosoHandle>(null)
@@ -1119,6 +1141,28 @@ export default function AdminChatDetail() {
       await loadDetail(parseInt(id))
       await loadConversations()
     } catch { /* ignore */ }
+  }
+
+  // ── 加载更早的历史消息（分页向上翻）──
+  const handleLoadOlder = async () => {
+    const conv = activeConv
+    if (!conv || loadingOlder) return
+    const oldestId = conv.messages.length ? conv.messages[0].id : undefined
+    if (oldestId == null) return
+    setLoadingOlder(true)
+    try {
+      const { results, has_more_older } = await chatAPI.getOlderMessages(conv.id, oldestId)
+      setActiveConv((prev) => {
+        if (!prev || prev.id !== conv.id) return prev
+        const existingIds = new Set(prev.messages.map((m) => m.id))
+        const older = results.filter((m) => !existingIds.has(m.id))
+        return { ...prev, messages: [...older, ...prev.messages], has_more_older }
+      })
+    } catch {
+      // 加载失败保持现状，按钮可重试
+    } finally {
+      setLoadingOlder(false)
+    }
   }
 
   // ── Close ──
@@ -1436,9 +1480,21 @@ export default function AdminChatDetail() {
                 style={{ flex: 1 }}
                 initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
                 components={{
-                  Header: () => convLoading ? (
-                    <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
-                  ) : null,
+                  Header: () => (
+                    <>
+                      {convLoading ? (
+                        <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
+                      ) : (
+                        activeConv.has_more_older && activeConv.messages.length > 0 && (
+                          <LoadingMore>
+                            <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
+                              {loadingOlder ? t('store.chatDetail.loading') : '加载更早消息'}
+                            </LoadOlderBtn>
+                          </LoadingMore>
+                        )
+                      )}
+                    </>
+                  ),
                   Footer: () => (
                     <>
                       {isTyping && (
