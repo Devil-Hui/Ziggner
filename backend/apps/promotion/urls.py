@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     ClaimCouponView, ClaimByPromoCodeView, CouponDetailView, CouponListView,
+    PromoDetailView,
     GenerateCouponView, MyCouponView,
     ActivityListView, ActivityCreateView, ActivityUpdateView, ActivityDeleteView,
     CouponApplicationCreateView, CouponApplicationDetailView,
@@ -29,6 +30,7 @@ urlpatterns = [
     path('<str:code>/', CouponDetailView.as_view(), name='promotion-detail'),
     path('<str:code>/claim/', ClaimCouponView.as_view(), name='promotion-claim'),
     path('promo/<str:code>/claim/', ClaimByPromoCodeView.as_view(), name='promotion-promo-claim'),
+    path('promo/<str:code>/', PromoDetailView.as_view(), name='promotion-promo-detail'),
 
     # Admin Coupon CRUD
     path('coupon', CouponAdminListView.as_view(), name='promotion-coupon-admin'),

@@ -1,5 +1,5 @@
 // TypeScript strict mode enabled
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
@@ -7,7 +7,7 @@ import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import Pagination from '../../components/admin/common/Pagination';
-import { adminAPI, Coupon, CouponFormData } from '../../api/admin';
+import { adminAPI, Coupon, CouponFormData, type PromoCodeItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
 
@@ -308,6 +308,60 @@ export default function AdminCoupons() {
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null);
 
+  // Promo codes（专属券推广码 / 引流追踪）
+  const [promoTarget, setPromoTarget] = useState<Coupon | null>(null);
+  const [promoList, setPromoList] = useState<PromoCodeItem[]>([]);
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoCreating, setPromoCreating] = useState(false);
+  const [promoCopiedCode, setPromoCopiedCode] = useState<string | null>(null);
+  const [promoForm, setPromoForm] = useState<{ count: number; prefix: string; name: string; note: string }>({
+    count: 1, prefix: '', name: '', note: '',
+  });
+
+  const openPromo = async (coupon: Coupon) => {
+    setPromoTarget(coupon);
+    setPromoForm({ count: 1, prefix: '', name: '', note: '' });
+    await fetchPromo(coupon.id);
+  };
+
+  const fetchPromo = async (couponId: number) => {
+    try {
+      setPromoLoading(true);
+      const data = await adminAPI.getPromoDashboard(couponId);
+      setPromoList(Array.isArray(data) ? data : []);
+    } catch {
+      setPromoList([]);
+    } finally {
+      setPromoLoading(false);
+    }
+  };
+
+  const handleCreatePromo = async () => {
+    if (!promoTarget) return;
+    try {
+      setPromoCreating(true);
+      await adminAPI.createPromoCodes(promoTarget.id, promoForm);
+      showMsg('success', t('admin.coupons.promoCreateSuccess'));
+      setPromoForm({ count: 1, prefix: '', name: '', note: '' });
+      await fetchPromo(promoTarget.id);
+    } catch (err: any) {
+      showMsg('error', err?.message || t('admin.coupons.promoCreateFailed'));
+    } finally {
+      setPromoCreating(false);
+    }
+  };
+
+  const copyPromoLink = async (code: string) => {
+    const link = `${window.location.origin}/coupon/${encodeURIComponent(code)}`;
+    try {
+      await navigator.clipboard.writeText(link);
+      setPromoCopiedCode(code);
+      setTimeout(() => setPromoCopiedCode(null), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
+
   // ==================== Data Fetching ====================
 
   const fetchCoupons = useCallback(async () => {
@@ -540,7 +594,7 @@ export default function AdminCoupons() {
     {
       key: 'actions',
       title: t('admin.coupons.columnActions'),
-      width: '120px',
+      width: '190px',
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <button
@@ -551,6 +605,15 @@ export default function AdminCoupons() {
             onClick={() => openEdit(record)}
           >
             {t('admin.coupons.edit')}
+          </button>
+          <button
+            style={{
+              padding: '4px 10px', fontSize: 12, border: '1px solid #2d8cf0',
+              background: '#fff', color: '#2d8cf0', borderRadius: 2, cursor: 'pointer',
+            }}
+            onClick={() => openPromo(record)}
+          >
+            {t('admin.coupons.promoBtn')}
           </button>
           <button
             style={{
@@ -783,6 +846,120 @@ export default function AdminCoupons() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+
+      {/* Promo Code Management（专属券推广码 / 引流追踪） */}
+      {promoTarget && (
+        <FormOverlay onClick={() => setPromoTarget(null)}>
+          <FormDialog onClick={(e) => e.stopPropagation()} style={{ width: 760, maxWidth: '94vw' }}>
+            <FormTitle>{t('admin.coupons.promoTitle')} · {promoTarget.code}</FormTitle>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: Color.text.secondary }}>
+              {t('admin.coupons.promoSubtitle')}
+            </p>
+
+            {/* 新建推广码 */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16, padding: 16, border: `1px solid ${Color.border.medium}`, borderRadius: 4 }}>
+              <FormGroup style={{ margin: 0 }}>
+                <Label>{t('admin.coupons.promoCount')}</Label>
+                <Input type="number" min={1} max={200} value={promoForm.count}
+                  onChange={(e) => setPromoForm((p) => ({ ...p, count: Math.max(1, Math.min(200, Number(e.target.value) || 1)) }))} />
+              </FormGroup>
+              <FormGroup style={{ margin: 0 }}>
+                <Label>{t('admin.coupons.promoPrefix')}</Label>
+                <Input value={promoForm.prefix} maxLength={8}
+                  onChange={(e) => setPromoForm((p) => ({ ...p, prefix: e.target.value.toUpperCase() }))} />
+              </FormGroup>
+              <FormGroup style={{ margin: 0 }}>
+                <Label>{t('admin.coupons.promoName')}</Label>
+                <Input value={promoForm.name} maxLength={128}
+                  onChange={(e) => setPromoForm((p) => ({ ...p, name: e.target.value }))} />
+              </FormGroup>
+              <FormGroup style={{ margin: 0 }}>
+                <Label>{t('admin.coupons.promoNote')}</Label>
+                <Input value={promoForm.note} maxLength={255}
+                  onChange={(e) => setPromoForm((p) => ({ ...p, note: e.target.value }))} />
+              </FormGroup>
+              <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end' }}>
+                <SecondaryBtn onClick={handleCreatePromo} disabled={promoCreating}>
+                  {promoCreating ? t('admin.coupons.promoGenerating') : t('admin.coupons.promoCreate')}
+                </SecondaryBtn>
+              </div>
+            </div>
+
+            {/* 推广码列表 + 引流看板 */}
+            <p style={{ margin: '0 0 8px', fontSize: 13, color: Color.text.secondary }}>
+              {t('admin.coupons.promoShareHint')}
+            </p>
+            {promoLoading ? (
+              <p>{t('common.loading')}</p>
+            ) : promoList.length === 0 ? (
+              <div style={{ padding: '28px', textAlign: 'center', color: '#999' }}>
+                {t('admin.coupons.promoEmpty')}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: Color.text.secondary }}>
+                      <th style={thStyle}>{t('admin.coupons.promoColCode')}</th>
+                      <th style={thStyle}>{t('admin.coupons.promoColName')}</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColClaims')}</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColUsers')}</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColPaid')}</th>
+                      <th style={{ ...thStyle, textAlign: 'right' }}>{t('admin.coupons.promoColGmv')}</th>
+                      <th style={thStyle}>{t('admin.coupons.promoColActions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {promoList.map((pc) => (
+                      <tr key={pc.id} style={{ borderTop: `1px solid ${Color.border.light}` }}>
+                        <td style={tdStyle}><strong>{pc.code}</strong></td>
+                        <td style={tdStyle}>{pc.name || '-'}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.claim_count}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.unique_users ?? '-'}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.paid_order_count}</td>
+                        <td style={{ ...tdStyle, textAlign: 'right' }}>{Number(pc.gmv || 0).toFixed(2)}</td>
+                        <td style={tdStyle}>
+                          <button
+                            type="button"
+                            onClick={() => copyPromoLink(pc.code)}
+                            style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, background: '#fff', borderRadius: 2, cursor: 'pointer' }}
+                          >
+                            {promoCopiedCode === pc.code ? t('admin.coupons.promoLinkCopied') : t('admin.coupons.promoCopyLink')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ borderTop: `2px solid ${Color.border.medium}`, fontWeight: 600 }}>
+                      <td style={tdStyle}>{t('admin.coupons.promoTotalRow')}</td>
+                      <td style={tdStyle}></td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{promoList.reduce((s, p) => s + p.claim_count, 0)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{promoList.reduce((s, p) => s + (p.unique_users ?? 0), 0)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{promoList.reduce((s, p) => s + p.paid_order_count, 0)}</td>
+                      <td style={{ ...tdStyle, textAlign: 'right' }}>{promoList.reduce((s, p) => s + Number(p.gmv || 0), 0).toFixed(2)}</td>
+                      <td style={tdStyle}></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <ButtonGroup>
+              <SecondaryBtn onClick={() => setPromoTarget(null)}>{t('admin.coupons.promoClose')}</SecondaryBtn>
+            </ButtonGroup>
+          </FormDialog>
+        </FormOverlay>
+      )}
     </div>
   );
 }
+
+const thStyle: CSSProperties = {
+  padding: '8px 10px',
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
+};
+
+const tdStyle: CSSProperties = {
+  padding: '8px 10px',
+  whiteSpace: 'nowrap',
+};

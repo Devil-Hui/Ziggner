@@ -208,6 +208,30 @@ class ClaimByPromoCodeView(BaseApiView):
         return Response({'detail': Messages.COUPON_CLAIMED})
 
 
+class PromoDetailView(PublicApiView):
+    """公开：按推广码解析其指向的优惠券详情 + 推广码元信息（分享页用）。"""
+
+    @extend_schema(responses={200: OpenApiResponse(description='promo detail')})
+    def get(self, request, code):
+        pc = PromoCode.objects.filter(code=code, is_active=True).select_related('coupon').first()
+        if not pc:
+            return Response(
+                {'detail': Messages.PROMO_CODE_NOT_FOUND},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        try:
+            detail = PromotionService.get_public_detail(pc.coupon.code)
+        except ValueError:
+            return Response(
+                {'detail': Messages.COUPON_NOT_FOUND},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        detail['promo_code'] = pc.code
+        detail['promo_name'] = pc.name
+        detail['promo_note'] = pc.note
+        return Response(detail)
+
+
 class GenerateCouponView(BaseApiView):
     """生成优惠券并返回折扣信息（仅管理员可用）。"""
     permission_classes = [HasPerm('promotion.coupon.write')]

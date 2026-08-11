@@ -188,18 +188,20 @@ class PromoCodeAdminListView(BaseApiView):
 
     permission_classes = [HasPerm('promotion.coupon.write')]
 
-    @extend_schema(responses={200: PromoCodeSerializer(many=True)})
-    def get(self, request):
-        coupon_id = request.query_params.get('coupon_id')
+    @extend_schema(responses={200: PromoCodeDetailSerializer(many=True)})
+    def get(self, request, pk=None):
+        # 路由 coupon/<int:pk>/promo-codes 优先用 pk，兼容 query 参数
+        coupon_id = request.query_params.get('coupon_id') or pk
         qs = PromoCodeService.dashboard(coupon_id=coupon_id)
         return Response(PromoCodeDetailSerializer(qs, many=True).data)
 
     @extend_schema(request=PromoCodeCreateSerializer, responses={201: PromoCodeSerializer(many=True)})
-    def post(self, request):
+    def post(self, request, pk=None):
         serializer = PromoCodeCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        coupon_id = request.data.get('coupon_id')
+        # 路由 coupon/<int:pk>/promo-codes 优先用 pk，兼容 body 中的 coupon_id
+        coupon_id = request.data.get('coupon_id') or pk
         if not coupon_id:
             return Response({'detail': 'coupon_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
@@ -238,7 +240,8 @@ class PromoCodeDashboardView(BaseApiView):
     permission_classes = [HasPerm('promotion.coupon.write')]
 
     @extend_schema(responses={200: PromoCodeDetailSerializer(many=True)})
-    def get(self, request):
-        coupon_id = request.query_params.get('coupon_id')
+    def get(self, request, pk=None):
+        # 路由 coupon/<int:pk>/promo-dashboard 优先用 pk，兼容 query 参数
+        coupon_id = request.query_params.get('coupon_id') or pk
         qs = PromoCodeService.dashboard(coupon_id=coupon_id)
         return Response(PromoCodeDetailSerializer(qs, many=True).data)

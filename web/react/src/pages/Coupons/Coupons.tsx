@@ -160,7 +160,15 @@ export default function Coupons() {
           <CouponDesc>{coupon.description}</CouponDesc>
         </CouponInfo>
         <CouponFooter>
-          <span>{t('store.coupons.expires')} {coupon.expireDate}</span>
+          <span>
+            {t('store.coupons.expires')} {coupon.expireDate}
+            {coupon.promoCode && (
+              <span style={{ display: 'block', marginTop: 4, opacity: 0.95 }}>
+                {t('store.coupons.fromPromo')}
+                {coupon.promoCodeName ? ` · ${coupon.promoCodeName}` : ''}（{coupon.promoCode}）
+              </span>
+            )}
+          </span>
           <span>{coupon.code}</span>
         </CouponFooter>
       </CardComponent>

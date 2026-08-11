@@ -15,6 +15,8 @@ export interface DisplayCoupon {
   expireDate: string;
   code: string;
   status: UserCoupon['status'];
+  promoCode?: string | null;
+  promoCodeName?: string | null;
 }
 
 function mapCoupon(userCoupon: UserCoupon): DisplayCoupon {
@@ -30,6 +32,8 @@ function mapCoupon(userCoupon: UserCoupon): DisplayCoupon {
     expireDate: coupon.end_time?.split('T')[0] || '',
     code: coupon.code,
     status: userCoupon.status,
+    promoCode: userCoupon.promo_code?.code ?? null,
+    promoCodeName: userCoupon.promo_code?.name ?? null,
   };
 }
 

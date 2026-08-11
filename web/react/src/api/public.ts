@@ -122,6 +122,11 @@ export interface UserCoupon {
   status: 'available' | 'locked' | 'used' | 'expired' | 'returned'
   claimed_at: string
   used_at?: string
+  promo_code?: {
+    id: number
+    code: string
+    name: string
+  } | null
 }
 
 /** 购物车项 */
@@ -267,6 +272,16 @@ export const publicAPI = {
   /** 领取优惠券，未登录时后端返回 401。 */
   claimCoupon: (code: string) =>
     post<{ detail: string }>(`/promotion/${encodeURIComponent(code)}/claim/`, {}),
+
+  /** 凭专属推广码领取（指向同一张基础券，按码追踪来源）。 */
+  claimByPromoCode: (code: string) =>
+    post<{ detail: string }>(`/promotion/promo/${encodeURIComponent(code)}/claim/`, {}),
+
+  /** 按推广码解析其指向的优惠券详情 + 推广码元信息（分享页用）。 */
+  getPromoDetail: (code: string) =>
+    get<PublicCoupon & { promo_code: string; promo_name: string; promo_note: string }>(
+      `/promotion/promo/${encodeURIComponent(code)}/`,
+    ),
 
   /** 获取用户已领取的优惠券 */
   getMyCoupons: (params?: { status?: string; page?: number; page_size?: number }) =>

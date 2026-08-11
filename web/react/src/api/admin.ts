@@ -186,6 +186,34 @@ export interface CouponItem {
 
 // Compatibility aliases used by AdminCoupons.tsx
 export type Coupon = CouponItem;
+
+/** 专属推广码（引流追踪）：同一张基础券可挂多个推广码 */
+export interface PromoCodeItem {
+  id: number;
+  coupon: number;
+  coupon_code: string;
+  code: string;
+  name: string;
+  note: string;
+  is_active: boolean;
+  claim_count: number;
+  paid_order_count: number;
+  gmv: number | string;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at: string;
+  /** 看板聚合：独立领取用户数 */
+  unique_users?: number;
+}
+
+export interface PromoCodeCreateData {
+  codes?: string[];
+  count?: number;
+  prefix?: string;
+  name?: string;
+  note?: string;
+}
+
 export interface CouponFormData {
   code?: string;
   discount_type: 'fixed' | 'percent';
@@ -461,6 +489,14 @@ export const adminAPI = {
     del(`/promotion/coupon/${id}/delete`),
   setCouponScope: (id: number, data: { scope_type: string; target_ids: number[] }) =>
     post(`/promotion/coupon/${id}/scope`, data),
+
+  // Promo Code（专属券推广码 / 引流追踪）
+  getPromoCodes: (couponId: number) =>
+    get<PromoCodeItem[]>(`/promotion/coupon/${couponId}/promo-codes`),
+  createPromoCodes: (couponId: number, data: PromoCodeCreateData) =>
+    post<PromoCodeItem[]>(`/promotion/coupon/${couponId}/promo-codes`, data),
+  getPromoDashboard: (couponId: number) =>
+    get<PromoCodeItem[]>(`/promotion/coupon/${couponId}/promo-dashboard`),
 
   // Activity
   getActivities: (params?: { page?: number; search?: string }) =>
