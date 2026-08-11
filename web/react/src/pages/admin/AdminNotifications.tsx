@@ -188,7 +188,7 @@ export default function AdminNotifications() {
     setNotifLoading(true)
     setNotifError(null)
     try {
-      const params: Record<string, unknown> = { page: notifPage, page_size: pageSize }
+      const params: Record<string, unknown> = { page: notifPage, per_page: pageSize }
       if (activeTab === 'unread') {
         params.unread = '1'
       } else if (activeTab === 'expired') {
@@ -198,9 +198,9 @@ export default function AdminNotifications() {
       } else if (activeTab === 'operation') {
         params.type = 'operation'
       }
-      const response = await adminAPI.getNotifications(params as { page?: number; page_size?: number })
-      const data = response as { items: NotificationItem[]; total: number }
-      setNotifications(data.items || [])
+      const response = await adminAPI.getNotifications(params as { page?: number; per_page?: number })
+      const data = response as { results?: NotificationItem[]; items?: NotificationItem[]; total: number }
+      setNotifications(data.results || data.items || [])
       setNotifTotal(data.total || 0)
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : t('admin.notifications.loadFailed')
@@ -258,6 +258,8 @@ export default function AdminNotifications() {
       notification: t('admin.notifications.tabNotification'),
       security: t('admin.notifications.tabSecurity'),
       error: t('admin.notifications.tabError'),
+      cs_new_message: '客服',
+      cs_new_conversation: '客服',
     }
     return labels[type] || type
   }

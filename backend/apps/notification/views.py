@@ -20,6 +20,7 @@ class NotificationListView(BaseApiView):
         parameters=[
             OpenApiParameter(name='unread', type=str, required=False, description='1=只看未读'),
             OpenApiParameter(name='expired', type=str, required=False, description='true=只看过期, false=只看未过期'),
+            OpenApiParameter(name='type', type=str, required=False, description='按通知类型精确筛选（如 cs_new_message）'),
             OpenApiParameter(name='page', type=int, required=False, default=1),
             OpenApiParameter(name='per_page', type=int, required=False, default=20),
         ],
@@ -31,8 +32,11 @@ class NotificationListView(BaseApiView):
 
         unread_only = request.query_params.get('unread') == '1'
         expired_filter = request.query_params.get('expired')
+        type_filter = request.query_params.get('type', '').strip() or None
         page, per_page = parse_pagination(request)
-        results, total = NotificationService.list_for_user(request.user, unread_only=unread_only, page=page, per_page=per_page)
+        results, total = NotificationService.list_for_user(
+            request.user, unread_only=unread_only, page=page, per_page=per_page, type=type_filter,
+        )
 
         # 过期状态过滤
         if expired_filter is not None:
@@ -54,6 +58,14 @@ class NotificationReadView(BaseApiView):
     def post(self, request, notification_id):
         NotificationService.mark_read(request.user, notification_id)
         return Response({'detail': Messages.NOTIFICATION_READ})
+
+
+class NotificationUnreadCountView(BaseApiView):
+    """未读通知数（管理后台小铃铛角标轮询用）。"""
+
+    @extend_schema(responses={200: OpenApiResponse(description='Unread count')})
+    def get(self, request):
+        return Response({'unread_count': NotificationService.unread_count(request.user)})
 
 
 class NotificationReadAllView(BaseApiView):

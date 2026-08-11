@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { useTranslation } from '../../i18n'
 import { adminAPI } from '../../api/admin'
+import { CONFIG } from '../../config/constants'
 import { Icon } from './common/Icon'
 
 // ── Types ──
@@ -15,7 +16,7 @@ interface Notification {
   content: string
   is_read: boolean
   created_at: string
-  read_at: string | null
+  read_at?: string | null
 }
 
 type TabKey = 'all' | 'system' | 'operation' | 'notification' | 'security' | 'error'
@@ -354,9 +355,9 @@ export default function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true)
-      const res = await adminAPI.getNotifications({ page: 1, page_size: 20 })
-      const data = res as { items: Notification[]; total: number }
-      setNotifications(data.items || [])
+      const res = await adminAPI.getNotifications({ page: 1, per_page: 20 })
+      const data = res as { results?: Notification[]; items?: Notification[]; total: number }
+      setNotifications(data.results || data.items || [])
     } catch {
       // ignore
     } finally {
@@ -368,9 +369,9 @@ export default function NotificationBell() {
     fetchUnread()
   }, [fetchUnread])
 
-  // Periodic polling for unread count
+  // Periodic polling for unread count（30s，比原 60s 更及时；客服新消息经 signal 写入后角标尽快亮起）
   useEffect(() => {
-    const interval = setInterval(fetchUnread, 60000)
+    const interval = setInterval(fetchUnread, CONFIG.NOTIF_FLOAT_POLL_INTERVAL)
     return () => clearInterval(interval)
   }, [fetchUnread])
 
@@ -424,10 +425,14 @@ export default function NotificationBell() {
     setOpen(false)
   }
 
-  // Filter notifications by tab
+  // Filter notifications by tab（客服通知 cs_* 归入「通知」tab）
   const filteredNotifications = activeTab === 'all'
     ? notifications
-    : notifications.filter(n => n.type === activeTab)
+    : notifications.filter(n =>
+        activeTab === 'notification'
+          ? n.type === 'notification' || n.type.startsWith('cs_')
+          : n.type === activeTab,
+      )
 
   const getTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {
@@ -436,6 +441,8 @@ export default function NotificationBell() {
       notification: isZh ? '通知' : 'Notification',
       security: isZh ? '安全' : 'Security',
       error: isZh ? '错误' : 'Error',
+      cs_new_message: isZh ? '客服' : 'CS',
+      cs_new_conversation: isZh ? '客服' : 'CS',
     }
     return labels[type] || type
   }

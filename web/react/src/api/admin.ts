@@ -129,7 +129,7 @@ export interface NotificationItem {
   content: string;
   is_read: boolean;
   created_at: string;
-  read_at: string | null;
+  read_at?: string | null;
 }
 
 export interface OperationLogItem {
@@ -411,15 +411,15 @@ export const adminAPI = {
   getStaffList: () =>
     get<{ items: { id: number; username: string; is_superuser: boolean }[] }>('/goods/staff/list'),
 
-  // Notification
-  getNotifications: (params?: { page?: number; page_size?: number }) =>
-    get<PaginatedData<NotificationItem>>('/goods/notification', params),
+  // Notification（统一走通用通知中心 /notification/，含客服消息 cs_* 通知）
+  getNotifications: (params?: { page?: number; per_page?: number }) =>
+    get<PaginatedData<NotificationItem>>('/notification/', params),
   getUnreadCount: () =>
-    get<{ unread_count: number }>('/goods/notification/unread_count'),
+    get<{ unread_count: number }>('/notification/unread_count/'),
   markRead: (id: number) =>
-    post(`/goods/notification/${id}/read`, {}),
+    post(`/notification/${id}/read/`, {}),
   markAllRead: () =>
-    post('/goods/notification/read_all', {}),
+    post('/notification/read-all/', {}),
 
   // Operation Logs
   getOperationLogs: (params?: { page?: number; page_size?: number }) =>

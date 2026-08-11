@@ -8,16 +8,18 @@ _cache = Cache('notification')
 class NotificationService:
 
     @staticmethod
-    def list_for_user(user, unread_only=False, page=1, per_page=None):
+    def list_for_user(user, unread_only=False, page=1, per_page=None, type=None):
         if per_page is None:
             per_page = getattr(settings, 'NOTIFICATION_DEFAULT_PAGE_SIZE', 20)
         cache_ttl = getattr(settings, 'NOTIFICATION_LIST_CACHE_TTL', 120)
-        cache_key = f'list:{user.id}:{unread_only}:{page}:{per_page}'
+        cache_key = f'list:{user.id}:{unread_only}:{page}:{per_page}:{type}'
         cached = _cache.get(cache_key)
         if cached is not None:
             return cached['results'], cached['total']
 
         qs = Notification.objects.filter(user=user)
+        if type:
+            qs = qs.filter(type=type)
         if unread_only:
             qs = qs.filter(is_read=False)
         total = qs.count()
