@@ -25,6 +25,43 @@ ALLOWED_HOSTS.extend(
     if host.strip()
 )
 
+# ============================================================
+# CORS / CSRF —— 本机即生产源站时需支持公网跨子域访问
+# （docker-compose.yml 用 DJANGO_ENV=dev，但通过 Cloudflare Tunnel 暴露公网，
+#  base.py 的 CORS_ALLOWED_ORIGINS 仅含 localhost，浏览器跨域 POST 会被拦截）
+# ============================================================
+
+# CORS：优先从环境变量读取（.env 的 CORS_ORIGINS），未配置时回退本地开发默认值
+_cors_env = os.getenv('CORS_ORIGINS', '')
+if _cors_env:
+    CORS_ALLOWED_ORIGINS = [o.strip() for o in _cors_env.split(',') if o.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:8000",
+        "http://localhost:8001",
+        "http://127.0.0.1:8000",
+        "http://127.0.0.1:8001",
+    ]
+# 允许跨域携带 Cookie（axios withCredentials: true 需要此配置）
+CORS_ALLOW_CREDENTIALS = True
+
+# CSRF 跨域信任：admin/www/shop → api 子域的 POST 请求需要
+CSRF_TRUSTED_ORIGINS = [
+    origin for origin in CORS_ALLOWED_ORIGINS
+    if origin.startswith('https://')
+]
+
+# 跨子域 Cookie：公网域名场景下 csrftoken/sessionid 落在父域 .ziggner.com，
+# 使 admin/www/shop 前端能从 document.cookie 读取 csrftoken 并随 axios 写请求回传
+# （否则 host-only cookie 仅 api.ziggner.com 可读，前端域拿不到 → X-CSRFToken 头缺失 → 403）
+if any('.ziggner.com' in o for o in CORS_ALLOWED_ORIGINS):
+    CSRF_COOKIE_DOMAIN = '.ziggner.com'
+    SESSION_COOKIE_DOMAIN = '.ziggner.com'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    # nginx-tunnel 已设 X-Forwarded-Proto: https，信任该头以正确识别 HTTPS
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")

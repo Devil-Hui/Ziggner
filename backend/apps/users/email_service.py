@@ -127,6 +127,8 @@ def _send_with_account(account: dict, recipient: str, code: str, template_type: 
         password=account.get('password', ''),
         use_ssl=bool(account.get('use_ssl', True)),
         use_tls=bool(account.get('use_tls', False)),
+        # 显式连接/读写超时：Gmail 网络不稳定时快速失败并切换账号，避免接口长时间挂起
+        timeout=int(account.get('timeout', 3)),
     )
     msg.connection = conn
     msg.send(fail_silently=False)

@@ -6,7 +6,7 @@ import TurnstileWidget from '../../components/business/TurnstileWidget/Turnstile
 import { useUser } from '../../store/UserContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
-import { post } from '../../api/request'
+import { post, ensureCSRFCookie } from '../../api/request'
 
 // ==================== 样式组件 ====================
 
@@ -102,6 +102,8 @@ export default function RegisterForm() {
     if (!formData.email || codeCooldown > 0) return
     setCodeSending(true)
     try {
+      // 确保 csrftoken cookie 就绪（后续注册 POST 需要 CSRF 校验）
+      await ensureCSRFCookie().catch(() => {})
       const res: any = await post('/users/email/verify/send/', { email: formData.email })
       if (res && res.verify_id) {
         setVerifyId(res.verify_id)

@@ -48,7 +48,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.production exec db bas
 
 **进入 web 容器**
 ```
-docker compose -f docker-compose.prod.yml --env-file .env.production exec django-app bash
+docker compose -f docker-compose.prod.yml --env-file .env.production exec web bash
 ```
 
 **迁移**

@@ -5,7 +5,7 @@ import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
-import { post } from '../../api/request'
+import { post, ensureCSRFCookie } from '../../api/request'
 
 /* ── Lumiere editorial palette (aligned with storefront) ── */
 const CREAM = '#f7f4ef'
@@ -201,6 +201,8 @@ export default function AdminLogin() {
     setError('')
     setSuccess('')
     try {
+      // 确保 csrftoken cookie 就绪（后续登录 POST 需要 CSRF 校验）
+      await ensureCSRFCookie().catch(() => {})
       // 走 request.ts（带 VITE_API_URL 后端地址），不要用相对路径 fetch —— 相对路径会发到前端域导致 405
       const data: any = await post('/users/email/verify/send/', { email })
       if (data && data.verify_id) {
