@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
@@ -6,6 +6,7 @@ import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import { adminAPI } from '../../api/admin';
+import { postWithProgress } from '../../api/request';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
@@ -163,6 +164,48 @@ const LogoPlaceholder = styled.div`
   color: ${Color.border.dark};
 `;
 
+const UploadBtn = styled.button<{ $disabled?: boolean }>`
+  padding: 8px 18px;
+  font-size: ${FontSize.sm}px;
+  border: 1px dashed ${Color.border.medium};
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  border-radius: 2px;
+  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
+  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
+
+  &:hover {
+    border-color: #e74c3c;
+    color: #e74c3c;
+  }
+`;
+
+const LogoPreview = styled.div`
+  position: relative;
+  display: inline-block;
+  padding: 8px;
+  border: 1px solid ${Color.border.light};
+  border-radius: 2px;
+  background: ${Color.primaryLight};
+`;
+
+const LogoPreviewRemove = styled.button`
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: #e74c3c;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+`;
+
 const Toast = styled.div<{ $type: 'success' | 'error' }>`
   padding: 10px 16px;
   margin-bottom: 16px;
@@ -187,6 +230,8 @@ export default function AdminBrands() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState('');
   const [formLogo, setFormLogo] = useState('');
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = React.useRef<HTMLInputElement>(null);
   const [formDesc, setFormDesc] = useState('');
   const [formActive, setFormActive] = useState(true);
 
@@ -213,6 +258,34 @@ export default function AdminBrands() {
   const showMsg = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      showMsg('error', '请选择图片文件');
+      return;
+    }
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      // 走项目统一的 cookie + CSRF 上传通道（postWithProgress 已处理鉴权）
+      const data = await postWithProgress<{ url?: string; detail?: string }>('/goods/upload/image', formData);
+      if (data && data.url) {
+        setFormLogo(data.url);
+        showMsg('success', 'Logo 上传成功');
+      } else {
+        showMsg('error', data?.detail || '上传失败');
+      }
+    } catch (err: any) {
+      showMsg('error', err?.message || '上传请求异常');
+    } finally {
+      setUploadingLogo(false);
+      // reset input so same file can be re-selected
+      if (logoInputRef.current) logoInputRef.current.value = '';
+    }
   };
 
   const openCreate = () => {
@@ -396,8 +469,28 @@ export default function AdminBrands() {
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.brands.namePlaceholder')} />
             </FormGroup>
             <FormGroup>
-              <Label>Logo URL</Label>
-              <Input value={formLogo} onChange={(e) => setFormLogo(e.target.value)} placeholder={t('admin.brands.logoPlaceholder')} />
+              <Label>{t('admin.brands.logoLabel') || 'Logo'}</Label>
+              {formLogo ? (
+                <LogoPreview>
+                  <img src={formLogo} alt="logo preview" style={{ maxWidth: 120, maxHeight: 80, objectFit: 'contain' }} />
+                  <LogoPreviewRemove onClick={() => setFormLogo('')}>✕</LogoPreviewRemove>
+                </LogoPreview>
+              ) : (
+                <UploadBtn
+                  type="button"
+                  $disabled={uploadingLogo}
+                  onClick={() => logoInputRef.current?.click()}
+                >
+                  {uploadingLogo ? '上传中...' : '选择图片'}
+                </UploadBtn>
+              )}
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleLogoUpload}
+              />
             </FormGroup>
             <FormGroup>
               <Label>{t('admin.brands.descriptionLabel')}</Label>

@@ -35,6 +35,7 @@ const TABS: { key: TabKey; labelKey: string }[] = [
 const BellWrapper = styled.div`
   position: relative;
   display: inline-flex;
+  z-index: 100;
 `
 
 const BellButton = styled.button`

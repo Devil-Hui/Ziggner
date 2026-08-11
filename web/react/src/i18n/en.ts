@@ -559,6 +559,7 @@ const en = {
       confirmCompleteRefund: 'Confirm complete refund and restore stock if return?',
       reviewSuccess: 'Review completed',
       reviewFailed: 'Review failed',
+      openProductDetail: 'Click to view product detail',
 
     },
     coupons: {

@@ -10,7 +10,7 @@ import React from 'react'
 import { koboyoIcons } from './koboyoIcons'
 
 export type IconName =
-  | 'package' | 'tag' | 'grid' | 'image' | 'upload'
+  | 'package' | 'tag' | 'brand' | 'grid' | 'image' | 'upload'
   | 'settings' | 'clock'
   | 'plus' | 'x' | 'edit' | 'trash' | 'save' | 'search' | 'refresh' | 'download'
   | 'check' | 'alert' | 'info'

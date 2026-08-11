@@ -24,10 +24,11 @@ def validate_shipping_address(value):
 
 class OrderItemSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    spu_id = serializers.IntegerField(source='sku.spu_id', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'spu_name', 'sku_code', 'spec_snapshot',
+        fields = ['id', 'spu_id', 'spu_name', 'sku_code', 'spec_snapshot',
                   'price', 'quantity', 'subtotal', 'image_url']
 
     def get_image_url(self, obj) -> str:

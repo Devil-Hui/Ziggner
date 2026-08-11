@@ -553,6 +553,7 @@ const zhCN = {
       confirmCompleteRefund: '确认完成退款？退货将恢复库存。',
       reviewSuccess: '审核完成',
       reviewFailed: '审核失败',
+      openProductDetail: '点击查看商品详情',
 
     },
     coupons: {

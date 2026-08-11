@@ -1,5 +1,6 @@
 // TypeScript strict mode enabled
 import { useCallback, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { useTranslation } from '../../i18n'
@@ -165,12 +166,48 @@ const Actions = styled.div`
   flex-wrap: wrap;
 `
 
-const DetailPanel = styled.div`
-  margin-top: 16px;
+const OrdersLayout = styled.div`
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  @media (max-width: 980px) {
+    flex-direction: column;
+  }
+`
+
+const OrdersMain = styled.div`
+  flex: 1 1 auto;
+  min-width: 0;
+`
+
+const SidePanel = styled.div`
+  flex: 0 0 380px;
+  max-width: 380px;
+  position: sticky;
+  top: 16px;
   padding: 16px;
   background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  @media (max-width: 980px) {
+    flex: 1 1 auto;
+    max-width: 100%;
+    position: static;
+    max-height: none;
+  }
+`
+
+const ItemNameLink = styled.a`
+  color: ${Color.primaryHover};
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover {
+    color: #e74c3c;
+    text-decoration: underline;
+  }
 `
 
 const Grid = styled.div`
@@ -239,6 +276,7 @@ function orderNoFromAfterSale(row: AfterSaleRow): string {
 
 export default function AdminOrders() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<TabKey>('orders')
 
   // orders state
@@ -408,8 +446,9 @@ export default function AdminOrders() {
       {toast && <Toast $type={toast.type}>{toast.message}</Toast>}
 
       {tab === 'orders' && (
-        <>
-          <FilterBar>
+        <OrdersLayout>
+          <OrdersMain>
+            <FilterBar>
             <Select value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
               <option value="">{t('admin.orders.allStatus')}</option>
               <option value="pending_payment">{t('admin.orders.statusPendingPayment')}</option>
@@ -510,9 +549,10 @@ export default function AdminOrders() {
               {t('common.next')}
             </Button>
           </PaginationBar>
+          </OrdersMain>
 
           {selected && (
-            <DetailPanel>
+            <SidePanel>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <strong>{t('admin.orders.detailTitle')} — {String(selected.order_no || '')}</strong>
                 <Button onClick={() => setSelected(null)}>{t('common.back')}</Button>
@@ -550,7 +590,15 @@ export default function AdminOrders() {
                 <tbody>
                   {(selected.items || []).map((it: any) => (
                     <tr key={it.id || it.sku_code}>
-                      <Td>{it.spu_name}</Td>
+                      <Td>
+                        {it.spu_id ? (
+                          <ItemNameLink onClick={() => navigate(`/product/${it.spu_id}`)} title={t('admin.orders.openProductDetail')}>
+                            {it.spu_name}
+                          </ItemNameLink>
+                        ) : (
+                          it.spu_name
+                        )}
+                      </Td>
                       <Td>{it.sku_code}</Td>
                       <Td>{money(it.price)}</Td>
                       <Td>{it.quantity}</Td>
@@ -587,9 +635,9 @@ export default function AdminOrders() {
                   </Table>
                 </>
               )}
-            </DetailPanel>
+            </SidePanel>
           )}
-        </>
+        </OrdersLayout>
       )}
 
       {tab === 'aftersales' && (

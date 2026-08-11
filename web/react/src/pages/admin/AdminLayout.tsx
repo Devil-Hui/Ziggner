@@ -247,7 +247,7 @@ function useMenuItems() {
       items: [
         { to: '/admin/products', label: t('admin.layout.menu.products'), icon: <Icon name="package" size={18} /> },
         { to: '/admin/categories', label: t('admin.layout.menu.categories'), icon: <Icon name="grid" size={18} /> },
-        { to: '/admin/brands', label: t('admin.layout.menu.brands'), icon: <Icon name="tag" size={18} /> },
+        { to: '/admin/brands', label: t('admin.layout.menu.brands'), icon: <Icon name="brand" size={18} /> },
         { to: '/admin/tags', label: t('admin.layout.menu.tags'), icon: <Icon name="tag" size={18} /> },
       ],
     },
@@ -456,7 +456,7 @@ export default function AdminLayout() {
           <HeaderRight>
             <LanguageSwitch position="header" />
             <NotificationBell />
-            <NotificationFloat />
+            {/* NotificationFloat 已移除：与 NotificationBell 功能重复 */}
             <UserMenu onClick={() => setUserMenuOpen((v) => !v)}>
               {adminUser?.username}
               <span style={{ color: '#999', fontSize: '0.75rem' }}>
