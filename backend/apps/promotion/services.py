@@ -7,7 +7,7 @@ from logging import getLogger
 from utils.cache import Cache
 from .models import (
     Coupon, CouponApplication, CouponApprovalHistory, CouponScope,
-    CouponTargetAudience, DiscountType, UserCoupon,
+    CouponTargetAudience, DiscountType, PromoCode, UserCoupon,
 )
 
 _cache = Cache('promotion')
@@ -140,6 +140,8 @@ class PromotionService:
     @staticmethod
     def list_user_coupons(user, status=None):
         now = timezone.now()
+        # 先释放过期锁定（用户放弃支付且未取消订单 → 券永久锁定问题）
+        PromotionService.release_expired_locks(user=user)
         UserCoupon.objects.filter(
             user=user,
             status__in=(UserCoupon.Status.AVAILABLE, UserCoupon.Status.RETURNED),
@@ -153,7 +155,47 @@ class PromotionService:
 
     @staticmethod
     @transaction.atomic
-    def claim(user, code):
+    def release_expired_locks(user=None):
+        """释放已过锁定窗口（lock_expires_at 过期）的 LOCKED 券。
+
+        - user 指定时只处理该用户（懒释放，保证用户视图不出现永久锁定券）；
+        - user 为 None 时全局处理（供定时任务调用），仅当对应订单已不在
+          待支付状态才释放，避免与仍在途的支付冲突。
+        返回释放的券数量。
+        """
+        now = timezone.now()
+        qs = UserCoupon.objects.select_for_update().filter(
+            status=UserCoupon.Status.LOCKED, lock_expires_at__lt=now,
+        )
+        if user is not None:
+            qs = qs.filter(user=user)
+        else:
+            # 全局模式：排除仍在待支付的订单，防止释放后订单又支付导致漏核销
+            from apps.order.models import Order, OrderStatus
+            live = Order.objects.filter(
+                order_no__in=qs.values('used_order_no'),
+                status=OrderStatus.PENDING_PAYMENT,
+            ).values_list('order_no', flat=True)
+            qs = qs.exclude(used_order_no__in=list(live))
+        expired = list(qs.select_related('coupon'))
+        if not expired:
+            return 0
+        for uc in expired:
+            if uc.coupon.is_active and uc.coupon.start_time <= now <= uc.coupon.end_time:
+                uc.status = UserCoupon.Status.AVAILABLE
+            else:
+                uc.status = UserCoupon.Status.EXPIRED
+            uc.used_order_no = ''
+            uc.locked_at = None
+            uc.lock_expires_at = None
+            uc.save(update_fields=[
+                'status', 'used_order_no', 'locked_at', 'lock_expires_at', 'updated_at',
+            ])
+        return len(expired)
+
+    @staticmethod
+    @transaction.atomic
+    def claim(user, code, promo_code=None):
         coupon = Coupon.objects.select_for_update().filter(code=code).first()
         if not coupon:
             _logger.warning('Coupon claim fail: user_id=%s code=%s error=COUPON_NOT_FOUND', user.id, code)
@@ -178,12 +220,39 @@ class PromotionService:
             )
             raise ValueError('COUPON_LIMIT_REACHED')
 
-        UserCoupon.objects.create(user=user, coupon=coupon, status=UserCoupon.Status.AVAILABLE)
+        uc = UserCoupon.objects.create(
+            user=user, coupon=coupon, status=UserCoupon.Status.AVAILABLE,
+            promo_code=promo_code,
+        )
         # 🔥 修复：claimed_count 必须递增，且 update_fields 必须包含该字段
         coupon.claimed_count = models.F('claimed_count') + 1
         coupon.save(update_fields=['claimed_count'])
+        if promo_code is not None:
+            PromoCode.objects.filter(pk=promo_code.pk).update(
+                claim_count=models.F('claim_count') + 1,
+            )
         _cache.delete('available')
-        _logger.info('Coupon claim success: user_id=%s code=%s coupon_id=%d', user.id, code, coupon.id)
+        _logger.info(
+            'Coupon claim success: user_id=%s code=%s coupon_id=%d promo_code=%s',
+            user.id, code, coupon.id, promo_code.code if promo_code else None,
+        )
+
+    @staticmethod
+    @transaction.atomic
+    def claim_via_promo_code(user, promo_code_str):
+        """凭专属推广码领取（指向同一张基础券，按码追踪来源）。"""
+        pc = PromoCode.objects.select_for_update().filter(
+            code=promo_code_str, is_active=True,
+        ).select_related('coupon').first()
+        if not pc:
+            _logger.warning(
+                'Promo claim fail: user_id=%s code=%s error=PROMO_CODE_NOT_FOUND',
+                user.id, promo_code_str,
+            )
+            raise ValueError('PROMO_CODE_NOT_FOUND')
+        if not pc.coupon.is_available:
+            raise ValueError('COUPON_UNAVAILABLE')
+        return PromotionService.claim(user, pc.coupon.code, promo_code=pc)
 
     @staticmethod
     @transaction.atomic
@@ -222,6 +291,15 @@ class PromotionService:
         uc.lock_expires_at = None
         uc.save(update_fields=['status', 'used_at', 'locked_at', 'lock_expires_at', 'updated_at'])
         Coupon.objects.filter(pk=uc.coupon_id).update(used_count=models.F('used_count') + 1)
+        # 引流归因：若此券通过专属推广码领取，累计付款订单数与 GMV
+        if uc.promo_code_id:
+            from apps.order.models import Order
+            order = Order.objects.filter(order_no=order_no).only('actual_amount').first()
+            gmv = order.actual_amount if order else Decimal('0.00')
+            PromoCode.objects.filter(pk=uc.promo_code_id).update(
+                paid_order_count=models.F('paid_order_count') + 1,
+                gmv=models.F('gmv') + gmv,
+            )
         return uc
 
     @staticmethod
@@ -541,3 +619,69 @@ class CouponApplicationService:
         )
         Cache('promotion').delete('available')
         return application
+
+
+class PromoCodeService:
+    """专属推广码（引流追踪）服务。"""
+
+    @staticmethod
+    @transaction.atomic
+    def create_codes(coupon_id, creator, *, codes=None, name='', note='', count=1, prefix=''):
+        """为一个基础券创建推广码。
+
+        - codes 给定时按给定字符串创建（需全局唯一、去除空白、转大写）；
+        - 否则按 count 自动生成（可带 prefix）。
+        返回创建的 PromoCode 列表。
+        """
+        if not Coupon.objects.filter(pk=coupon_id).exists():
+            raise ValueError('COUPON_NOT_FOUND')
+
+        if codes:
+            requested = [str(c).strip().upper() for c in codes if str(c).strip()]
+            if not requested:
+                raise ValueError('EMPTY_PROMO_CODES')
+            dup_in_req = len(requested) != len(set(requested))
+            if dup_in_req:
+                raise ValueError('DUPLICATE_PROMO_CODE_IN_REQUEST')
+            existing = set(
+                PromoCode.objects.filter(code__in=requested).values_list('code', flat=True)
+            )
+            clash = existing & set(requested)
+            if clash:
+                raise ValueError('PROMO_CODE_EXISTS:' + ','.join(sorted(clash)))
+            objs = [
+                PromoCode(
+                    coupon_id=coupon_id, code=c, name=name, note=note, created_by=creator,
+                )
+                for c in requested
+            ]
+        else:
+            count = max(1, int(count))
+            if count > 200:
+                raise ValueError('TOO_MANY_PROMO_CODES')
+            objs = [
+                PromoCode(
+                    coupon_id=coupon_id,
+                    code=generate_promo_code(prefix=prefix),
+                    name=name, note=note, created_by=creator,
+                )
+                for _ in range(count)
+            ]
+        # bulk_create 在本环境不回填主键，故按码回查保证返回实例带 id
+        created_codes = [o.code for o in objs]
+        PromoCode.objects.bulk_create(objs)
+        return list(
+            PromoCode.objects.filter(coupon_id=coupon_id, code__in=created_codes)
+        )
+
+    @staticmethod
+    def dashboard(coupon_id=None):
+        """引流看板：每个推广码的领取数、独立用户数、付款订单数、GMV。"""
+        from django.db.models import Count
+        qs = PromoCode.objects.all().select_related('coupon', 'created_by')
+        if coupon_id is not None:
+            qs = qs.filter(coupon_id=coupon_id)
+        qs = qs.annotate(
+            unique_users=Count('user_coupons__user', distinct=True),
+        )
+        return qs.order_by('-gmv', '-paid_order_count', '-claim_count')

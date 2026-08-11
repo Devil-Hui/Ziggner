@@ -11,15 +11,16 @@ from utils.api_base_view import BaseApiView, PublicApiView
 from utils.api_permission import ApiPermission
 from apps.rbac.permissions import HasPerm, IsSuperAdmin
 from utils.response_codes import Messages
-from .models import Coupon, CouponApplication, DiscountActivity
+from .models import Coupon, CouponApplication, DiscountActivity, PromoCode
 from .serializers import (
     ClaimCouponSerializer, CouponSerializer,
     GenerateCouponSerializer, UserCouponSerializer,
     ActivitySerializer, ActivityAdminSerializer,
     CouponApplicationDraftSerializer, CouponApplicationReviewSerializer,
     CouponApplicationRevisionSerializer, CouponApplicationSerializer,
+    PromoCodeCreateSerializer, PromoCodeDetailSerializer, PromoCodeSerializer,
 )
-from .services import CouponApplicationService, PromotionService
+from .services import CouponApplicationService, PromotionService, PromoCodeService
 
 
 def _application_error(exc):
@@ -169,6 +170,30 @@ class ClaimCouponView(BaseApiView):
         except ValueError as e:
             error_map = {
                 'COUPON_NOT_FOUND': (Messages.COUPON_NOT_FOUND, status.HTTP_404_NOT_FOUND),
+                'COUPON_UNAVAILABLE': (Messages.COUPON_UNAVAILABLE, status.HTTP_400_BAD_REQUEST),
+                'COUPON_LIMIT_REACHED': (Messages.COUPON_LIMIT_REACHED, status.HTTP_400_BAD_REQUEST),
+                'COUPON_AUDIENCE_MISMATCH': (
+                    Messages.COUPON_AUDIENCE_MISMATCH,
+                    status.HTTP_403_FORBIDDEN,
+                ),
+            }
+            if str(e) in error_map:
+                msg, code = error_map[str(e)]
+                return Response({'detail': msg}, status=code)
+            raise
+        return Response({'detail': Messages.COUPON_CLAIMED})
+
+
+class ClaimByPromoCodeView(BaseApiView):
+    """凭专属推广码领取优惠券（不同推广码指向同一张基础券）。"""
+
+    @extend_schema(request=None, responses={200: OpenApiResponse(description='coupon claimed')})
+    def post(self, request, code):
+        try:
+            PromotionService.claim_via_promo_code(request.user, code)
+        except ValueError as e:
+            error_map = {
+                'PROMO_CODE_NOT_FOUND': (Messages.PROMO_CODE_NOT_FOUND, status.HTTP_404_NOT_FOUND),
                 'COUPON_UNAVAILABLE': (Messages.COUPON_UNAVAILABLE, status.HTTP_400_BAD_REQUEST),
                 'COUPON_LIMIT_REACHED': (Messages.COUPON_LIMIT_REACHED, status.HTTP_400_BAD_REQUEST),
                 'COUPON_AUDIENCE_MISMATCH': (

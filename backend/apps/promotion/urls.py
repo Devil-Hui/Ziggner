@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    ClaimCouponView, CouponDetailView, CouponListView,
+    ClaimCouponView, ClaimByPromoCodeView, CouponDetailView, CouponListView,
     GenerateCouponView, MyCouponView,
     ActivityListView, ActivityCreateView, ActivityUpdateView, ActivityDeleteView,
     CouponApplicationCreateView, CouponApplicationDetailView,
@@ -11,6 +11,7 @@ from .admin_views import (
     CouponAdminListView, CouponAdminDetailView,
     ActivityAdminListView, ActivityAdminDetailView,
     CouponScopeView, ActivitySKUView,
+    PromoCodeAdminListView, PromoCodeDashboardView,
 )
 
 urlpatterns = [
@@ -27,6 +28,7 @@ urlpatterns = [
     path('application/<int:application_id>/review/', CouponApplicationReviewView.as_view(), name='promotion-application-review'),
     path('<str:code>/', CouponDetailView.as_view(), name='promotion-detail'),
     path('<str:code>/claim/', ClaimCouponView.as_view(), name='promotion-claim'),
+    path('promo/<str:code>/claim/', ClaimByPromoCodeView.as_view(), name='promotion-promo-claim'),
 
     # Admin Coupon CRUD
     path('coupon', CouponAdminListView.as_view(), name='promotion-coupon-admin'),
@@ -34,6 +36,8 @@ urlpatterns = [
     path('coupon/<int:pk>/update', CouponAdminDetailView.as_view(), name='promotion-coupon-update'),
     path('coupon/<int:pk>/delete', CouponAdminDetailView.as_view(), name='promotion-coupon-delete'),
     path('coupon/<int:pk>/scope', CouponScopeView.as_view(), name='promotion-coupon-scope'),
+    path('coupon/<int:pk>/promo-codes', PromoCodeAdminListView.as_view(), name='promotion-promo-codes'),
+    path('coupon/<int:pk>/promo-dashboard', PromoCodeDashboardView.as_view(), name='promotion-promo-dashboard'),
 
     # Admin Activity CRUD
     path('activity', ActivityAdminListView.as_view(), name='promotion-activity-admin'),

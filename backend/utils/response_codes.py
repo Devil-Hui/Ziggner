@@ -181,6 +181,7 @@ class Messages:
     COUPON_CLAIMED = 'Coupon claimed successfully.'
     COUPON_INVALID = 'Coupon is invalid or already used.'
     COUPON_EXPIRED = 'Coupon has expired.'
+    PROMO_CODE_NOT_FOUND = 'Promo code is invalid or has been disabled.'
 
     # ============================================================
     # Favorite (收藏)

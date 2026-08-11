@@ -7,6 +7,7 @@ from .models import (
     CouponApprovalHistory,
     CouponTargetAudience,
     DiscountActivity,
+    PromoCode,
     UserCoupon,
 )
 
@@ -51,12 +52,47 @@ class ActivityAdminSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class PromoCodeSerializer(serializers.ModelSerializer):
+    coupon_code = serializers.CharField(source='coupon.code', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True, allow_null=True)
+
+    class Meta:
+        model = PromoCode
+        fields = [
+            'id', 'coupon', 'coupon_code', 'code', 'name', 'note', 'is_active',
+            'claim_count', 'paid_order_count', 'gmv', 'created_by_name',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = [
+            'id', 'coupon', 'coupon_code', 'claim_count', 'paid_order_count',
+            'gmv', 'created_by_name', 'created_at', 'updated_at',
+        ]
+
+
+class PromoCodeDetailSerializer(PromoCodeSerializer):
+    unique_users = serializers.IntegerField(read_only=True)
+
+    class Meta(PromoCodeSerializer.Meta):
+        fields = PromoCodeSerializer.Meta.fields + ['unique_users']
+
+
+class PromoCodeCreateSerializer(serializers.Serializer):
+    codes = serializers.ListField(
+        child=serializers.CharField(max_length=32), required=False, allow_empty=True,
+    )
+    count = serializers.IntegerField(min_value=1, max_value=200, default=1, required=False)
+    prefix = serializers.CharField(max_length=8, required=False, allow_blank=True, default='')
+    name = serializers.CharField(max_length=128, required=False, allow_blank=True, default='')
+    note = serializers.CharField(required=False, allow_blank=True, default='')
+
+
 class UserCouponSerializer(serializers.ModelSerializer):
     coupon = CouponSerializer(read_only=True)
+    promo_code = PromoCodeSerializer(read_only=True)
 
     class Meta:
         model = UserCoupon
-        fields = ['id', 'coupon', 'status', 'claimed_at', 'used_at', 'used_order_no']
+        fields = ['id', 'coupon', 'promo_code', 'status', 'claimed_at', 'used_at', 'used_order_no']
 
 
 class ClaimCouponSerializer(serializers.Serializer):

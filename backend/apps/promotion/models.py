@@ -13,6 +13,20 @@ def generate_coupon_code():
     return ''.join(_SECURE_RANDOM.choices(string.ascii_uppercase + string.digits, k=8))
 
 
+# 排除易混淆字符，保证推广码可人工读/念
+_PROMO_ALPHABET = string.ascii_uppercase + string.digits
+_PROMO_ALPHABET = _PROMO_ALPHABET.translate(str.maketrans('', '', 'O0I1L'))
+
+
+def generate_promo_code(prefix='', length=6):
+    """生成一个全局唯一的推广码（专属券入口）。"""
+    for _ in range(20):
+        c = (prefix or '') + ''.join(_SECURE_RANDOM.choices(_PROMO_ALPHABET, k=length))
+        if not PromoCode.objects.filter(code=c).exists():
+            return c
+    raise RuntimeError('无法生成唯一的推广码，请稍后重试')
+
+
 # ==================== 优惠券 ====================
 
 class DiscountType(models.TextChoices):
@@ -222,6 +236,57 @@ class CouponScope(models.Model):
         return f'{self.coupon.code} → {self.get_scope_type_display()}#{self.target_id}'
 
 
+# ==================== 专属推广码（引流追踪） ====================
+
+class PromoCode(models.Model):
+    """推广码：一个基础券可挂多个推广码，按码追踪领取/下单/GMV。
+
+    不同推广人（或渠道）持有不同推广码，但都指向同一张基础券的
+    抵消效果。通过本表可统计每个推广码带来的独立用户数、付款订单数
+    与引流 GMV（对应需求「专属优惠券 / 引流追踪」）。
+    """
+
+    coupon = models.ForeignKey(
+        Coupon, on_delete=models.CASCADE, related_name='promo_codes',
+        verbose_name='基础券',
+    )
+    code = models.CharField(
+        max_length=32, unique=True, verbose_name='推广码',
+        help_text='用户凭此码领取对应基础券',
+    )
+    name = models.CharField(
+        max_length=128, default='', blank=True, verbose_name='渠道/推广人',
+    )
+    note = models.TextField(blank=True, default='', verbose_name='备注')
+    is_active = models.BooleanField(default=True, verbose_name='启用')
+    claim_count = models.PositiveIntegerField(default=0, verbose_name='领取数')
+    paid_order_count = models.PositiveIntegerField(default=0, verbose_name='付款订单数')
+    gmv = models.DecimalField(
+        max_digits=14, decimal_places=2, default=0,
+        verbose_name='引流 GMV',
+    )
+    created_by = models.ForeignKey(
+        'auth.User', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='created_promo_codes', verbose_name='创建人',
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
+
+    class Meta:
+        db_table = 'promotion_promocode'
+        verbose_name = '专属推广码'
+        verbose_name_plural = verbose_name
+        app_label = 'promotion'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['coupon']),
+            models.Index(fields=['code']),
+        ]
+
+    def __str__(self):
+        return f'{self.code} → {self.coupon.code}'
+
+
 # ==================== 用户优惠券 ====================
 
 class UserCoupon(models.Model):
@@ -253,6 +318,10 @@ class UserCoupon(models.Model):
     lock_expires_at = models.DateTimeField(null=True, blank=True, verbose_name='锁定过期时间')
     used_order_no = models.CharField(max_length=20, blank=True, default='',
                                      verbose_name='使用订单号')
+    promo_code = models.ForeignKey(
+        'PromoCode', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='user_coupons', verbose_name='推广码',
+    )
 
     class Meta:
         db_table = 'promotion_user_coupon'
@@ -264,6 +333,7 @@ class UserCoupon(models.Model):
             models.Index(fields=['user', 'status'], name='idx_uc_user_status'),
             models.Index(fields=['coupon'], name='idx_uc_coupon'),
             models.Index(fields=['used_order_no'], name='idx_uc_order_no'),
+            models.Index(fields=['promo_code'], name='idx_uc_promo_code'),
         ]
 
     def __str__(self):

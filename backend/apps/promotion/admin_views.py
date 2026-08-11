@@ -11,7 +11,9 @@ from .models import Coupon, DiscountActivity, ActivitySKURelation
 from .serializers import (
     CouponAdminSerializer, ActivityAdminSerializer,
     CouponSerializer, ActivitySerializer,
+    PromoCodeCreateSerializer, PromoCodeDetailSerializer, PromoCodeSerializer,
 )
+from .services import PromoCodeService
 
 
 class StandardPagination(PageNumberPagination):
@@ -177,3 +179,66 @@ class ActivitySKUView(BaseApiView):
             'message': Messages.SUCCESS,
             'linked_count': len(sku_ids),
         })
+
+
+# ── 专属推广码（引流追踪） ──────────────────────────
+
+class PromoCodeAdminListView(BaseApiView):
+    """管理端：某基础券下的推广码列表 / 批量创建。"""
+
+    permission_classes = [HasPerm('promotion.coupon.write')]
+
+    @extend_schema(responses={200: PromoCodeSerializer(many=True)})
+    def get(self, request):
+        coupon_id = request.query_params.get('coupon_id')
+        qs = PromoCodeService.dashboard(coupon_id=coupon_id)
+        return Response(PromoCodeDetailSerializer(qs, many=True).data)
+
+    @extend_schema(request=PromoCodeCreateSerializer, responses={201: PromoCodeSerializer(many=True)})
+    def post(self, request):
+        serializer = PromoCodeCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        coupon_id = request.data.get('coupon_id')
+        if not coupon_id:
+            return Response({'detail': 'coupon_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            created = PromoCodeService.create_codes(
+                int(coupon_id),
+                request.user,
+                codes=data.get('codes') or None,
+                name=data.get('name', ''),
+                note=data.get('note', ''),
+                count=data.get('count', 1),
+                prefix=data.get('prefix', ''),
+            )
+        except ValueError as e:
+            msg = str(e)
+            if msg.startswith('PROMO_CODE_EXISTS:'):
+                return Response(
+                    {'detail': f'推广码已存在：{msg.split(":", 1)[1]}'},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            mapping = {
+                'COUPON_NOT_FOUND': (Messages.COUPON_NOT_FOUND, status.HTTP_404_NOT_FOUND),
+                'EMPTY_PROMO_CODES': ('推广码列表不能为空。', status.HTTP_400_BAD_REQUEST),
+                'DUPLICATE_PROMO_CODE_IN_REQUEST': ('推广码列表中存在重复。', status.HTTP_400_BAD_REQUEST),
+                'TOO_MANY_PROMO_CODES': ('单次创建推广码数量过多。', status.HTTP_400_BAD_REQUEST),
+            }
+            if msg in mapping:
+                m, c = mapping[msg]
+                return Response({'detail': m}, status=c)
+            raise
+        return Response(PromoCodeSerializer(created, many=True).data, status=status.HTTP_201_CREATED)
+
+
+class PromoCodeDashboardView(BaseApiView):
+    """管理端：专属券引流看板（领取/独立用户/付款订单/GMV）。"""
+
+    permission_classes = [HasPerm('promotion.coupon.write')]
+
+    @extend_schema(responses={200: PromoCodeDetailSerializer(many=True)})
+    def get(self, request):
+        coupon_id = request.query_params.get('coupon_id')
+        qs = PromoCodeService.dashboard(coupon_id=coupon_id)
+        return Response(PromoCodeDetailSerializer(qs, many=True).data)
