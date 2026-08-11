@@ -15,6 +15,7 @@ import {
   type ConversationDetail,
   type ChatMessage,
   type ProductSearchResult,
+  mergeWsMessage,
 } from '../../api/chat'
 import { useDebounce } from '../../hooks/useDebounce'
 import { CONFIG } from '../../config/constants'
@@ -162,6 +163,129 @@ const DetailArea = styled.div`
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
+`
+
+// ── Right: Orders Panel（可收起） ──
+
+const OrdersPanel = styled.div`
+  width: 300px;
+  min-width: 300px;
+  background: ${Color.bg.card};
+  border-radius: ${Radius.md}px;
+  box-shadow: ${Shadow.card};
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+`
+
+const OrdersHeader = styled.div`
+  padding: ${Spacing.md}px ${Spacing.lg}px;
+  border-bottom: 1px solid ${Color.border.light};
+  font-size: ${FontSize.md}px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+`
+
+const CollapseBtn = styled.button`
+  border: none;
+  background: ${Color.bg.page};
+  color: ${Color.text.muted};
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition: background ${Transition.fast};
+
+  &:hover { background: #e9e9e9; }
+`
+
+const OrdersBody = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: ${Spacing.md}px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+const OrderCard = styled.div<{ $active: boolean }>`
+  border: 1px solid ${props => props.$active ? '#07c160' : Color.border.light};
+  background: ${props => props.$active ? '#f0fdf4' : '#ffffff'};
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
+
+  &:hover {
+    border-color: #07c160;
+    box-shadow: 0 2px 6px rgba(7,193,96,0.12);
+  }
+`
+
+const OrderRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  & + & { margin-top: 6px; }
+`
+
+const OrderNo = styled.div`
+  font-size: 12px;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+`
+
+const OrderMeta = styled.div`
+  font-size: 11px;
+  color: #999;
+`
+
+const OrderStatusTag = styled.span`
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+`
+
+const OrdersEmpty = styled.div`
+  padding: ${Spacing.xl}px;
+  text-align: center;
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.muted};
+`
+
+// 收起后的窄条（竖向），点击展开
+const OrdersCollapsedBar = styled.div`
+  width: 36px;
+  min-width: 36px;
+  background: ${Color.bg.card};
+  border-radius: ${Radius.md}px;
+  box-shadow: ${Shadow.card};
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: ${Spacing.md}px 0;
+  cursor: pointer;
+  gap: 8px;
+
+  &:hover { background: #f7f7f7; }
+
+  span {
+    writing-mode: vertical-rl;
+    font-size: ${FontSize.xs}px;
+    color: ${Color.text.muted};
+    letter-spacing: 2px;
+  }
 `
 
 const DetailHeader = styled.div`
@@ -613,6 +737,10 @@ export default function AdminChatDetail() {
   const [activeConv, setActiveConv] = useState<ConversationDetail | null>(null)
   const [convLoading, setConvLoading] = useState(false)
 
+  // WS 引用与已 ACK 集合（用于把对方历史未读消息标记为已读）
+  const wsRef = useRef<WebSocket | null>(null)
+  const ackedRef = useRef<Set<number>>(new Set())
+
   // Input
   const [inputText, setInputText] = useState('')
   const [inputAttachments, setInputAttachments] = useState<string[]>([])
@@ -640,6 +768,10 @@ export default function AdminChatDetail() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // 右侧订单面板：默认展开，可收起以让出更多对话空间
+  const [ordersCollapsed, setOrdersCollapsed] = useState(false)
+  const hasOrders = !!(activeConv?.order_info && activeConv.order_info.length > 0)
 
   // ── Load conversations list ──
   const loadConversations = useCallback(async () => {
@@ -697,28 +829,38 @@ export default function AdminChatDetail() {
     let retry = 0
     let retryTimer: ReturnType<typeof setTimeout> | null = null
 
-    const connect = () => {
-      try {
-        ws = new WebSocket(`${wsBase}/ws/chat/${convId}/`)
+  const connect = () => {
+    try {
+      ws = new WebSocket(`${wsBase}/ws/chat/${convId}/`)
+      wsRef.current = ws
         ws.onopen = () => { retry = 0 }
         ws.onmessage = (e) => {
           try {
             const data = JSON.parse(e.data)
             if (data.type === 'ping') { ws?.send(JSON.stringify({ type: 'pong' })); return }
-            if (data.type === 'message' || data.type === 'new_message' || data.type === 'read_receipt') {
-              loadDetail(convId)
+            if (data.type === 'message' || data.type === 'new_message') {
+              // 增量合并，不再整页重载（避免最新一条被旧数据覆盖的竞态）
+              const isOwn = data.payload?.sender_type === 'admin'
+              setActiveConv((prev) => mergeWsMessage(prev, data.payload ?? {}, 'admin', 'message'))
+              // 仅对「对方」的消息发 ACK（自己发的回显不 ACK，否则会自己标记自己已读）
+              if (!isOwn && data.msg_id) {
+                ws?.send(JSON.stringify({ type: 'ack', msg_id: String(data.msg_id) }))
+              }
+            } else if (data.type === 'read_receipt') {
+              setActiveConv((prev) => mergeWsMessage(prev, data, 'admin', 'read_receipt'))
             }
           } catch { /* ignore */ }
         }
-        ws.onclose = () => {
-          if (closedByUs || retry >= CONFIG.WS_MAX_RECONNECT_ATTEMPTS) return
-          const delay = Math.min(
-            CONFIG.WS_RECONNECT_BASE_DELAY * Math.pow(2, retry),
-            CONFIG.WS_RECONNECT_MAX_DELAY,
-          )
-          retry++
-          retryTimer = setTimeout(connect, delay)
-        }
+    ws.onclose = () => {
+      wsRef.current = null
+      if (closedByUs || retry >= CONFIG.WS_MAX_RECONNECT_ATTEMPTS) return
+      const delay = Math.min(
+        CONFIG.WS_RECONNECT_BASE_DELAY * Math.pow(2, retry),
+        CONFIG.WS_RECONNECT_MAX_DELAY,
+      )
+      retry++
+      retryTimer = setTimeout(connect, delay)
+    }
         ws.onerror = () => { /* onclose 随后触发 */ }
       } catch { /* ignore */ }
     }
@@ -729,6 +871,18 @@ export default function AdminChatDetail() {
       ws?.close()
     }
   }, [id, loadDetail])
+
+  // 进入会话后，把「对方」的历史未读消息标记为已读（发 ACK，触发对方看到「已读」）
+  useEffect(() => {
+    if (!activeConv?.messages) return
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return
+    for (const m of activeConv.messages) {
+      if (m.sender_type !== 'admin' && !m.is_read && m.id > 0 && !ackedRef.current.has(m.id)) {
+        ackedRef.current.add(m.id)
+        wsRef.current.send(JSON.stringify({ type: 'ack', msg_id: String(m.id) }))
+      }
+    }
+  }, [activeConv?.messages])
 
   // ── Product search ──
   useEffect(() => {
@@ -768,12 +922,47 @@ export default function AdminChatDetail() {
     const atts = inputAttachments
     setInputText('')
     setInputAttachments([])
+
+    // 乐观更新：立即把消息插入本地，消除「发送后等待 POST + loadDetail」的卡顿感
+    const tempId = -Date.now()
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      sender: 'optimistic',
+      sender_type: 'admin',
+      sender_name: '',
+      content: text,
+      msg_type: 'text',
+      file_url: null,
+      card_data: null,
+      is_read: true,
+      read_at: null,
+      created_at: new Date().toISOString(),
+      status: 'sending',
+    }
+    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimisticMsg] } : prev)
+
     try {
       setSending(true)
-      await adminChatAPI.sendMessage(convId, { content: text, attachments: atts })
-      await loadDetail(convId)
+      const resp = await adminChatAPI.sendMessage(convId, { content: text, attachments: atts })
+      // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
+      setActiveConv((prev) => {
+        if (!prev) return prev
+        const real = (resp.messages || []).slice().reverse()
+          .find((m) => m.sender_type === 'admin' && m.id > 0)
+        const msgs = prev.messages || []
+        if (real) {
+          const copy = msgs.slice()
+          const idx = copy.findIndex((m) => m.id === tempId)
+          if (idx >= 0) copy[idx] = { ...real, status: 'sent' }
+          else if (!copy.some((m) => m.id === real.id)) copy.push({ ...real, status: 'sent' })
+          return { ...prev, messages: copy }
+        }
+        return { ...prev, messages: msgs.map((m) => m.id === tempId ? { ...m, status: 'sent' } : m) }
+      })
       await loadConversations()
     } catch {
+      // 失败回滚：移除临时消息并恢复输入
+      setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
       setInputText(text)
       setInputAttachments(atts)
     } finally {
@@ -865,11 +1054,20 @@ export default function AdminChatDetail() {
 
   // ── Map message ──
   const mapMessage = (msg: ChatMessage) => {
-    const isMine: boolean = msg.sender === 'admin'
+    // 注意：后端 sender 是用户主键（数字），不能用来判断身份；必须用 sender_type。
+    // 此前写成 msg.sender === 'admin' 永远为 false，导致管理端所有消息都渲染成「对方」。
+    const isMine: boolean = msg.sender_type === 'admin'
     const type = (msg.msg_type || 'text') as 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share'
     let fileUrl: string | undefined
     if ((type === 'image' || type === 'video') && msg.file_url) {
       fileUrl = msg.file_url
+    }
+    // 发送状态回执：自己发的消息才显示（发送中 / 已送达 / 已读）
+    let receipt: 'sending' | 'sent' | 'read' | undefined
+    if (isMine) {
+      if (msg.status) receipt = msg.status
+      else if (msg.is_read) receipt = 'read'
+      else receipt = 'sent'
     }
     return {
       id: msg.id,
@@ -893,7 +1091,7 @@ export default function AdminChatDetail() {
         order_id: msg.card_data.order_id,
       } : undefined,
       cartItems: undefined,
-      isRead: msg.is_read === true,
+      receipt,
     }
   }
 
@@ -945,7 +1143,7 @@ export default function AdminChatDetail() {
     const bubble = item as {
       id: number; type: string; content: string; isMine: boolean; timestamp: string
       fileUrl?: string; productSnapshot?: ProductSnapshot | null
-      productCardData?: ProductCardData | null; cartItems?: CartItem[]; isRead?: boolean
+      productCardData?: ProductCardData | null; cartItems?: CartItem[]; receipt?: 'sending' | 'sent' | 'read'
     }
     return (
       <ChatBubble
@@ -957,7 +1155,7 @@ export default function AdminChatDetail() {
         productSnapshot={bubble.productSnapshot}
         productCardData={bubble.productCardData}
         cartItems={bubble.cartItems}
-        isRead={bubble.isRead}
+        receipt={bubble.receipt}
         onProductClick={(productId) => navigate(`/product/${productId}`)}
       />
     )
@@ -1056,46 +1254,6 @@ export default function AdminChatDetail() {
                   </ActionBtn>
                 )}
               </LockBanner>
-            )}
-
-            {/* 订单信息：买家在该会话关联商品上的最近订单（宏观查看用） */}
-            {activeConv?.order_info && activeConv.order_info.length > 0 && (
-              <div style={{ padding: '8px 16px', background: '#fffbeb', borderBottom: '1px solid #fde68a' }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: '#b45309', marginBottom: 6 }}>
-                  📦 订单信息（{activeConv.order_info.length}）
-                </div>
-                {activeConv.order_info.map((o) => {
-                  const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
-                  return (
-                    <div
-                      key={o.order_id}
-                      onClick={() => navigate(`/profile/orders/${o.order_id}`)}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        gap: 12, padding: '6px 8px', borderRadius: 6, cursor: 'pointer',
-                        background: '#fff', marginBottom: 4, border: '1px solid #fde68a',
-                      }}
-                    >
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: '#333', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {o.order_no}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#999' }}>
-                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
-                        </div>
-                      </div>
-                      <span
-                        style={{
-                          flexShrink: 0, fontSize: 11, fontWeight: 600, padding: '2px 8px',
-                          borderRadius: 4, background: st.bg, color: st.color,
-                        }}
-                      >
-                        {o.status_label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
             )}
 
             {/* Filter tabs */}
@@ -1204,6 +1362,46 @@ export default function AdminChatDetail() {
           </EmptyDetail>
         )}
       </DetailArea>
+
+      {/* Right: Orders Panel（可收起 / 点击订单查看详情） */}
+      {hasOrders && !ordersCollapsed && (
+        <OrdersPanel>
+          <OrdersHeader>
+            <span>订单信息（{activeConv!.order_info!.length}）</span>
+            <CollapseBtn onClick={() => setOrdersCollapsed(true)} title="收起订单面板">»</CollapseBtn>
+          </OrdersHeader>
+          <OrdersBody>
+            {activeConv!.order_info!.map((o) => {
+              const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
+              return (
+                <OrderCard
+                  key={o.order_id}
+                  $active={false}
+                  onClick={() => navigate(`/profile/orders/${o.order_id}`)}
+                >
+                  <OrderRow>
+                    <OrderNo>{o.order_no}</OrderNo>
+                    <OrderStatusTag style={{ background: st.bg, color: st.color }}>
+                      {o.status_label}
+                    </OrderStatusTag>
+                  </OrderRow>
+                  <OrderMeta>
+                    {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                  </OrderMeta>
+                </OrderCard>
+              )
+            })}
+          </OrdersBody>
+        </OrdersPanel>
+      )}
+
+      {/* 收起后的窄条：点击展开订单面板 */}
+      {hasOrders && ordersCollapsed && (
+        <OrdersCollapsedBar onClick={() => setOrdersCollapsed(false)} title="展开订单面板">
+          <CollapseBtn as="div">«</CollapseBtn>
+          <span>订单</span>
+        </OrdersCollapsedBar>
+      )}
 
       {/* Product Search Popup */}
       {showProductSearch && (

@@ -29,7 +29,12 @@ export interface ChatMessage {
   /** 已读时间 */
   read_at: string | null
   created_at: string
+  /** 发送状态（前端瞬态，用于「发送中/已送达/已读」回执，不来自后端） */
+  status?: 'sending' | 'sent' | 'read'
 }
+
+/** 消息发送状态（推特式回执） */
+export type MsgStatus = 'sending' | 'sent' | 'read'
 
 export interface ConversationSummary {
   id: number
@@ -186,6 +191,58 @@ function transformChatMessage(m: CsMessage): ChatMessage {
     read_at: null,
     created_at: m.created_at || '',
   }
+}
+
+export { transformChatMessage }
+
+/**
+ * 将 WS 推送的消息增量合并进当前会话，避免「整页重载」带来的时序竞态
+ * （竞态会让最新一条被旧数据覆盖，观感上像「显示的是上一句」）。
+ * - kind='message'：对方消息直接追加；自己消息的回显用于把乐观临时消息替换为真实消息（status=sent）
+ * - kind='read_receipt'：把对应消息标记为已读
+ */
+export function mergeWsMessage(
+  conv: ConversationDetail | null,
+  payload: Record<string, unknown>,
+  mySenderType: 'user' | 'admin',
+  kind: 'message' | 'read_receipt',
+): ConversationDetail | null {
+  if (!conv) return conv
+  const msgs = conv.messages || []
+  if (kind === 'read_receipt') {
+    const rid = Number(payload.msg_id)
+    if (!rid) return conv
+    return {
+      ...conv,
+      messages: msgs.map((m) => (m.id === rid ? { ...m, status: 'read', is_read: true } : m)),
+    }
+  }
+  const real = transformChatMessage(payload as unknown as CsMessage)
+  const isOwn = real.sender_type === mySenderType
+  if (isOwn) {
+    real.status = 'sent'
+    const byId = msgs.findIndex((m) => m.id === real.id)
+    if (byId >= 0) {
+      const copy = msgs.slice()
+      copy[byId] = real
+      return { ...conv, messages: copy }
+    }
+    // 用乐观临时消息（id<0）替换为真实消息
+    const tempIdx = msgs.findIndex((m) => m.id < 0 && m.sender_type === mySenderType)
+    if (tempIdx >= 0) {
+      const copy = msgs.slice()
+      copy[tempIdx] = real
+      return { ...conv, messages: copy }
+    }
+    return { ...conv, messages: [...msgs, real] }
+  }
+  const byId = msgs.findIndex((m) => m.id === real.id)
+  if (byId >= 0) {
+    const copy = msgs.slice()
+    copy[byId] = real
+    return { ...conv, messages: copy }
+  }
+  return { ...conv, messages: [...msgs, real] }
 }
 
 function transformSummary(c: CsConversation): ConversationSummary {

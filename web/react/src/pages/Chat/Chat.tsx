@@ -13,6 +13,7 @@ import {
   type ConversationSummary,
   type ConversationDetail,
   type ChatMessage,
+  mergeWsMessage,
 } from '../../api/chat'
 import { CONFIG } from '../../config/constants'
 
@@ -644,24 +645,24 @@ export default function Chat() {
       return
     }
 
-    // New message — reload conversation
+    // New message — 增量合并，不再整页重载（避免最新一条被旧数据覆盖的竞态）
     if (data.type === 'new_message' || data.type === 'message') {
-      if (activeId) {
-        loadConversation(activeId)
-        // Send ACK
-        if (data.msg_id) {
-          sendAckRef.current?.(data.msg_id as number)
-        }
+      const payload = (data.payload ?? {}) as Record<string, unknown>
+      const isOwn = payload.sender_type === 'user'
+      setActiveConv((prev) => mergeWsMessage(prev, payload, 'user', 'message'))
+      // 仅对「对方（客服）」的消息发 ACK，自己的回显不 ACK
+      if (!isOwn && data.msg_id) {
+        sendAckRef.current?.(data.msg_id as number)
       }
       return
     }
 
     // Read receipt
     if (data.type === 'read_receipt') {
-      if (activeId) loadConversation(activeId)
+      setActiveConv((prev) => mergeWsMessage(prev, data, 'user', 'read_receipt'))
       return
     }
-  }, [activeId, loadConversation])
+  }, [setActiveConv])
 
   const sendAckRef = useRef<(msgId: number) => void>(() => {})
 
@@ -671,6 +672,18 @@ export default function Chat() {
   useEffect(() => {
     sendAckRef.current = sendAck
   }, [sendAck])
+
+  // 进入会话后，把「对方（客服）」的历史未读消息标记为已读（发 ACK，触发客服看到「已读」）
+  const ackedRef = useRef<Set<number>>(new Set())
+  useEffect(() => {
+    if (!activeConv?.messages) return
+    for (const m of activeConv.messages) {
+      if (m.sender_type !== 'user' && !m.is_read && m.id > 0 && !ackedRef.current.has(m.id)) {
+        ackedRef.current.add(m.id)
+        sendAckRef.current?.(m.id)
+      }
+    }
+  }, [activeConv?.messages])
 
   // ── 5-message limit check ──
   const consecutiveUserMsgs = (() => {
@@ -723,15 +736,48 @@ export default function Chat() {
     setInputText('')
     setInputAttachments([])
 
+    // 乐观更新：立即插入本地，发送方无需等待 POST + 重拉即可看到自己消息
+    const tempId = -Date.now()
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
+      sender: 'optimistic',
+      sender_type: 'user',
+      sender_name: '',
+      content: text,
+      msg_type: 'text',
+      file_url: null,
+      card_data: null,
+      is_read: true,
+      read_at: null,
+      created_at: new Date().toISOString(),
+      status: 'sending',
+    }
+    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimisticMsg] } : prev)
+
     try {
       setSending(true)
-      await chatAPI.sendMessage(activeId, {
+      const resp = await chatAPI.sendMessage(activeId, {
         content: text,
         attachments: atts,
       })
-      await loadConversation(activeId)
+      // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
+      setActiveConv((prev) => {
+        if (!prev) return prev
+        const real = (resp.messages || []).slice().reverse()
+          .find((m) => m.sender_type === 'user' && m.id > 0)
+        const msgs = prev.messages || []
+        if (real) {
+          const copy = msgs.slice()
+          const idx = copy.findIndex((m) => m.id === tempId)
+          if (idx >= 0) copy[idx] = { ...real, status: 'sent' }
+          else if (!copy.some((m) => m.id === real.id)) copy.push({ ...real, status: 'sent' })
+          return { ...prev, messages: copy }
+        }
+        return { ...prev, messages: msgs.map((m) => m.id === tempId ? { ...m, status: 'sent' } : m) }
+      })
       await loadConversations()
     } catch {
+      setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
       setInputText(text)
       setInputAttachments(atts)
     } finally {
@@ -814,6 +860,14 @@ export default function Chat() {
       }
     }
 
+    // 发送状态回执：自己发的消息才显示（发送中 / 已送达 / 已读）
+    let receipt: 'sending' | 'sent' | 'read' | undefined
+    if (isMine) {
+      if (msg.status) receipt = msg.status
+      else if (msg.is_read) receipt = 'read'
+      else receipt = 'sent'
+    }
+
     return {
       id: msg.id,
       type,
@@ -824,7 +878,7 @@ export default function Chat() {
       productSnapshot,
       productCardData,
       cartItems: undefined,
-      isRead: msg.is_read === true,
+      receipt,
     }
   }
 
@@ -954,7 +1008,7 @@ export default function Chat() {
     const bubble = item as {
       id: number; type: string; content: string; isMine: boolean; timestamp: string
       fileUrl?: string; productSnapshot?: ProductSnapshot | null
-      productCardData?: ProductCardData | null; cartItems?: CartItem[]; isRead?: boolean
+      productCardData?: ProductCardData | null; cartItems?: CartItem[]; receipt?: 'sending' | 'sent' | 'read'
     }
     return (
       <ChatBubble
@@ -966,7 +1020,7 @@ export default function Chat() {
         productSnapshot={bubble.productSnapshot}
         productCardData={bubble.productCardData}
         cartItems={bubble.cartItems}
-        isRead={bubble.isRead}
+        receipt={bubble.receipt}
         onProductClick={(productId) => navigate(`/product/${productId}`)}
       />
     )

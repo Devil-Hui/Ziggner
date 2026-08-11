@@ -369,7 +369,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             logger.error(f'ACK retry error: {e}')
 
     async def _handle_ack(self, msg_id: str):
-        """处理客户端 ACK — 取消重试"""
+        """处理客户端 ACK — 取消重试，并标记消息已读后向会话组广播已读回执"""
         if not msg_id:
             return
         group_acks = _pending_acks.get(self.group_name, {})
@@ -379,6 +379,35 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             if task and not task.done():
                 task.cancel()
             del group_acks[msg_id]
+
+        # 标记该消息为已读，并通知发送方（让对方看到「已读」）
+        try:
+            await self._mark_message_read(msg_id)
+            await self.channel_layer.group_send(self.group_name, {
+                'type': 'read.receipt',
+                'msg_id': str(msg_id),
+            })
+        except Exception as e:
+            logger.warning(f'Read receipt broadcast failed for msg {msg_id}: {e}')
+
+    @database_sync_to_async
+    def _mark_message_read(self, msg_id: str):
+        from .models import Message
+
+        try:
+            msg = Message.objects.get(id=int(msg_id))
+            if not msg.is_read:
+                msg.is_read = True
+                msg.save(update_fields=['is_read'])
+        except (Message.DoesNotExist, ValueError, TypeError):
+            return
+
+    async def read_receipt(self, event):
+        """把「已读」回执转发给会话组内所有客户端"""
+        await self.send(json.dumps({
+            'type': 'read_receipt',
+            'msg_id': event.get('msg_id'),
+        }))
 
     # ══════════════════════════════════════════════════════════
     # 限流检查

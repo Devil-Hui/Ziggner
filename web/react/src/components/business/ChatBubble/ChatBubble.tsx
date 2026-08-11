@@ -32,8 +32,8 @@ export interface ChatBubbleProps {
   productCardData?: ProductCardData | null
   cartItems?: CartItem[]
   onProductClick?: (productId: number) => void
-  /** 已读状态：对方已读时显示双对勾 */
-  isRead?: boolean
+  /** 发送状态回执（推特式）：发送中 / 已送达 / 已读，仅自己发的消息显示 */
+  receipt?: 'sending' | 'sent' | 'read'
 }
 
 // ── Format time: 今天 HH:mm / 昨天 HH:mm / MM-DD ──
@@ -96,11 +96,14 @@ const Wrapper = styled.div<{ $isMine: boolean }>`
 `
 
 const Bubble = styled.div<{ $isMine: boolean }>`
-  max-width: 70%;
+  max-width: 72%;
   padding: 10px 16px;
   border-radius: ${props => props.$isMine ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
-  background: ${props => props.$isMine ? '#1a56db' : '#f0f0f0'};
-  color: ${props => props.$isMine ? '#fff' : '#333'};
+  /* 微信风格：自己发的绿色白字，对方白底深字 + 浅边框阴影，背景色强区分 */
+  background: ${props => props.$isMine ? '#07c160' : '#ffffff'};
+  color: ${props => props.$isMine ? '#ffffff' : '#1f1f1f'};
+  border: ${props => props.$isMine ? 'none' : '1px solid #e6e6e6'};
+  box-shadow: ${props => props.$isMine ? '0 1px 2px rgba(7,193,96,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'};
   font-size: ${FontSize.base}px;
   line-height: 1.5;
   word-break: break-word;
@@ -136,6 +139,12 @@ const ReadStatus = styled.span`
   color: #1a56db;
   font-size: 12px;
   letter-spacing: -1px;
+`
+
+const ReceiptText = styled.span<{ $state: 'sending' | 'sent' | 'read' }>`
+  font-size: 11px;
+  color: ${props => (props.$state === 'read' ? '#1a56db' : '#bbb')};
+  margin-left: 2px;
 `
 
 // ── Media ──
@@ -308,7 +317,7 @@ export default function ChatBubble({
   productCardData,
   cartItems,
   onProductClick,
-  isRead = false,
+  receipt,
 }: ChatBubbleProps) {
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
 
@@ -433,7 +442,9 @@ export default function ChatBubble({
           {renderContent()}
         </Bubble>
         <TimeRow $isMine={isMine}>
-          {isMine && isRead && <ReadStatus>✓✓</ReadStatus>}
+          {isMine && receipt === 'sending' && <ReceiptText $state="sending">发送中…</ReceiptText>}
+          {isMine && receipt === 'sent' && <ReceiptText $state="sent">已送达</ReceiptText>}
+          {isMine && receipt === 'read' && <ReceiptText $state="read">已读</ReceiptText>}
           <TimeText>{formatTime(timestamp)}</TimeText>
         </TimeRow>
       </Wrapper>

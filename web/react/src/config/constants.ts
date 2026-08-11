@@ -26,8 +26,9 @@ export const CONFIG = {
   // ──── 管理后台聊天详情页 ────
   // 会话列表：一次接口请求加载的会话数量
   ADMIN_CHAT_LIST_PAGE_SIZE: 100,
-  // 聊天详情：轮询间隔（毫秒），默认5秒轮询新消息
-  ADMIN_CHAT_POLL_INTERVAL: 5000,
+  // 聊天详情：轮询兜底间隔（毫秒）。实时消息/已读回执已由 WebSocket 增量推送，
+  // 此处仅作 WS 断线时的补偿拉取，故放宽到 15s 降低对 DB + order_info 的冗余查询（低负载）。
+  ADMIN_CHAT_POLL_INTERVAL: 15000,
   // 聊天详情：搜索框自动获取焦点的延迟（毫秒）
   ADMIN_CHAT_FOCUS_DELAY: 100,
   // 聊天详情：搜索输入防抖延迟（毫秒）
