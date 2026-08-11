@@ -1,6 +1,5 @@
 // TypeScript strict mode enabled
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { useTranslation } from '../../i18n'
@@ -170,7 +169,7 @@ const OrdersLayout = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 16px;
-  @media (max-width: 980px) {
+  @media (max-width: 820px) {
     flex-direction: column;
   }
 `
@@ -191,7 +190,7 @@ const SidePanel = styled.div`
   border-radius: ${Radius.md}px;
   max-height: calc(100vh - 48px);
   overflow-y: auto;
-  @media (max-width: 980px) {
+  @media (max-width: 820px) {
     flex: 1 1 auto;
     max-width: 100%;
     position: static;
@@ -276,7 +275,6 @@ function orderNoFromAfterSale(row: AfterSaleRow): string {
 
 export default function AdminOrders() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [tab, setTab] = useState<TabKey>('orders')
 
   // orders state
@@ -592,7 +590,12 @@ export default function AdminOrders() {
                     <tr key={it.id || it.sku_code}>
                       <Td>
                         {it.spu_id ? (
-                          <ItemNameLink onClick={() => navigate(`/product/${it.spu_id}`)} title={t('admin.orders.openProductDetail')}>
+                          <ItemNameLink
+                            href={`/product/${it.spu_id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={t('admin.orders.openProductDetail')}
+                          >
                             {it.spu_name}
                           </ItemNameLink>
                         ) : (
