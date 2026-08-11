@@ -196,7 +196,8 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             content = payload.get('content', '')
             msg_type_field = payload.get('msg_type', 'text')
             file_url = payload.get('file_url', '')
-            card_data = payload.get('card_data', None)
+            # 前端 product_card 语义字段兜底：product_card = {id,name,main_image,price,order_id}
+            card_data = payload.get('card_data') or payload.get('product_card') or None
             metadata = payload.get('metadata', {})
             attachments = payload.get('attachments', None)
 
@@ -595,7 +596,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
         """
         from apps.order.models import OrderItem
 
-        spu_id = card_data.get('product_id') or card_data.get('spu_id')
+        spu_id = card_data.get('product_id') or card_data.get('spu_id') or card_data.get('id')
         if not spu_id or not self.conv_id:
             # 至少保留 spu_id
             result = {}
@@ -679,7 +680,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
         if not card_data or not isinstance(card_data, dict):
             return card_data or {}
         refs = {}
-        spu_id = card_data.get('spu_id') or card_data.get('product_id')
+        spu_id = card_data.get('spu_id') or card_data.get('product_id') or card_data.get('id')
         if spu_id:
             refs['spu_id'] = spu_id
         order_id = card_data.get('order_id')

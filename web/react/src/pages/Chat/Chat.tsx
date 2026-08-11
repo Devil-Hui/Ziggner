@@ -892,17 +892,11 @@ export default function Chat() {
       // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
       setActiveConv((prev) => {
         if (!prev) return prev
-        const real = (resp.messages || []).slice().reverse()
-          .find((m) => m.sender_type === 'user' && m.id > 0)
-        const msgs = prev.messages || []
-        if (real) {
-          const copy = msgs.slice()
-          const idx = copy.findIndex((m) => m.id === tempId)
-          if (idx >= 0) copy[idx] = { ...real, status: 'sent' }
-          else if (!copy.some((m) => m.id === real.id)) copy.push({ ...real, status: 'sent' })
-          return { ...prev, messages: copy }
-        }
-        return { ...prev, messages: msgs.map((m) => m.id === tempId ? { ...m, status: 'sent' } : m) }
+        const copy = (prev.messages || []).slice()
+        const idx = copy.findIndex((m) => m.id === tempId)
+        if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
+        else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
+        return { ...prev, messages: copy }
       })
       await loadConversations()
     } catch {
@@ -924,7 +918,12 @@ export default function Chat() {
         msg_type: 'product_card',
         product_card: { id: spu.id, name: spu.name, main_image: spu.main_image, price: spu.price },
       })
-      setActiveConv(resp)
+      // resp 是服务端返回的单条真实消息 → 按 id 去重 merge 进本地（不覆盖整个会话）
+      setActiveConv((prev) => {
+        if (!prev || resp.id <= 0) return prev
+        if (prev.messages.some((m) => m.id === resp.id)) return prev
+        return { ...prev, messages: [...prev.messages, { ...resp, status: 'sent' }] }
+      })
       await loadConversations()
     } catch {
       // ignore

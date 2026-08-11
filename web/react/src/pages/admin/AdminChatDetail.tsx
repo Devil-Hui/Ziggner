@@ -1082,17 +1082,11 @@ export default function AdminChatDetail() {
       // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
       setActiveConv((prev) => {
         if (!prev) return prev
-        const real = (resp.messages || []).slice().reverse()
-          .find((m) => m.sender_type === 'admin' && m.id > 0)
-        const msgs = prev.messages || []
-        if (real) {
-          const copy = msgs.slice()
-          const idx = copy.findIndex((m) => m.id === tempId)
-          if (idx >= 0) copy[idx] = { ...real, status: 'sent' }
-          else if (!copy.some((m) => m.id === real.id)) copy.push({ ...real, status: 'sent' })
-          return { ...prev, messages: copy }
-        }
-        return { ...prev, messages: msgs.map((m) => m.id === tempId ? { ...m, status: 'sent' } : m) }
+        const copy = (prev.messages || []).slice()
+        const idx = copy.findIndex((m) => m.id === tempId)
+        if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
+        else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
+        return { ...prev, messages: copy }
       })
       await loadConversations()
     } catch {

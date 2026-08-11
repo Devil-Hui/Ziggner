@@ -466,6 +466,8 @@ class SendMessageSerializer(serializers.Serializer):
     file_url = serializers.CharField(required=False, allow_blank=True, default='')
     attachments = serializers.ListField(required=False, default=list)
     card_data = serializers.JSONField(required=False, default=dict)
+    # 前端「发给客服/发商品卡」语义字段：product_card = {id,name,main_image,price,order_id}
+    product_card = serializers.JSONField(required=False, default=dict)
     metadata = serializers.JSONField(required=False, default=dict)
 
     def validate_card_data(self, value):

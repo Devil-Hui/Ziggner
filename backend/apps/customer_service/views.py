@@ -157,7 +157,7 @@ def _strip_card_data_to_refs(card_data: dict) -> dict:
     if not card_data or not isinstance(card_data, dict):
         return card_data or {}
     refs = {}
-    spu_id = card_data.get('spu_id') or card_data.get('product_id')
+    spu_id = card_data.get('spu_id') or card_data.get('product_id') or card_data.get('id')
     if spu_id:
         refs['spu_id'] = spu_id
     order_id = card_data.get('order_id')
@@ -836,7 +836,8 @@ class MessageView(BaseApiView):
             conv.save(update_fields=['handled_by', 'handled_at'])
 
         # ── card_data 精简为引用（spu_id + order_id） ──
-        raw_card_data = data.get('card_data', {})
+        # 前端语义字段 product_card = {id,name,main_image,price,order_id} 兜底兼容
+        raw_card_data = data.get('card_data') or data.get('product_card') or {}
         card_data = _strip_card_data_to_refs(raw_card_data)
 
         # ── 管理员发送商品卡片时，自动补充订单信息 ──
@@ -876,7 +877,7 @@ class MessageView(BaseApiView):
         管理员发送商品卡片时，自动补充用户订单信息。
         card_data 仅存储 spu_id + order_id + sku_id 引用。
         """
-        spu_id = card_data.get('spu_id') or card_data.get('product_id')
+        spu_id = card_data.get('spu_id') or card_data.get('product_id') or card_data.get('id')
         if not spu_id or not conv:
             return card_data
 

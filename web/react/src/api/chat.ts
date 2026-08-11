@@ -331,10 +331,10 @@ export const chatAPI = {
     }
   },
 
-  /** 发送消息 */
-  sendMessage: async (convId: number, params: SendMessageParams): Promise<ConversationDetail> => {
-    const raw = await post<CsConversation>(`/chat/conversations/${convId}/messages/`, params)
-    return transformDetail(raw)
+  /** 发送消息。后端返回该条消息（不是整个会话），前端按 id merge/回填乐观消息 */
+  sendMessage: async (convId: number, params: SendMessageParams): Promise<ChatMessage> => {
+    const raw = await post<CsMessage>(`/chat/conversations/${convId}/messages/`, params)
+    return transformChatMessage(raw)
   },
 
   /** 关闭对话 */
@@ -377,9 +377,11 @@ export const adminChatAPI = {
   getConversation: (convId: number) =>
     get<ConversationDetail>(`/chat/conversations/${convId}/`),
 
-  /** Admin 发送回复 */
-  sendMessage: (convId: number, params: SendMessageParams) =>
-    post<ConversationDetail>(`/chat/conversations/${convId}/messages/`, params),
+  /** Admin 发送回复（返回单条消息，前端按 id 回填乐观消息） */
+  sendMessage: async (convId: number, params: SendMessageParams): Promise<ChatMessage> => {
+    const raw = await post<CsMessage>(`/chat/conversations/${convId}/messages/`, params)
+    return transformChatMessage(raw)
+  },
 
   /** Admin 标记为已回复（无独立状态，PATCH 空体刷新详情即可） */
   markReplied: (convId: number) =>
