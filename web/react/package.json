@@ -11,7 +11,8 @@
     "preview": "vite preview --host 0.0.0.0 --port 12700",
     "test": "vitest run",
     "test:watch": "vitest",
-    "security:audit": "audit-ci --config .audit-ci.json"
+    "security:audit": "audit-ci --config .audit-ci.json",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
     "agent-base": "^9.0.0",
@@ -41,6 +42,7 @@
     "jsdom": "^25.0.1",
     "typescript": "~5.7.0",
     "vite": "^6.0.0",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "4.118.0"
   }
 }
