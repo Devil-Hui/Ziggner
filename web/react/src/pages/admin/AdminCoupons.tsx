@@ -1,6 +1,7 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback, type CSSProperties } from 'react';
 import styled from 'styled-components'
+import { QRCodeSVG } from 'qrcode.react';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
@@ -314,6 +315,7 @@ export default function AdminCoupons() {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoCreating, setPromoCreating] = useState(false);
   const [promoCopiedCode, setPromoCopiedCode] = useState<string | null>(null);
+  const [qrCode, setQrCode] = useState<{ code: string; name: string } | null>(null);
   const [promoForm, setPromoForm] = useState<{ count: number; prefix: string; name: string; note: string }>({
     count: 1, prefix: '', name: '', note: '',
   });
@@ -351,8 +353,15 @@ export default function AdminCoupons() {
     }
   };
 
+  // 直达链接：始终指向商城前台 /coupon/<code>（admin 域名自动回退到 www）
+  const storefrontUrl = (code: string) => {
+    const u = new URL(window.location.origin);
+    if (u.hostname.startsWith('admin.')) u.hostname = u.hostname.slice('admin.'.length);
+    return `${u.origin}/coupon/${encodeURIComponent(code)}`;
+  };
+
   const copyPromoLink = async (code: string) => {
-    const link = `${window.location.origin}/coupon/${encodeURIComponent(code)}`;
+    const link = storefrontUrl(code);
     try {
       await navigator.clipboard.writeText(link);
       setPromoCopiedCode(code);
@@ -919,13 +928,22 @@ export default function AdminCoupons() {
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{pc.paid_order_count}</td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{Number(pc.gmv || 0).toFixed(2)}</td>
                         <td style={tdStyle}>
-                          <button
-                            type="button"
-                            onClick={() => copyPromoLink(pc.code)}
-                            style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, background: '#fff', borderRadius: 2, cursor: 'pointer' }}
-                          >
-                            {promoCopiedCode === pc.code ? t('admin.coupons.promoLinkCopied') : t('admin.coupons.promoCopyLink')}
-                          </button>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setQrCode({ code: pc.code, name: pc.name })}
+                              style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, background: '#fff', borderRadius: 2, cursor: 'pointer' }}
+                            >
+                              {t('admin.coupons.promoQr')}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copyPromoLink(pc.code)}
+                              style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, background: '#fff', borderRadius: 2, cursor: 'pointer' }}
+                            >
+                              {promoCopiedCode === pc.code ? t('admin.coupons.promoLinkCopied') : t('admin.coupons.promoCopyLink')}
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -945,6 +963,36 @@ export default function AdminCoupons() {
 
             <ButtonGroup>
               <SecondaryBtn onClick={() => setPromoTarget(null)}>{t('admin.coupons.promoClose')}</SecondaryBtn>
+            </ButtonGroup>
+          </FormDialog>
+        </FormOverlay>
+      )}
+
+      {/* 推广码二维码 + 直达链接 */}
+      {qrCode && (
+        <FormOverlay onClick={() => setQrCode(null)}>
+          <FormDialog onClick={(e) => e.stopPropagation()} style={{ width: 420, maxWidth: '94vw', textAlign: 'center' }}>
+            <FormTitle>{t('admin.coupons.promoQrTitle')}</FormTitle>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: Color.text.secondary }}>
+              {qrCode.name ? `${qrCode.name} · ${qrCode.code}` : qrCode.code}
+            </p>
+            <div style={{ display: 'grid', placeItems: 'center', padding: 16, background: '#fff', border: `1px solid ${Color.border.light}`, borderRadius: 4, width: 'fit-content', margin: '0 auto 16px' }}>
+              <QRCodeSVG value={storefrontUrl(qrCode.code)} size={200} level="M" includeMargin />
+            </div>
+            <p style={{ margin: '0 0 8px', fontSize: 12, color: Color.text.secondary }}>{t('admin.coupons.promoDirectLink')}</p>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <input
+                readOnly
+                value={storefrontUrl(qrCode.code)}
+                onFocus={(e) => e.currentTarget.select()}
+                style={{ flex: 1, padding: '8px 10px', fontSize: 12, border: `1px solid ${Color.border.medium}`, borderRadius: 4, background: '#fafafa', color: Color.text.secondary, minWidth: 0 }}
+              />
+              <SecondaryBtn onClick={() => copyPromoLink(qrCode.code)}>
+                {promoCopiedCode === qrCode.code ? t('admin.coupons.promoLinkCopied') : t('admin.coupons.promoCopyLink')}
+              </SecondaryBtn>
+            </div>
+            <ButtonGroup>
+              <SecondaryBtn onClick={() => setQrCode(null)}>{t('admin.coupons.promoClose')}</SecondaryBtn>
             </ButtonGroup>
           </FormDialog>
         </FormOverlay>

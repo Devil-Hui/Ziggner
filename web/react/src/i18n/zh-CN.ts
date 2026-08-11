@@ -646,6 +646,9 @@ const zhCN = {
       promoEmpty: '暂无推广码，点击「新建推广码」生成',
       promoTotalRow: '合计',
       promoShareHint: '分享此链接给不同渠道，按推广码统计各自的引流与成交',
+      promoQr: '二维码',
+      promoQrTitle: '推广码二维码',
+      promoDirectLink: '直达链接（扫码或点击即可领取）',
     },
     activities: {
       title: '活动管理',

@@ -46,6 +46,7 @@ logs/
 
 # Media (user uploaded files)
 web/react/dist/
+web/react/dist_verify/
 backend/media/
 backend/static/
 
