@@ -16,6 +16,7 @@ services:
       - mysql_data:/var/lib/mysql
     mem_limit: 320m
     memswap_limit: 320m
+    cpus: 0.4
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 15s
@@ -32,6 +33,7 @@ services:
     expose: ["6379"]
     mem_limit: 96m
     memswap_limit: 96m
+    cpus: 0.1
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -77,6 +79,7 @@ services:
         condition: service_healthy
     mem_limit: 448m
     memswap_limit: 448m
+    cpus: 0.5
 
   celery_worker:
     build:
@@ -85,6 +88,7 @@ services:
     command: ["celery_worker"]
     mem_limit: 448m
     memswap_limit: 448m
+    cpus: 0.5
     environment:
       DJANGO_ENV: dev
       # 邮件账号池（Gmail，.env 配置，验证码异步发送需要）
@@ -130,6 +134,23 @@ services:
       - web
     mem_limit: 640m
     memswap_limit: 640m
+    cpus: 0.2
+
+  # Cloudflare Tunnel 本地源站入口：443 HTTPS 反代 /api/→web:8000、/ws/→web:8001
+  # （自签证书在 deploy/nginx-certs/，不入库；cloudflared noTLSVerify 连接）
+  tunnel-nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "443:443"
+    volumes:
+      - ../deploy/nginx-tunnel/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ../deploy/nginx-certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    mem_limit: 128m
+    memswap_limit: 256m
+    cpus: 0.1
 
 volumes:
   mysql_data:
