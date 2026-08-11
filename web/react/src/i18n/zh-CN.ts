@@ -1298,6 +1298,7 @@ const zhCN = {
       defaultSubject: '客服咨询',
       statusPending: '待处理',
       statusReplied: '已回复',
+      sendFailed: '发送失败，请重试',
       statusClosed: '已关闭',
       contactTitle: '联系客服',
       contactDesc: '描述您遇到的问题，客服将尽快回复您',

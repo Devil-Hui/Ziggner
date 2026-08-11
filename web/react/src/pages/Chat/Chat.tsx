@@ -427,6 +427,15 @@ const LimitWarning = styled.div`
   border-top: 1px solid #ffe0b2;
 `
 
+const SendErrorBar = styled.div`
+  padding: 8px ${Spacing.lg}px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  text-align: center;
+  border-top: 1px solid #fecaca;
+`
+
 // ── Input Area ──
 
 const InputArea = styled.div`
@@ -696,6 +705,7 @@ export default function Chat() {
   const [loading, setLoading] = useState(false)
   const [sending, setSending] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const [sendError, setSendError] = useState('')
   const [uploading, setUploading] = useState(false)
 
   // Message input
@@ -864,6 +874,7 @@ export default function Chat() {
     const atts = inputAttachments
     setInputText('')
     setInputAttachments([])
+    setSendError('')
 
     // 乐观更新：立即插入本地，发送方无需等待 POST + 重拉即可看到自己消息
     const tempId = -Date.now()
@@ -903,6 +914,7 @@ export default function Chat() {
       setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
       setInputText(text)
       setInputAttachments(atts)
+      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -926,7 +938,7 @@ export default function Chat() {
       })
       await loadConversations()
     } catch {
-      // ignore
+      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -1235,7 +1247,7 @@ export default function Chat() {
                 {activeConv.spu_info && (
                   <>
                     <PCtxImg
-                      src={activeConv.spu_info.main_image}
+                      src={activeConv.spu_info.main_image || undefined}
                       alt={activeConv.spu_info.name}
                       onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}
                       onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
@@ -1338,6 +1350,9 @@ export default function Chat() {
                 {t('store.chat.waitingReply')}
               </LimitWarning>
             )}
+
+            {/* 发送失败提示 */}
+            {sendError && <SendErrorBar>{sendError}</SendErrorBar>}
 
             {activeConv.status !== 'closed' && (
               <InputArea>

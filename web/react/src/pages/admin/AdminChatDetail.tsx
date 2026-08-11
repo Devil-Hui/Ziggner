@@ -691,6 +691,15 @@ const LoadingMore = styled.div`
   font-size: 13px;
 `
 
+const SendErrorBar = styled.div`
+  padding: 8px ${Spacing.lg}px;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  text-align: center;
+  border-top: 1px solid #fecaca;
+`
+
 const LoadOlderBtn = styled.button`
   border: 1px solid ${Color.border.light};
   background: ${Color.bg.card};
@@ -881,6 +890,7 @@ export default function AdminChatDetail() {
   const [sending, setSending] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [loadingOlder, setLoadingOlder] = useState(false)
+  const [sendError, setSendError] = useState('')
 
   // Virtual scroll
   const virtuosoRef = useRef<VirtuosoHandle>(null)
@@ -1057,6 +1067,7 @@ export default function AdminChatDetail() {
     const atts = inputAttachments
     setInputText('')
     setInputAttachments([])
+    setSendError('')
 
     // 乐观更新：立即把消息插入本地，消除「发送后等待 POST + loadDetail」的卡顿感
     const tempId = -Date.now()
@@ -1094,6 +1105,7 @@ export default function AdminChatDetail() {
       setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
       setInputText(text)
       setInputAttachments(atts)
+      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -1121,7 +1133,7 @@ export default function AdminChatDetail() {
       setProductSearchQuery('')
       setProductResults([])
     } catch {
-      // ignore
+      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }
@@ -1404,7 +1416,7 @@ export default function AdminChatDetail() {
               {activeConv.spu_info && (
                 <CtxProduct onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
                   <CtxProductImg
-                    src={activeConv.spu_info.main_image}
+                    src={activeConv.spu_info.main_image || undefined}
                     alt={activeConv.spu_info.name}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
                   />
@@ -1506,6 +1518,9 @@ export default function AdminChatDetail() {
                 <Icon name="chevron-down" />
               </ScrollToBottomFab>
             </MessageListContainer>
+
+            {/* 发送失败提示 */}
+            {sendError && <SendErrorBar>{sendError}</SendErrorBar>}
 
             {activeConv.status !== 'closed' && (
               <InputArea>

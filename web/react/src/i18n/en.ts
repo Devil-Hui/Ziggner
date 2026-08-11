@@ -1301,6 +1301,7 @@ const en = {
       defaultSubject: 'Customer Support',
       statusPending: 'Pending',
       statusReplied: 'Replied',
+      sendFailed: 'Failed to send, please retry',
       statusClosed: 'Closed',
       contactTitle: 'Contact Support',
       contactDesc: 'Describe your issue, we will respond shortly',

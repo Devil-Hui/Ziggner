@@ -256,7 +256,7 @@ export default function ProductCard({ product, loading = false, imageError = fal
             </BrokenImgPlaceholder>
           ) : (
             <ThumbImg
-              src={product.main_image}
+              src={product.main_image || undefined}
               alt={product.name}
               loading="lazy"
               onError={() => setImgErr(true)}
