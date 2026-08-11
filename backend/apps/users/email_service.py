@@ -491,8 +491,21 @@ class EmailVerifyService:
         return _code_cache.get(f'email_verify_email:{verify_id}') or ''
 
     @staticmethod
-    def verify_code(verify_id: str, code: str) -> bool:
-        """校验验证码，一次性使用；每 verify_id 最多尝试 5 次，超限即销毁（防暴破）"""
+    def verify_code(verify_id: str, code: str, consume: bool = True) -> bool:
+        """校验验证码。
+
+        Args:
+            verify_id: 发送验证码时返回的 verify_id
+            code: 用户输入的验证码
+            consume: True=校验成功后立即销毁（注册等一次性场景）；
+                     False=仅校验不销毁（管理员登录等需容错场景，后续调 consume_code 显式消费）
+
+        安全保障：
+            - 验证码 10 分钟自动过期（Redis TTL）
+            - 每 verify_id 最多尝试 5 次，超限自动销毁（防暴破）
+            - 发新码时旧码立即作废
+            - 60s 发送频率限制 + 全局日额度限制
+        """
         key = f'email_verify:{verify_id}'
         stored = _code_cache.get(key)
         if stored is None:
@@ -504,10 +517,18 @@ class EmailVerifyService:
             if attempts >= _cfg.get('VERIFICATION_MAX_ATTEMPTS', 5):
                 _code_cache.delete(key)  # 超限销毁验证码
             return False
-        _code_cache.delete(key)
-        # 校验成功后清除活跃指针（后续发新码无需再作废）
-        _code_cache.delete(EmailVerifyService._active_key(EmailVerifyService.get_verify_email(verify_id)))
+        if consume:
+            EmailVerifyService.consume_code(verify_id)
         return True
+
+    @staticmethod
+    def consume_code(verify_id: str) -> None:
+        """显式消费验证码（登录成功后调用，使验证码不可再用于后续请求）"""
+        _code_cache.delete(f'email_verify:{verify_id}')
+        # 清除活跃指针（后续发新码无需再作废）
+        email = EmailVerifyService.get_verify_email(verify_id)
+        if email:
+            _code_cache.delete(EmailVerifyService._active_key(email))
 
     @staticmethod
     def send_admin_verify_code(email: str) -> dict:

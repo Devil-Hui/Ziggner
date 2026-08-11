@@ -75,7 +75,8 @@ class AdminLoginView(PublicApiView):
         if EmailVerifyService.get_verify_email(verify_id) != email:
             return Response({'detail': '验证码与邮箱不匹配'}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not EmailVerifyService.verify_code(verify_id, code):
+        # 邮箱验证码校验（consume=False：仅校验不销毁，允许密码输错后重试同一验证码）
+        if not EmailVerifyService.verify_code(verify_id, code, consume=False):
             return Response({'detail': '验证码错误或已过期'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Cloudflare Turnstile 人机验证
@@ -109,6 +110,9 @@ class AdminLoginView(PublicApiView):
 
         if not user.check_password(password):
             return Response({'detail': '邮箱或密码错误'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 全部校验通过 → 消费验证码（使其不可再用）
+        EmailVerifyService.consume_code(verify_id)
 
         refresh = RefreshToken.for_user(user)
         response = Response({'authenticated': True})
