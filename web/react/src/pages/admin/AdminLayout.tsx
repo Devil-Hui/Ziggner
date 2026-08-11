@@ -8,7 +8,6 @@ import { adminAPI } from '../../api/admin'
 import { adminChatAPI } from '../../api/chat'
 import { useAllowedMenuPaths } from '../../components/admin/ProtectedRoute'
 import NotificationBell from '../../components/admin/NotificationBell'
-import NotificationFloat from '../../components/admin/common/NotificationFloat'
 import { Icon } from '../../components/admin/common/Icon'
 
 // ── Layout ──
