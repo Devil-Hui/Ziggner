@@ -113,29 +113,6 @@ services:
       redis:
         condition: service_healthy
 
-  frontend:
-    hostname: frontend
-    build:
-      context: ../web/react
-      dockerfile: Dockerfile.dev
-    environment:
-      # 容器内通过 compose 服务名访问后端，不能用 localhost（那是 frontend 自己）
-      VITE_PROXY_TARGET: http://web:8000
-      # WebSocket 走 daphne(ASGI):8001（gunicorn:8000 是 WSGI 不支持 WS）
-      VITE_WS_PROXY_TARGET: http://web:8001
-      # Windows/mac 共享文件系统下保证 HMR 文件监听生效
-      CHOKIDAR_USEPOLLING: "true"
-    ports:
-      - "12700:12700"
-    volumes:
-      - ../web/react:/app
-      - /app/node_modules   # 匿名卷：保留镜像内装好的依赖，不被源码挂载覆盖
-    depends_on:
-      - web
-    mem_limit: 640m
-    memswap_limit: 640m
-    cpus: 0.2
-
   # Cloudflare Tunnel 本地源站入口：443 HTTPS 反代 /api/→web:8000、/ws/→web:8001
   # （自签证书在 deploy/nginx-certs/，不入库；cloudflared noTLSVerify 连接）
   tunnel-nginx:
