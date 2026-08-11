@@ -20,6 +20,7 @@ export interface ProductCardData {
   price: string
   order_status?: string
   order_id?: number
+  order_no?: string
 }
 
 export interface ProductCardProps {
@@ -280,8 +281,8 @@ export default function ProductCard({ product, loading = false, imageError = fal
           查看商品
         </ActionBtn>
         <ActionBtn onClick={() => {
-          if (product.order_id) {
-            navigate(`/profile/orders/${product.order_id}`)
+          if (product.order_no) {
+            navigate(`/order/${product.order_no}`)
           }
         }}>
           查看订单

@@ -114,6 +114,17 @@ def _resolve_card_data(card_data: dict) -> dict:
             resolved['status'] = card_data.get('status', 'unknown')
             resolved['price'] = card_data.get('price', '0')
 
+    # 解析 order_id -> order_no，便于前端「查看订单」跳转 /order/:order_no
+    order_id = card_data.get('order_id')
+    if order_id:
+        try:
+            from apps.orders.models import Order
+            order = Order.objects.filter(id=order_id).only('order_no').first()
+            if order:
+                resolved['order_no'] = order.order_no
+        except Exception:
+            pass
+
     return resolved
 
 

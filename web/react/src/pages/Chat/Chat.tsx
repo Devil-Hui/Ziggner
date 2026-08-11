@@ -222,6 +222,106 @@ const WSIndicator = styled.span<{ $status: WSStatus }>`
   }
 `
 
+// ── 顶部上下文上悬窗：当前咨询商品（用户选定）+ 关联订单（参考拼多多买家端客服）──
+const ORDER_STATUS_COLOR: Record<string, { bg: string; color: string }> = {
+  pending_payment: { bg: '#fff7ed', color: '#f59e0b' },
+  paid: { bg: '#eff6ff', color: '#2563eb' },
+  shipped: { bg: '#ecfdf5', color: '#059669' },
+  delivered: { bg: '#ecfeff', color: '#0891b2' },
+  completed: { bg: '#ecfdf5', color: '#047857' },
+  cancelled: { bg: '#f3f4f6', color: '#9ca3af' },
+  refunding: { bg: '#fef2f2', color: '#e74c3c' },
+}
+
+const ProductContextBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px ${Spacing.lg}px;
+  background: linear-gradient(180deg, #fcfcfc, ${Color.bg.card});
+  border-bottom: 1px solid ${Color.border.light};
+`
+
+const PCtxImg = styled.img`
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+  cursor: pointer;
+`
+
+const PCtxInfo = styled.div`
+  min-width: 0;
+  cursor: pointer;
+`
+
+const PCtxLabel = styled.div`
+  font-size: 11px;
+  color: ${Color.text.muted};
+  line-height: 1.3;
+`
+
+const PCtxName = styled.div`
+  font-size: 13px;
+  color: #333;
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const PCtxPrice = styled.div`
+  font-size: 14px;
+  font-weight: 600;
+  color: #e74c3c;
+  margin-left: 4px;
+`
+
+const PCtxSendBtn = styled.button`
+  border: 1px solid #07c160;
+  background: #07c160;
+  color: #fff;
+  border-radius: ${Radius.sm}px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background ${Transition.fast};
+
+  &:hover:not(:disabled) { background: #06ad56; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`
+
+const PCtxOrder = styled.button`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid ${Color.border.light};
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
+  text-align: left;
+
+  &:hover { border-color: #07c160; box-shadow: 0 2px 6px rgba(7,193,96,0.12); }
+`
+
+const PCtxOrderMeta = styled.div`
+  font-size: 12px;
+  color: #333;
+`
+
+const PCtxOrderSub = styled.div`
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+`
+
 // ── Filter tabs ──
 
 const FilterTabs = styled.div`
@@ -785,6 +885,25 @@ export default function Chat() {
     }
   }
 
+  // ── Send current consulting product card to agent（拼多多式「发给客服」）──
+  const handleSendProductCard = async (spu: { id: number; name: string; main_image: string; price: string }) => {
+    if (!activeId) return
+    try {
+      setSending(true)
+      const resp = await chatAPI.sendMessage(activeId, {
+        content: '',
+        msg_type: 'product_card',
+        product_card: { id: spu.id, name: spu.name, main_image: spu.main_image, price: spu.price },
+      })
+      setActiveConv(resp)
+      await loadConversations()
+    } catch {
+      // ignore
+    } finally {
+      setSending(false)
+    }
+  }
+
   // ── Close conversation ──
   const handleClose = async () => {
     if (!activeId) return
@@ -1059,6 +1178,48 @@ export default function Chat() {
                 )}
               </ChatActions>
             </ChatHeader>
+
+            {/* 顶部上下文上悬窗：当前咨询商品（用户选定）+ 关联订单 */}
+            {(activeConv.spu_info || (activeConv.order_info && activeConv.order_info.length > 0)) && (
+              <ProductContextBar>
+                {activeConv.spu_info && (
+                  <>
+                    <PCtxImg
+                      src={activeConv.spu_info.main_image}
+                      alt={activeConv.spu_info.name}
+                      onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}
+                      onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
+                    />
+                    <PCtxInfo onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
+                      <PCtxLabel>咨询商品</PCtxLabel>
+                      <PCtxName>{activeConv.spu_info.name}</PCtxName>
+                    </PCtxInfo>
+                    <PCtxPrice>¥{activeConv.spu_info.price}</PCtxPrice>
+                    <PCtxSendBtn onClick={() => handleSendProductCard(activeConv.spu_info!)} disabled={sending}>
+                      发给客服
+                    </PCtxSendBtn>
+                  </>
+                )}
+
+                {activeConv.order_info && activeConv.order_info.length > 0 && (() => {
+                  const o = activeConv.order_info![0]
+                  const st = ORDER_STATUS_COLOR[o.status] || { bg: '#f3f4f6', color: '#666' }
+                  return (
+                    <PCtxOrder onClick={() => navigate(`/order/${o.order_no}`)}>
+                      <div>
+                        <PCtxOrderMeta>关联订单 {o.order_no}</PCtxOrderMeta>
+                        <PCtxOrderSub>
+                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                        </PCtxOrderSub>
+                      </div>
+                      <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
+                        {o.status_label}
+                      </span>
+                    </PCtxOrder>
+                  )
+                })()}
+              </ProductContextBar>
+            )}
 
             {/* Filter tabs */}
             <FilterTabs>

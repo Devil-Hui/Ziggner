@@ -370,6 +370,119 @@ const ActionBtn = styled.button<{ $variant?: 'primary' | 'danger' }>`
   }
 `
 
+// ── 顶部上下文上悬窗：用户 + 当前咨询商品 + 关联订单（参考京东/拼多多客服工作台）──
+// 常驻于对话区顶部，对话滚动时不丢失，替代原先只在右侧/标题里的零散信息
+const ContextBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px ${Spacing.lg}px;
+  background: linear-gradient(180deg, #fcfcfc, ${Color.bg.card});
+  border-bottom: 1px solid ${Color.border.light};
+`
+
+const CtxUser = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  border-right: 1px solid ${Color.border.light};
+`
+
+const CtxAvatar = styled.div`
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: ${Color.primary};
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+`
+
+const CtxUserName = styled.span`
+  font-size: 13px;
+  font-weight: 600;
+  color: ${Color.text.heading};
+`
+
+const CtxLabel = styled.span`
+  font-size: 11px;
+  color: ${Color.text.muted};
+  display: block;
+  line-height: 1.3;
+`
+
+const CtxProduct = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #f7f7f8;
+  transition: background ${Transition.fast};
+
+  &:hover { background: #f0f0f1; }
+`
+
+const CtxProductImg = styled.img`
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
+`
+
+const CtxProductName = styled.div`
+  font-size: 13px;
+  color: #333;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
+const CtxProductPrice = styled.div`
+  font-size: 13px;
+  font-weight: 600;
+  color: #e74c3c;
+`
+
+const CtxOrder = styled.button`
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid ${Color.border.light};
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
+  text-align: left;
+
+  &:hover {
+    border-color: #07c160;
+    box-shadow: 0 2px 6px rgba(7,193,96,0.12);
+  }
+`
+
+const CtxOrderMeta = styled.div`
+  font-size: 12px;
+  color: #333;
+`
+
+const CtxOrderSub = styled.div`
+  font-size: 11px;
+  color: #999;
+  margin-top: 2px;
+`
+
 // ── Filter tabs ──
 
 const FilterTabs = styled.div`
@@ -1240,6 +1353,48 @@ export default function AdminChatDetail() {
               </DetailActions>
             </DetailHeader>
 
+            {/* 顶部上下文上悬窗：咨询客户 + 当前咨询商品 + 关联订单 */}
+            <ContextBar>
+              <CtxUser>
+                <CtxAvatar>{(activeConv.user?.username || '?').slice(0, 1)}</CtxAvatar>
+                <div>
+                  <CtxLabel>咨询客户</CtxLabel>
+                  <CtxUserName>{activeConv.user?.username}</CtxUserName>
+                </div>
+              </CtxUser>
+
+              {activeConv.spu_info && (
+                <CtxProduct onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
+                  <CtxProductImg
+                    src={activeConv.spu_info.main_image}
+                    alt={activeConv.spu_info.name}
+                    onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
+                  />
+                  <div>
+                    <CtxLabel>咨询商品</CtxLabel>
+                    <CtxProductName>{activeConv.spu_info.name}</CtxProductName>
+                  </div>
+                  <CtxProductPrice>¥{activeConv.spu_info.price}</CtxProductPrice>
+                </CtxProduct>
+              )}
+
+              {activeConv.order_info && activeConv.order_info.length > 0 && (() => {
+                const o = activeConv.order_info![0]
+                const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
+                return (
+                  <CtxOrder onClick={() => navigate(`/order/${o.order_no}`)}>
+                    <div>
+                      <CtxOrderMeta>{o.order_no}</CtxOrderMeta>
+                      <CtxOrderSub>
+                        {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                      </CtxOrderSub>
+                    </div>
+                    <OrderStatusTag style={{ background: st.bg, color: st.color }}>{o.status_label}</OrderStatusTag>
+                  </CtxOrder>
+                )
+              })()}
+            </ContextBar>
+
             {isHandledByOther && (
               <LockBanner>
                 <Icon name="lock" size={16} />
@@ -1377,7 +1532,7 @@ export default function AdminChatDetail() {
                 <OrderCard
                   key={o.order_id}
                   $active={false}
-                  onClick={() => navigate(`/profile/orders/${o.order_id}`)}
+                  onClick={() => navigate(`/order/${o.order_no}`)}
                 >
                   <OrderRow>
                     <OrderNo>{o.order_no}</OrderNo>
