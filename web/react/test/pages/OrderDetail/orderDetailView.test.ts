@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getOrderAmounts, getOrderItemImage, markOrderCancelled } from './orderDetailView'
+import { getOrderAmounts, getOrderItemImage, markOrderCancelled } from '@/pages/OrderDetail/orderDetailView'
 
 describe('order detail view model', () => {
   it('uses the pre-discount total as subtotal and actual_amount as payable total', () => {

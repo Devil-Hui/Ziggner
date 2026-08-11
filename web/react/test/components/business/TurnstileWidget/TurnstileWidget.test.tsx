@@ -2,7 +2,7 @@
 
 import { cleanup, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import TurnstileWidget from './TurnstileWidget'
+import TurnstileWidget from '@/components/business/TurnstileWidget/TurnstileWidget'
 
 const TEST_SITE_KEY = '1x00000000000000000000AA'
 const TEST_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX'

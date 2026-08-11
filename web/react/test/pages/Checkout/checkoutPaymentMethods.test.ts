@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getCheckoutPaymentMethods } from './checkoutPaymentMethods'
+import { getCheckoutPaymentMethods } from '@/pages/Checkout/checkoutPaymentMethods'
 
 describe('getCheckoutPaymentMethods', () => {
   it('exposes the simulator only when the environment explicitly enables it', () => {
@@ -8,4 +8,3 @@ describe('getCheckoutPaymentMethods', () => {
     expect(getCheckoutPaymentMethods(false)).not.toContain('mock')
   })
 })
-

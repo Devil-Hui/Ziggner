@@ -3,8 +3,8 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { I18nProvider } from '../../../i18n'
-import AppErrorBoundary from './AppErrorBoundary'
+import { I18nProvider } from '@/i18n'
+import AppErrorBoundary from '@/components/common/AppErrorBoundary/AppErrorBoundary'
 
 function BrokenPage(): never {
   throw new Error('internal database address must never be rendered')

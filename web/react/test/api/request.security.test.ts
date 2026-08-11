@@ -2,13 +2,13 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const source = readFileSync(fileURLToPath(new URL('./request.ts', import.meta.url)), 'utf8')
+const source = readFileSync(fileURLToPath(new URL('../../src/api/request.ts', import.meta.url)), 'utf8')
 const adminContext = readFileSync(
-  fileURLToPath(new URL('../store/AdminAuthContext.tsx', import.meta.url)),
+  fileURLToPath(new URL('../../src/store/AdminAuthContext.tsx', import.meta.url)),
   'utf8',
 )
 const chatSource = readFileSync(
-  fileURLToPath(new URL('../pages/Chat/Chat.tsx', import.meta.url)),
+  fileURLToPath(new URL('../../src/pages/Chat/Chat.tsx', import.meta.url)),
   'utf8',
 )
 

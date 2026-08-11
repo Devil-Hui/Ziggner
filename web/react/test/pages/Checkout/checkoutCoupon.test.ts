@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import type { PublicCoupon, UserCoupon } from '../../api/public'
+import type { PublicCoupon, UserCoupon } from '@/api/public'
 import {
   buildCheckoutCouponSelection,
   calculateCouponDiscount,
   getSelectableUserCoupons,
-} from './checkoutCoupon'
+} from '@/pages/Checkout/checkoutCoupon'
 
 function coupon(overrides: Partial<PublicCoupon> = {}): PublicCoupon {
   return {

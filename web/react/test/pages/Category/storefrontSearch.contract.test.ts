@@ -3,12 +3,12 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
 const navigation = readFileSync(
-  fileURLToPath(new URL('../../components/layout/Navigation/Navigation.tsx', import.meta.url)),
+  fileURLToPath(new URL('../../../src/components/layout/Navigation/Navigation.tsx', import.meta.url)),
   'utf8',
 )
-const category = readFileSync(fileURLToPath(new URL('./Category.tsx', import.meta.url)), 'utf8')
+const category = readFileSync(fileURLToPath(new URL('../../../src/pages/Category/Category.tsx', import.meta.url)), 'utf8')
 const productsHook = readFileSync(
-  fileURLToPath(new URL('../../hooks/useProducts.ts', import.meta.url)),
+  fileURLToPath(new URL('../../../src/hooks/useProducts.ts', import.meta.url)),
   'utf8',
 )
 

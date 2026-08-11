@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { addProductToCart } from './productCartAction'
+import { addProductToCart } from '@/pages/ProductDetail/productCartAction'
 
 describe('addProductToCart', () => {
   it('shows success only after the persisted cart has been refreshed', async () => {

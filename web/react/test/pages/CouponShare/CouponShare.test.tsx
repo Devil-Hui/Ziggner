@@ -4,29 +4,29 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
-import { I18nProvider } from '../../i18n'
+import { I18nProvider } from '@/i18n'
 
 const mocks = vi.hoisted(() => ({
   getCouponDetail: vi.fn(),
   claimCoupon: vi.fn(),
 }))
 
-vi.mock('../../api/public', () => ({
+vi.mock('@/api/public', () => ({
   publicAPI: {
     getCouponDetail: mocks.getCouponDetail,
     claimCoupon: mocks.claimCoupon,
   },
 }))
 
-vi.mock('../../store/UserContext', () => ({
+vi.mock('@/store/UserContext', () => ({
   useUser: () => ({ isLoggedIn: true }),
 }))
 
-vi.mock('../../components/layout/PageLayout/PageLayout', () => ({
+vi.mock('@/components/layout/PageLayout/PageLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-import CouponShare from './CouponShare'
+import CouponShare from '@/pages/CouponShare/CouponShare'
 
 afterEach(() => {
   cleanup()

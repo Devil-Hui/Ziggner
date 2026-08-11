@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { optionalMediaUrl } from './mediaUrl'
+import { optionalMediaUrl } from '@/utils/mediaUrl'
 
 describe('optionalMediaUrl', () => {
   it('preserves usable URLs and removes blank values before rendering media', () => {

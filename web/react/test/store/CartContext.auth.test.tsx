@@ -7,17 +7,17 @@ const mocks = vi.hoisted(() => ({
   getCart: vi.fn(),
 }))
 
-vi.mock('../api/public', () => ({
+vi.mock('@/api/public', () => ({
   publicAPI: {
     getCart: mocks.getCart,
   },
 }))
 
-vi.mock('./UserContext', () => ({
+vi.mock('@/store/UserContext', () => ({
   useUser: () => ({ isLoggedIn: true, isLoading: false }),
 }))
 
-import { CartProvider, useCart } from './CartContext'
+import { CartProvider, useCart } from '@/store/CartContext'
 
 function CartProbe() {
   const { count } = useCart()

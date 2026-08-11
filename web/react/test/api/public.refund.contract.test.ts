@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ post: vi.fn() }))
 
-vi.mock('./request', () => ({
+vi.mock('@/api/request', () => ({
   get: vi.fn(),
   post: mocks.post,
   put: vi.fn(),
@@ -10,7 +10,7 @@ vi.mock('./request', () => ({
   del: vi.fn(),
 }))
 
-import { publicAPI } from './public'
+import { publicAPI } from '@/api/public'
 
 beforeEach(() => mocks.post.mockReset())
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { toCartItem } from './cartMapper'
+import { toCartItem } from '@/store/cartMapper'
 
 describe('toCartItem', () => {
   it('normalizes the decimal price returned by Django into a finite number', () => {

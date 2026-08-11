@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { getSafeLoginRedirect } from './loginRedirect'
+import { getSafeLoginRedirect } from '@/pages/Auth/loginRedirect'
 
 describe('getSafeLoginRedirect', () => {
   it('keeps an internal coupon share URL', () => {

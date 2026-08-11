@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { patch, put } from './request'
-import { publicAPI } from './public'
+import { patch, put } from '@/api/request'
+import { publicAPI } from '@/api/public'
 
-vi.mock('./request', () => ({
+vi.mock('@/api/request', () => ({
   get: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),

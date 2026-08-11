@@ -10,6 +10,7 @@ deploy/nginx-certs/
 # Node
 node_modules/
 web/react/node_modules/
+web/react/.wrangler/
 
 # Python
 __pycache__/

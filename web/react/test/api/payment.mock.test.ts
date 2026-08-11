@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ post: vi.fn() }))
 
-vi.mock('./request', () => ({
+vi.mock('@/api/request', () => ({
   get: vi.fn(),
   post: mocks.post,
 }))
 
-import { paymentAPI } from './payment'
+import { paymentAPI } from '@/api/payment'
 
 beforeEach(() => mocks.post.mockReset())
 

@@ -125,7 +125,8 @@ api.interceptors.response.use(
     }
     const originalRequest = error.config as InternalAxiosRequestConfig | undefined
     const isSessionEndpoint = originalRequest?.url?.includes('/users/session/')
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isSessionEndpoint) {
+    const isAuthEndpoint = isSessionEndpoint || originalRequest?.url?.includes('/users/login/') || originalRequest?.url?.includes('/users/register/')
+    if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       if (await refreshBrowserSession()) return api(originalRequest)
     }

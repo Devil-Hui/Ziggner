@@ -6,19 +6,19 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 const mocks = vi.hoisted(() => ({ completeMock: vi.fn() }))
 
-vi.mock('../../api/payment', () => ({
+vi.mock('@/api/payment', () => ({
   paymentAPI: { completeMock: mocks.completeMock },
 }))
 
-vi.mock('../../i18n', () => ({
+vi.mock('@/i18n', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
-vi.mock('../../components/layout/PageLayout/PageLayout', () => ({
+vi.mock('@/components/layout/PageLayout/PageLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-import MockPayment from './MockPayment'
+import MockPayment from '@/pages/MockPayment/MockPayment'
 
 afterEach(() => {
   cleanup()

@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
-const loginForm = readFileSync(fileURLToPath(new URL('./LoginForm.tsx', import.meta.url)), 'utf8')
-const registerForm = readFileSync(fileURLToPath(new URL('./RegisterForm.tsx', import.meta.url)), 'utf8')
+const loginForm = readFileSync(fileURLToPath(new URL('../../../src/pages/Auth/LoginForm.tsx', import.meta.url)), 'utf8')
+const registerForm = readFileSync(fileURLToPath(new URL('../../../src/pages/Auth/RegisterForm.tsx', import.meta.url)), 'utf8')
 const userContext = readFileSync(
-  fileURLToPath(new URL('../../store/UserContext.tsx', import.meta.url)),
+  fileURLToPath(new URL('../../../src/store/UserContext.tsx', import.meta.url)),
   'utf8',
 )
 const publicApi = readFileSync(
-  fileURLToPath(new URL('../../api/public.ts', import.meta.url)),
+  fileURLToPath(new URL('../../../src/api/public.ts', import.meta.url)),
   'utf8',
 )
 
