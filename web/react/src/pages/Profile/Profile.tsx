@@ -2,22 +2,25 @@ import { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { Container } from '../../components/layout/PageLayout/shared'
-import { Color, Radius, Spacing, FontSize, Breakpoint } from '../../theme/tokens'
+import { Color, Spacing, Radius, FontSize, Breakpoint, Shadow } from '../../theme/tokens'
+import Button from '../../components/common/Button/Button'
 import { useUser } from '../../store/UserContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 import { reviewAPI, type ReviewItem } from '../../api/review'
 
-// ── SHEIN-style 个人中心布局 ──
-// 左窄右宽，白底灰边，干净留白
+// 配色对齐商城设计令牌（Ziggner Blue）
+const BRAND = {
+  red: Color.primary,
+  light: Color.primaryLight,
+}
 
-const BRAND_RED = '#e74c3c'
-
-const ProfileGrid = styled.div`
+// ── layout ──
+const Shell = styled.div`
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: ${Spacing.xxl}px;
+  grid-template-columns: 240px 1fr;
+  gap: 22px;
   align-items: start;
   max-width: 1100px;
   margin: 0 auto;
@@ -27,30 +30,34 @@ const ProfileGrid = styled.div`
   }
 `
 
-// ── 左栏 ──
-
-const LeftSidebar = styled.aside`
-  position: sticky;
-  top: ${Spacing.xxl}px;
-  display: flex;
-  flex-direction: column;
-  gap: ${Spacing.md}px;
-`
-
-const SidebarCard = styled.div`
+// ── hero ──
+const Hero = styled.div`
   background: ${Color.bg.card};
   border-radius: ${Radius.lg}px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  padding: ${Spacing.xxl}px;
+  padding: 24px 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  color: ${Color.text.heading};
+  border: 1px solid ${Color.border.light};
+  box-shadow: ${Shadow.card};
+  margin-bottom: 22px;
 `
 
-const AvatarLarge = styled.div`
-  width: 80px;
-  height: 80px;
+const Avatar = styled.div`
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
-  background: #e8e8e8;
-  margin: 0 auto ${Spacing.md}px;
+  border: 3px solid ${Color.primaryLight};
+  background: ${Color.primaryLight};
   overflow: hidden;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: ${Color.primary};
 
   img {
     width: 100%;
@@ -59,160 +66,226 @@ const AvatarLarge = styled.div`
   }
 `
 
-const UserNickname = styled.div`
-  text-align: center;
-  font-size: ${FontSize.lg}px;
-  font-weight: 600;
-  color: ${Color.text.heading};
-  margin-bottom: ${Spacing.xs}px;
+const HeroInfo = styled.div`
+  flex: 1;
+  min-width: 0;
 `
 
-const UserEmail = styled.div`
-  text-align: center;
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
-  margin-bottom: ${Spacing.lg}px;
+const HeroName = styled.div`
+  font-size: 20px;
+  font-weight: 700;
+  margin-bottom: 4px;
 `
 
-const SidebarDivider = styled.div`
-  border-top: 1px solid ${Color.border.light};
-  margin: ${Spacing.md}px 0;
+const HeroEmail = styled.div`
+  font-size: 13px;
+  opacity: 0.85;
 `
 
-const SidebarLink = styled.div`
-  display: flex;
+const HeroBadge = styled.div`
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  padding: ${Spacing.sm}px 0;
-  font-size: ${FontSize.base}px;
-  color: ${Color.text.body};
+  gap: 4px;
+  margin-top: 8px;
+  background: ${Color.primaryLight};
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${Color.primary};
+`
+
+const HeroLogout = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.medium};
+  color: ${Color.text.secondary};
+  padding: 8px 14px;
+  border-radius: 20px;
   cursor: pointer;
-  transition: color 0.15s;
+  font-size: 13px;
+  transition: all 0.15s;
+  white-space: nowrap;
 
   &:hover {
-    color: ${BRAND_RED};
+    border-color: ${Color.primary};
+    color: ${Color.primary};
   }
 `
 
-const AddressSummary = styled.div`
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
-  margin-top: ${Spacing.xs}px;
-  line-height: 1.5;
+// ── left nav ──
+const Nav = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: ${Color.bg.card};
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 10px;
+  position: sticky;
+  top: ${Spacing.xxl}px;
+
+  @media (max-width: ${Breakpoint.mobile}px) {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
 `
 
-const LogoutBtn = styled.button`
+const NavItem = styled.button<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border: none;
   width: 100%;
-  padding: ${Spacing.sm + 2}px;
-  margin-top: ${Spacing.sm}px;
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.sm}px;
-  background: transparent;
-  color: ${Color.text.secondary};
+  background: ${props => (props.$active ? BRAND.light : 'transparent')};
+  border-radius: 10px;
   cursor: pointer;
-  font-size: ${FontSize.base}px;
+  text-align: left;
+  font-size: 14px;
+  color: ${props => (props.$active ? BRAND.red : Color.text.secondary)};
+  font-weight: ${props => (props.$active ? 600 : 400)};
+  border-left: 3px solid ${props => (props.$active ? BRAND.red : 'transparent')};
   transition: all 0.15s;
 
   &:hover {
-    border-color: ${BRAND_RED};
-    color: ${BRAND_RED};
+    background: ${props => (props.$active ? BRAND.light : '#f7f7f7')};
+    color: ${BRAND.red};
+  }
+
+  @media (max-width: ${Breakpoint.mobile}px) {
+    width: auto;
+    flex: 1 1 calc(50% - 4px);
   }
 `
 
-// ── 右栏 ──
+const AddressCard = styled.div`
+  background: ${Color.bg.card};
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  padding: 16px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.15s;
 
-const RightContent = styled.section`
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+`
+
+const AddressText = styled.div`
+  font-size: 13px;
+  color: #444;
+`
+
+const AddressSub = styled.div`
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+`
+
+// ── right content ──
+const Right = styled.section`
   min-height: 60vh;
 `
 
-const TabBar = styled.div`
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid ${Color.border.light};
-  margin-bottom: ${Spacing.xxl}px;
+const StatusRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 22px;
+
+  @media (max-width: ${Breakpoint.mobile}px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
 `
 
-const TabItem = styled.button<{ $active?: boolean }>`
-  padding: ${Spacing.md}px ${Spacing.xl}px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid ${props => props.$active ? BRAND_RED : 'transparent'};
-  margin-bottom: -2px;
-  color: ${props => props.$active ? BRAND_RED : Color.text.secondary};
-  font-size: ${FontSize.base}px;
-  font-weight: ${props => props.$active ? 600 : 400};
+const StatusTile = styled.button<{ $active?: boolean }>`
+  background: ${Color.bg.card};
+  border: 1px solid ${props => (props.$active ? BRAND.red : Color.border.light)};
+  border-radius: 14px;
+  padding: 16px 8px;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: ${props => (props.$active ? BRAND.red : Color.text.heading)};
+  font-size: 12.5px;
+  font-weight: ${props => (props.$active ? 600 : 500)};
+  transition: all 0.15s;
+
+  svg {
+    width: 24px;
+    height: 24px;
+  }
 
   &:hover {
-    color: ${BRAND_RED};
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    transform: translateY(-2px);
   }
 `
 
 const ContentCard = styled.div`
   background: ${Color.bg.card};
-  border-radius: ${Radius.lg}px;
+  border-radius: 14px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  padding: ${Spacing.xxl}px;
+  padding: 24px;
 `
 
 const ModuleTitle = styled.div`
   font-size: ${FontSize.lg}px;
   font-weight: 600;
   color: ${Color.text.heading};
-  margin-bottom: ${Spacing.xl}px;
+  margin-bottom: 18px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 `
 
-// ── 订单筛选按钮 ──
-
-const OrderBtnGroup = styled.div`
+const PillGroup = styled.div`
   display: flex;
-  gap: ${Spacing.sm}px;
-  margin-bottom: ${Spacing.xl}px;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 `
 
-const OrderTypeBtn = styled.button<{ $active?: boolean }>`
-  flex: 1;
-  padding: ${Spacing.sm + 2}px 0;
-  border: 1px solid ${props => props.$active ? BRAND_RED : Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  background: ${props => props.$active ? BRAND_RED : Color.bg.card};
-  color: ${props => props.$active ? Color.text.inverse : Color.text.body};
+const Pill = styled.button<{ $active?: boolean }>`
+  padding: 6px 16px;
+  border-radius: 18px;
   cursor: pointer;
-  font-size: ${FontSize.sm}px;
+  font-size: 12.5px;
+  border: 1px solid ${props => (props.$active ? BRAND.red : Color.border.medium)};
+  background: ${props => (props.$active ? BRAND.red : '#fff')};
+  color: ${props => (props.$active ? '#fff' : Color.text.secondary)};
   transition: all 0.15s;
-  white-space: nowrap;
 
   &:hover {
-    border-color: ${BRAND_RED};
-    color: ${props => props.$active ? Color.text.inverse : BRAND_RED};
+    border-color: ${BRAND.red};
+    color: ${props => (props.$active ? '#fff' : BRAND.red)};
   }
 `
-
-const FilterSpacer = styled.div`
-  height: ${Spacing.xs}px;
-`
-
-// ── 订单列表项 ──
 
 const OrderItem = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${Spacing.md}px ${Spacing.lg}px;
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.md}px;
-  margin-bottom: ${Spacing.sm}px;
+  padding: 14px 16px;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  margin-bottom: 10px;
   cursor: pointer;
   text-align: left;
   transition: all 0.15s;
 
   &:hover {
-    border-color: ${Color.border.medium};
-    background: #fafafa;
+    border-color: ${BRAND.red};
+    background: ${Color.bg.page};
   }
 `
 
@@ -237,7 +310,7 @@ const OrderItemNo = styled.span`
 
 const OrderItemStatus = styled.span`
   font-size: ${FontSize.xs}px;
-  color: ${BRAND_RED};
+  color: ${Color.text.secondary};
 `
 
 const OrderItemMeta = styled.span`
@@ -248,7 +321,7 @@ const OrderItemMeta = styled.span`
 const OrderItemAmount = styled.span`
   font-weight: 600;
   font-size: ${FontSize.base}px;
-  color: ${BRAND_RED};
+  color: ${Color.text.heading};
 `
 
 const OrderItemProducts = styled.div`
@@ -270,8 +343,6 @@ const EmptyState = styled.div`
   font-size: ${FontSize.base}px;
 `
 
-// ── 浏览历史网格 ──
-
 const BrowseGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -283,9 +354,14 @@ const BrowseGrid = styled.div`
 `
 
 const BrowseItem = styled.div`
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.sm}px;
+  border: 1px solid #eee;
+  border-radius: 12px;
   overflow: hidden;
+  transition: all 0.15s;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  }
 `
 
 const ItemImg = styled.div`
@@ -307,8 +383,6 @@ const ItemPrice = styled.div`
   font-weight: 500;
 `
 
-// ── 优惠券网格 ──
-
 const CouponGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -320,15 +394,28 @@ const CouponGrid = styled.div`
 `
 
 const CouponItem = styled.div`
-  border: 1px dashed ${Color.text.muted};
-  border-radius: ${Radius.sm}px;
-  padding: ${Spacing.lg}px;
+  position: relative;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px 16px 16px 22px;
+  background: #fff;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: ${BRAND.red};
+  }
 `
 
 const CouponPrice = styled.div`
   font-size: ${FontSize.xxl}px;
   font-weight: 700;
-  color: ${Color.text.heading};
+  color: ${BRAND.red};
   margin-bottom: ${Spacing.sm}px;
 `
 
@@ -343,24 +430,21 @@ const CouponTime = styled.div`
   color: ${Color.text.muted};
 `
 
-// ── 客服区域 ──
-
 const SupportSection = styled.div`
   text-align: center;
-  padding: ${Spacing.xxxl}px 0;
+  padding: ${Spacing.xxl}px 0;
 `
 
-const SupportIcon = styled.div`
+const SupportIconBox = styled.div`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: #fef2f2;
+  background: ${BRAND.light};
   margin: 0 auto ${Spacing.lg}px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${BRAND_RED};
-  font-size: 28px;
+  color: ${BRAND.red};
 `
 
 const SupportTitle = styled.div`
@@ -375,23 +459,6 @@ const SupportDesc = styled.div`
   color: ${Color.text.secondary};
   margin-bottom: ${Spacing.xl}px;
 `
-
-const SupportBtn = styled.button`
-  padding: ${Spacing.sm + 2}px ${Spacing.xxxl}px;
-  background: ${BRAND_RED};
-  color: #fff;
-  border: none;
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  font-size: ${FontSize.base}px;
-  transition: opacity 0.15s;
-
-  &:hover {
-    opacity: 0.9;
-  }
-`
-
-// ── 登录提示 ──
 
 const LoginPrompt = styled.div`
   background: #fff;
@@ -433,7 +500,6 @@ export default function Profile() {
   const [reviews, setReviews] = useState<ReviewItem[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
 
-  // Fetch orders when tab changes
   useEffect(() => {
     if (!user || activeTab !== 'orders') return
     setOrdersLoading(true)
@@ -443,7 +509,6 @@ export default function Profile() {
     }).catch(() => setOrders([])).finally(() => setOrdersLoading(false))
   }, [activeOrder, paymentFilter, user, activeTab])
 
-  // Fetch reviews when tab changes
   useEffect(() => {
     if (!user || activeTab !== 'reviews') return
     setReviewsLoading(true)
@@ -459,23 +524,12 @@ export default function Profile() {
           <LoginPrompt>
             <LoginTitle>{t('store.profile.signIn')}</LoginTitle>
             <LoginDesc>{t('store.profile.signInDesc')}</LoginDesc>
-            <button
-              onClick={() => navigate('/login')}
-              style={{
-                padding: '12px 32px',
-                background: BRAND_RED,
-                color: '#fff',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '16px',
-              }}
-            >
+            <Button variant="primary" size="lg" onClick={() => navigate('/login')}>
               {t('store.profile.signInBtn')}
-            </button>
-            <p style={{ marginTop: '2vh', fontSize: '1rem', color: '#666' }}>
+            </Button>
+            <p style={{ marginTop: '2vh', fontSize: '1rem', color: Color.text.secondary }}>
               {t('store.profile.noAccount')}{' '}
-              <Link to="/register" style={{ color: BRAND_RED }}>{t('store.profile.signUp')}</Link>
+              <Link to="/register" style={{ color: Color.primary }}>{t('store.profile.signUp')}</Link>
             </p>
           </LoginPrompt>
         </Container>
@@ -484,6 +538,7 @@ export default function Profile() {
   }
 
   const displayName = user.nickname || user.name
+  const initial = (displayName || user.email || '?').charAt(0).toUpperCase()
 
   const orderTabs = [
     { key: 'pending_payment', label: t('store.profile.pendingPayment') },
@@ -499,34 +554,31 @@ export default function Profile() {
     { key: 'unpaid', label: t('store.profile.unpaid') },
   ]
 
+  const navItems: { key: string; label: string; icon: JSX.Element; tab?: ProfileTab; route?: string }[] = [
+    { key: 'orders', label: t('store.profile.myOrdersTab'), icon: <OrderIcon />, tab: 'orders' },
+    { key: 'coupons', label: t('store.profile.myCouponsTab'), icon: <CouponIcon />, tab: 'coupons' },
+    { key: 'history', label: t('store.profile.browseHistoryTab'), icon: <HistoryIcon />, tab: 'history' },
+    { key: 'reviews', label: t('store.profile.myReviewsTab'), icon: <ReviewIcon />, tab: 'reviews' },
+    { key: 'support', label: t('store.profile.supportTab'), icon: <SupportIcon />, tab: 'support' },
+    { key: 'notifications', label: t('store.nav.notifications'), icon: <BellIcon />, route: '/notifications' },
+    { key: 'favorites', label: t('store.nav.favorites'), icon: <HeartIcon />, route: '/favorites' },
+  ]
+
   const renderOrders = () => (
     <ContentCard>
       <ModuleTitle>{t('store.profile.myOrders')}</ModuleTitle>
 
-      <OrderBtnGroup>
-        {orderTabs.map(tab => (
-          <OrderTypeBtn
-            key={tab.key}
-            $active={activeOrder === tab.key}
-            onClick={() => setActiveOrder(tab.key)}
-          >
-            {tab.label}
-          </OrderTypeBtn>
-        ))}
-      </OrderBtnGroup>
-
-      <OrderBtnGroup>
+      <PillGroup>
         {paymentTabs.map(tab => (
-          <OrderTypeBtn
+          <Pill
             key={tab.key}
             $active={paymentFilter === tab.key}
             onClick={() => setPaymentFilter(tab.key)}
-            style={{ fontSize: '12px', padding: '8px 0' }}
           >
             {tab.label}
-          </OrderTypeBtn>
+          </Pill>
         ))}
-      </OrderBtnGroup>
+      </PillGroup>
 
       {ordersLoading ? (
         <EmptyState>{t('common.loading')}</EmptyState>
@@ -551,7 +603,7 @@ export default function Profile() {
               <OrderItemProducts>
                 <span>{order.item_count} {order.item_count === 1 ? 'item' : 'items'}</span>
                 {order.payment_status && (
-                  <OrderItemStatus style={{ color: order.payment_status === 'paid' ? '#2e7d32' : BRAND_RED }}>
+                  <OrderItemStatus style={{ color: order.payment_status === 'paid' ? Color.status.success : Color.status.error }}>
                     {order.payment_status}
                   </OrderItemStatus>
                 )}
@@ -605,16 +657,14 @@ export default function Profile() {
     <ContentCard>
       <ModuleTitle>{t('store.profile.support')}</ModuleTitle>
       <SupportSection>
-        <SupportIcon>
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        </SupportIcon>
+        <SupportIconBox>
+          <SupportIcon />
+        </SupportIconBox>
         <SupportTitle>{t('store.profile.support')}</SupportTitle>
         <SupportDesc>{t('store.profile.supportDesc')}</SupportDesc>
-        <SupportBtn onClick={() => navigate('/support')}>
+        <Button variant="primary" onClick={() => navigate('/support')}>
           {t('store.nav.support')}
-        </SupportBtn>
+        </Button>
       </SupportSection>
     </ContentCard>
   )
@@ -635,7 +685,7 @@ export default function Profile() {
               <OrderItemMeta>{new Date(review.created_at).toLocaleDateString()}</OrderItemMeta>
             </OrderItemLeft>
             <OrderItemRight>
-              <OrderItemStatus style={{ color: review.is_active ? '#2e7d32' : '#e74c3c' }}>
+              <OrderItemStatus style={{ color: review.is_active ? Color.status.success : Color.status.error }}>
                 {review.is_active ? t('store.profile.published') : t('store.profile.pendingReview')}
               </OrderItemStatus>
             </OrderItemRight>
@@ -645,88 +695,78 @@ export default function Profile() {
     </ContentCard>
   )
 
+  const goTab = (item: { tab?: ProfileTab; route?: string }) => {
+    if (item.tab) setActiveTab(item.tab)
+    else if (item.route) navigate(item.route)
+  }
+
   return (
     <PageLayout>
       <Container>
-        <ProfileGrid>
-          {/* ── 左栏：用户信息 + 地址 + 退出 ── */}
-          <LeftSidebar>
-            <SidebarCard>
-              <AvatarLarge>
-                {user.avatar ? <img src={user.avatar} alt={displayName} /> : null}
-              </AvatarLarge>
-              <UserNickname>{displayName}</UserNickname>
-              <UserEmail>{user.email}</UserEmail>
-              <SidebarDivider />
-              <SidebarLink onClick={() => navigate('/cart')}>
-                {t('store.profile.myOrders')}
-                <span style={{ color: Color.text.muted }}>›</span>
-              </SidebarLink>
-              <SidebarLink onClick={() => navigate('/coupons')}>
-                {t('store.profile.myCoupons')}
-                <span style={{ color: Color.text.muted }}>›</span>
-              </SidebarLink>
-              <SidebarLink onClick={() => navigate('/history')}>
-                {t('store.profile.browseHistory')}
-                <span style={{ color: Color.text.muted }}>›</span>
-              </SidebarLink>
-              <SidebarLink onClick={() => navigate('/notifications')}>
-                Notifications
-                <span style={{ color: Color.text.muted }}>›</span>
-              </SidebarLink>
-              <SidebarLink onClick={() => navigate('/favorites')}>
-                Favorites
-                <span style={{ color: Color.text.muted }}>›</span>
-              </SidebarLink>
-            </SidebarCard>
-
-            <SidebarCard>
-              <div style={{ fontWeight: 600, fontSize: FontSize.base, color: Color.text.heading, marginBottom: Spacing.sm }}>
-                {t('store.profile.addresses')}
-              </div>
-              <AddressSummary>
-                {t('store.profile.noAddresses')}
-              </AddressSummary>
-            </SidebarCard>
-
-            <LogoutBtn onClick={() => { logout(); navigate('/') }}>
+        <Shell>
+          {/* 头图 */}
+          <Hero style={{ gridColumn: '1 / -1' }}>
+            <Avatar>
+              {user.avatar ? <img src={user.avatar} alt={displayName} /> : initial}
+            </Avatar>
+            <HeroInfo>
+              <HeroName>{displayName}</HeroName>
+              <HeroEmail>{user.email}</HeroEmail>
+              <HeroBadge>{t('store.profile.standard')}</HeroBadge>
+            </HeroInfo>
+            <HeroLogout onClick={() => { logout(); navigate('/') }}>
+              <LogoutIcon />
               {t('store.profile.logout')}
-            </LogoutBtn>
-          </LeftSidebar>
+            </HeroLogout>
+          </Hero>
 
-          {/* ── 右栏：标签页切换 + 内容 ── */}
-          <RightContent>
-            <TabBar>
-              <TabItem $active={activeTab === 'orders'} onClick={() => setActiveTab('orders')}>
-                {t('store.profile.myOrdersTab')}
-              </TabItem>
-              <TabItem $active={activeTab === 'coupons'} onClick={() => setActiveTab('coupons')}>
-                {t('store.profile.myCouponsTab')}
-              </TabItem>
-              <TabItem $active={activeTab === 'history'} onClick={() => setActiveTab('history')}>
-                {t('store.profile.browseHistoryTab')}
-              </TabItem>
-              <TabItem $active={activeTab === 'support'} onClick={() => setActiveTab('support')}>
-                {t('store.profile.supportTab')}
-              </TabItem>
-              <TabItem $active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')}>
-                {t('store.profile.myReviewsTab')}
-              </TabItem>
-              <TabItem $active={activeTab === 'notifications'} onClick={() => { navigate('/notifications'); }}>
-                Notifications
-              </TabItem>
-              <TabItem $active={activeTab === 'favorites'} onClick={() => { navigate('/favorites'); }}>
-                Favorites
-              </TabItem>
-            </TabBar>
+          {/* 左：导航 + 地址 */}
+          <div>
+            <Nav>
+              {navItems.map(item => (
+                <NavItem
+                  key={item.key}
+                  $active={item.tab ? activeTab === item.tab : false}
+                  onClick={() => goTab(item)}
+                >
+                  {item.icon}
+                  {item.label}
+                </NavItem>
+              ))}
+            </Nav>
+
+            <AddressCard onClick={() => navigate('/profile')}>
+              <div>
+                <AddressText>{t('store.profile.addresses')}</AddressText>
+                <AddressSub>{t('store.profile.addressDesc')}</AddressSub>
+              </div>
+            </AddressCard>
+          </div>
+
+          {/* 右：订单状态快捷入口（仅订单页显示）+ 内容区，主切换由左侧 Nav 承担 */}
+          <Right>
+            {activeTab === 'orders' && (
+              <StatusRow>
+                {orderTabs.map(tab => (
+                  <StatusTile
+                    key={tab.key}
+                    $active={activeTab === 'orders' && activeOrder === tab.key}
+                    onClick={() => { setActiveTab('orders'); setActiveOrder(tab.key) }}
+                  >
+                    <OrderIcon />
+                    {tab.label}
+                  </StatusTile>
+                ))}
+              </StatusRow>
+            )}
 
             {activeTab === 'orders' && renderOrders()}
             {activeTab === 'coupons' && renderCoupons()}
             {activeTab === 'history' && renderHistory()}
             {activeTab === 'support' && renderSupport()}
             {activeTab === 'reviews' && renderReviews()}
-          </RightContent>
-        </ProfileGrid>
+          </Right>
+        </Shell>
       </Container>
     </PageLayout>
   )

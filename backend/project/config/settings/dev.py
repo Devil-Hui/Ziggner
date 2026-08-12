@@ -54,9 +54,12 @@ CSRF_TRUSTED_ORIGINS = [
 # 跨子域 Cookie：公网域名场景下 csrftoken/sessionid 落在父域 .ziggner.com，
 # 使 admin/www/shop 前端能从 document.cookie 读取 csrftoken 并随 axios 写请求回传
 # （否则 host-only cookie 仅 api.ziggner.com 可读，前端域拿不到 → X-CSRFToken 头缺失 → 403）
-if any('.ziggner.com' in o for o in CORS_ALLOWED_ORIGINS):
-    CSRF_COOKIE_DOMAIN = '.ziggner.com'
-    SESSION_COOKIE_DOMAIN = '.ziggner.com'
+# 本地 localhost 开发：在 .env 设 COOKIE_DOMAIN=（空）→ 使用 host-only cookie，
+# 浏览器才能在 localhost 上存储并回传 CSRF/鉴权 cookie（跨域 .ziggner.com cookie 会被拒绝）。
+_COOKIE_DOMAIN = os.getenv('COOKIE_DOMAIN', '.ziggner.com' if '.ziggner.com' in (os.getenv('DOMAIN', '') or '') else '')
+if _COOKIE_DOMAIN:
+    CSRF_COOKIE_DOMAIN = _COOKIE_DOMAIN
+    SESSION_COOKIE_DOMAIN = _COOKIE_DOMAIN
     CSRF_COOKIE_SAMESITE = 'Lax'
     SESSION_COOKIE_SAMESITE = 'Lax'
     # nginx-tunnel 已设 X-Forwarded-Proto: https，信任该头以正确识别 HTTPS

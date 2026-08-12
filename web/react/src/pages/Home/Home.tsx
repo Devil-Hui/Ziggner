@@ -714,7 +714,7 @@ export default function Home() {
                             {imgUrl ? (
                               <img src={imgUrl} alt={product.name} loading="lazy" />
                             ) : (
-                              <Placeholder>📦</Placeholder>
+                              <Placeholder />
                             )}
                             {i < 2 && <CardBadge>{t('store.home.newBadge')}</CardBadge>}
                             <QuickAdd
@@ -769,9 +769,7 @@ export default function Home() {
                         <VFeedThumb>
                           {sku.image_url ? (
                             <img src={sku.image_url} alt={sku.name} loading="lazy" />
-                          ) : (
-                            <span>📦</span>
-                          )}
+                          ) : null}
                         </VFeedThumb>
                         <VFeedInfo>
                           <VFeedName>{sku.name}</VFeedName>
