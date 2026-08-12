@@ -88,7 +88,7 @@ export default function CouponShare() {
 
   const discountText = coupon?.discount_type === 'percent'
     ? String(coupon.amount) + '%'
-    : String(coupon?.amount ?? '') + ' USD'
+    : String(coupon?.amount ?? '') + ' $'
 
   return (
     <PageLayout>
@@ -106,7 +106,7 @@ export default function CouponShare() {
           {coupon && <p style={{ margin: '0 0 20px', color: '#1248d8', fontSize: 28, fontWeight: 700 }}>{discountText}</p>}
           {coupon && (
             <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '10px 20px', margin: '0 0 28px' }}>
-              <dt>{t('store.coupons.minSpend')}</dt><dd style={{ margin: 0, textAlign: 'right' }}>{coupon.min_amount} USD</dd>
+              <dt>{t('store.coupons.minSpend')}</dt><dd style={{ margin: 0, textAlign: 'right' }}>{coupon.min_amount} $</dd>
               <dt>{t('store.coupons.expires')}</dt><dd style={{ margin: 0, textAlign: 'right' }}>{new Date(coupon.end_time).toLocaleString()}</dd>
               <dt>{t('store.coupons.remaining')}</dt><dd style={{ margin: 0, textAlign: 'right' }}>{coupon.remaining ?? Math.max(0, coupon.total_count - coupon.claimed_count)}</dd>
             </dl>

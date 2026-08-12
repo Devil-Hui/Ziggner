@@ -121,7 +121,7 @@ const CouponCard = styled.div<{ $disabled?: boolean }>`
   }
 `
 
-/* ── 左侧：金额区（红橙渐变底）── */
+/* ── 左侧：金额区 ── */
 const LeftPanel = styled.div<{ $variant?: 'available' | 'used' | 'expired' }>`
   width: 40%;
   min-width: 132px;

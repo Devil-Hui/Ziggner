@@ -8,6 +8,7 @@ import type { Column } from '../../components/admin/common/DataTable';
 import StatusBadge from '../../components/admin/common/StatusBadge';
 import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
+import { useAdminAuth } from '../../store/AdminAuthContext';
 
 interface Application {
   id: number;
@@ -363,6 +364,7 @@ export default function AdminApplications() {
   const [activeTab, setActiveTab] = useState<'my' | 'pending'>('my');
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
+  const { adminUser } = useAdminAuth();
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -564,6 +566,7 @@ export default function AdminApplications() {
           payload.reason = formData.reason;
           break;
         case 'coupon':
+          payload.admin_group_id = adminUser?.group_id ?? undefined;
           payload.coupon_name = formData.coupon_name;
           payload.discount_type = formData.discount_type;
           payload.coupon_code = formData.coupon_code || '';
@@ -928,12 +931,12 @@ export default function AdminApplications() {
             <div><ReviewDetailLabel>{t('admin.applications.sectionBasic')}</ReviewDetailLabel></div>
             <div><ReviewDetailLabel>{t('admin.applications.formCouponName')}:</ReviewDetailLabel><ReviewDetailValue>{detail.coupon_name}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formDiscountType')}:</ReviewDetailLabel><ReviewDetailValue>{detail.discount_type === 'fixed' ? t('admin.applications.formFixedAmount') : t('admin.applications.formPercentage')}</ReviewDetailValue></div>
-            <div><ReviewDetailLabel>{t('admin.applications.formAmount')}:</ReviewDetailLabel><ReviewDetailValue>{detail.discount_type === 'percent' ? `${detail.amount}%` : `¥${detail.amount}`}</ReviewDetailValue></div>
-            {detail.max_discount && <div><ReviewDetailLabel>{t('admin.applications.formMaxDiscount')}:</ReviewDetailLabel><ReviewDetailValue>¥{detail.max_discount}</ReviewDetailValue></div>}
-            <div><ReviewDetailLabel>{t('admin.applications.formMinSpend')}:</ReviewDetailLabel><ReviewDetailValue>¥{detail.min_amount || 0}</ReviewDetailValue></div>
+            <div><ReviewDetailLabel>{t('admin.applications.formAmount')}:</ReviewDetailLabel><ReviewDetailValue>{detail.discount_type === 'percent' ? `${detail.amount}%` : `$ ${detail.amount}`}</ReviewDetailValue></div>
+            {detail.max_discount && <div><ReviewDetailLabel>{t('admin.applications.formMaxDiscount')}:</ReviewDetailLabel><ReviewDetailValue>$ {detail.max_discount}</ReviewDetailValue></div>}
+            <div><ReviewDetailLabel>{t('admin.applications.formMinSpend')}:</ReviewDetailLabel><ReviewDetailValue>$ {detail.min_amount || 0}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formTotalCount')}:</ReviewDetailLabel><ReviewDetailValue>{detail.total_count}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formPerUserLimit')}:</ReviewDetailLabel><ReviewDetailValue>{detail.per_user_limit}</ReviewDetailValue></div>
-            {detail.expected_cost && <div><ReviewDetailLabel>{t('admin.applications.formExpectedCost')}:</ReviewDetailLabel><ReviewDetailValue>¥{detail.expected_cost}</ReviewDetailValue></div>}
+            {detail.expected_cost && <div><ReviewDetailLabel>{t('admin.applications.formExpectedCost')}:</ReviewDetailLabel><ReviewDetailValue>$ {detail.expected_cost}</ReviewDetailValue></div>}
             {detail.start_time && <div><ReviewDetailLabel>{t('admin.applications.formStartTime')}:</ReviewDetailLabel><ReviewDetailValue>{new Date(detail.start_time).toLocaleString('zh-CN')}</ReviewDetailValue></div>}
             {detail.end_time && <div><ReviewDetailLabel>{t('admin.applications.formEndTime')}:</ReviewDetailLabel><ReviewDetailValue>{new Date(detail.end_time).toLocaleString('zh-CN')}</ReviewDetailValue></div>}
             <div><ReviewDetailLabel>{t('admin.applications.formStackable')}:</ReviewDetailLabel><ReviewDetailValue>{detail.stackable ? '✓' : '✗'}</ReviewDetailValue></div>
@@ -962,7 +965,7 @@ export default function AdminApplications() {
           case 'category_rename': return `${detail.category_name} → ${detail.new_name}`;
           case 'brand_rename': return `${detail.brand_name} → ${detail.new_name}`;
           case 'leader_change': return `${detail.group_name}: ${detail.new_leader_name}`;
-          case 'coupon': return `${detail.coupon_name || t('admin.applications.typeCoupon')}: ${detail.discount_type === 'percent' ? `${detail.amount}%` : `¥${detail.amount}`}`;
+          case 'coupon': return `${detail.coupon_name || t('admin.applications.typeCoupon')}: ${detail.discount_type === 'percent' ? `${detail.amount}%` : `$ ${detail.amount}`}`;
           default: return '-';
         }
       },
