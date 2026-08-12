@@ -8,6 +8,7 @@ import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
+import { useAdminAuth } from '../../store/AdminAuthContext';
 
 interface AdminGroup {
   id: number;
@@ -261,6 +262,22 @@ const AddMemberBtn = styled.button<{ $disabled?: boolean }>`
   }
 `;
 
+const RoleSelect = styled.select`
+  height: 30px;
+  padding: 0 6px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 2px;
+  color: ${Color.primaryHover};
+  box-sizing: border-box;
+  background: ${Color.bg.card};
+
+  &:focus {
+    outline: none;
+    border-color: #e74c3c;
+  }
+`;
+
 const RemoveBtn = styled.button`
   padding: 2px 8px;
   font-size: ${FontSize.xs}px;
@@ -339,6 +356,7 @@ const RetrySmallBtn = styled.button`
 
 export default function AdminGroups() {
   const { t } = useTranslation();
+  const { isSuperAdmin } = useAdminAuth();
   // Group list state
   const [groups, setGroups] = useState<AdminGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -358,6 +376,7 @@ export default function AdminGroups() {
 
   // Add member state
   const [addMemberUserId, setAddMemberUserId] = useState('');
+  const [addMemberRole, setAddMemberRole] = useState<'leader' | 'member'>('member');
   const [addingMember, setAddingMember] = useState(false);
 
   // Remove member confirmation state
@@ -457,7 +476,9 @@ export default function AdminGroups() {
     }
     try {
       setAddingMember(true);
-      await adminAPI.addGroupMember(expandedGroupId, { user_id: userId, role: 'member' });
+      // 超管可选择角色（组长/普通管理员）；组长仅能添加本队普通成员
+      const role = isSuperAdmin ? addMemberRole : 'member';
+      await adminAPI.addGroupMember(expandedGroupId, { user_id: userId, role });
       showMsg('success', t('admin.groups.memberAdded'));
       setAddMemberUserId('');
       fetchMembers(expandedGroupId);
@@ -613,6 +634,16 @@ export default function AdminGroups() {
           {/* Add member row */}
           <AddMemberRow>
             <AddMemberLabel>{t('admin.groups.addMember')}</AddMemberLabel>
+            {isSuperAdmin && (
+              <RoleSelect
+                value={addMemberRole}
+                onChange={(e) => setAddMemberRole(e.target.value as 'leader' | 'member')}
+                title={t('admin.groups.addMemberRoleTitle')}
+              >
+                <option value="member">{t('admin.groups.roleMember')}</option>
+                <option value="leader">{t('admin.groups.roleLeader')}</option>
+              </RoleSelect>
+            )}
             <AddMemberInput
               type="text"
               placeholder={t('admin.groups.addMemberPlaceholder')}

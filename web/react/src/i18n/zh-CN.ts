@@ -804,6 +804,7 @@ const zhCN = {
       remove: '移除',
       addMember: '添加成员：',
       addMemberPlaceholder: '输入用户 ID',
+      addMemberRoleTitle: '选择添加为组长或普通组员',
       adding: '添加中...',
       add: '添加',
       newGroup: '新建管理员分组',

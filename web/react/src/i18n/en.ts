@@ -808,6 +808,7 @@ const en = {
       remove: 'Remove',
       addMember: 'Add Member:',
       addMemberPlaceholder: 'Enter user ID',
+      addMemberRoleTitle: 'Select role: leader or regular member',
       adding: 'Adding...',
       add: 'Add',
       newGroup: 'New Admin Group',

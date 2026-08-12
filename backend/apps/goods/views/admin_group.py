@@ -68,29 +68,56 @@ class AdminGroupMembersView(BaseApiView):
         responses={201: OpenApiResponse(description='Member added')}
     )
     def post(self, request, group_id):
-        if not has_role(request.user, Role.SUPERADMIN.value):
-            return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
-        user_id = request.data.get('user_id')
+        user = request.user
+        is_super = has_role(user, Role.SUPERADMIN.value)
         role = request.data.get('role', 'member')
+
+        if not is_super:
+            # 组长：仅可给自己管理的组添加「普通成员」，不可提其他组长
+            if role != AdminGroupMember.Role.MEMBER:
+                return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+            leader_groups = set(
+                AdminGroupMember.objects.filter(
+                    user=user, role=AdminGroupMember.Role.LEADER,
+                    status=AdminGroupMember.Status.ACTIVE,
+                ).values_list('group_id', flat=True)
+            )
+            if group_id not in leader_groups:
+                return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+
+        user_id = request.data.get('user_id')
         try:
-            user = User.objects.get(id=user_id)
+            target_user = User.objects.get(id=user_id)
         except User.DoesNotExist:
             return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if AdminGroupMember.objects.filter(group_id=group_id, user=user).exists():
+        if AdminGroupMember.objects.filter(group_id=group_id, user=target_user).exists():
             return Response({'detail': Messages.ADMIN_GROUP_MEMBER_EXISTS}, status=status.HTTP_409_CONFLICT)
-        member = AdminGroupMember.objects.create(group_id=group_id, user=user, role=role)
+        member = AdminGroupMember.objects.create(group_id=group_id, user=target_user, role=role)
         create_audit_log(request.user, 'admin_group.member_add', 'admin_group_member', member.id,
-                         changes={'group_id': group_id, 'user_id': user.id, 'role': role},
+                         changes={'group_id': group_id, 'user_id': target_user.id, 'role': role},
                          ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'id': member.id, 'user_id': user.id, 'role': member.role}, status=status.HTTP_201_CREATED)
+        return Response({'id': member.id, 'user_id': target_user.id, 'role': member.role}, status=status.HTTP_201_CREATED)
 
     @extend_schema(
         request=None,
         responses={200: OpenApiResponse(description='Member removed')}
     )
     def delete(self, request, group_id, user_id):
-        if not has_role(request.user, Role.SUPERADMIN.value):
-            return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+        user = request.user
+        is_super = has_role(user, Role.SUPERADMIN.value)
+        if not is_super:
+            # 组长：仅可移除自己管理的组内的「普通成员」，不可移除组长
+            leader_groups = set(
+                AdminGroupMember.objects.filter(
+                    user=user, role=AdminGroupMember.Role.LEADER,
+                    status=AdminGroupMember.Status.ACTIVE,
+                ).values_list('group_id', flat=True)
+            )
+            if group_id not in leader_groups:
+                return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+            target = AdminGroupMember.objects.filter(group_id=group_id, user_id=user_id).first()
+            if target and target.role == AdminGroupMember.Role.LEADER:
+                return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
         AdminGroupMember.objects.filter(group_id=group_id, user_id=user_id).delete()
         create_audit_log(request.user, 'admin_group.member_remove', 'admin_group_member', 0,
                          changes={'group_id': group_id, 'user_id': user_id},
