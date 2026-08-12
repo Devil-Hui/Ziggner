@@ -7,7 +7,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
 from apps.rbac.permissions import HasPerm
-from .models import Coupon, DiscountActivity, ActivitySKURelation, PromoCode
+from .models import Coupon, DiscountActivity, ActivitySKURelation, PromoCode, CouponScope
 from .serializers import (
     CouponAdminSerializer, ActivityAdminSerializer,
     CouponSerializer, ActivitySerializer,
@@ -139,9 +139,23 @@ class CouponScopeView(BaseApiView):
         scope_type = request.data.get('scope_type', 'all')
         target_ids = request.data.get('target_ids', [])
 
-        coupon.scope_type = scope_type
-        coupon.target_ids = target_ids
-        coupon.save(update_fields=['scope_type', 'target_ids'])
+        if scope_type == 'all':
+            CouponScope.objects.filter(coupon=coupon).delete()
+        else:
+            type_map = {
+                'spu': CouponScope.ScopeType.SPU,
+                'product': CouponScope.ScopeType.SPU,
+                'category': CouponScope.ScopeType.CATEGORY,
+                'brand': CouponScope.ScopeType.BRAND,
+            }
+            st = type_map.get(scope_type)
+            if st is None:
+                return Response({'detail': 'Invalid scope_type.'}, status=status.HTTP_400_BAD_REQUEST)
+            CouponScope.objects.filter(coupon=coupon, scope_type=st).delete()
+            CouponScope.objects.bulk_create([
+                CouponScope(coupon=coupon, scope_type=st, target_id=tid)
+                for tid in (target_ids or [])
+            ])
 
         return Response({'message': Messages.SUCCESS, 'scope_type': scope_type})
 
