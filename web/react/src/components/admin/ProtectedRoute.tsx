@@ -47,7 +47,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/admin/activities': ['superadmin'],
   '/admin/audit-logs': ['superadmin', 'leader'],
   '/admin/recycle-bin': ['superadmin', 'leader'],
-  '/admin/groups': ['superadmin'],
+  '/admin/groups': ['superadmin', 'leader'],
   '/admin/tasks': ['superadmin', 'leader', 'member'],
   '/admin/rbac': ['superadmin'],
 }
