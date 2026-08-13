@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { Select, Input as SearchInput } from '../../components/admin/common/ui'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
+import PromptDialog from '../../components/admin/common/PromptDialog'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 
@@ -282,6 +283,8 @@ export default function AdminOrders() {
   const [busyNo, setBusyNo] = useState<string | null>(null)
   const [cancelTarget, setCancelTarget] = useState<string | null>(null)
   const [refundTarget, setRefundTarget] = useState<string | null>(null)
+  const [trackingTarget, setTrackingTarget] = useState<string | null>(null)
+  const [remarkTarget, setRemarkTarget] = useState<{ afterSaleNo: string; action: 'approve' | 'reject' } | null>(null)
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
@@ -342,9 +345,9 @@ export default function AdminOrders() {
     }
   }
 
-  const handleShip = async (orderNo: string) => {
-    const tracking = window.prompt(t('admin.orders.trackingPrompt'), '')
-    if (tracking == null) return
+  const openShipPrompt = (orderNo: string) => setTrackingTarget(orderNo)
+
+  const handleShip = async (orderNo: string, tracking: string) => {
     if (!tracking.trim()) {
       showToast('error', t('admin.orders.trackingRequired'))
       return
@@ -376,16 +379,16 @@ export default function AdminOrders() {
     }
   }
 
+  const openRemarkPrompt = (
+    afterSaleNo: string,
+    action: 'approve' | 'reject',
+  ) => setRemarkTarget({ afterSaleNo, action })
+
   const handleAfterSaleReview = async (
     afterSaleNo: string,
     action: 'approve' | 'reject' | 'complete_refund',
+    admin_remark = '',
   ) => {
-    let admin_remark = ''
-    if (action !== 'complete_refund') {
-      const remark = window.prompt(t('admin.orders.reviewRemarkPrompt'), '')
-      if (remark == null) return
-      admin_remark = remark
-    }
     setBusyNo(afterSaleNo)
     try {
       await orderAPI.adminAfterSaleReview(afterSaleNo, { action, admin_remark })
@@ -496,7 +499,7 @@ export default function AdminOrders() {
                           <Button
                             $variant="primary"
                             disabled={busyNo === item.order_no}
-                            onClick={() => handleShip(item.order_no)}
+                            onClick={() => openShipPrompt(item.order_no)}
                           >
                             {t('admin.orders.ship')}
                           </Button>
@@ -691,14 +694,14 @@ export default function AdminOrders() {
                             <Button
                               $variant="ok"
                               disabled={busyNo === row.after_sale_no}
-                              onClick={() => handleAfterSaleReview(row.after_sale_no, 'approve')}
+                              onClick={() => openRemarkPrompt(row.after_sale_no, 'approve')}
                             >
                               {t('admin.orders.approve')}
                             </Button>
                             <Button
                               $variant="danger"
                               disabled={busyNo === row.after_sale_no}
-                              onClick={() => handleAfterSaleReview(row.after_sale_no, 'reject')}
+                              onClick={() => openRemarkPrompt(row.after_sale_no, 'reject')}
                             >
                               {t('admin.orders.reject')}
                             </Button>
@@ -756,6 +759,30 @@ export default function AdminOrders() {
           danger
           onConfirm={() => { const no = refundTarget; setRefundTarget(null); handleAfterSaleReview(no, 'complete_refund') }}
           onCancel={() => setRefundTarget(null)}
+        />
+      )}
+
+      {trackingTarget !== null && (
+        <PromptDialog
+          title={t('admin.orders.shipTitle')}
+          message={t('admin.orders.trackingPrompt')}
+          placeholder={t('admin.orders.trackingPrompt')}
+          confirmLabel={t('common.confirm')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={(v) => { const no = trackingTarget; setTrackingTarget(null); handleShip(no, v) }}
+          onCancel={() => setTrackingTarget(null)}
+        />
+      )}
+
+      {remarkTarget !== null && (
+        <PromptDialog
+          title={t('admin.orders.reviewTitle')}
+          message={t('admin.orders.reviewRemarkPrompt')}
+          placeholder={t('admin.orders.reviewRemarkPrompt')}
+          confirmLabel={t('common.confirm')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={(v) => { const tgt = remarkTarget; setRemarkTarget(null); handleAfterSaleReview(tgt.afterSaleNo, tgt.action, v) }}
+          onCancel={() => setRemarkTarget(null)}
         />
       )}
     </div>

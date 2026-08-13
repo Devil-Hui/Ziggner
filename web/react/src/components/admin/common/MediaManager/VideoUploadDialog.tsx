@@ -1,5 +1,6 @@
 /** VideoUploadDialog —— 视频上传弹窗（含头帧提取） */
 import { useState, useRef, useEffect } from 'react'
+import { useAppContext } from '../../../../store/AppContext'
 import { extractVideoFrames } from '../../../../utils/videoFrameExtractor'
 import type { VideoFrameResult } from '../../../../utils/videoFrameExtractor'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
@@ -12,6 +13,7 @@ interface Props {
 }
 
 export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
+  const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [processing, setProcessing] = useState(false)
   const [previewUrl, setPreviewUrl] = useState('')
@@ -30,7 +32,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
     const file = e.target.files?.[0]
     if (file) {
       if (!file.type.startsWith('video/')) {
-        alert('请选择视频文件')
+        showToast('请选择视频文件', 'warning')
         return
       }
       setSelectedFile(file)
@@ -46,7 +48,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
       frameResultRef.current = result
       setProcessing(false)
     } catch (err) {
-      alert('视频头帧提取失败: ' + (err instanceof Error ? err.message : '未知错误'))
+      showToast('视频头帧提取失败: ' + (err instanceof Error ? err.message : '未知错误'))
       setProcessing(false)
       setSelectedFile(null)
     }

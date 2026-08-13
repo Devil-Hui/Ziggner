@@ -4,6 +4,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from '../../../../i18n'
+import { useAppContext } from '../../../../store/AppContext'
 import * as S from './MediaManager.styles'
 import MediaItem from './MediaItem'
 import MediaPreviewTabs from './MediaPreviewTabs'
@@ -42,6 +43,7 @@ export default function MediaManager({
 }: MediaManagerProps) {
   const isEditMode = !!spuId
   const { t } = useTranslation()
+  const { showToast } = useAppContext()
 
   // 创建模式暂存项
   const [items, setItems] = useState<StagedMediaItem[]>([])
@@ -135,7 +137,7 @@ export default function MediaManager({
       if (!isEditMode) {
         const remain = MAX_IMAGES - items.filter((item) => item.mediaType === 'image').length
         if (remain <= 0) {
-          alert(t('admin.mediaManager.imageLimitReached'))
+          showToast(t('admin.mediaManager.imageLimitReached'), 'warning')
           return
         }
         selected = files.slice(0, remain)
@@ -176,7 +178,7 @@ export default function MediaManager({
           setSavedItems((prev) => [...prev, newMedia])
           advanceQueue()
         } catch (err) {
-          alert(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'))
+          showToast(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'))
           advanceQueue()
         }
       } else {
@@ -250,7 +252,7 @@ export default function MediaManager({
           await adminAPI.deleteMedia(id)
           setSavedItems((prev) => prev.filter((mediaItem) => mediaItem.id !== id))
         } catch (err) {
-          alert(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
+          showToast(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
         }
       } else {
         await deleteStagedItem(id)
@@ -269,7 +271,7 @@ export default function MediaManager({
       await adminAPI.deleteMedia(id)
       setSavedItems((prev) => prev.filter((mediaItem) => mediaItem.id !== id))
     } catch (err) {
-      alert(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
+      showToast(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
     }
   }, [pendingDeleteActiveId])
 
@@ -295,7 +297,7 @@ export default function MediaManager({
         }
         setEditingMedia(null)
       } catch (err) {
-        alert(err instanceof Error ? err.message : t('admin.mediaManager.updateFailed'))
+        showToast(err instanceof Error ? err.message : t('admin.mediaManager.updateFailed'))
       }
     },
     [editingMedia, onMediaUpdate, spuId]
@@ -442,7 +444,7 @@ export default function MediaManager({
         onConfirm={async (item: StagedMediaItem) => {
           if (isEditMode && spuId) {
             // 视频暂不支持编辑模式直接上传，提示
-            alert(t('admin.mediaManager.videoNotSupported'))
+            showToast(t('admin.mediaManager.videoNotSupported'), 'warning')
           } else {
             const stagedId = await addStagedItem(item)
             const updated = [...items, { ...item, id: stagedId }]

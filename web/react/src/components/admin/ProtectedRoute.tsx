@@ -41,6 +41,7 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/admin/tags': ['superadmin'],
   '/admin/orders': ['superadmin', 'leader', 'member'],
   '/admin/chat': ['superadmin', 'leader', 'member'],
+  '/admin/email-templates': ['superadmin', 'leader', 'member'],
   '/admin/notifications': ['superadmin', 'leader', 'member'],
   '/admin/applications': ['superadmin', 'leader', 'member'],
   '/admin/coupons': ['superadmin'],

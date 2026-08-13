@@ -2,6 +2,7 @@
  * 支持队列模式：接收 dropzone 预选文件，直接进入裁剪流程。
  */
 import { useState, useRef, useEffect } from 'react'
+import { useAppContext } from '../../../../store/AppContext'
 import ImageCropper from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
 import * as S from './MediaManager.styles'
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSkip }: Props) {
+  const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -32,7 +34,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
     const f = e.target.files?.[0]
     if (f) {
       if (!f.type.startsWith('image/')) {
-        alert('请选择图片文件')
+        showToast('请选择图片文件', 'warning')
         return
       }
       setSelectedFile(f)
