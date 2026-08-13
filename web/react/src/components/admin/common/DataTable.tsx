@@ -9,6 +9,12 @@ const MUTED = '#8a8175'
 const CLAY = '#c8623a'
 const LINE = 'rgba(26, 23, 18, 0.10)'
 
+const TableScroll = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+`;
+
 const Table = styled.table`
   width: 100%;
   border-collapse: separate;
@@ -166,47 +172,49 @@ function DataTable<T extends Record<string, any>>({
   }
 
   return (
-    <Table>
-      <Thead>
-        <tr>
-          {safeColumns.map((col) => (
-            <Th key={col.key} $sortable={col.sortable} style={{ width: col.width }}>
-              {col.title}
-            </Th>
-          ))}
-        </tr>
-      </Thead>
-      <Tbody>
-        {source.length === 0 ? (
-          <Tr>
-            <Td colSpan={safeColumns.length} style={{ textAlign: 'center', padding: `${Spacing.section}px`, color: Color.text.muted }}>
-              <EmptyWrapper>
-                {emptyTitle &&                 <span>{emptyTitle}</span>}
-                <span>{emptyText ?? defaultEmptyText}</span>
-              </EmptyWrapper>
-            </Td>
-          </Tr>
-        ) : (
-          source.map((record, index) => (
-            <Tr
-              key={getRowKey(record, index)}
-              $clickable={!!onRowClick}
-              onClick={() => onRowClick?.(record)}
-            >
-              {safeColumns.map((col) => (
-                <Td key={col.key}>
-                  {col.render
-                    ? col.render(record[col.key], record)
-                    : col.dataIndex
-                      ? String(record[col.dataIndex] ?? '')
-                      : String(record[col.key] ?? '')}
-                </Td>
-              ))}
+    <TableScroll>
+      <Table>
+        <Thead>
+          <tr>
+            {safeColumns.map((col) => (
+              <Th key={col.key} $sortable={col.sortable} style={{ width: col.width }}>
+                {col.title}
+              </Th>
+            ))}
+          </tr>
+        </Thead>
+        <Tbody>
+          {source.length === 0 ? (
+            <Tr>
+              <Td colSpan={safeColumns.length} style={{ textAlign: 'center', padding: `${Spacing.section}px`, color: Color.text.muted }}>
+                <EmptyWrapper>
+                  {emptyTitle &&                 <span>{emptyTitle}</span>}
+                  <span>{emptyText ?? defaultEmptyText}</span>
+                </EmptyWrapper>
+              </Td>
             </Tr>
-          ))
-        )}
-      </Tbody>
-    </Table>
+          ) : (
+            source.map((record, index) => (
+              <Tr
+                key={getRowKey(record, index)}
+                $clickable={!!onRowClick}
+                onClick={() => onRowClick?.(record)}
+              >
+                {safeColumns.map((col) => (
+                  <Td key={col.key}>
+                    {col.render
+                      ? col.render(record[col.key], record)
+                      : col.dataIndex
+                        ? String(record[col.dataIndex] ?? '')
+                        : String(record[col.key] ?? '')}
+                  </Td>
+                ))}
+              </Tr>
+            ))
+          )}
+        </Tbody>
+      </Table>
+    </TableScroll>
   );
 }
 

@@ -322,25 +322,19 @@ const ProductCard = styled.div`
 
 const ProductBadge = styled.div`
   position: absolute;
-  top: 0;
-  left: 1vw;
-  width: 24px;
-  height: 72px;
+  top: 8px;
+  left: 8px;
+  padding: 2px 8px;
   background: #ff4444;
+  border-radius: ${Radius.xs}px;
   z-index: ${zIndex.base};
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: 0.8vh;
-  clip-path: polygon(0 0, 100% 0, 100% 88%, 50% 100%, 0 88%);
 
   span {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
     color: ${Color.text.inverse};
-    font-size: 0.85rem;
+    font-size: ${FontSize.xs}px;
     font-weight: bold;
-    letter-spacing: 2px;
+    line-height: 1.3;
+    white-space: nowrap;
   }
 `
 

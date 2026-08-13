@@ -1,15 +1,22 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition, FocusRing } from '../../theme/tokens';
+import styled from 'styled-components'
+import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import FormDialog from '../../components/admin/common/FormDialog';
-import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
 import { useAdminAuth } from '../../store/AdminAuthContext';
+import { adminAPI } from '../../api/admin';
+import {
+  validateGroupForm,
+  composeDeleteConfirmMessage,
+  validateAddMemberInput,
+  composeRemoveMemberConfirmMessage,
+} from '../../domain/adminGroups';
+import { PrimaryBtn, DangerBtn, OutlinePrimaryBtn, Input, Select, FormGroup, Label, Hint, ErrorText, RoleBadge, Toast } from '../../components/admin/common/ui';
 
 interface AdminGroup {
   id: number;
@@ -24,87 +31,6 @@ interface GroupMember {
   username: string;
   role: 'leader' | 'member';
 }
-
-/* ========== Toast ========== */
-
-const toastIn = keyframes`
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-`;
-
-const Toast = styled.div<{ $type: 'success' | 'error' }>`
-  padding: 10px 16px;
-  margin-bottom: ${Spacing.lg}px;
-  border-radius: ${Radius.sm}px;
-  font-size: ${FontSize.sm}px;
-  background: ${({ $type }) => ($type === 'success' ? 'rgba(5, 150, 105, 0.1)' : 'rgba(220, 38, 38, 0.1)')};
-  color: ${({ $type }) => ($type === 'success' ? Color.status.success : Color.status.error)};
-  border: 1px solid ${({ $type }) => ($type === 'success' ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)')};
-  animation: ${toastIn} ${Transition.normal};
-`;
-
-/* ========== Form Fields ========== */
-
-const FormGroup = styled.div`
-  margin-bottom: ${Spacing.lg}px;
-`;
-
-const Label = styled.label`
-  display: block;
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
-  margin-bottom: 6px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  height: 38px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.base}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  color: ${Color.text.body};
-  background: ${Color.bg.card};
-  box-sizing: border-box;
-  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
-
-  &:focus {
-    outline: none;
-    border-color: ${Color.primary};
-    box-shadow: ${FocusRing.style};
-  }
-`;
-
-const Hint = styled.span`
-  display: block;
-  margin-top: 4px;
-  font-size: ${FontSize.xs}px;
-  color: ${Color.text.muted};
-`;
-
-const ErrorText = styled.span`
-  display: block;
-  margin-top: 4px;
-  font-size: ${FontSize.xs}px;
-  color: ${Color.status.error};
-`;
-
-/* Primary action button (brand blue) — used in page header */
-const PrimaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: ${Color.primary};
-  color: ${Color.text.inverse};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: background ${Transition.fast}, box-shadow ${Transition.fast};
-
-  &:hover {
-    background: ${Color.primaryHover};
-    box-shadow: ${Shadow.focus};
-  }
-`;
 
 /* ========== Member Panel ========== */
 
@@ -182,17 +108,6 @@ const MemberTr = styled.tr`
   }
 `;
 
-const RoleBadge = styled.span<{ $role: 'leader' | 'member' }>`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: ${Radius.xs}px;
-  font-size: ${FontSize.xs}px;
-  font-weight: ${500};
-  background: ${({ $role }) => ($role === 'leader' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(37, 99, 235, 0.12)')};
-  color: ${({ $role }) => ($role === 'leader' ? Color.status.warning : Color.status.info)};
-`;
-
 const AddMemberRow = styled.div`
   display: flex;
   align-items: center;
@@ -204,80 +119,6 @@ const AddMemberRow = styled.div`
 const AddMemberLabel = styled.span`
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
-`;
-
-const AddMemberInput = styled.input`
-  width: 160px;
-  height: 32px;
-  padding: 0 8px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  color: ${Color.text.body};
-  background: ${Color.bg.card};
-  box-sizing: border-box;
-  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
-
-  &:focus {
-    outline: none;
-    border-color: ${Color.primary};
-    box-shadow: ${FocusRing.style};
-  }
-
-  &::placeholder {
-    color: ${Color.text.muted};
-  }
-`;
-
-const AddMemberBtn = styled.button<{ $disabled?: boolean }>`
-  padding: 4px 12px;
-  font-size: ${FontSize.xs}px;
-  border: 1px solid ${Color.primary};
-  background: ${Color.bg.card};
-  color: ${Color.primary};
-  border-radius: ${Radius.sm}px;
-  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
-  transition: background ${Transition.fast}, color ${Transition.fast};
-
-  &:hover {
-    background: ${({ $disabled }) => ($disabled ? 'transparent' : Color.primary)};
-    color: ${({ $disabled }) => ($disabled ? Color.primary : Color.text.inverse)};
-  }
-`;
-
-const RoleSelect = styled.select`
-  height: 32px;
-  padding: 0 6px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  color: ${Color.text.body};
-  box-sizing: border-box;
-  background: ${Color.bg.card};
-  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
-
-  &:focus {
-    outline: none;
-    border-color: ${Color.primary};
-    box-shadow: ${FocusRing.style};
-  }
-`;
-
-const RemoveBtn = styled.button`
-  padding: 2px 8px;
-  font-size: ${FontSize.xs}px;
-  border: 1px solid ${Color.status.error};
-  background: ${Color.bg.card};
-  color: ${Color.status.error};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: background ${Transition.fast}, color ${Transition.fast};
-
-  &:hover {
-    background: ${Color.status.error};
-    color: ${Color.text.inverse};
-  }
 `;
 
 const ExpandBtn = styled.button`
@@ -323,23 +164,6 @@ const MemberError = styled.div`
   padding: ${Spacing.xl}px ${Spacing.lg}px;
   color: ${Color.status.error};
   font-size: ${FontSize.sm}px;
-`;
-
-const RetrySmallBtn = styled.button`
-  margin-top: 8px;
-  padding: 4px 12px;
-  font-size: ${FontSize.xs}px;
-  border: 1px solid ${Color.status.error};
-  background: ${Color.bg.card};
-  color: ${Color.status.error};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: background ${Transition.fast}, color ${Transition.fast};
-
-  &:hover {
-    background: ${Color.status.error};
-    color: ${Color.text.inverse};
-  }
 `;
 
 /* ========== Main Component ========== */
@@ -409,19 +233,16 @@ export default function AdminGroups() {
     setShowForm(true);
   };
 
-  const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
-
   const handleCreate = async () => {
     const name = formName.trim();
     const slug = formSlug.trim();
-    const errs: { name?: string; slug?: string } = {};
-    if (!name) errs.name = t('admin.groups.nameRequired');
-    else if (name.length > 100) errs.name = t('admin.groups.nameTooLong');
-    if (!slug) errs.slug = t('admin.groups.slugRequired');
-    else if (!SLUG_RE.test(slug)) errs.slug = t('admin.groups.slugFormat');
-    else if (slug.length > 100) errs.slug = t('admin.groups.slugTooLong');
+    const rawErrs = validateGroupForm(formName, formSlug);
+    const errs: { name?: string; slug?: string } = {
+      name: rawErrs.name ? t(rawErrs.name) : undefined,
+      slug: rawErrs.slug ? t(rawErrs.slug) : undefined,
+    };
     setFormErrors(errs);
-    if (Object.keys(errs).length > 0) return;
+    if (Object.keys(errs).some((k) => errs[k as keyof typeof errs])) return;
     try {
       await adminAPI.createAdminGroup({ name, slug });
       showMsg('success', t('admin.groups.createSuccess'));
@@ -463,21 +284,18 @@ export default function AdminGroups() {
 
   const handleAddMember = async () => {
     if (!expandedGroupId) return;
-    const trimmed = addMemberUserId.trim();
-    if (!trimmed) {
-      showMsg('error', t('admin.groups.userIdRequired'));
-      return;
-    }
-    const userId = parseInt(trimmed, 10);
-    if (isNaN(userId) || userId <= 0) {
-      showMsg('error', t('admin.groups.userIdInvalid'));
+    const res = validateAddMemberInput({
+      rawUserId: addMemberUserId,
+      isSuperAdmin,
+      selectedRole: addMemberRole,
+    });
+    if (!res.ok) {
+      showMsg('error', t(res.errorKey!));
       return;
     }
     try {
       setAddingMember(true);
-      // 超管可选择角色（组长/普通管理员）；组长仅能添加本队普通成员
-      const role = isSuperAdmin ? addMemberRole : 'member';
-      await adminAPI.addGroupMember(expandedGroupId, { user_id: userId, role });
+      await adminAPI.addGroupMember(expandedGroupId, { user_id: res.userId!, role: res.role });
       showMsg('success', t('admin.groups.memberAdded'));
       setAddMemberUserId('');
       fetchMembers(expandedGroupId);
@@ -548,7 +366,7 @@ export default function AdminGroups() {
           <ExpandBtn onClick={() => handleExpand(record.id)}>
             {expandedGroupId === record.id ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
           </ExpandBtn>
-          <RemoveBtn onClick={() => {
+          <DangerBtn onClick={() => {
             if (record.slug === 'pending') {
               showMsg('error', t('admin.groups.defaultGroupProtected'));
               return;
@@ -556,7 +374,7 @@ export default function AdminGroups() {
             setDeleteGroupTarget(record);
           }}>
             {t('admin.groups.delete')}
-          </RemoveBtn>
+          </DangerBtn>
         </div>
       ),
     },
@@ -607,9 +425,9 @@ export default function AdminGroups() {
           {membersError && !membersLoading && (
             <MemberError>
               <span>{membersError}</span>
-              <RetrySmallBtn onClick={() => fetchMembers(expandedGroupId)}>
+              <DangerBtn style={{ marginTop: 8 }} onClick={() => fetchMembers(expandedGroupId)}>
                 {t('admin.groups.retry')}
-              </RetrySmallBtn>
+              </DangerBtn>
             </MemberError>
           )}
 
@@ -623,6 +441,7 @@ export default function AdminGroups() {
 
           {/* Members table */}
           {!membersLoading && !membersError && members.length > 0 && (
+            <div style={{ overflowX: 'auto' }}>
             <MemberTable>
               <MemberThead>
                 <tr>
@@ -643,35 +462,38 @@ export default function AdminGroups() {
                       </RoleBadge>
                     </MemberTd>
                     <MemberTd>
-                      <RemoveBtn
+                      <DangerBtn
                         onClick={() => {
                           setRemoveMemberTarget(m);
                           setRemoveMemberGroupId(expandedGroupId);
                         }}
                       >
                         {t('admin.groups.remove')}
-                      </RemoveBtn>
+                      </DangerBtn>
                     </MemberTd>
                   </MemberTr>
                 ))}
               </tbody>
             </MemberTable>
+            </div>
           )}
 
           {/* Add member row */}
           <AddMemberRow>
             <AddMemberLabel>{t('admin.groups.addMember')}</AddMemberLabel>
             {isSuperAdmin && (
-              <RoleSelect
+              <Select
                 value={addMemberRole}
                 onChange={(e) => setAddMemberRole(e.target.value as 'leader' | 'member')}
                 title={t('admin.groups.addMemberRoleTitle')}
               >
                 <option value="member">{t('admin.groups.roleMember')}</option>
                 <option value="leader">{t('admin.groups.roleLeader')}</option>
-              </RoleSelect>
+              </Select>
             )}
-            <AddMemberInput
+            <Input
+              $compact
+              style={{ width: 160 }}
               type="text"
               placeholder={t('admin.groups.addMemberPlaceholder')}
               value={addMemberUserId}
@@ -680,12 +502,12 @@ export default function AdminGroups() {
                 if (e.key === 'Enter') handleAddMember();
               }}
             />
-            <AddMemberBtn
+            <OutlinePrimaryBtn
               onClick={handleAddMember}
               $disabled={addingMember}
             >
               {addingMember ? t('admin.groups.adding') : t('admin.groups.add')}
-            </AddMemberBtn>
+            </OutlinePrimaryBtn>
           </AddMemberRow>
         </MemberPanel>
       )}
@@ -731,7 +553,11 @@ export default function AdminGroups() {
       {removeMemberTarget && removeMemberGroupId !== null && (
         <ConfirmDialog
           title={t('admin.groups.removeMember')}
-          message={t('admin.groups.confirmRemoveMember').replace('{group}', expandedGroup?.name || '').replace('{user}', removeMemberTarget.username || String(removeMemberTarget.id))}
+          message={composeRemoveMemberConfirmMessage({
+            groupName: expandedGroup?.name || '',
+            username: removeMemberTarget.username || String(removeMemberTarget.id),
+            t,
+          })}
           confirmLabel={t('admin.groups.confirmRemove')}
           danger
           onConfirm={handleRemoveMember}
@@ -744,13 +570,11 @@ export default function AdminGroups() {
 
       {/* ====== Delete Group Confirmation ====== */}
       {deleteGroupTarget && (() => {
-        const memberCount = deleteGroupTarget.member_count || 0;
-        const deleteMsg = memberCount > 0
-          ? t('admin.groups.confirmDeleteGroupWithMembers')
-              .replace('{name}', deleteGroupTarget.name)
-              .replace('{count}', String(memberCount))
-              .replace('{target}', t('admin.groups.pendingGroupName'))
-          : t('admin.groups.confirmDeleteGroup').replace('{name}', deleteGroupTarget.name);
+        const deleteMsg = composeDeleteConfirmMessage({
+          name: deleteGroupTarget.name,
+          memberCount: deleteGroupTarget.member_count || 0,
+          t,
+        });
         return (
           <ConfirmDialog
             title={t('admin.groups.deleteGroup')}

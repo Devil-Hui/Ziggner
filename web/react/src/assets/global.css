@@ -2,6 +2,9 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  /* 硬保证：任何板块/条件下都不出现竖排文字（产品硬性要求）。
+     强制横排书写，覆盖任何 writing-mode: vertical-* 的源头与未来回归。 */
+  writing-mode: horizontal-tb !important;
 }
 
 html, body, #root {

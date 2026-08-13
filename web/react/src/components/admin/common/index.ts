@@ -8,6 +8,8 @@ export { default as ErrorRetry } from './ErrorRetry';
 export { default as FilterBar } from './FilterBar';
 export { default as StatusBadge } from './StatusBadge';
 export { default as FormDialog } from './FormDialog';
+export * from './ui';
+export { default as HorizontalScroll } from '../../common/HorizontalScroll';
 export { default as DeleteConfirmDialog } from './DeleteConfirmDialog';
 export { default as SearchFilter } from './SearchFilter';
 export { default as LoadingState } from './LoadingState';

@@ -220,6 +220,10 @@ const Content = styled.main`
   flex: 1;
   padding: ${Spacing.xxl}px;
   overflow-y: auto;
+
+  @media (max-width: 768px) {
+    padding: ${Spacing.lg}px;
+  }
 `
 
 const CollapseIcon = styled.span<{ $collapsed: boolean }>`

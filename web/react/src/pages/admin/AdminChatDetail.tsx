@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { StatusBadge } from '../../components/admin/common'
+import HorizontalScroll from '../../components/common/HorizontalScroll'
 import { Icon } from '../../components/admin/common/Icon'
 import { useTranslation } from '../../i18n'
 import { useAdminAuth } from '../../store/AdminAuthContext'
@@ -266,27 +267,22 @@ const OrdersEmpty = styled.div`
   color: ${Color.text.muted};
 `
 
-// 收起后的窄条（竖向），点击展开
+// 收起后的按钮（横排），点击展开
 const OrdersCollapsedBar = styled.div`
-  width: 36px;
-  min-width: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
   background: ${Color.bg.card};
   border-radius: ${Radius.md}px;
   box-shadow: ${Shadow.card};
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: ${Spacing.md}px 0;
   cursor: pointer;
-  gap: 8px;
 
   &:hover { background: #f7f7f7; }
 
   span {
-    writing-mode: vertical-rl;
     font-size: ${FontSize.xs}px;
     color: ${Color.text.muted};
-    letter-spacing: 2px;
   }
 `
 
@@ -492,9 +488,6 @@ const FilterTabs = styled.div`
   gap: 4px;
   padding: ${Spacing.sm}px ${Spacing.lg}px;
   border-bottom: 1px solid ${Color.border.light};
-  overflow-x: auto;
-
-  &::-webkit-scrollbar { display: none; }
 `
 
 const FilterTab = styled.button<{ $active: boolean }>`
@@ -506,6 +499,7 @@ const FilterTab = styled.button<{ $active: boolean }>`
   font-size: 12px;
   font-weight: ${props => props.$active ? 600 : 400};
   cursor: pointer;
+  flex-shrink: 0;
   white-space: nowrap;
   transition: all ${Transition.fast};
 
@@ -1488,17 +1482,19 @@ export default function AdminChatDetail() {
             )}
 
             {/* Filter tabs */}
-            <FilterTabs>
-              {FILTER_TABS.map(tab => (
-                <FilterTab
-                  key={tab.key}
-                  $active={msgFilter === tab.key}
-                  onClick={() => setMsgFilter(tab.key)}
-                >
-                  {t(tab.labelKey)}
-                </FilterTab>
-              ))}
-            </FilterTabs>
+            <HorizontalScroll>
+              <FilterTabs>
+                {FILTER_TABS.map(tab => (
+                  <FilterTab
+                    key={tab.key}
+                    $active={msgFilter === tab.key}
+                    onClick={() => setMsgFilter(tab.key)}
+                  >
+                    {t(tab.labelKey)}
+                  </FilterTab>
+                ))}
+              </FilterTabs>
+            </HorizontalScroll>
 
             {/* Virtuoso message list */}
             <MessageListContainer>
@@ -1641,7 +1637,7 @@ export default function AdminChatDetail() {
         </OrdersPanel>
       )}
 
-      {/* 收起后的窄条：点击展开订单面板 */}
+      {/* 收起后的按钮：点击展开订单面板 */}
       {hasOrders && ordersCollapsed && (
         <OrdersCollapsedBar onClick={() => setOrdersCollapsed(false)} title="展开订单面板">
           <CollapseBtn as="div">«</CollapseBtn>
