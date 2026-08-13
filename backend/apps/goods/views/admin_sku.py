@@ -174,6 +174,8 @@ class SKUAdminUpdateView(BaseApiView):
                 changed_by=request.user,
                 reason=request.data.get('discount_reason', '管理后台折扣价调整'),
             )
+            from ..services import GoodsQueryService
+            GoodsQueryService.invalidate_promo_caches()
 
         return Response({'id': sku.id, 'price': str(sku.price), 'stock': sku.stock, 'shelf_status': sku.shelf_status})
 

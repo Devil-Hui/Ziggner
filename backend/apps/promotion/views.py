@@ -258,6 +258,8 @@ class GenerateCouponView(BaseApiView):
             created_by=request.user,
         )
         Cache('promotion').delete('available')
+        from apps.goods.services import GoodsQueryService
+        GoodsQueryService.invalidate_promo_caches()
         return Response(CouponSerializer(coupon).data, status=status.HTTP_201_CREATED)
 
 
@@ -293,6 +295,8 @@ class ActivityCreateView(BaseApiView):
             end_time=data['end_time'],
             created_by=request.user,
         )
+        from apps.goods.services import GoodsQueryService
+        GoodsQueryService.invalidate_promo_caches()
         return Response(ActivitySerializer(activity).data, status=status.HTTP_201_CREATED)
 
 
@@ -310,6 +314,8 @@ class ActivityUpdateView(BaseApiView):
         for k, v in serializer.validated_data.items():
             setattr(activity, k, v)
         activity.save()
+        from apps.goods.services import GoodsQueryService
+        GoodsQueryService.invalidate_promo_caches()
         return Response(ActivitySerializer(activity).data)
 
 
@@ -323,4 +329,6 @@ class ActivityDeleteView(BaseApiView):
         if not activity:
             return Response({'detail': Messages.COUPON_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
         activity.delete()
+        from apps.goods.services import GoodsQueryService
+        GoodsQueryService.invalidate_promo_caches()
         return Response({'detail': 'Activity deleted successfully.'})

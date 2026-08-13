@@ -124,6 +124,14 @@ class GoodsSearchService:
                 'created_at': spu.created_at.isoformat() if spu.created_at else '',
             })
 
+        from .services import GoodsQueryService
+        promo_map = GoodsQueryService.compute_promo_tags([
+            {'id': it['id'], 'category_id': it.get('category_id'), 'brand_id': it.get('brand_id')}
+            for it in items
+        ])
+        for it in items:
+            it['promo_tags'] = promo_map.get(it['id'], [])
+
         payload = {'items': items, 'total': total, 'page': page, 'per_page': per_page,
                    'facets': {'by_brand': [], 'by_category': [], 'price_ranges': []}}
         _cache.set_json(cache_key, payload, CACHE_TTL)

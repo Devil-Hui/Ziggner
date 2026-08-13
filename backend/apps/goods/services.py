@@ -226,6 +226,11 @@ class GoodsQueryService:
             return None
         cached = _goods_cache.get(f'spu:{spu_id}')
         if cached is not None:
+            spu = SPU.objects.filter(id=spu_id).only('id', 'category_id', 'brand_id').first()
+            if spu:
+                cached['promo_tags'] = GoodsQueryService.compute_promo_tags(
+                    [{'id': spu.id, 'category_id': spu.category_id, 'brand_id': spu.brand_id}]
+                ).get(spu_id, [])
             return cached
         from apps.goods.models import SPU, SPUStatus
         spu = SPU.objects.filter(
@@ -272,6 +277,9 @@ class GoodsQueryService:
             for rel in spu.tag_relations.select_related('tag').filter(tag__is_active=True)
         ]
         _goods_cache.set(f'spu:{spu_id}', data, _ttl['SPU_DETAIL'])
+        data['promo_tags'] = GoodsQueryService.compute_promo_tags(
+            [{'id': spu.id, 'category_id': spu.category_id, 'brand_id': spu.brand_id}]
+        ).get(spu_id, [])
         return data
 
     @staticmethod
@@ -365,6 +373,12 @@ class GoodsQueryService:
                     'max_price': str(prices.get('max_price', '')),
                     'created_at': spu.created_at.isoformat() if spu.created_at else '',
                 })
+            promo_map = GoodsQueryService.compute_promo_tags([
+                {'id': s.id, 'category_id': s.category_id, 'brand_id': s.brand_id}
+                for s in spus
+            ])
+            for r in results:
+                r['promo_tags'] = promo_map.get(r['id'], [])
             return {'results': results, 'total': total, 'page': page, 'size': size}
 
         return _goods_cache.get_or_set_with_lock(
@@ -396,6 +410,107 @@ class GoodsQueryService:
         data = SKUSimpleSerializer(skus, many=True).data
         _goods_cache.set(f'spu:{spu_id}:skus', data, _ttl['SPU_DETAIL'])
         return data
+
+    # ---------- 活动标签（promo_tags）----------
+
+    @staticmethod
+    def compute_promo_tags(items):
+        """计算商品活动标签。
+        items: [{'id': int, 'category_id': int|None, 'brand_id': int|None}]
+        返回 {spu_id: [{'type':'primary'|'secondary','label':str}, ...]}
+        - 活动价(primary): 在售 SKU 含 discount_price，或 SPU 命中生效期折扣活动
+        - 可领券(secondary): 命中活动券 scope，或存在无 scope 的全场券
+        """
+        if not items:
+            return {}
+        spu_ids = [i['id'] for i in items]
+        from apps.goods.models import SKU
+        discount_spu_ids = set(SKU.objects.filter(
+            spu_id__in=spu_ids, shelf_status='on', discount_price__isnull=False,
+        ).values_list('spu_id', flat=True))
+        activity_spu_ids = _get_active_activity_index()
+        activity_hit = discount_spu_ids | (activity_spu_ids & set(spu_ids))
+        cidx = _get_active_coupon_index()
+        result = {}
+        for it in items:
+            tags = []
+            if it['id'] in activity_hit:
+                tags.append({'type': 'primary', 'label': '活动价'})
+            if (cidx['global']
+                    or it['id'] in cidx['spu']
+                    or (it['category_id'] is not None and it['category_id'] in cidx['cat'])
+                    or (it['brand_id'] is not None and it['brand_id'] in cidx['brand'])):
+                tags.append({'type': 'secondary', 'label': '可领券'})
+            if tags:
+                result[it['id']] = tags
+        return result
+
+    @staticmethod
+    def invalidate_promo_caches():
+        """券/活动/折扣价变更后，刷新活动标签相关缓存。"""
+        cache.delete('promo:coupon_index:v1')
+        cache.delete('promo:activity_index:v1')
+        GoodsCacheService.invalidate_spu_list()
+        from utils.cache import Cache
+        Cache('search').clear_by_prefix('srch:')
+
+
+# ==================== 活动标签索引（模块级，短 TTL 缓存） ====================
+
+_PROMO_INDEX_TTL = 60
+
+
+def _get_active_coupon_index():
+    """活动券 scope 索引（缓存 60s）。
+    返回 {'spu': set, 'cat': set, 'brand': set, 'global': bool}
+    global=True 表示存在无 scope 的全场券。
+    """
+    key = 'promo:coupon_index:v1'
+    idx = cache.get(key)
+    if idx is not None:
+        return idx
+    now = timezone.now()
+    from apps.promotion.models import Coupon, CouponScope
+    spu_set, cat_set, brand_set = set(), set(), set()
+    global_coupon = False
+    coupons = Coupon.objects.filter(
+        is_active=True, start_time__lte=now, end_time__gte=now,
+    ).prefetch_related('scopes')
+    for c in coupons:
+        scopes = list(c.scopes.all())
+        if not scopes:
+            global_coupon = True
+            continue
+        for s in scopes:
+            if s.scope_type == CouponScope.ScopeType.SPU:
+                spu_set.add(s.target_id)
+            elif s.scope_type == CouponScope.ScopeType.CATEGORY:
+                cat_set.add(s.target_id)
+            elif s.scope_type == CouponScope.ScopeType.BRAND:
+                brand_set.add(s.target_id)
+    idx = {'spu': spu_set, 'cat': cat_set, 'brand': brand_set, 'global': global_coupon}
+    cache.set(key, idx, _PROMO_INDEX_TTL)
+    return idx
+
+
+def _get_active_activity_index():
+    """处于生效期的折扣活动所覆盖的 SPU id 集合（缓存 60s）。"""
+    key = 'promo:activity_index:v1'
+    idx = cache.get(key)
+    if idx is not None:
+        return idx
+    now = timezone.now()
+    from apps.promotion.models import DiscountActivity, ActivitySKURelation
+    active_ids = list(DiscountActivity.objects.filter(
+        start_time__lte=now, end_time__gte=now,
+    ).values_list('id', flat=True))
+    spu_ids = set()
+    if active_ids:
+        spu_ids = set(ActivitySKURelation.objects.filter(
+            activity_id__in=active_ids,
+        ).values_list('sku__spu_id', flat=True))
+    cache.set(key, spu_ids, _PROMO_INDEX_TTL)
+    return spu_ids
 
 
 # ==================== SPU 状态缓存服务（Redis 前置缓存） ====================
