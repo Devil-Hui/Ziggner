@@ -1,5 +1,5 @@
 // TypeScript strict mode enabled
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
@@ -193,24 +193,14 @@ export default function AdminProducts() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<number[]>([])
+  // 用 Set 存储选中项：membership 查询 O(1)（原数组 includes 为 O(n)），切换单选不再触发全表重算
+  const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
   const [shelfError, setShelfError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
-  const doShelfAction = async (id: number, action: string) => {
-    setShelfingIds(prev => new Set(prev).add(id))
-    setShelfError('')
-    try {
-      await adminAPI.shelfSPU(id, { action })
-    } catch (e: any) {
-      setShelfError(e?.message || t('admin.products.shelfFailed'))
-    }
-    await fetchProducts()
-    setShelfingIds(prev => { const next = new Set(prev); next.delete(id); return next })
-  }
   const fetchProducts = useCallback(async () => {
     setLoading(true)
     setError('')
@@ -227,27 +217,54 @@ export default function AdminProducts() {
     setLoading(false)
   }, [page, status, search, t])
 
+  // 在 fetchProducts 之后声明，避免 useCallback 依赖数组的 TDZ
+  const doShelfAction = useCallback(async (id: number, action: string) => {
+    setShelfingIds(prev => new Set(prev).add(id))
+    setShelfError('')
+    try {
+      await adminAPI.shelfSPU(id, { action })
+    } catch (e: any) {
+      setShelfError(e?.message || t('admin.products.shelfFailed'))
+    }
+    await fetchProducts()
+    setShelfingIds(prev => { const next = new Set(prev); next.delete(id); return next })
+  }, [fetchProducts, t])
+
   useEffect(() => {
     fetchProducts()
   }, [fetchProducts])
 
-  const toggleSelect = (id: number) => {
-    setSelected((prev) => prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id])
-  }
+  const toggleSelect = useCallback((id: number) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
 
-  const toggleAll = () => {
-    if (selected.length === items.length) {
-      setSelected([])
-    } else {
-      setSelected(items.map((i) => i.id))
-    }
-  }
+  const toggleAll = useCallback(() => {
+    setSelected((prev) =>
+      prev.size === items.length && items.length > 0
+        ? new Set()
+        : new Set(items.map((i) => i.id)),
+    )
+  }, [items])
+
+  // 行级回调保持稳定引用，配合 memo 行组件避免选中切换时全表重渲染
+  const onEdit = useCallback((id: number) => navigate(`/admin/products/${id}`), [navigate])
+  const onReview = useCallback((id: number) => navigate(`/admin/products/${id}/audit`), [navigate])
+  const onChat = useCallback((id: number) => navigate(`/admin/chat?product_id=${id}`), [navigate])
+  const onDelete = useCallback((id: number) => setDeleteTarget(id), [])
+  const onSubmitAudit = useCallback((id: number) => {
+    adminAPI.submitAudit(id).then(fetchProducts).catch(() => {})
+  }, [fetchProducts])
 
   const handleBatchAction = async (action: string) => {
-    if (!selected.length) return
+    if (selected.size === 0) return
     try {
-      await adminAPI.batchSPU({ spu_ids: selected, action })
-      setSelected([])
+      await adminAPI.batchSPU({ spu_ids: Array.from(selected), action })
+      setSelected(new Set())
       fetchProducts()
     } catch {
       setError(t('admin.products.batchFailed'))
@@ -293,7 +310,7 @@ export default function AdminProducts() {
           onKeyDown={(e) => e.key === 'Enter' && fetchProducts()}
         />
 
-        {selected.length > 0 && (
+        {selected.size > 0 && (
           <Actions>
             <Button onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')}</Button>
             <Button onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</Button>
@@ -314,7 +331,7 @@ export default function AdminProducts() {
           <Table>
             <thead>
               <tr>
-                <Th style={{ width: 40 }}><Checkbox checked={selected.length === items.length && items.length > 0} onChange={toggleAll} /></Th>
+                <Th style={{ width: 40 }}><Checkbox checked={selected.size === items.length && items.length > 0} onChange={toggleAll} /></Th>
                 <Th>{t('admin.products.columnProduct')}</Th>
                 <Th>{t('admin.products.columnPrice')}</Th>
                 <Th>{t('admin.products.columnStatus')}</Th>
@@ -324,51 +341,22 @@ export default function AdminProducts() {
             </thead>
             <tbody>
               {items.map((item) => (
-                <tr key={item.id}>
-                  <Td><Checkbox checked={selected.includes(item.id)} onChange={() => toggleSelect(item.id)} /></Td>
-                  <Td>
-                    <div style={{ fontWeight: 500 }}>{item.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#999' }}>{item.brand_name} · {item.sku_count} SKUs</div>
-                  </Td>
-                  <Td>{item.price_range ? `$${item.price_range.min} - $${item.price_range.max}` : '-'}</Td>
-                  <Td><StatusBadge $status={item.status}>{item.status_display}</StatusBadge></Td>
-                  <Td style={{ fontSize: '0.75rem', color: '#999' }}>{item.category_path}</Td>
-                  <Td>
-                    <ActionBtn onClick={() => navigate(`/admin/products/${item.id}`)}>{t('common.edit')}</ActionBtn>
-                    {item.status === 'draft' && (
-                      <>
-                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-                        {canSubmit && (
-                          <ActionBtn onClick={async () => { await adminAPI.submitAudit(item.id); fetchProducts() }}>{t('admin.products.submitReview')}</ActionBtn>
-                        )}
-                      </>
-                    )}
-                    {item.status === 'submitted' && canAudit && (
-                      <ActionBtn onClick={() => navigate(`/admin/products/${item.id}/audit`)}>{t('admin.products.review')}</ActionBtn>
-                    )}
-                    {item.status === 'approved' && (
-                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-                    )}
-                    {item.status === 'on_sale' && (
-                      <>
-                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
-                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
-                      </>
-                    )}
-                    {item.status === 'suspended' && (
-                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
-                    )}
-                    {item.status === 'off_sale' && (
-                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-                    )}
-                    {isSuperAdmin && (
-                      <ActionBtn $danger onClick={() => setDeleteTarget(item.id)}>{t('common.delete')}</ActionBtn>
-                    )}
-                    <ChatLink
-                      onClick={() => navigate(`/admin/chat?product_id=${item.id}`)}
-                    />
-                  </Td>
-                </tr>
+                <ProductRow
+                  key={item.id}
+                  item={item}
+                  isSelected={selected.has(item.id)}
+                  isShelfing={shelfingIds.has(item.id)}
+                  canSubmit={canSubmit}
+                  canAudit={canAudit}
+                  isSuperAdmin={isSuperAdmin}
+                  onToggleSelect={toggleSelect}
+                  onEdit={onEdit}
+                  onShelf={doShelfAction}
+                  onSubmitAudit={onSubmitAudit}
+                  onReview={onReview}
+                  onDelete={onDelete}
+                  onChat={onChat}
+                />
               ))}
             </tbody>
           </Table>
@@ -404,3 +392,83 @@ export default function AdminProducts() {
     </div>
   )
 }
+
+// ── 记忆化行组件：选中切换时仅重渲染变化的行，避免全表 reconcile ──
+interface ProductRowProps {
+  item: SPUItem
+  isSelected: boolean
+  isShelfing: boolean
+  canSubmit: boolean
+  canAudit: boolean
+  isSuperAdmin: boolean
+  onToggleSelect: (id: number) => void
+  onEdit: (id: number) => void
+  onShelf: (id: number, action: string) => void
+  onSubmitAudit: (id: number) => void
+  onReview: (id: number) => void
+  onDelete: (id: number) => void
+  onChat: (id: number) => void
+}
+
+const ProductRow = memo(function ProductRow({
+  item,
+  isSelected,
+  isShelfing,
+  canSubmit,
+  canAudit,
+  isSuperAdmin,
+  onToggleSelect,
+  onEdit,
+  onShelf,
+  onSubmitAudit,
+  onReview,
+  onDelete,
+  onChat,
+}: ProductRowProps) {
+  const { t } = useTranslation()
+  return (
+    <tr>
+      <Td><Checkbox checked={isSelected} onChange={() => onToggleSelect(item.id)} /></Td>
+      <Td>
+        <div style={{ fontWeight: 500 }}>{item.name}</div>
+        <div style={{ fontSize: '0.75rem', color: '#999' }}>{item.brand_name} · {item.sku_count} SKUs</div>
+      </Td>
+      <Td>{item.price_range ? `$${item.price_range.min} - $${item.price_range.max}` : '-'}</Td>
+      <Td><StatusBadge $status={item.status}>{item.status_display}</StatusBadge></Td>
+      <Td style={{ fontSize: '0.75rem', color: '#999' }}>{item.category_path}</Td>
+      <Td>
+        <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
+        {item.status === 'draft' && (
+          <>
+            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+            {canSubmit && (
+              <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>
+            )}
+          </>
+        )}
+        {item.status === 'submitted' && canAudit && (
+          <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
+        )}
+        {item.status === 'approved' && (
+          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+        )}
+        {item.status === 'on_sale' && (
+          <>
+            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
+            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
+          </>
+        )}
+        {item.status === 'suspended' && (
+          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
+        )}
+        {item.status === 'off_sale' && (
+          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+        )}
+        {isSuperAdmin && (
+          <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
+        )}
+        <ChatLink onClick={() => onChat(item.id)} />
+      </Td>
+    </tr>
+  )
+})
