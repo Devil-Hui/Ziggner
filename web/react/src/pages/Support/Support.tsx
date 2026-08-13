@@ -6,6 +6,7 @@ import Button from '../../components/common/Button/Button'
 import { useUser } from '../../store/UserContext'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Spacing } from '../../theme/tokens'
+import { useHoneypot } from '../../components/common/Honeypot'
 import {
   supportAPI,
   type SupportConversation,
@@ -449,6 +450,9 @@ export default function Support() {
   const [inputAttachments, setInputAttachments] = useState<string[]>([])
   const [sending, setSending] = useState(false)
 
+  // 蜜罐：公开客服表单反垃圾/反爬（机器人常无差别填充所有 input）
+  const hp = useHoneypot()
+
   const msgListRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const newFileInputRef = useRef<HTMLInputElement>(null)
@@ -555,6 +559,7 @@ export default function Support() {
 
   // Create new conversation
   const handleCreateConversation = async () => {
+    if (hp.isBot()) return
     if (!newContent.trim() && newAttachments.length === 0) return
 
     try {
@@ -717,8 +722,9 @@ export default function Support() {
             <ConvList>
               {showNewConv && (
                 <NewConvSection>
-                  <NewConvForm>
-                    <SubjectInput
+                <NewConvForm>
+                  {hp.field}
+                  <SubjectInput
                       placeholder={t('store.support.subjectPlaceholder')}
                       value={newSubject}
                       onChange={e => setNewSubject(e.target.value)}

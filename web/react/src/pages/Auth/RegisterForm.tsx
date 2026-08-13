@@ -7,6 +7,7 @@ import { useUser } from '../../store/UserContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { post, ensureCSRFCookie } from '../../api/request'
+import { useHoneypot } from '../../components/common/Honeypot'
 
 // ==================== 样式组件 ====================
 
@@ -97,6 +98,7 @@ export default function RegisterForm() {
   const [codeCooldown, setCodeCooldown] = useState(0)
   const [codeSending, setCodeSending] = useState(false)
   const [verifyId, setVerifyId] = useState('')
+  const hp = useHoneypot()
 
   const handleSendCode = async () => {
     if (!formData.email || codeCooldown > 0) return
@@ -125,6 +127,9 @@ export default function RegisterForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // 蜜罐：自动化爬虫常无差别填充所有 input，命中即静默丢弃
+    if (hp.isBot()) return
 
     if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
       setError(t('store.auth.fillAllFields'))
@@ -227,6 +232,8 @@ export default function RegisterForm() {
       <Button type="submit" variant="primary" size="lg">
         {t('store.auth.signUp')}
       </Button>
+
+      {hp.field}
 
       {error && <ErrorMsg>{error}</ErrorMsg>}
     </Form>
