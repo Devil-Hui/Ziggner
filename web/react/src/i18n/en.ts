@@ -1237,6 +1237,8 @@ const en = {
       quantity: 'Quantity',
       stock: 'Stock',
       contactSupport: 'Contact Support',
+      activityPrice: 'Activity Price',
+      originalPrice: 'Original Price',
     },
     profile: {
       signIn: 'Please Sign In',

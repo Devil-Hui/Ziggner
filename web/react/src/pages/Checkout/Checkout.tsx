@@ -787,7 +787,11 @@ export default function Checkout() {
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [region, setRegion] = useState('')
-  const [selectedCouponId, setSelectedCouponId] = useState<number | null>(null)
+  const [selectedCouponId, setSelectedCouponId] = useState<number | null>(() => {
+    const uc = new URLSearchParams(window.location.search).get('uc')
+    const n = uc ? Number(uc) : NaN
+    return Number.isFinite(n) ? n : null
+  })
   const [paymentMethod, setPaymentMethod] = useState<CheckoutPaymentMethod>(
     AVAILABLE_PAYMENT_METHODS[0]?.value as CheckoutPaymentMethod || 'paypal',
   )

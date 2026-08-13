@@ -415,8 +415,8 @@ export default function Coupons() {
     })
   }, [t])
 
-  const handleUse = useCallback(() => {
-    navigate('/cart')
+  const handleUse = useCallback((id: number) => {
+    navigate(`/checkout?uc=${id}`)
   }, [navigate])
 
   const renderCard = (coupon: DisplayCoupon, index: number) => {
@@ -468,7 +468,7 @@ export default function Coupons() {
           </ConditionText>
 
           {/* CTA 按钮 */}
-          <UseButton $variant={btnVariant} onClick={handleUse} disabled={isUsed}>
+          <UseButton $variant={btnVariant} onClick={() => handleUse(coupon.id)} disabled={isUsed}>
             {btnLabel}
           </UseButton>
 

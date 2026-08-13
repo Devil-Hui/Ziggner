@@ -1237,6 +1237,8 @@ const zhCN = {
       quantity: '数量',
       stock: '库存',
       contactSupport: '联系客服',
+      activityPrice: '活动价',
+      originalPrice: '原价',
     },
     profile: {
       signIn: '请先登录',

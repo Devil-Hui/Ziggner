@@ -100,6 +100,26 @@ const PriceValue = styled.span`
   color: ${Color.primary};
 `
 
+const ActivityBadge = styled.span`
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #fff;
+  background: ${Color.primary};
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-right: 10px;
+  align-self: center;
+`
+
+const OriginalPrice = styled.span`
+  font-size: 0.95rem;
+  color: ${Color.text.muted};
+  text-decoration: line-through;
+  margin-left: 0.6em;
+  align-self: center;
+`
+
 const SpecSection = styled.div`
   margin-top: 1vh;
 `
@@ -367,6 +387,10 @@ export default function ProductDetail() {
   }, [product, selectedSpecs])
 
   const price = selectedSku?.discount_price ?? selectedSku?.price ?? '0.00'
+  const originalPrice = selectedSku?.price
+  const activityPriceVal = selectedSku?.discount_price
+  const hasActivity =
+    !!activityPriceVal && !!originalPrice && Number(activityPriceVal) < Number(originalPrice)
 
   const handleToggleFavorite = async () => {
     if (!isLoggedIn) {
@@ -485,7 +509,11 @@ export default function ProductDetail() {
               </div>
 
               <PriceSection>
+                {hasActivity && <ActivityBadge>{t('store.product.activityPrice')}</ActivityBadge>}
                 <PriceValue>${Number(price).toFixed(2)}</PriceValue>
+                {hasActivity && (
+                  <OriginalPrice>{t('store.product.originalPrice')}: ${Number(originalPrice).toFixed(2)}</OriginalPrice>
+                )}
               </PriceSection>
 
               {/* Dynamic Specs — derived from SKU specs */}
