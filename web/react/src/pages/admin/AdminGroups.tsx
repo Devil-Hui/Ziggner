@@ -1,11 +1,12 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback } from 'react';
-import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import styled, { keyframes } from 'styled-components'
+import { Color, Radius, Shadow, Spacing, FontSize, Transition, FocusRing } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
+import FormDialog from '../../components/admin/common/FormDialog';
 import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
 import { useAdminAuth } from '../../store/AdminAuthContext';
@@ -26,45 +27,26 @@ interface GroupMember {
 
 /* ========== Toast ========== */
 
+const toastIn = keyframes`
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+`;
+
 const Toast = styled.div<{ $type: 'success' | 'error' }>`
   padding: 10px 16px;
-  margin-bottom: 16px;
-  border-radius: 2px;
-  font-size: ${FontSize.sm}px;
-  background: ${({ $type }) => ($type === 'success' ? '#e8f5e9' : '#fde8e8')};
-  color: ${({ $type }) => ($type === 'success' ? '#2e7d32' : '#c62828')};
-`;
-
-/* ========== Form Dialog ========== */
-
-const FormOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const FormDialog = styled.div`
-  background: ${Color.bg.card};
+  margin-bottom: ${Spacing.lg}px;
   border-radius: ${Radius.sm}px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-  width: 420px;
-  max-width: 90vw;
-  padding: ${Spacing.xxl}px;
+  font-size: ${FontSize.sm}px;
+  background: ${({ $type }) => ($type === 'success' ? 'rgba(5, 150, 105, 0.1)' : 'rgba(220, 38, 38, 0.1)')};
+  color: ${({ $type }) => ($type === 'success' ? Color.status.success : Color.status.error)};
+  border: 1px solid ${({ $type }) => ($type === 'success' ? 'rgba(5, 150, 105, 0.25)' : 'rgba(220, 38, 38, 0.25)')};
+  animation: ${toastIn} ${Transition.normal};
 `;
 
-const FormTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${Color.text.heading};
-  margin: 0 0 20px 0;
-`;
+/* ========== Form Fields ========== */
 
 const FormGroup = styled.div`
-  margin-bottom: 16px;
+  margin-bottom: ${Spacing.lg}px;
 `;
 
 const Label = styled.label`
@@ -76,92 +58,77 @@ const Label = styled.label`
 
 const Input = styled.input`
   width: 100%;
-  height: 36px;
+  height: 38px;
   padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
+  font-size: ${FontSize.base}px;
   border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
+  border-radius: ${Radius.sm}px;
+  color: ${Color.text.body};
+  background: ${Color.bg.card};
   box-sizing: border-box;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
+    box-shadow: ${FocusRing.style};
   }
 `;
 
 const Hint = styled.span`
   display: block;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: ${FontSize.xs}px;
   color: ${Color.text.muted};
 `;
 
 const ErrorText = styled.span`
   display: block;
   margin-top: 4px;
-  font-size: 11px;
-  color: #c62828;
+  font-size: ${FontSize.xs}px;
+  color: ${Color.status.error};
 `;
 
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
-`;
-
+/* Primary action button (brand blue) — used in page header */
 const PrimaryBtn = styled.button`
   padding: 8px 20px;
   font-size: ${FontSize.sm}px;
   border: none;
-  background: #e74c3c;
+  background: ${Color.primary};
   color: ${Color.text.inverse};
-  border-radius: 2px;
+  border-radius: ${Radius.sm}px;
   cursor: pointer;
+  transition: background ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:hover {
-    background: #c0392b;
-  }
-`;
-
-const SecondaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${Color.border.dark};
-    color: ${Color.primaryHover};
+    background: ${Color.primaryHover};
+    box-shadow: ${Shadow.focus};
   }
 `;
 
 /* ========== Member Panel ========== */
 
 const MemberPanel = styled.div`
-  margin-top: 16px;
-  margin-bottom: 16px;
+  margin-top: ${Spacing.lg}px;
+  margin-bottom: ${Spacing.lg}px;
   border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.sm}px;
+  border-radius: ${Radius.md}px;
   overflow: hidden;
+  box-shadow: ${Shadow.card};
 `;
 
 const MemberPanelHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
+  padding: ${Spacing.md}px ${Spacing.lg}px;
   background: ${Color.primaryLight};
   border-bottom: 1px solid ${Color.border.light};
 `;
 
 const MemberPanelTitle = styled.span`
   font-size: ${FontSize.base}px;
-  font-weight: 600;
+  font-weight: ${600};
   color: ${Color.primaryHover};
 `;
 
@@ -173,9 +140,12 @@ const MemberPanelClose = styled.button`
   cursor: pointer;
   padding: 0;
   line-height: 1;
+  border-radius: ${Radius.xs}px;
+  transition: color ${Transition.fast}, background ${Transition.fast};
 
   &:hover {
     color: ${Color.primaryHover};
+    background: rgba(26, 86, 219, 0.1);
   }
 `;
 
@@ -185,26 +155,28 @@ const MemberTable = styled.table`
 `;
 
 const MemberThead = styled.thead`
-  background: rgba(26, 23, 18, 0.03);
+  background: rgba(26, 86, 219, 0.04);
 `;
 
 const MemberTh = styled.th`
-  padding: 8px 16px;
+  padding: ${Spacing.sm}px ${Spacing.lg}px;
   text-align: left;
-  font-weight: 500;
+  font-weight: ${500};
   font-size: ${FontSize.xs}px;
   color: ${Color.text.muted};
   border-bottom: 1px solid ${Color.border.light};
 `;
 
 const MemberTd = styled.td`
-  padding: 10px 16px;
+  padding: ${Spacing.sm}px ${Spacing.lg}px;
   font-size: ${FontSize.sm}px;
-  color: ${Color.primaryHover};
+  color: ${Color.text.body};
   border-bottom: 1px solid ${Color.border.light};
 `;
 
 const MemberTr = styled.tr`
+  transition: background ${Transition.fast};
+
   &:hover {
     background: ${Color.primaryLight};
   }
@@ -214,18 +186,18 @@ const RoleBadge = styled.span<{ $role: 'leader' | 'member' }>`
   display: inline-flex;
   align-items: center;
   padding: 2px 8px;
-  border-radius: 2px;
+  border-radius: ${Radius.xs}px;
   font-size: ${FontSize.xs}px;
-  font-weight: 500;
-  background: ${({ $role }) => ($role === 'leader' ? '#fff3e0' : '#e3f2fd')};
-  color: ${({ $role }) => ($role === 'leader' ? '#e65100' : '#1565c0')};
+  font-weight: ${500};
+  background: ${({ $role }) => ($role === 'leader' ? 'rgba(217, 119, 6, 0.12)' : 'rgba(37, 99, 235, 0.12)')};
+  color: ${({ $role }) => ($role === 'leader' ? Color.status.warning : Color.status.info)};
 `;
 
 const AddMemberRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: ${Spacing.sm}px;
+  padding: ${Spacing.sm}px ${Spacing.lg}px;
   border-top: 1px solid ${Color.border.light};
 `;
 
@@ -236,67 +208,74 @@ const AddMemberLabel = styled.span`
 
 const AddMemberInput = styled.input`
   width: 160px;
-  height: 30px;
+  height: 32px;
   padding: 0 8px;
   font-size: ${FontSize.sm}px;
   border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
+  border-radius: ${Radius.sm}px;
+  color: ${Color.text.body};
+  background: ${Color.bg.card};
   box-sizing: border-box;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
+    box-shadow: ${FocusRing.style};
   }
 
   &::placeholder {
-    color: ${Color.border.dark};
+    color: ${Color.text.muted};
   }
 `;
 
 const AddMemberBtn = styled.button<{ $disabled?: boolean }>`
   padding: 4px 12px;
   font-size: ${FontSize.xs}px;
-  border: 1px solid #e74c3c;
+  border: 1px solid ${Color.primary};
   background: ${Color.bg.card};
-  color: #e74c3c;
-  border-radius: 2px;
+  color: ${Color.primary};
+  border-radius: ${Radius.sm}px;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
+  transition: background ${Transition.fast}, color ${Transition.fast};
 
   &:hover {
-    background: ${({ $disabled }) => ($disabled ? '#fff' : '#e74c3c')};
-    color: ${({ $disabled }) => ($disabled ? '#e74c3c' : '#fff')};
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : Color.primary)};
+    color: ${({ $disabled }) => ($disabled ? Color.primary : Color.text.inverse)};
   }
 `;
 
 const RoleSelect = styled.select`
-  height: 30px;
+  height: 32px;
   padding: 0 6px;
   font-size: ${FontSize.sm}px;
   border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
+  border-radius: ${Radius.sm}px;
+  color: ${Color.text.body};
   box-sizing: border-box;
   background: ${Color.bg.card};
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
+    box-shadow: ${FocusRing.style};
   }
 `;
 
 const RemoveBtn = styled.button`
   padding: 2px 8px;
   font-size: ${FontSize.xs}px;
-  border: 1px solid #e74c3c;
+  border: 1px solid ${Color.status.error};
   background: ${Color.bg.card};
-  color: #e74c3c;
-  border-radius: 2px;
+  color: ${Color.status.error};
+  border-radius: ${Radius.sm}px;
   cursor: pointer;
+  transition: background ${Transition.fast}, color ${Transition.fast};
 
   &:hover {
-    background: #e74c3c;
+    background: ${Color.status.error};
     color: ${Color.text.inverse};
   }
 `;
@@ -306,12 +285,14 @@ const ExpandBtn = styled.button`
   font-size: ${FontSize.xs}px;
   border: 1px solid ${Color.border.medium};
   background: ${Color.bg.card};
-  color: #e74c3c;
-  border-radius: 2px;
+  color: ${Color.text.secondary};
+  border-radius: ${Radius.sm}px;
   cursor: pointer;
+  transition: border-color ${Transition.fast}, color ${Transition.fast};
 
   &:hover {
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
+    color: ${Color.primary};
   }
 `;
 
@@ -319,7 +300,7 @@ const MemberLoading = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: ${Spacing.xxxl}px ${Spacing.lg}px;
   color: ${Color.text.muted};
   font-size: ${FontSize.sm}px;
 `;
@@ -329,7 +310,7 @@ const MemberEmpty = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 32px 16px;
+  padding: ${Spacing.xxxl}px ${Spacing.lg}px;
   color: ${Color.text.muted};
   font-size: ${FontSize.sm}px;
 `;
@@ -339,8 +320,8 @@ const MemberError = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 16px;
-  color: #c62828;
+  padding: ${Spacing.xl}px ${Spacing.lg}px;
+  color: ${Color.status.error};
   font-size: ${FontSize.sm}px;
 `;
 
@@ -348,14 +329,15 @@ const RetrySmallBtn = styled.button`
   margin-top: 8px;
   padding: 4px 12px;
   font-size: ${FontSize.xs}px;
-  border: 1px solid #e74c3c;
+  border: 1px solid ${Color.status.error};
   background: ${Color.bg.card};
-  color: #e74c3c;
-  border-radius: 2px;
+  color: ${Color.status.error};
+  border-radius: ${Radius.sm}px;
   cursor: pointer;
+  transition: background ${Transition.fast}, color ${Transition.fast};
 
   &:hover {
-    background: #e74c3c;
+    background: ${Color.status.error};
     color: ${Color.text.inverse};
   }
 `;
@@ -552,7 +534,7 @@ export default function AdminGroups() {
       title: t('admin.groups.columnCreatedAt'),
       width: '180px',
       render: (val) => (
-        <span style={{ color: '#999' }}>
+        <span style={{ color: Color.text.muted }}>
           {val ? new Date(String(val)).toLocaleString('zh-CN') : '-'}
         </span>
       ),
@@ -635,7 +617,7 @@ export default function AdminGroups() {
           {!membersLoading && !membersError && members.length === 0 && (
             <MemberEmpty>
               <span style={{ marginBottom: 4 }}>{t('admin.groups.noMembers')}</span>
-              <span style={{ fontSize: 12, color: '#ccc' }}>{t('admin.groups.addMemberHint')}</span>
+              <span style={{ fontSize: FontSize.xs, color: Color.text.muted }}>{t('admin.groups.addMemberHint')}</span>
             </MemberEmpty>
           )}
 
@@ -708,43 +690,42 @@ export default function AdminGroups() {
         </MemberPanel>
       )}
 
-      {/* ====== Create Form Dialog ====== */}
-      {showForm && (
-        <FormOverlay onClick={() => setShowForm(false)}>
-          <FormDialog onClick={(e) => e.stopPropagation()}>
-            <FormTitle>{t('admin.groups.newGroup')}</FormTitle>
-            <FormGroup>
-              <Label>{t('admin.groups.nameLabel')}</Label>
-              <Input
-                value={formName}
-                onChange={(e) => {
-                  setFormName(e.target.value);
-                  if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
-                }}
-                placeholder={t('admin.groups.namePlaceholder')}
-              />
-              {formErrors.name && <ErrorText>{formErrors.name}</ErrorText>}
-            </FormGroup>
-            <FormGroup>
-              <Label>{t('admin.groups.slugLabel')}</Label>
-              <Input
-                value={formSlug}
-                onChange={(e) => {
-                  setFormSlug(e.target.value);
-                  if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: undefined }));
-                }}
-                placeholder={t('admin.groups.slugPlaceholder')}
-              />
-              <Hint>{t('admin.groups.slugHint')}</Hint>
-              {formErrors.slug && <ErrorText>{formErrors.slug}</ErrorText>}
-            </FormGroup>
-            <ButtonGroup>
-              <SecondaryBtn onClick={() => setShowForm(false)}>{t('common.cancel')}</SecondaryBtn>
-              <PrimaryBtn onClick={handleCreate}>{t('admin.groups.create')}</PrimaryBtn>
-            </ButtonGroup>
-          </FormDialog>
-        </FormOverlay>
-      )}
+      {/* ====== Create Form Dialog (reuses common FormDialog) ====== */}
+      <FormDialog
+        open={showForm}
+        title={t('admin.groups.newGroup')}
+        submitLabel={t('admin.groups.create')}
+        cancelLabel={t('common.cancel')}
+        submitVariant="primary"
+        onClose={() => setShowForm(false)}
+        onSubmit={handleCreate}
+      >
+        <FormGroup>
+          <Label>{t('admin.groups.nameLabel')}</Label>
+          <Input
+            value={formName}
+            onChange={(e) => {
+              setFormName(e.target.value);
+              if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+            }}
+            placeholder={t('admin.groups.namePlaceholder')}
+          />
+          {formErrors.name && <ErrorText>{formErrors.name}</ErrorText>}
+        </FormGroup>
+        <FormGroup>
+          <Label>{t('admin.groups.slugLabel')}</Label>
+          <Input
+            value={formSlug}
+            onChange={(e) => {
+              setFormSlug(e.target.value);
+              if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: undefined }));
+            }}
+            placeholder={t('admin.groups.slugPlaceholder')}
+          />
+          <Hint>{t('admin.groups.slugHint')}</Hint>
+          {formErrors.slug && <ErrorText>{formErrors.slug}</ErrorText>}
+        </FormGroup>
+      </FormDialog>
 
       {/* ====== Remove Member Confirmation ====== */}
       {removeMemberTarget && removeMemberGroupId !== null && (

@@ -1022,7 +1022,7 @@ export default function Chat() {
     let productSnapshot: ProductSnapshot | null = null
     let productCardData: ProductCardData | null = null
     const card = msg.card_data as
-      | { spu_id?: number; product_name?: string; main_image?: string; price?: string; order_status?: string; order_id?: number }
+      | { spu_id?: number; product_name?: string; main_image?: string; price?: string; order_status?: string; order_id?: number; order_no?: string }
       | null
       | undefined
     if (card) {

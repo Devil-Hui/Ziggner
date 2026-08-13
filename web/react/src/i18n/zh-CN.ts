@@ -816,7 +816,6 @@ const zhCN = {
       namePlaceholder: '例如：商品管理组',
       slugLabel: '分组标识',
       slugPlaceholder: '例如：goods_admin',
-      slugHint: '标识用于系统内部识别，建议使用英文小写和下划线',
       create: '创建',
       removeMember: '移除成员',
       confirmRemoveMember: '确定要从「{group}」中移除用户「{user}」？',

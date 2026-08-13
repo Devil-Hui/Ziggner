@@ -89,18 +89,18 @@ const CancelBtn = styled.button`
   }
 `;
 
-const SubmitBtn = styled.button`
+const SubmitBtn = styled.button<{ $variant?: 'primary' | 'danger' }>`
   padding: 8px ${Spacing.xl}px;
   font-size: ${FontSize.base}px;
   border: none;
   border-radius: ${Radius.xs}px;
-  background: ${Color.status.error};
+  background: ${({ $variant }) => ($variant === 'primary' ? Color.primary : Color.status.error)};
   color: ${Color.text.inverse};
   cursor: pointer;
   transition: background ${Transition.fast};
 
   &:hover {
-    background: #c0392b;
+    background: ${({ $variant }) => ($variant === 'primary' ? Color.primaryHover : '#c0392b')};
   }
 `;
 
@@ -109,6 +109,8 @@ interface FormDialogProps {
   title: string;
   submitLabel?: string;
   submitDisabled?: boolean;
+  submitVariant?: 'primary' | 'danger';
+  cancelLabel?: string;
   width?: string;
   onClose: () => void;
   onSubmit: () => void;
@@ -120,6 +122,8 @@ export default function FormDialog({
   title,
   submitLabel = '提交',
   submitDisabled = false,
+  submitVariant = 'danger',
+  cancelLabel = '取消',
   width,
   onClose,
   onSubmit,
@@ -136,8 +140,8 @@ export default function FormDialog({
         </Header>
         <Body>{children}</Body>
         <Footer>
-          <CancelBtn onClick={onClose}>取消</CancelBtn>
-          <SubmitBtn onClick={onSubmit} disabled={submitDisabled}>{submitLabel}</SubmitBtn>
+          <CancelBtn onClick={onClose}>{cancelLabel}</CancelBtn>
+          <SubmitBtn $variant={submitVariant} onClick={onSubmit} disabled={submitDisabled}>{submitLabel}</SubmitBtn>
         </Footer>
       </Dialog>
     </Overlay>
