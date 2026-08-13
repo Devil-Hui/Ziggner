@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { Select, Input as SearchInput } from '../../components/admin/common/ui'
+import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 
@@ -279,6 +280,8 @@ export default function AdminOrders() {
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
   const [busyNo, setBusyNo] = useState<string | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null)
+  const [refundTarget, setRefundTarget] = useState<string | null>(null)
 
   const showToast = (type: 'success' | 'error', message: string) => {
     setToast({ type, message })
@@ -360,7 +363,6 @@ export default function AdminOrders() {
   }
 
   const handleCancel = async (orderNo: string) => {
-    if (!window.confirm(t('admin.orders.confirmCancel'))) return
     setBusyNo(orderNo)
     try {
       await orderAPI.adminCancel(orderNo, 'Cancelled by admin')
@@ -383,8 +385,6 @@ export default function AdminOrders() {
       const remark = window.prompt(t('admin.orders.reviewRemarkPrompt'), '')
       if (remark == null) return
       admin_remark = remark
-    } else if (!window.confirm(t('admin.orders.confirmCompleteRefund'))) {
-      return
     }
     setBusyNo(afterSaleNo)
     try {
@@ -505,7 +505,7 @@ export default function AdminOrders() {
                           <Button
                             $variant="danger"
                             disabled={busyNo === item.order_no}
-                            onClick={() => handleCancel(item.order_no)}
+                            onClick={() => setCancelTarget(item.order_no)}
                           >
                             {t('admin.orders.cancel')}
                           </Button>
@@ -708,7 +708,7 @@ export default function AdminOrders() {
                           <Button
                             $variant="primary"
                             disabled={busyNo === row.after_sale_no}
-                            onClick={() => handleAfterSaleReview(row.after_sale_no, 'complete_refund')}
+                            onClick={() => setRefundTarget(row.after_sale_no)}
                           >
                             {t('admin.orders.completeRefund')}
                           </Button>
@@ -733,6 +733,30 @@ export default function AdminOrders() {
             </Button>
           </PaginationBar>
         </>
+      )}
+
+      {cancelTarget !== null && (
+        <ConfirmDialog
+          title={t('admin.orders.title')}
+          message={t('admin.orders.confirmCancel')}
+          confirmLabel={t('common.confirm')}
+          cancelLabel={t('common.cancel')}
+          danger
+          onConfirm={() => { const no = cancelTarget; setCancelTarget(null); handleCancel(no) }}
+          onCancel={() => setCancelTarget(null)}
+        />
+      )}
+
+      {refundTarget !== null && (
+        <ConfirmDialog
+          title={t('admin.orders.title')}
+          message={t('admin.orders.confirmCompleteRefund')}
+          confirmLabel={t('common.confirm')}
+          cancelLabel={t('common.cancel')}
+          danger
+          onConfirm={() => { const no = refundTarget; setRefundTarget(null); handleAfterSaleReview(no, 'complete_refund') }}
+          onCancel={() => setRefundTarget(null)}
+        />
       )}
     </div>
   )

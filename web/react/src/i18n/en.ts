@@ -492,6 +492,12 @@ const en = {
       reviewApprove: 'Approve',
     },
 
+    emailTemplates: {
+      resetToDefault: 'Reset to Default',
+      resetTitle: 'Reset Template to Default',
+      confirmReset: 'Restore this template to default? All customizations will be lost.',
+    },
+
     orders: {
       title: 'Order Management',
       refresh: 'Refresh',
@@ -995,6 +1001,7 @@ const en = {
       uploadFailed: 'Upload failed',
       confirmDeleteActive: 'This media is live. Confirm deletion?',
       deleteFailed: 'Delete failed',
+      deleteTitle: 'Delete Media',
       updateFailed: 'Update failed',
       videoNotSupported: 'Videos are not supported in edit mode. Please upload via create mode',
     },

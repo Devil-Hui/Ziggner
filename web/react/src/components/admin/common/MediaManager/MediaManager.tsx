@@ -11,6 +11,7 @@ import ImageUploadDialog from './ImageUploadDialog'
 import VideoUploadDialog from './VideoUploadDialog'
 import MediaEditPanel from './MediaEditPanel'
 import { Icon } from '../Icon'
+import ConfirmDialog from '../ConfirmDialog'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import {
   getAllStagedItems,
@@ -56,6 +57,9 @@ export default function MediaManager({
 
   // 编辑面板
   const [editingMedia, setEditingMedia] = useState<ProductMediaItem | null>(null)
+
+  // 删除 active 媒体前的二次确认
+  const [pendingDeleteActiveId, setPendingDeleteActiveId] = useState<number | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queueFilesRef = useRef<File[]>([])
@@ -239,7 +243,8 @@ export default function MediaManager({
         // 编辑模式：删除已保存媒体（active 需二次确认）
         const target = savedItems.find((mediaItem) => mediaItem.id === id)
         if (target && target.status === 'active') {
-          if (!window.confirm(t('admin.mediaManager.confirmDeleteActive'))) return
+          setPendingDeleteActiveId(id)
+          return
         }
         try {
           await adminAPI.deleteMedia(id)
@@ -255,6 +260,18 @@ export default function MediaManager({
     },
     [isEditMode, savedItems, items, notifyChange]
   )
+
+  const handleConfirmDeleteActive = useCallback(async () => {
+    const id = pendingDeleteActiveId
+    if (id == null) return
+    setPendingDeleteActiveId(null)
+    try {
+      await adminAPI.deleteMedia(id)
+      setSavedItems((prev) => prev.filter((mediaItem) => mediaItem.id !== id))
+    } catch (err) {
+      alert(err instanceof Error ? err.message : t('admin.mediaManager.deleteFailed'))
+    }
+  }, [pendingDeleteActiveId])
 
   // ── 编辑面板保存 ──
 
@@ -441,6 +458,18 @@ export default function MediaManager({
           media={editingMedia}
           onSave={handleEditSave}
           onClose={() => setEditingMedia(null)}
+        />
+      )}
+
+      {pendingDeleteActiveId !== null && (
+        <ConfirmDialog
+          title={t('admin.mediaManager.deleteTitle')}
+          message={t('admin.mediaManager.confirmDeleteActive')}
+          confirmLabel={t('common.confirmDelete')}
+          cancelLabel={t('common.cancel')}
+          danger
+          onConfirm={handleConfirmDeleteActive}
+          onCancel={() => setPendingDeleteActiveId(null)}
         />
       )}
     </S.Container>

@@ -4,6 +4,7 @@ import { useTranslation } from '../../i18n'
 import { adminAPI, type EmailTemplateItem } from '../../api/admin'
 import { Color, Radius, Shadow, FontSize, Spacing } from '../../theme/tokens'
 import { Input, PrimaryBtn as SaveBtn } from '../../components/admin/common/ui'
+import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 
 const Container = styled.div`
   max-width: 960px;
@@ -115,6 +116,7 @@ const AdminEmailTemplates: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
   const [notice, setNotice] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [resetTarget, setResetTarget] = useState<string | null>(null)
 
   useEffect(() => {
     adminAPI.getEmailTemplates()
@@ -147,7 +149,6 @@ const AdminEmailTemplates: React.FC = () => {
   }
 
   const handleReset = async (type: string) => {
-    if (!window.confirm('Restore this template to default? Customizations will be lost.')) return
     try {
       await adminAPI.resetEmailTemplate(type)
       const res: any = await adminAPI.getEmailTemplates()
@@ -206,13 +207,24 @@ const AdminEmailTemplates: React.FC = () => {
               Active
             </label>
             <div style={{ flex: 1 }} />
-            <ResetBtn onClick={() => handleReset(tpl.template_type)}>Reset to Default</ResetBtn>
+            <ResetBtn onClick={() => setResetTarget(tpl.template_type)}>{t('admin.emailTemplates.resetToDefault')}</ResetBtn>
             <SaveBtn onClick={() => handleSave(tpl)} disabled={saving === tpl.template_type}>
               {saving === tpl.template_type ? 'Saving...' : 'Save'}
             </SaveBtn>
           </Row>
         </Card>
       ))}
+      {resetTarget !== null && (
+        <ConfirmDialog
+          title={t('admin.emailTemplates.resetTitle')}
+          message={t('admin.emailTemplates.confirmReset')}
+          confirmLabel={t('admin.emailTemplates.resetToDefault')}
+          cancelLabel={t('common.cancel')}
+          danger
+          onConfirm={() => { const type = resetTarget; setResetTarget(null); handleReset(type) }}
+          onCancel={() => setResetTarget(null)}
+        />
+      )}
     </Container>
   )
 }

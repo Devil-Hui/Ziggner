@@ -486,6 +486,12 @@ const zhCN = {
       reviewApprove: '审核通过',
     },
 
+    emailTemplates: {
+      resetToDefault: '恢复默认',
+      resetTitle: '恢复默认模板',
+      confirmReset: '确认将此模板恢复为默认值？所有自定义内容将丢失。',
+    },
+
     orders: {
       title: '订单管理',
       refresh: '刷新',
@@ -991,6 +997,7 @@ const zhCN = {
       uploadFailed: '上传失败',
       confirmDeleteActive: '此媒体已上线，确认删除？',
       deleteFailed: '删除失败',
+      deleteTitle: '删除媒体',
       updateFailed: '更新失败',
       videoNotSupported: '编辑模式暂不支持新增视频，请通过创建模式上传',
     },
