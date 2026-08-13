@@ -160,6 +160,8 @@ const en = {
       resume: 'Resume',
       onSale: 'On Sale',
       confirmDeleteProduct: 'Are you sure you want to delete this product?',
+      deleteProduct: 'Delete Product',
+      confirmDelete: 'Delete',
       batchFailed: 'Batch operation failed.',
       deleteFailed: 'Delete failed.',
       shelfFailed: 'Shelf operation failed, please retry.',

@@ -158,6 +158,8 @@ const zhCN = {
       resume: '恢复',
       onSale: '上架',
       confirmDeleteProduct: '确认删除此商品？',
+      deleteProduct: '删除商品',
+      confirmDelete: '确定删除',
       batchFailed: '批量操作失败。',
       deleteFailed: '删除失败。',
       shelfFailed: '上下架操作失败，请重试。',

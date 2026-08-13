@@ -9,6 +9,7 @@ import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation } from '../../i18n'
 import ChatLink from '../../components/admin/ChatLink'
 import ChatFloatWidget from '../../components/admin/common/ChatFloatWidget'
+import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 
 // ── Styled Components ──
 
@@ -197,6 +198,7 @@ export default function AdminProducts() {
   const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
   const [shelfError, setShelfError] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
 
   const doShelfAction = async (id: number, action: string) => {
     setShelfingIds(prev => new Set(prev).add(id))
@@ -253,7 +255,6 @@ export default function AdminProducts() {
   }
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm(t('admin.products.confirmDeleteProduct'))) return
     try {
       await adminAPI.deleteSPU(id)
       fetchProducts()
@@ -361,7 +362,7 @@ export default function AdminProducts() {
                       <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
                     )}
                     {isSuperAdmin && (
-                      <ActionBtn $danger onClick={() => handleDelete(item.id)}>{t('common.delete')}</ActionBtn>
+                      <ActionBtn $danger onClick={() => setDeleteTarget(item.id)}>{t('common.delete')}</ActionBtn>
                     )}
                     <ChatLink
                       onClick={() => navigate(`/admin/chat?product_id=${item.id}`)}
@@ -385,6 +386,21 @@ export default function AdminProducts() {
         </>
       )}
       <ChatFloatWidget />
+      {deleteTarget !== null && (
+        <ConfirmDialog
+          title={t('admin.products.deleteProduct')}
+          message={t('admin.products.confirmDeleteProduct')}
+          confirmLabel={t('admin.products.confirmDelete')}
+          cancelLabel={t('common.cancel')}
+          danger
+          onConfirm={() => {
+            const id = deleteTarget
+            setDeleteTarget(null)
+            handleDelete(id)
+          }}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }
