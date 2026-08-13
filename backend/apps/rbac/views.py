@@ -1,10 +1,10 @@
 """
 权限核查 API —— 服务于运维角色"检查所有用户不同权限"的诉求。
 
-  GET  /api/rbac/matrix/            角色 × 权限点矩阵（ops 只读）
-  PUT  /api/rbac/matrix/            调整某角色的权限（仅 superadmin）
-  GET  /api/rbac/users/             用户及其角色（ops 只读）
-  PUT  /api/rbac/users/<id>/roles/  调整某用户角色（仅 superadmin）
+  GET  /api/rbac/matrix             角色 × 权限点矩阵（ops 只读）
+  PUT  /api/rbac/matrix             调整某角色的权限（仅 superadmin）
+  GET  /api/rbac/users              用户及其角色（ops 只读）
+  PUT  /api/rbac/users/<id>/roles   调整某用户角色（仅 superadmin）
 
 本模块用 rbac 自己的 HasPerm 守卫，不写裸 is_superuser 判断。
 """
