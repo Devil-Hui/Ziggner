@@ -15,6 +15,7 @@ interface AdminGroup {
   name: string;
   slug: string;
   created_at: string;
+  member_count?: number;
 }
 
 interface GroupMember {
@@ -94,6 +95,13 @@ const Hint = styled.span`
   margin-top: 4px;
   font-size: 11px;
   color: ${Color.text.muted};
+`;
+
+const ErrorText = styled.span`
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #c62828;
 `;
 
 const ButtonGroup = styled.div`
@@ -367,6 +375,7 @@ export default function AdminGroups() {
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
+  const [formErrors, setFormErrors] = useState<{ name?: string; slug?: string }>({});
 
   // Member expansion state
   const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
@@ -414,20 +423,25 @@ export default function AdminGroups() {
   const openCreate = () => {
     setFormName('');
     setFormSlug('');
+    setFormErrors({});
     setShowForm(true);
   };
 
+  const SLUG_RE = /^[a-z0-9][a-z0-9-]*$/;
+
   const handleCreate = async () => {
-    if (!formName.trim()) {
-      showMsg('error', t('admin.groups.nameRequired'));
-      return;
-    }
-    if (!formSlug.trim()) {
-      showMsg('error', t('admin.groups.slugRequired'));
-      return;
-    }
+    const name = formName.trim();
+    const slug = formSlug.trim();
+    const errs: { name?: string; slug?: string } = {};
+    if (!name) errs.name = t('admin.groups.nameRequired');
+    else if (name.length > 100) errs.name = t('admin.groups.nameTooLong');
+    if (!slug) errs.slug = t('admin.groups.slugRequired');
+    else if (!SLUG_RE.test(slug)) errs.slug = t('admin.groups.slugFormat');
+    else if (slug.length > 100) errs.slug = t('admin.groups.slugTooLong');
+    setFormErrors(errs);
+    if (Object.keys(errs).length > 0) return;
     try {
-      await adminAPI.createAdminGroup({ name: formName.trim(), slug: formSlug.trim() });
+      await adminAPI.createAdminGroup({ name, slug });
       showMsg('success', t('admin.groups.createSuccess'));
       setShowForm(false);
       fetchGroups();
@@ -552,7 +566,13 @@ export default function AdminGroups() {
           <ExpandBtn onClick={() => handleExpand(record.id)}>
             {expandedGroupId === record.id ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
           </ExpandBtn>
-          <RemoveBtn onClick={() => setDeleteGroupTarget(record)}>
+          <RemoveBtn onClick={() => {
+            if (record.slug === 'pending') {
+              showMsg('error', t('admin.groups.defaultGroupProtected'));
+              return;
+            }
+            setDeleteGroupTarget(record);
+          }}>
             {t('admin.groups.delete')}
           </RemoveBtn>
         </div>
@@ -697,18 +717,26 @@ export default function AdminGroups() {
               <Label>{t('admin.groups.nameLabel')}</Label>
               <Input
                 value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+                onChange={(e) => {
+                  setFormName(e.target.value);
+                  if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+                }}
                 placeholder={t('admin.groups.namePlaceholder')}
               />
+              {formErrors.name && <ErrorText>{formErrors.name}</ErrorText>}
             </FormGroup>
             <FormGroup>
               <Label>{t('admin.groups.slugLabel')}</Label>
               <Input
                 value={formSlug}
-                onChange={(e) => setFormSlug(e.target.value)}
+                onChange={(e) => {
+                  setFormSlug(e.target.value);
+                  if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: undefined }));
+                }}
                 placeholder={t('admin.groups.slugPlaceholder')}
               />
               <Hint>{t('admin.groups.slugHint')}</Hint>
+              {formErrors.slug && <ErrorText>{formErrors.slug}</ErrorText>}
             </FormGroup>
             <ButtonGroup>
               <SecondaryBtn onClick={() => setShowForm(false)}>{t('common.cancel')}</SecondaryBtn>
@@ -734,16 +762,25 @@ export default function AdminGroups() {
       )}
 
       {/* ====== Delete Group Confirmation ====== */}
-      {deleteGroupTarget && (
-        <ConfirmDialog
-          title={t('admin.groups.deleteGroup')}
-          message={t('admin.groups.confirmDeleteGroup').replace('{name}', deleteGroupTarget.name)}
-          confirmLabel={t('admin.groups.confirmDelete')}
-          danger
-          onConfirm={handleDeleteGroup}
-          onCancel={() => setDeleteGroupTarget(null)}
-        />
-      )}
+      {deleteGroupTarget && (() => {
+        const memberCount = deleteGroupTarget.member_count || 0;
+        const deleteMsg = memberCount > 0
+          ? t('admin.groups.confirmDeleteGroupWithMembers')
+              .replace('{name}', deleteGroupTarget.name)
+              .replace('{count}', String(memberCount))
+              .replace('{target}', t('admin.groups.pendingGroupName'))
+          : t('admin.groups.confirmDeleteGroup').replace('{name}', deleteGroupTarget.name);
+        return (
+          <ConfirmDialog
+            title={t('admin.groups.deleteGroup')}
+            message={deleteMsg}
+            confirmLabel={t('admin.groups.confirmDelete')}
+            danger
+            onConfirm={handleDeleteGroup}
+            onCancel={() => setDeleteGroupTarget(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

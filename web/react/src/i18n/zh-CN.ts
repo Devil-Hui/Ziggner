@@ -827,6 +827,13 @@ const zhCN = {
       confirmDelete: '确定删除',
       groupDeleted: '分组已删除',
       deleteGroupFailed: '删除分组失败',
+      nameTooLong: '名称不能超过 100 个字符',
+      slugTooLong: '标识不能超过 100 个字符',
+      slugFormat: '标识只能包含小写字母、数字和连字符，且以字母或数字开头',
+      defaultGroupProtected: '默认待定组不可删除',
+      pendingGroupName: '待定组',
+      confirmDeleteGroupWithMembers: '确定要删除分组「{name}」？该组有 {count} 名成员，删除后成员将自动转移到「{target}」。此操作不可恢复。',
+      slugHint: '标识用于系统内部识别，仅限小写字母、数字和连字符（如：goods-admin）',
     },
     dataImport: {
       title: '数据导入',
