@@ -220,6 +220,31 @@ const SecondaryBtn = styled.button`
   &:hover { border-color: ${Color.border.dark}; color: ${Color.primaryHover}; }
 `;
 
+// 表格内紧凑操作按钮：复用设计系统色板，避免内联硬编码（大厂规范：一致性 + 主题适配）
+const ActionSecondary = styled.button`
+  padding: 4px 12px;
+  font-size: 12px;
+  border: 1px solid ${Color.border.medium};
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  border-radius: 2px;
+  cursor: pointer;
+  &:hover { border-color: ${Color.border.dark}; color: ${Color.primaryHover}; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
+const ActionPrimary = styled.button`
+  padding: 4px 12px;
+  font-size: 12px;
+  border: none;
+  background: #e74c3c;
+  color: ${Color.text.inverse};
+  border-radius: 2px;
+  cursor: pointer;
+  &:hover { background: #c0392b; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
 const Tabs = styled.div`
   display: flex;
   gap: 0;
@@ -1058,35 +1083,32 @@ export default function AdminApplications() {
         const actions: ReactNode[] = [];
         if (activeTab === 'pending' && record.status === 'pending') {
           actions.push(
-            <button
+            <ActionPrimary
               key="review"
-              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #27ae60', background: '#fff', color: '#27ae60', borderRadius: 2, cursor: 'pointer' }}
               onClick={() => { setReviewTarget(record); setReviewComment(''); }}
             >
               {t('admin.applications.review')}
-            </button>
+            </ActionPrimary>
           );
         }
         // 我的申请：优惠券草稿/驳回态 → 编辑 + 提交审核
         if (activeTab === 'my' && record.type === 'coupon' && (record.status === 'draft' || record.status === 'rejected')) {
           actions.push(
-            <button
+            <ActionSecondary
               key="edit"
-              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #2980b9', background: '#fff', color: '#2980b9', borderRadius: 2, cursor: 'pointer' }}
               onClick={() => openEditForm(record)}
             >
               {t('common.edit')}
-            </button>
+            </ActionSecondary>
           );
           actions.push(
-            <button
+            <ActionPrimary
               key="submit"
-              style={{ padding: '4px 10px', fontSize: 12, border: 'none', background: '#27ae60', color: '#fff', borderRadius: 2, cursor: 'pointer', opacity: submittingId === record.id ? 0.6 : 1 }}
               disabled={submittingId === record.id}
               onClick={() => handleSubmitForReview(record)}
             >
               {submittingId === record.id ? t('admin.applications.formSubmitting') : t('admin.applications.submitForReview')}
-            </button>
+            </ActionPrimary>
           );
         }
         if (actions.length === 0) return null;

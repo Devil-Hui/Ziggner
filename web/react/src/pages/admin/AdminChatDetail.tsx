@@ -935,7 +935,13 @@ export default function AdminChatDetail() {
     }
   }, [])
 
-  useEffect(() => { loadConversations() }, [loadConversations])
+  useEffect(() => {
+    loadConversations()
+    // 清理未触发的列表防抖定时器，防止组件卸载后回调对已卸载组件 setState / 发起游离请求
+    return () => {
+      if (listRefreshTimer.current) clearTimeout(listRefreshTimer.current)
+    }
+  }, [loadConversations])
 
   // 防抖刷新左侧会话列表（合并短时间内多次触发，避免轮询式频繁请求）
   const scheduleListRefresh = useCallback(() => {

@@ -44,20 +44,16 @@ class NotificationService:
     @staticmethod
     def mark_read(user, notification_id):
         updated = Notification.objects.filter(user=user, pk=notification_id, is_read=False).update(is_read=True)
-        # 直接重写未读计数缓存（不依赖 clear_by_prefix 是否对各缓存后端生效），
-        # 避免标记已读后缓存仍返回旧未读数导致「刷新后红点回退」。
         if updated:
-            remaining = Notification.objects.filter(user=user, is_read=False).count()
-            unread_ttl = getattr(settings, 'NOTIFICATION_UNREAD_CACHE_TTL', 60)
-            _cache.set(f'unread:{user.id}', remaining, unread_ttl)
-        _cache.clear_by_prefix(f'list:{user.id}')
-        _cache.delete(f'unread:{user.id}')
+            # 标记已读后让缓存失效：delete 直接删 key（对各缓存后端均可靠），
+            # 下次读取回源 DB 得到正确未读数，避免「刷新后红点回退」；
+            # clear_by_prefix 为尽力而为（部分后端 SCAN 支持不一致），仅作冗余兜底。
+            _cache.clear_by_prefix(f'list:{user.id}')
+            _cache.delete(f'unread:{user.id}')
 
     @staticmethod
     def mark_all_read(user):
         Notification.objects.filter(user=user, is_read=False).update(is_read=True)
-        unread_ttl = getattr(settings, 'NOTIFICATION_UNREAD_CACHE_TTL', 60)
-        _cache.set(f'unread:{user.id}', 0, unread_ttl)
         _cache.clear_by_prefix(f'list:{user.id}')
         _cache.delete(f'unread:{user.id}')
 
