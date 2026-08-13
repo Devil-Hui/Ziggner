@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { publicAPI, type PublicSPU, type PublicCategory } from '../api/public';
+import { publicAPI, type PublicSPU, type PublicCategory, type PromoTag } from '../api/public';
 
 // ── 类型 ──────────────────────────────────────────────────────
 
@@ -20,6 +20,7 @@ export interface Product {
   reviews: number;
   badge?: string;
   originalPrice?: number;
+  promo_tags?: PromoTag[];
 }
 
 export interface CategoryItem {
@@ -42,6 +43,7 @@ function mapSPUToProduct(spu: PublicSPU): Product {
     description: spu.description || '',
     rating: 0,
     reviews: 0,
+    promo_tags: spu.promo_tags || [],
   };
 }
 
@@ -118,6 +120,7 @@ export function useProductDetail(spuId: number) {
             description: detail.description || '',
             rating: 0,
             reviews: 0,
+            promo_tags: detail.promo_tags || [],
           });
         }
       })

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useProducts, useCategories } from '../../hooks/useProducts'
 import { publicAPI, type PublicSKU, type PublicBrand } from '../../api/public'
+import { PromoTags } from '../../components/business/PromoTags'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useTranslation } from '../../i18n'
 import LoadingState from '../../components/common/LoadingState'
@@ -595,6 +596,7 @@ export default function Home() {
           description: spu.description || '',
           rating: 0,
           reviews: 0,
+          promo_tags: spu.promo_tags || [],
           badge: i < 2 ? t('store.home.newBadge') : undefined,
         }))
         setRecommendedProducts(prev => [...prev, ...newProducts])
@@ -717,6 +719,7 @@ export default function Home() {
                               <Placeholder />
                             )}
                             {i < 2 && <CardBadge>{t('store.home.newBadge')}</CardBadge>}
+                            <PromoTags tags={product.promo_tags} />
                             <QuickAdd
                               type="button"
                               onClick={(e) => {

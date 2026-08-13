@@ -1,5 +1,6 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback } from 'react'
+import { PromoTags } from '../../components/business/PromoTags'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useProducts, useFlatCategories } from '../../hooks/useProducts'
@@ -688,6 +689,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
+                <PromoTags tags={product.promo_tags} />
                 <ProductImage>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} />
@@ -727,6 +729,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
+                <PromoTags tags={product.promo_tags} />
                 <ProductImage style={{ width: 200, height: 200, flexShrink: 0 }}>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} />

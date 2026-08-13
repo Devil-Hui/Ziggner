@@ -9,6 +9,12 @@ import { get, post, put, patch, del } from './request';
 
 // ── 类型定义 ──────────────────────────────────────────────────────
 
+/** 商品活动标签 */
+export interface PromoTag {
+  type: 'primary' | 'secondary';
+  label: string;
+}
+
 /** 后台 SPU 列表项 */
 export interface PublicSPU {
   id: number;
@@ -22,6 +28,8 @@ export interface PublicSPU {
   total_stock?: number;
   main_image?: string;
   created_at?: string;
+  /** 活动标签：活动价(primary) / 可领券(secondary) */
+  promo_tags?: PromoTag[];
 }
 
 /** 商品媒体 */
@@ -59,6 +67,8 @@ export interface PublicSPUDetail {
   skus: PublicSKU[];
   media?: PublicProductMedia[];
   tags?: { id: number; name: string }[];
+  /** 活动标签：活动价(primary) / 可领券(secondary) */
+  promo_tags?: PromoTag[];
   submitted_by_name?: string;
   submitted_at?: string;
 }
