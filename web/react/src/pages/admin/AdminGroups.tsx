@@ -9,7 +9,11 @@ import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import FormDialog from '../../components/admin/common/FormDialog';
 import { useTranslation } from '../../i18n';
 import { useAdminAuth } from '../../store/AdminAuthContext';
-import { adminAPI } from '../../api/admin';
+import {
+  useAdminGroupRepository,
+  AdminGroupRepositoryProvider,
+} from '../../repositories/AdminGroupRepositoryContext';
+import type { AdminGroupItem, GroupMember } from '../../repositories/AdminGroupRepository';
 import {
   validateGroupForm,
   composeDeleteConfirmMessage,
@@ -17,20 +21,6 @@ import {
   composeRemoveMemberConfirmMessage,
 } from '../../domain/adminGroups';
 import { PrimaryBtn, DangerBtn, OutlinePrimaryBtn, Input, Select, FormGroup, Label, Hint, ErrorText, RoleBadge, Toast } from '../../components/admin/common/ui';
-
-interface AdminGroup {
-  id: number;
-  name: string;
-  slug: string;
-  created_at: string;
-  member_count?: number;
-}
-
-interface GroupMember {
-  id: number;
-  username: string;
-  role: 'leader' | 'member';
-}
 
 /* ========== Member Panel ========== */
 
@@ -171,8 +161,9 @@ const MemberError = styled.div`
 export default function AdminGroups() {
   const { t } = useTranslation();
   const { isSuperAdmin } = useAdminAuth();
+  const groupRepo = useAdminGroupRepository();
   // Group list state
-  const [groups, setGroups] = useState<AdminGroup[]>([]);
+  const [groups, setGroups] = useState<AdminGroupItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -199,21 +190,20 @@ export default function AdminGroups() {
   const [removeMemberGroupId, setRemoveMemberGroupId] = useState<number | null>(null);
 
   // Delete group confirmation state
-  const [deleteGroupTarget, setDeleteGroupTarget] = useState<AdminGroup | null>(null);
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<AdminGroupItem | null>(null);
 
   const fetchGroups = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const data: any = await adminAPI.getAdminGroups();
-      const list = Array.isArray(data) ? data : (data.items || data.results || []);
+      const list = await groupRepo.listGroups();
       setGroups(list);
     } catch (err: any) {
       setError(err.message || t('admin.groups.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, groupRepo]);
 
   useEffect(() => {
     fetchGroups();
@@ -244,7 +234,7 @@ export default function AdminGroups() {
     setFormErrors(errs);
     if (Object.keys(errs).some((k) => errs[k as keyof typeof errs])) return;
     try {
-      await adminAPI.createAdminGroup({ name, slug });
+      await groupRepo.createGroup({ name, slug });
       showMsg('success', t('admin.groups.createSuccess'));
       setShowForm(false);
       fetchGroups();
@@ -259,8 +249,7 @@ export default function AdminGroups() {
     try {
       setMembersLoading(true);
       setMembersError(null);
-      const data: any = await adminAPI.getGroupMembers(groupId);
-      const list = Array.isArray(data) ? data : data.members || [];
+      const list = await groupRepo.listMembers(groupId);
       setMembers(list);
     } catch (err: any) {
       setMembersError(err.message || t('admin.groups.loadMembersFailed'));
@@ -295,7 +284,7 @@ export default function AdminGroups() {
     }
     try {
       setAddingMember(true);
-      await adminAPI.addGroupMember(expandedGroupId, { user_id: res.userId!, role: res.role });
+      await groupRepo.addMember(expandedGroupId, { user_id: res.userId!, role: res.role });
       showMsg('success', t('admin.groups.memberAdded'));
       setAddMemberUserId('');
       fetchMembers(expandedGroupId);
@@ -309,7 +298,7 @@ export default function AdminGroups() {
   const handleRemoveMember = async () => {
     if (!removeMemberTarget || removeMemberGroupId === null) return;
     try {
-      await adminAPI.removeGroupMember(removeMemberGroupId, removeMemberTarget.id);
+      await groupRepo.removeMember(removeMemberGroupId, removeMemberTarget.id);
       showMsg('success', t('admin.groups.memberRemoved'));
       setRemoveMemberTarget(null);
       setRemoveMemberGroupId(null);
@@ -326,7 +315,7 @@ export default function AdminGroups() {
   const handleDeleteGroup = async () => {
     if (!deleteGroupTarget) return;
     try {
-      await adminAPI.deleteGroup(deleteGroupTarget.id);
+      await groupRepo.deleteGroup(deleteGroupTarget.id);
       showMsg('success', t('admin.groups.groupDeleted'));
       setDeleteGroupTarget(null);
       if (expandedGroupId === deleteGroupTarget.id) {
@@ -344,7 +333,7 @@ export default function AdminGroups() {
 
   /* ---- Columns ---- */
 
-  const columns: Column<AdminGroup>[] = [
+  const columns: Column<AdminGroupItem>[] = [
     { key: 'name', title: t('admin.groups.columnName'), sortable: true },
     { key: 'slug', title: t('admin.groups.columnSlug'), sortable: true },
     {
@@ -381,6 +370,7 @@ export default function AdminGroups() {
   ];
 
   return (
+    <AdminGroupRepositoryProvider>
     <div>
       <PageHeader
         title={t('admin.groups.title')}
@@ -585,7 +575,8 @@ export default function AdminGroups() {
             onCancel={() => setDeleteGroupTarget(null)}
           />
         );
-      })()}
+      })(      )}
     </div>
+    </AdminGroupRepositoryProvider>
   );
 }
