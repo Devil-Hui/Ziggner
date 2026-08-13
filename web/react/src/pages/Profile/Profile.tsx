@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactElement } from 'react'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { Container } from '../../components/layout/PageLayout/shared'
@@ -15,6 +15,77 @@ const BRAND = {
   red: Color.primary,
   light: Color.primaryLight,
 }
+
+// ── inline nav/action icons (self-contained SVGs, inherit currentColor) ──
+const iconProps = {
+  width: 18,
+  height: 18,
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.8,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+}
+
+const OrderIcon = () => (
+  <svg {...iconProps}>
+    <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+    <rect x="9" y="3" width="6" height="4" rx="1" />
+    <path d="M9 12h6M9 16h6" />
+  </svg>
+)
+
+const CouponIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 8a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z" />
+    <path d="M14 6v12" />
+  </svg>
+)
+
+const HistoryIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+    <path d="M3 4v4h4" />
+    <path d="M12 8v4l3 2" />
+  </svg>
+)
+
+const ReviewIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z" />
+  </svg>
+)
+
+const SupportIcon = () => (
+  <svg {...iconProps}>
+    <path d="M4 13v-1a8 8 0 0 1 16 0v1" />
+    <rect x="2" y="13" width="4" height="6" rx="1.5" />
+    <rect x="18" y="13" width="4" height="6" rx="1.5" />
+    <path d="M20 19a4 4 0 0 1-4 3h-2" />
+  </svg>
+)
+
+const BellIcon = () => (
+  <svg {...iconProps}>
+    <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+    <path d="M10.5 20a2 2 0 0 0 3 0" />
+  </svg>
+)
+
+const HeartIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 20s-7-4.4-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7 2.7C19 15.6 12 20 12 20z" />
+  </svg>
+)
+
+const LogoutIcon = () => (
+  <svg {...iconProps}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="M16 17l5-5-5-5" />
+    <path d="M21 12H9" />
+  </svg>
+)
 
 // ── layout ──
 const Shell = styled.div`
@@ -554,7 +625,7 @@ export default function Profile() {
     { key: 'unpaid', label: t('store.profile.unpaid') },
   ]
 
-  const navItems: { key: string; label: string; icon: JSX.Element; tab?: ProfileTab; route?: string }[] = [
+  const navItems: { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string }[] = [
     { key: 'orders', label: t('store.profile.myOrdersTab'), icon: <OrderIcon />, tab: 'orders' },
     { key: 'coupons', label: t('store.profile.myCouponsTab'), icon: <CouponIcon />, tab: 'coupons' },
     { key: 'history', label: t('store.profile.browseHistoryTab'), icon: <HistoryIcon />, tab: 'history' },
