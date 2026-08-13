@@ -766,6 +766,7 @@ export default function Navigation() {
                 <DropdownItem onClick={handleOpenNicknameModal}>{t('store.nav.changeNickname')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/cart')}>{t('store.nav.myOrders')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/coupons')}>{t('store.nav.myCoupons')}</DropdownItem>
+                <DropdownItem onClick={() => navigate('/coupons/center')}>{t('store.nav.couponCenter')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/history')}>{t('store.nav.recentlyViewed')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/support')}>{t('store.nav.support')}</DropdownItem>
                 <div className="dropdown-divider"></div>

@@ -689,7 +689,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
-                <PromoTags tags={product.promo_tags} />
+                <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
                 <ProductImage>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} />
@@ -729,7 +729,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
-                <PromoTags tags={product.promo_tags} />
+                <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
                 <ProductImage style={{ width: 200, height: 200, flexShrink: 0 }}>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} />

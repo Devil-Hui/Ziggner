@@ -13,6 +13,7 @@ import Profile from '../pages/Profile/Profile'
 import AuthPage from '../pages/Auth/AuthPage'
 import SetPasswordPage from '../pages/Auth/SetPasswordPage'
 import Coupons from '../pages/Coupons/Coupons'
+import CouponCenter from '../pages/CouponCenter/CouponCenter'
 import CouponShare from '../pages/CouponShare/CouponShare'
 import History from '../pages/History/History'
 import AboutPage from '../pages/AboutPage/AboutPage'
@@ -79,6 +80,7 @@ export const routes: RouteObject[] = [
   { path: '/login', element: <Navigate to="/auth?tab=login" replace /> },
   { path: '/register', element: <Navigate to="/auth?tab=register" replace /> },
   { path: '/coupons', element: <Coupons /> },
+  { path: '/coupons/center', element: <CouponCenter /> },
   { path: '/coupon/:code', element: <CouponShare /> },
   { path: '/coupon', element: <Navigate to="/coupons" replace /> },
   { path: '/history', element: <History /> },

@@ -719,7 +719,7 @@ export default function Home() {
                               <Placeholder />
                             )}
                             {i < 2 && <CardBadge>{t('store.home.newBadge')}</CardBadge>}
-                            <PromoTags tags={product.promo_tags} />
+                            <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
                             <QuickAdd
                               type="button"
                               onClick={(e) => {
