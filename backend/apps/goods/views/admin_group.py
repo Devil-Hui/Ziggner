@@ -1,5 +1,5 @@
 from django.db.models import Count, Q
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.auth.models import User
@@ -95,7 +95,12 @@ class AdminGroupCreateView(BaseApiView):
         if AdminGroup.objects.filter(name=name).exists() or AdminGroup.objects.filter(slug=slug).exists():
             return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
 
-        group = AdminGroup.objects.create(name=name, slug=slug, description=description, created_by=request.user)
+        try:
+            group = AdminGroup.objects.create(name=name, slug=slug, description=description, created_by=request.user)
+        except IntegrityError:
+            # 并发下 .exists() 检查与写入之间存在竞态，唯一约束会抛出 IntegrityError，
+            # 兜底为 409，避免暴露 500
+            return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
         create_audit_log(request.user, 'admin_group.create', 'admin_group', group.id,
                          changes={'name': name, 'slug': slug},
                          ip_address=request.META.get('REMOTE_ADDR'))
@@ -226,7 +231,10 @@ class AdminGroupUpdateView(BaseApiView):
             fields.append('description')
 
         if fields:
-            group.save(update_fields=fields)
+            try:
+                group.save(update_fields=fields)
+            except IntegrityError:
+                return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
             create_audit_log(request.user, 'admin_group.update', 'admin_group', group.id,
                              changes={f: str(getattr(group, f)) for f in fields},
                              ip_address=request.META.get('REMOTE_ADDR'))
@@ -280,15 +288,18 @@ class AdminGroupDeleteView(BaseApiView):
         # 原子转移 + 删除
         with transaction.atomic():
             transferred = 0
+            moved_user_ids = []
             for m in active_members:
+                # 转移一律降为普通成员：避免原组长(leader)被无意复制进目标组而获得管理权
                 obj, created = AdminGroupMember.objects.get_or_create(
                     group=target, user=m.user,
-                    defaults={'role': m.role, 'status': AdminGroupMember.Status.ACTIVE},
+                    defaults={'role': AdminGroupMember.Role.MEMBER, 'status': AdminGroupMember.Status.ACTIVE},
                 )
                 if not created and obj.status != AdminGroupMember.Status.ACTIVE:
                     obj.status = AdminGroupMember.Status.ACTIVE
                     obj.save(update_fields=['status'])
                 transferred += 1
+                moved_user_ids.append(m.user_id)
             # 清理源组残留的活跃成员关系
             group.members.filter(status=AdminGroupMember.Status.ACTIVE).delete()
             group.is_active = False
@@ -298,6 +309,7 @@ class AdminGroupDeleteView(BaseApiView):
                          changes={
                              'name': group.name, 'slug': group.slug,
                              'transferred': transferred, 'target_group_id': target.id,
+                             'moved_user_ids': moved_user_ids,
                          },
                          ip_address=request.META.get('REMOTE_ADDR'))
         return Response({
