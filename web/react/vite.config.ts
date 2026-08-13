@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import obfuscator from 'vite-plugin-javascript-obfuscator'
 import path from 'path'
 
 const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:8000'
@@ -19,6 +20,25 @@ export default defineConfig({
             fileName: false,
           }],
         ],
+      },
+    }),
+    // 生产构建才混淆（dev/HMR 保持可读）；默认已排除 node_modules（vendor 框架不混淆）
+    obfuscator({
+      apply: 'build',
+      exclude: [/node_modules/],
+      options: {
+        compact: true,
+        controlFlowFlattening: false,
+        deadCodeInjection: false,
+        stringArray: true,
+        stringArrayEncoding: ['base64'],
+        stringArrayThreshold: 0.5,
+        unicodeEscapeSequence: true,
+        rotateStringArray: true,
+        renameGlobals: false,
+        identifierNamesGenerator: 'hexadecimal',
+        disableConsoleOutput: false,
+        log: false,
       },
     }),
   ],
