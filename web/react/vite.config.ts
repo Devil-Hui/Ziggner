@@ -57,14 +57,16 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    minify: false,  // Fix: prevent styled-components minification error
+    // esbuild minify is safe here: styled-components is excluded from manualChunks
+    // (the old `minify:false` workaround leaked fully-readable source to production).
+    minify: 'esbuild',
+    cssMinify: true,
+    target: 'es2020',
     chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          // styled-components minification can cause `$C` reference error
-          // disabling manual chunk for styled-components
         },
       },
     },
