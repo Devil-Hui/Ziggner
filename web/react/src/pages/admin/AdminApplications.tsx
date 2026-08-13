@@ -1,5 +1,5 @@
 // TypeScript strict mode enabled
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
@@ -384,6 +384,10 @@ export default function AdminApplications() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
 
+  // ── 优惠券草稿：编辑 / 提交审核 ──
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [submittingId, setSubmittingId] = useState<number | null>(null);
+
   // ── Fetch reference data ──
   useEffect(() => {
     async function loadRefs() {
@@ -584,9 +588,18 @@ export default function AdminApplications() {
           payload.reason = formData.reason;
           break;
       }
-      await adminAPI.submitApplication(payload);
-      showMsg('success', t('admin.applications.submitted'));
+      if (editingId) {
+        // 编辑草稿：复用 promotion revise 端点（仅更新传入字段，其余保留）
+        const updatePayload = { ...payload } as Record<string, any>;
+        delete updatePayload.admin_group_id;
+        await adminAPI.updateCouponApplication(editingId, updatePayload);
+        showMsg('success', t('admin.applications.draftSaved'));
+      } else {
+        await adminAPI.submitApplication(payload);
+        showMsg('success', t('admin.applications.submitted'));
+      }
       setShowForm(false);
+      setEditingId(null);
       fetchApplications();
     } catch (err: any) {
       showMsg('error', err.message || t('admin.applications.submitFailed'));
@@ -613,6 +626,56 @@ export default function AdminApplications() {
       showMsg('error', err.message || t('admin.applications.reviewFailed'));
     } finally {
       setReviewSubmitting(false);
+    }
+  };
+
+  // ── 编辑优惠券草稿（预填表单）──
+  const openEditForm = (record: Application) => {
+    if (record.type !== 'coupon') return;
+    const d = record.detail || {};
+    const toLocalInput = (v?: string | null) => {
+      if (!v) return '';
+      // 后端 isoformat(含时区/微秒) → datetime-local 所需 yyyy-MM-ddTHH:mm
+      return v.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '').split('.')[0];
+    };
+    setFormType('coupon');
+    setFormData({
+      coupon_name: d.coupon_name || '',
+      coupon_code: d.coupon_code || '',
+      discount_type: d.discount_type || '',
+      amount: d.amount ?? '',
+      min_amount: d.min_amount ?? '',
+      max_discount: d.max_discount ?? '',
+      stackable: !!d.stackable,
+      total_count: d.total_count ?? '',
+      per_user_limit: d.per_user_limit ?? '',
+      start_time: toLocalInput(d.start_time),
+      end_time: toLocalInput(d.end_time),
+      applicable_categories: d.applicable_categories || [],
+      applicable_products: d.applicable_products || [],
+      applicable_brands: d.applicable_brands || [],
+      expected_cost: d.expected_cost ?? '',
+      expected_usage_count: d.expected_usage_count ?? '',
+      target_audience: d.target_audience || '',
+      campaign_purpose: d.campaign_purpose || '',
+      reason: d.reason || '',
+    });
+    setFormErrors({});
+    setEditingId(record.id);
+    setShowForm(true);
+  };
+
+  // ── 提交优惠券草稿进入审核 ──
+  const handleSubmitForReview = async (record: Application) => {
+    try {
+      setSubmittingId(record.id);
+      await adminAPI.submitCouponApplication(record.id);
+      showMsg('success', t('admin.applications.submitted'));
+      fetchApplications();
+    } catch (err: any) {
+      showMsg('error', err.message || t('admin.applications.submitForReviewFailed'));
+    } finally {
+      setSubmittingId(null);
     }
   };
 
@@ -992,19 +1055,42 @@ export default function AdminApplications() {
       title: t('admin.applications.columnActions'),
       width: '120px',
       render: (_, record) => {
+        const actions: ReactNode[] = [];
         if (activeTab === 'pending' && record.status === 'pending') {
-          return (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #27ae60', background: '#fff', color: '#27ae60', borderRadius: 2, cursor: 'pointer' }}
-                onClick={() => { setReviewTarget(record); setReviewComment(''); }}
-              >
-                {t('admin.applications.review')}
-              </button>
-            </div>
+          actions.push(
+            <button
+              key="review"
+              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #27ae60', background: '#fff', color: '#27ae60', borderRadius: 2, cursor: 'pointer' }}
+              onClick={() => { setReviewTarget(record); setReviewComment(''); }}
+            >
+              {t('admin.applications.review')}
+            </button>
           );
         }
-        return null;
+        // 我的申请：优惠券草稿/驳回态 → 编辑 + 提交审核
+        if (activeTab === 'my' && record.type === 'coupon' && (record.status === 'draft' || record.status === 'rejected')) {
+          actions.push(
+            <button
+              key="edit"
+              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #2980b9', background: '#fff', color: '#2980b9', borderRadius: 2, cursor: 'pointer' }}
+              onClick={() => openEditForm(record)}
+            >
+              {t('common.edit')}
+            </button>
+          );
+          actions.push(
+            <button
+              key="submit"
+              style={{ padding: '4px 10px', fontSize: 12, border: 'none', background: '#27ae60', color: '#fff', borderRadius: 2, cursor: 'pointer', opacity: submittingId === record.id ? 0.6 : 1 }}
+              disabled={submittingId === record.id}
+              onClick={() => handleSubmitForReview(record)}
+            >
+              {submittingId === record.id ? t('admin.applications.formSubmitting') : t('admin.applications.submitForReview')}
+            </button>
+          );
+        }
+        if (actions.length === 0) return null;
+        return <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>;
       },
     },
   ];

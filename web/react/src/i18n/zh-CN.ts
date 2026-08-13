@@ -160,6 +160,7 @@ const zhCN = {
       confirmDeleteProduct: '确认删除此商品？',
       batchFailed: '批量操作失败。',
       deleteFailed: '删除失败。',
+      shelfFailed: '上下架操作失败，请重试。',
     },
 
     productForm: {
@@ -398,6 +399,9 @@ const zhCN = {
       formAmountPlaceholderFixed: '例：20.00',
       columnActions: '操作',
       review: '审核',
+      submitForReview: '提交审核',
+      submitForReviewFailed: '提交审核失败',
+      draftSaved: '草稿已保存',
       noApplications: '暂无申请',
       // Form sections
       sectionBasic: '基本信息',
@@ -817,6 +821,12 @@ const zhCN = {
       removeMember: '移除成员',
       confirmRemoveMember: '确定要从「{group}」中移除用户「{user}」？',
       confirmRemove: '确定移除',
+      delete: '删除分组',
+      deleteGroup: '删除分组',
+      confirmDeleteGroup: '确定要删除分组「{name}」？该操作不可恢复。',
+      confirmDelete: '确定删除',
+      groupDeleted: '分组已删除',
+      deleteGroupFailed: '删除分组失败',
     },
     dataImport: {
       title: '数据导入',

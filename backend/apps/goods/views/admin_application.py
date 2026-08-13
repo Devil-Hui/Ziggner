@@ -130,6 +130,7 @@ class ApplicationSubmitView(BaseApiView):
             return Response({'id': app.id, 'type': app_type, 'status': app.status}, status=status.HTTP_201_CREATED)
 
         elif app_type == 'coupon':
+            # 仅创建草稿，提交审核由前端在"我的申请"页发起（POST /promotion/application/{id}/submit/）
             legacy_payload = request.data.copy()
             legacy_payload['admin_group_id'] = legacy_payload.get('admin_group_id') or legacy_payload.get('group_id')
             serializer = CouponApplicationDraftSerializer(data=legacy_payload)
@@ -138,7 +139,6 @@ class ApplicationSubmitView(BaseApiView):
             group_id = payload.pop('admin_group_id')
             try:
                 app = CouponApplicationService.create_draft(applicant, group_id, payload)
-                CouponApplicationService.submit(applicant, app.id)
             except PermissionError as exc:
                 return Response({'detail': str(exc)}, status=status.HTTP_403_FORBIDDEN)
             except ValueError as exc:

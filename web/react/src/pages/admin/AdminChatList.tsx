@@ -6,6 +6,7 @@ import { PageHeader, DataTable, StatusBadge, SearchFilter, Pagination } from '..
 import type { Column } from '../../components/admin/common/DataTable'
 import { useTranslation } from '../../i18n'
 import { adminChatAPI, type ConversationSummary, type PaginatedResult } from '../../api/chat'
+import { CONFIG } from '../../config/constants'
 
 // ── Styled ──
 
@@ -118,6 +119,12 @@ export default function AdminChatList() {
   }, [page, statusFilter, search, isZh])
 
   useEffect(() => { fetchData() }, [fetchData])
+
+  // 轮询刷新：列表页无 WebSocket，靠轮询兜底让新会话 / 未读变化自动出现，无需手动刷新
+  useEffect(() => {
+    const timer = setInterval(() => { fetchData() }, CONFIG.ADMIN_CHAT_LIST_POLL_INTERVAL)
+    return () => clearInterval(timer)
+  }, [fetchData])
 
   const conversations = data?.results || []
   const total = data?.count || 0

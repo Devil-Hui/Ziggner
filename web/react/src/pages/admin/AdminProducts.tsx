@@ -214,10 +214,16 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true)
   const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
+  const [shelfError, setShelfError] = useState('')
 
   const doShelfAction = async (id: number, action: string) => {
     setShelfingIds(prev => new Set(prev).add(id))
-    try { await adminAPI.shelfSPU(id, { action }) } catch {}
+    setShelfError('')
+    try {
+      await adminAPI.shelfSPU(id, { action })
+    } catch (e: any) {
+      setShelfError(e?.message || t('admin.products.shelfFailed'))
+    }
     await fetchProducts()
     setShelfingIds(prev => { const next = new Set(prev); next.delete(id); return next })
   }
@@ -314,6 +320,7 @@ export default function AdminProducts() {
       </FilterBar>
 
       {error && <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: '0.875rem' }}>{error}</div>}
+      {shelfError && <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: '0.875rem' }}>{shelfError}</div>}
 
       {loading ? (
         <LoadingState>{t('common.loading')}</LoadingState>
@@ -345,11 +352,19 @@ export default function AdminProducts() {
                   <Td style={{ fontSize: '0.75rem', color: '#999' }}>{item.category_path}</Td>
                   <Td>
                     <ActionBtn onClick={() => navigate(`/admin/products/${item.id}`)}>{t('common.edit')}</ActionBtn>
-                    {item.status === 'draft' && canSubmit && (
-                      <ActionBtn onClick={async () => { await adminAPI.submitAudit(item.id); fetchProducts() }}>{t('admin.products.submitReview')}</ActionBtn>
+                    {item.status === 'draft' && (
+                      <>
+                        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+                        {canSubmit && (
+                          <ActionBtn onClick={async () => { await adminAPI.submitAudit(item.id); fetchProducts() }}>{t('admin.products.submitReview')}</ActionBtn>
+                        )}
+                      </>
                     )}
                     {item.status === 'submitted' && canAudit && (
                       <ActionBtn onClick={() => navigate(`/admin/products/${item.id}/audit`)}>{t('admin.products.review')}</ActionBtn>
+                    )}
+                    {item.status === 'approved' && (
+                      <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
                     )}
                     {item.status === 'on_sale' && (
                       <>
@@ -360,7 +375,7 @@ export default function AdminProducts() {
                     {item.status === 'suspended' && (
                       <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
                     )}
-                    {item.status === 'approved' && (
+                    {item.status === 'off_sale' && (
                       <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
                     )}
                     {isSuperAdmin && (

@@ -17,6 +17,7 @@ import {
   type ChatMessage,
   type ProductSearchResult,
   mergeWsMessage,
+  resolveMediaUrl,
 } from '../../api/chat'
 import { useDebounce } from '../../hooks/useDebounce'
 import { CONFIG } from '../../config/constants'
@@ -913,6 +914,8 @@ export default function AdminChatDetail() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  // 左侧会话列表防抖刷新：收到 WS 新消息 / 标记已读后刷新 last_message·unread·updated_at
+  const listRefreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // 右侧订单面板：默认展开，可收起以让出更多对话空间
   const [ordersCollapsed, setOrdersCollapsed] = useState(false)
@@ -934,16 +937,23 @@ export default function AdminChatDetail() {
 
   useEffect(() => { loadConversations() }, [loadConversations])
 
+  // 防抖刷新左侧会话列表（合并短时间内多次触发，避免轮询式频繁请求）
+  const scheduleListRefresh = useCallback(() => {
+    if (listRefreshTimer.current) clearTimeout(listRefreshTimer.current)
+    listRefreshTimer.current = setTimeout(() => { loadConversations() }, 600)
+  }, [loadConversations])
+
   // ── Load active conversation ──
-  const loadDetail = useCallback(async (convId: number) => {
+  const loadDetail = useCallback(async (convId: number, opts?: { silent?: boolean }) => {
+    const silent = opts?.silent
     try {
-      setConvLoading(true)
+      if (!silent) setConvLoading(true)
       const detail = await adminChatAPI.getConversation(convId)
       setActiveConv(detail)
     } catch {
       // ignore
     } finally {
-      setConvLoading(false)
+      if (!silent) setConvLoading(false)
     }
   }, [])
 
@@ -954,9 +964,11 @@ export default function AdminChatDetail() {
   }, [id, loadDetail])
 
   // ── Poll active conversation ──
+  // 轮询静默刷新（不触发顶部 loading 闪烁），仅用于兜底对齐服务端状态；
+  // 实时增量仍由 WebSocket 合并驱动，避免「间歇性 loading」。
   useEffect(() => {
     if (id) {
-      pollRef.current = setInterval(() => loadDetail(parseInt(id!)), CONFIG.ADMIN_CHAT_POLL_INTERVAL)
+      pollRef.current = setInterval(() => loadDetail(parseInt(id!), { silent: true }), CONFIG.ADMIN_CHAT_POLL_INTERVAL)
     }
     return () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -991,6 +1003,9 @@ export default function AdminChatDetail() {
               if (!isOwn && data.msg_id) {
                 ws?.send(JSON.stringify({ type: 'ack', msg_id: String(data.msg_id) }))
               }
+              // 收到新消息 → 刷新左侧会话列表（last_message / unread / updated_at），
+              // 消除「需刷新才能看到最新对话」的列表滞后
+              scheduleListRefresh()
             } else if (data.type === 'read_receipt') {
               setActiveConv((prev) => mergeWsMessage(prev, data, 'admin', 'read_receipt'))
             }
@@ -1015,19 +1030,23 @@ export default function AdminChatDetail() {
       if (retryTimer) clearTimeout(retryTimer)
       ws?.close()
     }
-  }, [id, loadDetail])
+  }, [id, loadDetail, scheduleListRefresh])
 
   // 进入会话后，把「对方」的历史未读消息标记为已读（发 ACK，触发对方看到「已读」）
   useEffect(() => {
     if (!activeConv?.messages) return
     if (wsRef.current?.readyState !== WebSocket.OPEN) return
+    let acked = false
     for (const m of activeConv.messages) {
       if (m.sender_type !== 'admin' && !m.is_read && m.id > 0 && !ackedRef.current.has(m.id)) {
         ackedRef.current.add(m.id)
         wsRef.current.send(JSON.stringify({ type: 'ack', msg_id: String(m.id) }))
+        acked = true
       }
     }
-  }, [activeConv?.messages])
+    // 已读状态变化后刷新左侧列表，使红点（unread_count）及时消失
+    if (acked) scheduleListRefresh()
+  }, [activeConv?.messages, scheduleListRefresh])
 
   // ── Product search ──
   useEffect(() => {
@@ -1223,7 +1242,7 @@ export default function AdminChatDetail() {
     const type = (msg.msg_type || 'text') as 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share'
     let fileUrl: string | undefined
     if ((type === 'image' || type === 'video') && msg.file_url) {
-      fileUrl = msg.file_url
+      fileUrl = resolveMediaUrl(msg.file_url) || undefined
     }
     // 发送状态回执：自己发的消息才显示（发送中 / 已送达 / 已读）
     let receipt: 'sending' | 'sent' | 'read' | undefined
@@ -1252,6 +1271,7 @@ export default function AdminChatDetail() {
         price: msg.card_data.price ?? '',
         order_status: msg.card_data.order_status,
         order_id: msg.card_data.order_id,
+        order_no: msg.card_data.order_no,
       } : undefined,
       cartItems: undefined,
       receipt,

@@ -383,6 +383,9 @@ export default function AdminGroups() {
   const [removeMemberTarget, setRemoveMemberTarget] = useState<GroupMember | null>(null);
   const [removeMemberGroupId, setRemoveMemberGroupId] = useState<number | null>(null);
 
+  // Delete group confirmation state
+  const [deleteGroupTarget, setDeleteGroupTarget] = useState<AdminGroup | null>(null);
+
   const fetchGroups = useCallback(async () => {
     try {
       setLoading(true);
@@ -504,6 +507,25 @@ export default function AdminGroups() {
     }
   };
 
+  /* ---- Delete Group ---- */
+
+  const handleDeleteGroup = async () => {
+    if (!deleteGroupTarget) return;
+    try {
+      await adminAPI.deleteGroup(deleteGroupTarget.id);
+      showMsg('success', t('admin.groups.groupDeleted'));
+      setDeleteGroupTarget(null);
+      if (expandedGroupId === deleteGroupTarget.id) {
+        setExpandedGroupId(null);
+        setMembers([]);
+      }
+      fetchGroups();
+    } catch (err: any) {
+      showMsg('error', err.message || t('admin.groups.deleteGroupFailed'));
+      setDeleteGroupTarget(null);
+    }
+  };
+
   const expandedGroup = groups.find((group) => group.id === expandedGroupId);
 
   /* ---- Columns ---- */
@@ -530,6 +552,9 @@ export default function AdminGroups() {
           <ExpandBtn onClick={() => handleExpand(record.id)}>
             {expandedGroupId === record.id ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
           </ExpandBtn>
+          <RemoveBtn onClick={() => setDeleteGroupTarget(record)}>
+            {t('admin.groups.delete')}
+          </RemoveBtn>
         </div>
       ),
     },
@@ -705,6 +730,18 @@ export default function AdminGroups() {
             setRemoveMemberTarget(null);
             setRemoveMemberGroupId(null);
           }}
+        />
+      )}
+
+      {/* ====== Delete Group Confirmation ====== */}
+      {deleteGroupTarget && (
+        <ConfirmDialog
+          title={t('admin.groups.deleteGroup')}
+          message={t('admin.groups.confirmDeleteGroup').replace('{name}', deleteGroupTarget.name)}
+          confirmLabel={t('admin.groups.confirmDelete')}
+          danger
+          onConfirm={handleDeleteGroup}
+          onCancel={() => setDeleteGroupTarget(null)}
         />
       )}
     </div>

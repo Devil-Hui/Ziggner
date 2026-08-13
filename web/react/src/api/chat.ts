@@ -1,7 +1,25 @@
 // 客服系统 API — 用户端 + Admin 端
 // 用户端 chatAPI 已统一到 customer_service（/api/v1/chat/），与管理台共用同一张会话表。
 
-import { get, post, patch } from './request'
+import { get, post, patch, BASE_URL } from './request'
+
+// 媒体资源基础域名：优先用 API 域名（后端同源托管 /media/），开发态回退到前端域名
+function apiOrigin(): string {
+  if (BASE_URL.startsWith('http')) {
+    try { return new URL(BASE_URL).origin } catch { /* fallthrough */ }
+  }
+  return window.location.origin
+}
+
+/**
+ * 本地存储的媒体 URL 可能以回环地址（127.0.0.1 / localhost）作 DOMAIN 生成，
+ * 公网浏览器无法访问。统一改写为 API 域名（同源后端托管 /media/），
+ * 确保聊天图片/视频在任何部署环境都能加载（修复「视频/图片无法显示」）。
+ */
+export function resolveMediaUrl(url: string | null | undefined): string | null {
+  if (!url) return null
+  return url.replace(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i, apiOrigin())
+}
 
 // ── Types ──
 
@@ -23,6 +41,8 @@ export interface ChatMessage {
     price?: string
     order_status?: string
     order_id?: number
+    /** 后端把 order_id 解析为 order_no，供前端「查看订单」跳转 /order/:order_no */
+    order_no?: string
   } | null
   /** 已读状态 */
   is_read: boolean
@@ -188,7 +208,7 @@ function transformChatMessage(m: CsMessage): ChatMessage {
     sender_name: m.sender_name || '',
     content: m.content || '',
     msg_type: (m.msg_type || 'text') as ChatMessage['msg_type'],
-    file_url: m.file_url || null,
+    file_url: resolveMediaUrl(m.file_url),
     card_data: (m.card_data as ChatMessage['card_data']) || null,
     is_read: Boolean(m.is_read),
     read_at: null,

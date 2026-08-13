@@ -33,6 +33,9 @@ export const CONFIG = {
   ADMIN_CHAT_FOCUS_DELAY: 100,
   // 聊天详情：搜索输入防抖延迟（毫秒）
   ADMIN_CHAT_DEBOUNCE_MS: 300,
+  // 客服列表页：轮询刷新间隔（毫秒）。列表页无 WebSocket，靠轮询兜底让新会话/未读变化自动出现，
+  // 无需手动刷新（12s 一次，低负载）。
+  ADMIN_CHAT_LIST_POLL_INTERVAL: 12000,
 
   // ──── 用户端聊天 ────
   // 用户端：客服回复前用户最多连续发送消息数

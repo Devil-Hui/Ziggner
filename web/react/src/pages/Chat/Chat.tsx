@@ -14,6 +14,7 @@ import {
   type ConversationDetail,
   type ChatMessage,
   mergeWsMessage,
+  resolveMediaUrl,
 } from '../../api/chat'
 import { CONFIG } from '../../config/constants'
 
@@ -1015,7 +1016,7 @@ export default function Chat() {
   const mapMessage = (msg: ChatMessage) => {
     const isMine: boolean = msg.sender_type === 'user'
     const type = (msg.msg_type || 'text') as 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share'
-    const fileUrl: string | undefined = msg.file_url || undefined
+    const fileUrl: string | undefined = resolveMediaUrl(msg.file_url) || undefined
 
     // 商品卡片 / 商品快照：customer_service 的 card_data 为引用 + 实时解析结果
     let productSnapshot: ProductSnapshot | null = null
@@ -1038,6 +1039,7 @@ export default function Chat() {
         price: card.price || '0',
         order_status: (card.order_status as ProductCardData['order_status']) || undefined,
         order_id: card.order_id,
+        order_no: card.order_no,
       }
     }
 

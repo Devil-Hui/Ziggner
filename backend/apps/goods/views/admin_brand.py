@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
-from ..models import Brand
+from ..models import Brand, SPU
 from apps.rbac.permissions import HasPerm
 from ..services import GoodsCacheService
 
@@ -63,6 +63,8 @@ class BrandAdminDeleteView(BaseApiView):
             brand = Brand.objects.get(id=brand_id)
         except Brand.DoesNotExist:
             return Response({'detail': 'Brand not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if SPU.objects.filter(brand=brand, deleted_at__isnull=True).exists():
+            return Response({'detail': Messages.ADMIN_BRAND_HAS_SPUS}, status=status.HTTP_400_BAD_REQUEST)
         brand.delete()
         GoodsCacheService.invalidate_brand()
         return Response({'message': 'Deleted successfully.'})

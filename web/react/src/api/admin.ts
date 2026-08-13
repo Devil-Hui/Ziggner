@@ -437,6 +437,11 @@ export const adminAPI = {
     get<ApplicationItem[]>('/goods/application/pending'),
   reviewApplication: (id: number, data: { type: string; action: string; comment?: string }) =>
     post(`/goods/application/${id}/review`, data),
+  // 优惠券草稿：提交审核 / 编辑（复用 promotion 端点，覆盖草稿与驳回态）
+  submitCouponApplication: (id: number) =>
+    post(`/promotion/application/${id}/submit/`, {}),
+  updateCouponApplication: (id: number, data: Record<string, unknown>) =>
+    patch(`/promotion/application/${id}/`, data),
   getStaffList: () =>
     get<{ items: { id: number; username: string; is_superuser: boolean }[] }>('/goods/staff/list'),
 

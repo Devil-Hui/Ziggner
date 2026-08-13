@@ -162,6 +162,7 @@ const en = {
       confirmDeleteProduct: 'Are you sure you want to delete this product?',
       batchFailed: 'Batch operation failed.',
       deleteFailed: 'Delete failed.',
+      shelfFailed: 'Shelf operation failed, please retry.',
     },
 
     productForm: {
@@ -404,6 +405,9 @@ const en = {
       formAmountPlaceholderFixed: 'e.g. 20.00',
       columnActions: 'Actions',
       review: 'Review',
+      submitForReview: 'Submit for Review',
+      submitForReviewFailed: 'Failed to submit for review',
+      draftSaved: 'Draft saved',
       noApplications: 'No applications',
       // Form sections
       sectionBasic: 'Basic Info',
@@ -821,6 +825,12 @@ const en = {
       removeMember: 'Remove Member',
       confirmRemoveMember: 'Remove user "{user}" from "{group}"?',
       confirmRemove: 'Confirm Remove',
+      delete: 'Delete Group',
+      deleteGroup: 'Delete Group',
+      confirmDeleteGroup: 'Delete group "{name}"? This action cannot be undone.',
+      confirmDelete: 'Delete',
+      groupDeleted: 'Group deleted',
+      deleteGroupFailed: 'Failed to delete group',
     },
     dataImport: {
       title: 'Data Import',

@@ -393,19 +393,22 @@ class SPU(models.Model):
         self.save(update_fields=['status', 'reviewed_by', 'reviewed_at', 'review_comment'])
 
     def put_on_sale(self):
-        if self.status != SPUStatus.APPROVED:
+        # 允许从草稿/已通过/已下架直接上架，免去强制审核流程，管理员可一键上下架
+        allowed = (SPUStatus.DRAFT, SPUStatus.APPROVED, SPUStatus.OFF_SALE, SPUStatus.SUSPENDED)
+        if self.status not in allowed:
             raise ValueError(
                 f'Cannot put on sale from status "{self.get_status_display()}". '
-                f'Only Approved SPUs can be put on sale.'
+                f'Only Draft, Approved, Off-sale or Suspended SPUs can be put on sale.'
             )
         self.status = SPUStatus.ON_SALE
         self.save(update_fields=['status'])
 
     def put_off_sale(self):
-        if self.status not in (SPUStatus.ON_SALE, SPUStatus.SUSPENDED):
+        allowed = (SPUStatus.ON_SALE, SPUStatus.SUSPENDED, SPUStatus.APPROVED)
+        if self.status not in allowed:
             raise ValueError(
                 f'Cannot put off sale from status "{self.get_status_display()}". '
-                f'Only On Sale or Suspended SPUs can be put off sale.'
+                f'Only On Sale, Suspended or Approved SPUs can be put off sale.'
             )
         self.status = SPUStatus.OFF_SALE
         self.save(update_fields=['status'])

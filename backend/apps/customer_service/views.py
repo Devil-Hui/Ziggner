@@ -174,7 +174,13 @@ def _strip_card_data_to_refs(card_data: dict) -> dict:
 
 
 def _create_attachment_messages(conv, user, sender_type: str, attachments: list) -> int:
-    """为会话批量创建附件消息（图片/视频）。返回创建的消息条数。"""
+    """为会话批量创建附件消息（图片/视频）并实时广播。返回创建的消息条数。
+
+    关键：附件消息是独立于主消息的 Message 行，主消息广播（_broadcast_new_message）
+    只携带主 payload，不会包含这些附件。若此处不单独广播，对方 WebSocket
+    只能收到主消息（或空文本），图片/视频要等到整页刷新（loadDetail）才出现，
+    表现为「媒体消息延迟 / 需刷新才看到」。
+    """
     created = 0
     for att in attachments or []:
         if isinstance(att, dict):
@@ -187,7 +193,7 @@ def _create_attachment_messages(conv, user, sender_type: str, attachments: list)
             continue
         if msg_type not in ('image', 'video'):
             msg_type = 'image'
-        Message.objects.create(
+        att_msg = Message.objects.create(
             conversation=conv,
             sender=user,
             sender_type=sender_type,
@@ -199,6 +205,8 @@ def _create_attachment_messages(conv, user, sender_type: str, attachments: list)
         if sender_type == 'user':
             conv.increment_msg_count()
         created += 1
+        # 实时推送给对方 WebSocket，使图片/视频即时出现
+        _broadcast_new_message(conv.id, att_msg, sender_type)
     return created
 
 

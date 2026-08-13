@@ -202,6 +202,7 @@ class Messages:
     ADMIN_SPU_AUDIT_NOT_ALLOWED = 'Only group leaders can audit SPUs.'
     ADMIN_CATEGORY_HAS_CHILDREN = 'Cannot delete category with child categories.'
     ADMIN_CATEGORY_HAS_SPUS = 'Cannot delete category with associated SPUs.'
+    ADMIN_BRAND_HAS_SPUS = 'Cannot delete brand with associated SPUs. Please reassign or delete its products first.'
     ADMIN_BATCH_IN_PROGRESS = 'Batch operation is in progress. Check task status.'
     ADMIN_TASK_NOT_FOUND = 'Task not found.'
     ADMIN_STOCK_ALERT = 'SKU stock below alert threshold.'
