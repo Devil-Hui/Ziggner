@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../theme/tokens'
+import { Select as StatusFilter } from '../../components/admin/common/ui'
 import { PageHeader, DataTable, StatusBadge, SearchFilter, Pagination } from '../../components/admin/common'
 import type { Column } from '../../components/admin/common/DataTable'
 import { useTranslation } from '../../i18n'
@@ -18,19 +19,6 @@ const Toolbar = styled.div`
   gap: ${Spacing.md}px;
   margin-bottom: ${Spacing.lg}px;
   flex-wrap: wrap;
-`
-
-const StatusFilter = styled.select`
-  padding: 6px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.body};
-  background: ${Color.bg.card};
-  outline: none;
-  cursor: pointer;
-
-  &:focus { border-color: ${Color.primary}; }
 `
 
 const UnreadBadge = styled.span`

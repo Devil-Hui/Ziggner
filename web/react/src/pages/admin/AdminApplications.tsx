@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import { Input, Select, SecondaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
@@ -94,32 +95,6 @@ const RequiredDot = styled.span`
   margin-right: 2px;
 `;
 
-const Input = styled.input`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-  &:focus { outline: none; border-color: #e74c3c; }
-  &:disabled { background: #f5f5f5; color: #999; }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  background: ${Color.bg.card};
-  box-sizing: border-box;
-  &:focus { outline: none; border-color: #e74c3c; }
-`;
-
 const Textarea = styled.textarea`
   width: 100%;
   padding: 8px 10px;
@@ -207,17 +182,6 @@ const PrimaryBtn = styled.button`
   cursor: pointer;
   &:hover { background: #c0392b; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
-`;
-
-const SecondaryBtn = styled.button`
-  padding: 8px 24px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: pointer;
-  &:hover { border-color: ${Color.border.dark}; color: ${Color.primaryHover}; }
 `;
 
 // 表格内紧凑操作按钮：复用设计系统色板，避免内联硬编码（大厂规范：一致性 + 主题适配）

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { PrimaryBtn, SecondaryBtn } from '../../components/admin/common/ui'
 import PageHeader from '../../components/admin/common/PageHeader'
 import DataTable from '../../components/admin/common/DataTable'
 import Pagination from '../../components/admin/common/Pagination'
@@ -66,48 +67,6 @@ const TabButton = styled.button<{ $active: boolean }>`
 const ActionsRow = styled.div`
   display: flex;
   gap: ${Spacing.sm}px;
-`
-
-const PrimaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.primary};
-  background: ${Color.primary};
-  color: ${Color.text.inverse};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: ${Transition.fast};
-
-  &:hover {
-    background: ${Color.primaryHover};
-    border-color: ${Color.primaryHover};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`
-
-const SecondaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: ${Transition.fast};
-
-  &:hover {
-    border-color: ${Color.primary};
-    color: ${Color.primary};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 `
 
 const Badge = styled.span<{ $type: string }>`

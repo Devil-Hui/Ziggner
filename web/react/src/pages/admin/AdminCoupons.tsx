@@ -11,6 +11,7 @@ import Pagination from '../../components/admin/common/Pagination';
 import { adminAPI, Coupon, CouponFormData, type PromoCodeItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
+import { Input, Input as SearchInput, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
 
 // ==================== Styled Components ====================
 
@@ -61,39 +62,6 @@ const Label = styled.label`
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
   margin-bottom: 6px;
-`;
-
-const Input = styled.input`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  background: ${Color.bg.card};
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
 `;
 
 const ToggleRow = styled.div`
@@ -167,24 +135,6 @@ const CodeRow = styled.div`
   }
 `;
 
-const GenerateBtn = styled.button`
-  padding: 0 16px;
-  height: 36px;
-  font-size: 12px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-  border-radius: 2px;
-  cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
-
-  &:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
-  }
-`;
-
 const PrimaryBtn = styled.button`
   padding: 8px 20px;
   font-size: ${FontSize.sm}px;
@@ -196,21 +146,6 @@ const PrimaryBtn = styled.button`
 
   &:hover {
     background: #c0392b;
-  }
-`;
-
-const SecondaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${Color.border.dark};
-    color: ${Color.primaryHover};
   }
 `;
 
@@ -250,26 +185,6 @@ const StackableText = styled.span<{ $stackable: boolean }>`
 
 const SearchBar = styled.div`
   margin-bottom: 12px;
-`;
-
-const SearchInput = styled.input`
-  height: 32px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  width: 200px;
-  outline: none;
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-
-  &::placeholder {
-    color: ${Color.border.dark};
-  }
-
-  &:focus {
-    border-color: #e74c3c;
-  }
 `;
 
 // ==================== Constants ====================

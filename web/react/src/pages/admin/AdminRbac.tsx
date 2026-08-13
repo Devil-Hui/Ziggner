@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { PrimaryBtn as SaveBtn, Input as SearchInput, SecondaryBtn, SecondaryBtn as ActionBtn, SecondaryBtn as CancelBtn } from '../../components/admin/common/ui'
 import { adminAPI, type RbacMatrix, type RbacUser, type RbacDomain } from '../../api/admin'
 import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import Pagination from '../../components/admin/common/Pagination'
@@ -120,52 +121,6 @@ const SuperAdminHint = styled.div`
   margin-bottom: ${Spacing.lg}px;
 `
 
-const SaveBtn = styled.button`
-  margin-top: ${Spacing.lg}px;
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  color: #fff;
-  background: ${Color.primaryHover};
-  border: none;
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: ${Transition.fast};
-  &:hover {
-    opacity: 0.85;
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-`
-
-const SearchInput = styled.input`
-  height: 32px;
-  padding: 0 10px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  outline: none;
-  width: 260px;
-  &:focus {
-    border-color: ${Color.primaryHover};
-  }
-`
-
-const ActionBtn = styled.button`
-  padding: 4px 10px;
-  font-size: ${FontSize.xs}px;
-  color: ${Color.primaryHover};
-  background: transparent;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
-  transition: ${Transition.fast};
-  &:hover {
-    background: ${Color.primaryLight};
-  }
-`
-
 const RoleTag = styled.span`
   display: inline-block;
   font-size: 11px;
@@ -213,16 +168,6 @@ const ModalActions = styled.div`
   justify-content: flex-end;
   gap: 10px;
   margin-top: ${Spacing.lg}px;
-`
-
-const CancelBtn = styled.button`
-  padding: 8px 16px;
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
-  background: transparent;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  cursor: pointer;
 `
 
 const ToastMsg = styled.div<{ $type: 'success' | 'error' }>`

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import { Input, Select, SecondaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
@@ -56,38 +57,6 @@ const Label = styled.label`
   margin-bottom: 6px;
 `;
 
-const Input = styled.input`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
-`;
-
-const Select = styled.select`
-  width: 100%;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  color: ${Color.primaryHover};
-  background: ${Color.bg.card};
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
-`;
-
 const ButtonGroup = styled.div`
   display: flex;
   justify-content: flex-end;
@@ -106,21 +75,6 @@ const PrimaryBtn = styled.button`
 
   &:hover {
     background: #c0392b;
-  }
-`;
-
-const SecondaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${Color.border.dark};
-    color: ${Color.primaryHover};
   }
 `;
 

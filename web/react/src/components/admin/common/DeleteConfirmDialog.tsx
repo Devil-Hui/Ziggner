@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../../theme/tokens';
+import { SecondaryBtn as CancelBtn } from './ui';
 
 const Overlay = styled.div`
   position: fixed;
@@ -50,21 +51,6 @@ const Footer = styled.div`
   justify-content: flex-end;
   gap: ${Spacing.md}px;
   padding: 0 ${Spacing.xxxl}px ${Spacing.xxxl}px;
-`;
-
-const CancelBtn = styled.button`
-  padding: 10px ${Spacing.xl}px;
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.md}px;
-  background: ${Color.bg.card};
-  color: ${Color.text.body};
-  font-size: ${FontSize.base}px;
-  cursor: pointer;
-  transition: background ${Transition.normal};
-
-  &:hover {
-    background: ${Color.primaryLight};
-  }
 `;
 
 const ConfirmBtn = styled.button<{ $loading?: boolean }>`

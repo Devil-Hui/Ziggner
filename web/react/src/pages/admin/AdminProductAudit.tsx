@@ -11,6 +11,7 @@ import { adminAPI } from '../../api/admin';
 import { adminChatAPI, type ConversationSummary } from '../../api/chat';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
+import { SuccessBtn as ApproveBtn, DangerBtn as RejectBtn } from '../../components/admin/common/ui';
 import ChatLink from '../../components/admin/ChatLink';
 
 interface SPUDetail {
@@ -194,35 +195,6 @@ const ButtonGroup = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 16px;
-`;
-
-const ApproveBtn = styled.button`
-  padding: 8px 24px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: #27ae60;
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    background: #219a52;
-  }
-`;
-
-const RejectBtn = styled.button`
-  padding: 8px 24px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid #e74c3c;
-  background: ${Color.bg.card};
-  color: #e74c3c;
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    background: #e74c3c;
-    color: ${Color.text.inverse};
-  }
 `;
 
 const Toast = styled.div<{ $type: 'success' | 'error' }>`

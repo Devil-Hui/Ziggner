@@ -2,6 +2,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
 import { adminAPI, Activity, ActivityFormData } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
@@ -217,39 +218,6 @@ const FormLabel = styled.label`
   color: ${Color.text.body};
 `;
 
-const FormInput = styled.input`
-  width: 100%;
-  padding: 10px 14px;
-  font-size: ${FontSize.base}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.md}px;
-  outline: none;
-  box-sizing: border-box;
-  transition: ${Transition.normal};
-
-  &:focus {
-    border-color: ${PRIMARY};
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-  }
-`;
-
-const FormSelect = styled.select`
-  width: 100%;
-  padding: 10px 14px;
-  font-size: ${FontSize.base}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.md}px;
-  outline: none;
-  box-sizing: border-box;
-  background: ${SURFACE};
-  transition: ${Transition.normal};
-
-  &:focus {
-    border-color: ${PRIMARY};
-    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-  }
-`;
-
 const FormError = styled.span`
   display: block;
   margin-top: 4px;
@@ -318,23 +286,6 @@ const RuleFieldLabel = styled.span`
   font-size: 11px;
   color: ${Color.text.muted};
   font-weight: 500;
-`;
-
-const RuleFieldInput = styled.input`
-  height: 34px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  outline: none;
-  box-sizing: border-box;
-  width: 100%;
-  transition: ${Transition.normal};
-
-  &:focus {
-    border-color: ${PRIMARY};
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
-  }
 `;
 
 const RuleRemoveBtn = styled.button`

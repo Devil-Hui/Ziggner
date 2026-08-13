@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens';
+import { Input as SearchInput } from './ui';
 
 const Container = styled.div`
   display: flex;
@@ -7,26 +8,6 @@ const Container = styled.div`
   align-items: center;
   gap: ${Spacing.md}px;
   padding: 0 0 ${Spacing.lg}px 0;
-`;
-
-const SearchInput = styled.input`
-  padding: 7px ${Spacing.md}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.xs}px;
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-  outline: none;
-  min-width: ${200}px;
-  transition: border-color 0.2s;
-
-  &:focus {
-    border-color: ${Color.primary};
-  }
-
-  &::placeholder {
-    color: ${Color.text.muted};
-  }
 `;
 
 interface SearchFilterProps {

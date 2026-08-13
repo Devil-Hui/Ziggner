@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { useTranslation } from '../../i18n'
 import { adminAPI, type EmailTemplateItem } from '../../api/admin'
 import { Color, Radius, Shadow, FontSize, Spacing } from '../../theme/tokens'
+import { Input, PrimaryBtn as SaveBtn } from '../../components/admin/common/ui'
 
 const Container = styled.div`
   max-width: 960px;
@@ -56,16 +57,6 @@ const Label = styled.label`
   color: ${Color.text.heading};
 `
 
-const Input = styled.input`
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  font-size: 0.9rem;
-  box-sizing: border-box;
-  &:focus { outline: none; border-color: ${Color.primary}; box-shadow: 0 0 0 3px rgba(26,86,219,0.15); }
-`
-
 const Textarea = styled.textarea`
   width: 100%;
   min-height: 180px;
@@ -84,20 +75,6 @@ const Row = styled.div`
   display: flex;
   gap: 12px;
   align-items: center;
-`
-
-const SaveBtn = styled.button`
-  padding: 8px 20px;
-  background: ${Color.primary};
-  color: #fff;
-  border: none;
-  border-radius: ${Radius.sm}px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  &:hover { opacity: 0.88; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `
 
 const ResetBtn = styled.button`

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { Select, Input as SearchInput } from '../../components/admin/common/ui'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 
@@ -56,25 +57,6 @@ const FilterBar = styled.div`
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
-`
-
-const Select = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.813rem;
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-`
-
-const SearchInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.813rem;
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-  min-width: 220px;
 `
 
 const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'ghost' | 'ok' }>`

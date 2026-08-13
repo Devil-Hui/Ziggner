@@ -2,6 +2,7 @@
 import { useState, useRef, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { SecondaryBtn } from '../../components/admin/common/ui'
 import { adminAPI } from '../../api/admin'
 import { post } from '../../api/request'
 import PageHeader from '../../components/admin/common/PageHeader'
@@ -197,21 +198,6 @@ const PrimaryBtn = styled.button<{ $disabled?: boolean }>`
 
   &:hover {
     background: ${({ $disabled }) => ($disabled ? '#ccc' : '#c0392b')};
-  }
-`
-
-const SecondaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    border-color: ${Color.border.dark};
-    color: ${Color.primaryHover};
   }
 `
 

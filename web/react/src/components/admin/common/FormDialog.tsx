@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../../theme/tokens';
+import { SecondaryBtn as CancelBtn } from './ui';
 
 const Overlay = styled.div`
   position: fixed;
@@ -71,22 +72,6 @@ const Footer = styled.div`
   gap: ${Spacing.sm}px;
   padding: ${Spacing.lg}px ${Spacing.xxxl}px;
   border-top: 1px solid ${Color.border.light};
-`;
-
-const CancelBtn = styled.button`
-  padding: 8px ${Spacing.xl}px;
-  font-size: ${FontSize.base}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.xs}px;
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  cursor: pointer;
-  transition: all ${Transition.fast};
-
-  &:hover {
-    border-color: #bbb;
-    color: ${Color.primaryHover};
-  }
 `;
 
 const SubmitBtn = styled.button<{ $variant?: 'primary' | 'danger' }>`

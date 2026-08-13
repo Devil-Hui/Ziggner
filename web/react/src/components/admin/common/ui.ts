@@ -80,6 +80,33 @@ export const OutlinePrimaryBtn = styled(BaseBtn)`
   }
 `
 
+// 成功 / 肯定操作（通过 / 批准 / 上线）— 绿描边，hover 填充
+export const SuccessBtn = styled(BaseBtn)`
+  padding: 2px 8px;
+  font-size: ${FontSize.xs}px;
+  border: 1px solid ${Color.status.success};
+  background: ${Color.bg.card};
+  color: ${Color.status.success};
+
+  &:hover {
+    background: ${({ $disabled }) => ($disabled ? 'transparent' : Color.status.success)};
+    color: ${({ $disabled }) => ($disabled ? Color.status.success : Color.text.inverse)};
+  }
+`
+
+// 微信相关操作 — 微信绿实心（品牌语义，单独保留，不走 token）
+export const WeChatBtn = styled(BaseBtn)`
+  padding: 8px 20px;
+  font-size: ${FontSize.sm}px;
+  font-weight: 500;
+  background: #07c160;
+  color: #fff;
+
+  &:hover {
+    background: #06ad56;
+  }
+`
+
 /* ========== 表单控件 ========== */
 
 export const Input = styled.input<{ $compact?: boolean }>`

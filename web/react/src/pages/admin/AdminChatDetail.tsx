@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { PrimaryBtn as SendBtn } from '../../components/admin/common/ui'
 import { StatusBadge } from '../../components/admin/common'
 import HorizontalScroll from '../../components/common/HorizontalScroll'
 import { Icon } from '../../components/admin/common/Icon'
@@ -607,20 +608,6 @@ const ToolBtn = styled.button`
 
 const HiddenInput = styled.input`
   display: none;
-`
-
-const SendBtn = styled.button`
-  background: ${Color.primaryHover};
-  color: #fff;
-  border: none;
-  border-radius: ${Radius.sm}px;
-  padding: 10px 20px;
-  font-size: ${FontSize.base}px;
-  cursor: pointer;
-  white-space: nowrap;
-
-  &:hover { opacity: 0.9; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `
 
 const PreviewRow = styled.div`

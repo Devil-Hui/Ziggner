@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { Input as SearchInput } from '../../components/admin/common/ui'
 import { adminAPI } from '../../api/admin'
 import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
@@ -12,26 +13,6 @@ import { useTranslation } from '../../i18n'
 
 const PageContainer = styled.div`
   padding: 0;
-`
-
-const SearchInput = styled.input`
-  height: 32px;
-  width: 200px;
-  padding: 0 ${Spacing.sm}px;
-  font-size: ${FontSize.sm}px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 2px;
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-
-  &::placeholder {
-    color: ${Color.border.dark};
-  }
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
 `
 
 const JsonPreview = styled.pre`
