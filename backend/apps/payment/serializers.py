@@ -2,6 +2,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 from .models import PaymentLog, PaymentMethod, RefundLog
+from utils.url_security import is_safe_redirect
 
 
 class CreatePaymentSerializer(serializers.Serializer):
@@ -9,6 +10,16 @@ class CreatePaymentSerializer(serializers.Serializer):
     method = serializers.ChoiceField(choices=PaymentMethod.choices)
     success_url = serializers.CharField(max_length=500, required=False, default='')
     cancel_url = serializers.CharField(max_length=500, required=False, default='')
+
+    def validate_success_url(self, value):
+        if value and not is_safe_redirect(value):
+            raise serializers.ValidationError('unsupported redirect url')
+        return value
+
+    def validate_cancel_url(self, value):
+        if value and not is_safe_redirect(value):
+            raise serializers.ValidationError('unsupported redirect url')
+        return value
 
 
 class MockPaymentScenarioSerializer(serializers.Serializer):

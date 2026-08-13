@@ -15,6 +15,7 @@ import {
   calculateCouponDiscount,
   getSelectableUserCoupons,
 } from './checkoutCoupon'
+import { safeHref } from '../../utils/sanitizeUrl'
 
 // ── SHEIN 设计令牌 ──────────────────────────────────
 const SHEIN = {
@@ -879,7 +880,8 @@ export default function Checkout() {
       if (paymentResult.pay_url) {
         const payUrl = new URL(paymentResult.pay_url, window.location.origin)
         if (paymentMethod === 'mock') payUrl.searchParams.set('order_no', orderNo)
-        window.location.href = payUrl.toString()
+        const safePayHref = safeHref(payUrl.toString())
+        if (safePayHref) window.location.href = safePayHref
       } else {
         setError('Failed to create payment session. Please try again.')
         setLoading(false)

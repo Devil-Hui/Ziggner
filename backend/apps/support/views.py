@@ -3,7 +3,11 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes
 
 from utils.api_base_view import BaseApiView
-from utils.upload_security import UploadValidationError, validate_media_upload
+from utils.upload_security import (
+    UploadValidationError,
+    strip_exif,
+    validate_media_upload,
+)
 from .models import Conversation, Message
 from .policies import SupportConversationAccessPolicy
 from .serializers import (
@@ -192,7 +196,9 @@ class UploadAttachmentView(BaseApiView):
         import uuid
 
         filename = f'support/{uuid.uuid4().hex}{extension}'
-        path = default_storage.save(filename, file)
+        # 图片剥离 EXIF；视频原样保存
+        save_file = strip_exif(file) if content_type.startswith('image/') else file
+        path = default_storage.save(filename, save_file)
         url = f'{settings.MEDIA_URL}{path}'
 
         return Response({'url': url, 'filename': file.name})

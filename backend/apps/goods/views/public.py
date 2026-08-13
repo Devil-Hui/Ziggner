@@ -202,7 +202,11 @@ class AdminImageUploadView(AdminApiView):
         file = request.FILES.get('file')
         if not file:
             return Response({'detail': '请上传文件'}, status=status.HTTP_400_BAD_REQUEST)
-        from utils.upload_security import UploadValidationError, validate_image_upload
+        from utils.upload_security import (
+            UploadValidationError,
+            strip_exif,
+            validate_image_upload,
+        )
         try:
             ext, _mime = validate_image_upload(file, max_bytes=self.MAX_UPLOAD_SIZE)
         except UploadValidationError:
@@ -212,6 +216,6 @@ class AdminImageUploadView(AdminApiView):
             )
         safe_name = f'{uuid.uuid4().hex}{ext}'
         from django.core.files.storage import default_storage
-        path = default_storage.save(f'uploads/{safe_name}', file)
+        path = default_storage.save(f'uploads/{safe_name}', strip_exif(file))
         # R2 启用时 default_storage.url() 返回绝对 CDN 地址；否则返回 /media/... 相对路径
         return Response({'url': default_storage.url(path)})

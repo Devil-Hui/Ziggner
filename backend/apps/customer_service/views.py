@@ -12,7 +12,11 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
 from utils.storage import get_storage
 from utils.api_permission import ApiPermission
-from utils.upload_security import UploadValidationError, validate_media_upload
+from utils.upload_security import (
+    UploadValidationError,
+    strip_exif,
+    validate_media_upload,
+)
 from apps.rbac.services import has_perm, has_role
 from apps.rbac.constants import Role
 from .models import Conversation, Message
@@ -264,7 +268,9 @@ class UploadFileView(BaseApiView):
 
         try:
             storage = get_storage()
-            result = storage.upload(filename, file.read(), content_type=content_type)
+            # 图片剥离 EXIF 后再读取字节上传；视频原样
+            upload_file = strip_exif(file) if content_type.startswith('image/') else file
+            result = storage.upload(filename, upload_file.read(), content_type=content_type)
             if result.get('url'):
                 return Response({
                     'url': result['url'],

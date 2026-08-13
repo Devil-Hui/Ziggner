@@ -11,7 +11,11 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 
 from utils.api_base_view import BaseApiView
-from utils.upload_security import UploadValidationError, validate_image_upload
+from utils.upload_security import (
+    UploadValidationError,
+    strip_exif,
+    validate_image_upload,
+)
 from ..models import ProductMedia, SPU
 from apps.rbac.permissions import HasPerm
 from ..admin_permissions import can_operate_spu
@@ -300,11 +304,11 @@ class MediaCreateView(BaseApiView):
             f.content_type = content_type
             validated_extensions[id(f)] = extension
 
-        # 保存文件到本地存储
+        # 保存文件到本地存储（剥离 EXIF 元数据）
         def _save_file(f):
             ext = validated_extensions[id(f)]
             safe_name = f'{uuid.uuid4().hex}{ext}'
-            path = default_storage.save(f'product_media/{safe_name}', f)
+            path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
             return f'/media/{path}'
 
         thumb_url = _save_file(thumb)

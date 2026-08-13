@@ -21,7 +21,7 @@ class ProcessProductImageTask(CeleryTask):
         if sizes is None:
             sizes = [(200, 200), (400, 400), (800, 800)]
 
-        from PIL import Image
+        from PIL import Image, ImageOps
         import os
 
         if not os.path.exists(image_path):
@@ -31,9 +31,12 @@ class ProcessProductImageTask(CeleryTask):
         results = []
         base, ext = os.path.splitext(image_path)
         with Image.open(image_path) as img:
+            # 校正方向并丢弃 EXIF 元数据
+            img = ImageOps.exif_transpose(img)
             for w, h in sizes:
                 thumb = img.copy()
                 thumb.thumbnail((w, h), Image.LANCZOS)
+                thumb.info.pop('exif', None)
                 thumb_path = f'{base}_{w}x{h}{ext}'
                 thumb.save(thumb_path, quality=85)
                 results.append(thumb_path)

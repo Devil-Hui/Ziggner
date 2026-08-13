@@ -599,14 +599,18 @@ class AvatarUploadView(BaseApiView):
         if not file:
             return Response({'detail': 'No file uploaded'}, status=status.HTTP_400_BAD_REQUEST)
         
-        from utils.upload_security import UploadValidationError, validate_image_upload
+        from utils.upload_security import (
+            UploadValidationError,
+            strip_exif,
+            validate_image_upload,
+        )
         try:
             ext, _mime = validate_image_upload(file, max_bytes=5 * 1024 * 1024)
         except UploadValidationError:
             return Response({'detail': 'Unsupported file type'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         filename = f'avatars/{uuid.uuid4().hex}{ext}'
-        saved_path = default_storage.save(filename, file)
+        saved_path = default_storage.save(filename, strip_exif(file))
         full_url = request.build_absolute_uri(default_storage.url(saved_path))
         
         user = request.user

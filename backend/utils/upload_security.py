@@ -7,11 +7,16 @@ import io
 import os
 import warnings
 
-from PIL import Image
+from PIL import Image, ImageOps
+from django.core.files.uploadedfile import InMemoryUploadedFile
 
 
 class UploadValidationError(ValueError):
     pass
+
+
+# 重编码时允许的图片格式（GIF 不重编码以保留动画）
+_STRIP_FORMATS = {"JPEG", "PNG", "WEBP"}
 
 
 _IMAGE_FORMATS = {
@@ -141,3 +146,49 @@ def parse_csv_upload(
 def escape_csv_cell(value) -> str:
     text = "" if value is None else str(value)
     return f"'{text}" if _is_formula(text) else text
+
+
+def strip_exif(upload):
+    """重编码上传图片以剥离 EXIF（GPS / 相机 / 时间戳等元数据），并校正方向。
+
+    返回新的 InMemoryUploadedFile；遇到非图片 / GIF / 解析异常时原样返回，
+    保证调用方（default_storage.save / file.read）行为不变。
+    """
+    try:
+        upload.seek(0)
+        with Image.open(upload) as image:
+            image_format = image.format or "JPEG"
+            if image_format not in _STRIP_FORMATS:
+                upload.seek(0)
+                return upload
+
+            # 按 EXIF Orientation 校正，避免重编码后图片横竖颠倒
+            img = ImageOps.exif_transpose(image)
+            if img.mode in ("RGBA", "P", "LA"):
+                img = img.convert("RGB")
+
+            buffer = io.BytesIO()
+            if image_format == "JPEG":
+                img.save(buffer, format="JPEG", quality=85, exif=b"")
+            elif image_format == "WEBP":
+                img.save(buffer, format="WEBP", exif=b"")
+            else:  # PNG —— save 默认不写 info 元数据
+                img.save(buffer, format="PNG")
+
+            buffer.seek(0)
+            name = upload.name or f"image.{image_format.lower()}"
+            return InMemoryUploadedFile(
+                buffer,
+                "image",
+                name,
+                f"image/{image_format.lower()}",
+                buffer.tell(),
+                None,
+            )
+    except Exception:
+        # 任何异常都回退到原始文件，绝不让上传失败
+        try:
+            upload.seek(0)
+        except Exception:
+            pass
+        return upload
