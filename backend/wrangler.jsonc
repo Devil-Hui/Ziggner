@@ -9,7 +9,7 @@
     {
       "max_instances": 3,
       "class_name": "DjangoContainer",
-      "image": "./Dockerfile.cf"
+      "image": "./Dockerfile.prod"
     }
   ],
 
