@@ -29,7 +29,7 @@ export default function ChatFloatWidget() {
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #eee', fontWeight: 600, fontSize: 15 }}>
-            {t('admin.sidebar.chat')}
+            {t('admin.layout.menu.chat')}
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
             {convs.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>{t('chat.noConversations')}</div>}
