@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
-import { Select, Input as SearchInput } from '../../components/admin/common/ui'
+import { Select, Input as SearchInput, SecondaryBtn } from '../../components/admin/common/ui'
 import { adminAPI } from '../../api/admin'
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation } from '../../i18n'
@@ -29,21 +29,6 @@ const Title = styled.h2`
 const Actions = styled.div`
   display: flex;
   gap: 8px;
-`
-
-const Button = styled.button<{ $variant?: 'primary' | 'danger' }>`
-  padding: 8px 16px;
-  border: 1px solid ${({ $variant }) => ($variant === 'danger' ? '#e74c3c' : '#ddd')};
-  background: ${({ $variant }) => ($variant === 'primary' ? '#e74c3c' : '#fff')};
-  color: ${({ $variant }) => ($variant === 'primary' ? '#fff' : '#333')};
-  border-radius: 6px;
-  font-size: 0.813rem;
-  cursor: pointer;
-  transition: ${Transition.fast};
-
-  &:hover {
-    background: ${({ $variant }) => ($variant === 'primary' ? '#c0392b' : '#f5f5f5')};
-  }
 `
 
 const FilterBar = styled.div`
@@ -287,8 +272,8 @@ export default function AdminProducts() {
       <PageHeader>
         <Title>{t('admin.products.title')} ({total})</Title>
         <Actions>
-          <Button onClick={() => navigate('/admin/products/create')}>{t('admin.products.createProduct')}</Button>
-          <Button onClick={() => navigate('/admin/chat')}>{t('admin.layout.menu.chat')}</Button>
+          <SecondaryBtn onClick={() => navigate('/admin/products/create')}>{t('admin.products.createProduct')}</SecondaryBtn>
+          <SecondaryBtn onClick={() => navigate('/admin/chat')}>{t('admin.layout.menu.chat')}</SecondaryBtn>
         </Actions>
       </PageHeader>
 
@@ -312,9 +297,9 @@ export default function AdminProducts() {
 
         {selected.size > 0 && (
           <Actions>
-            <Button onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')}</Button>
-            <Button onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</Button>
-            <Button onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</Button>
+            <SecondaryBtn onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')}</SecondaryBtn>
+            <SecondaryBtn onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</SecondaryBtn>
+            <SecondaryBtn onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</SecondaryBtn>
           </Actions>
         )}
       </FilterBar>
@@ -325,7 +310,7 @@ export default function AdminProducts() {
       {loading ? (
         <LoadingState>{t('common.loading')}</LoadingState>
       ) : items.length === 0 ? (
-        <EmptyState>{t('admin.products.emptyState')}<Button onClick={() => navigate('/admin/products/create')}>{t('admin.products.createOne')}</Button></EmptyState>
+        <EmptyState>{t('admin.products.emptyState')}<SecondaryBtn onClick={() => navigate('/admin/products/create')}>{t('admin.products.createOne')}</SecondaryBtn></EmptyState>
       ) : (
         <>
           <Table>

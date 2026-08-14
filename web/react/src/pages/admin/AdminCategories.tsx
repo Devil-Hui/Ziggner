@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
-import { Input, Select, SecondaryBtn, DangerBtn } from '../../components/admin/common/ui';
+import { Input, Select, SecondaryBtn, DangerBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import LoadingSkeleton from '../../components/admin/common/LoadingSkeleton';
 import ErrorRetry from '../../components/admin/common/ErrorRetry';
@@ -133,20 +133,6 @@ const ButtonGroup = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 20px;
-`;
-
-const PrimaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: #e74c3c;
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    background: #c0392b;
-  }
 `;
 
 const MigrateSection = styled.div`

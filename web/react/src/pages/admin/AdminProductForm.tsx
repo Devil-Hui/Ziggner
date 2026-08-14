@@ -14,6 +14,7 @@ import {
   getAllStagedItems,
   clearAllStaged,
 } from '../../utils/mediaStaging'
+import { Input, Select, PrimaryBtn, SecondaryBtn } from '../../components/admin/common/ui'
 
 // ── Types ──
 
@@ -110,22 +111,6 @@ const Label = styled.label`
   margin-bottom: 4px;
 `
 
-const Input = styled.input`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
-  }
-`
-
 const TextArea = styled.textarea`
   width: 100%;
   padding: 8px 12px;
@@ -143,51 +128,10 @@ const TextArea = styled.textarea`
   }
 `
 
-const Select = styled.select`
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.875rem;
-  background: ${Color.bg.card};
-  color: ${Color.primaryHover};
-  box-sizing: border-box;
-
-  &:focus {
-    outline: none;
-    border-color: #e74c3c;
-  }
-`
-
 const BtnGroup = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 20px;
-`
-
-const Btn = styled.button<{ $primary?: boolean; $danger?: boolean }>`
-  padding: 10px 20px;
-  border: 1px solid ${({ $primary, $danger }) => $danger ? '#e74c3c' : $primary ? '#e74c3c' : '#ddd'};
-  background: ${({ $primary, $danger }) => $danger ? '#fff' : $primary ? '#e74c3c' : '#fff'};
-  color: ${({ $primary, $danger }) => $danger ? '#e74c3c' : $primary ? '#fff' : '#333'};
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.875rem;
-  transition: ${Transition.fast};
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-
-  &:hover {
-    background: ${({ $primary, $danger }) =>
-      $danger ? '#e74c3c' : $primary ? '#c0392b' : '#f5f5f5'};
-    color: ${({ $danger }) => $danger ? '#fff' : undefined};
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 `
 
 const SpinIcon = styled.span`
@@ -1321,15 +1265,15 @@ export default function AdminProductForm() {
         </Section>
 
         <BtnGroup>
-          <Btn type="submit" disabled={isSaving || isSubmitting}>
+          <SecondaryBtn type="submit" disabled={isSaving || isSubmitting}>
             {isSaving ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> Saving…</> : t('admin.productForm.saveDraft')}
-          </Btn>
-          <Btn type="button" $primary disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
+          </SecondaryBtn>
+          <PrimaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
             {isSubmitting ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> Submitting…</> : t('admin.productForm.saveAndSubmit')}
-          </Btn>
-          <Btn type="button" onClick={() => navigate('/admin/products')}>
+          </PrimaryBtn>
+          <SecondaryBtn type="button" onClick={() => navigate('/admin/products')}>
             {t('common.cancel')}
-          </Btn>
+          </SecondaryBtn>
         </BtnGroup>
       </Form>
 

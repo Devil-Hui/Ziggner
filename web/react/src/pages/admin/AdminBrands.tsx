@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
-import { Input, Select, SecondaryBtn } from '../../components/admin/common/ui';
+import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
@@ -80,20 +80,6 @@ const ButtonGroup = styled.div`
   justify-content: flex-end;
   gap: 8px;
   margin-top: 20px;
-`;
-
-const PrimaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: #e74c3c;
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    background: #c0392b;
-  }
 `;
 
 const LogoImg = styled.img`

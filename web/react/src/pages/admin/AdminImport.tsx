@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
-import { SecondaryBtn } from '../../components/admin/common/ui'
+import { SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui'
 import { adminAPI } from '../../api/admin'
 import { post } from '../../api/request'
 import PageHeader from '../../components/admin/common/PageHeader'
@@ -186,20 +186,6 @@ const ButtonRow = styled.div`
   margin-top: 16px;
 `
 
-const PrimaryBtn = styled.button<{ $disabled?: boolean }>`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: ${({ $disabled }) => ($disabled ? '#ccc' : '#e74c3c')};
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  transition: background 0.15s;
-
-  &:hover {
-    background: ${({ $disabled }) => ($disabled ? '#ccc' : '#c0392b')};
-  }
-`
 
 // ── Result ──
 

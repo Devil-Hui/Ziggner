@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
-import { Input, Select, SecondaryBtn } from '../../components/admin/common/ui';
+import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
@@ -170,18 +170,6 @@ const ButtonGroup = styled.div`
   bottom: 0;
   background: ${Color.bg.card};
   z-index: 1;
-`;
-
-const PrimaryBtn = styled.button`
-  padding: 8px 24px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: #e74c3c;
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: pointer;
-  &:hover { background: #c0392b; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
 // 表格内紧凑操作按钮：复用设计系统色板，避免内联硬编码（大厂规范：一致性 + 主题适配）

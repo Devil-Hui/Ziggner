@@ -11,7 +11,7 @@ import Pagination from '../../components/admin/common/Pagination';
 import { adminAPI, Coupon, CouponFormData, type PromoCodeItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
-import { Input, Input as SearchInput, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
+import { Input, Input as SearchInput, PrimaryBtn, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
 
 // ==================== Styled Components ====================
 
@@ -132,20 +132,6 @@ const CodeRow = styled.div`
 
   input {
     flex: 1;
-  }
-`;
-
-const PrimaryBtn = styled.button`
-  padding: 8px 20px;
-  font-size: ${FontSize.sm}px;
-  border: none;
-  background: #e74c3c;
-  color: ${Color.text.inverse};
-  border-radius: 2px;
-  cursor: pointer;
-
-  &:hover {
-    background: #c0392b;
   }
 `;
 
