@@ -17,6 +17,7 @@
   "dependencies": {
     "agent-base": "^9.0.0",
     "axios": "^1.7.9",
+    "browser-image-compression": "2.0.2",
     "http-proxy-agent": "^9.1.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
