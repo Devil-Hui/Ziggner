@@ -6,6 +6,16 @@
 secrets.json
 # 本机 tunnel 自签证书（敏感，不入库）
 deploy/nginx-certs/
+# 敏感证书（真实 TLS 私钥，严禁入库）
+certs/
+
+# 测试/验证残留（不允许上传）
+backend/_*_test.py
+backend/test/
+web/react/probe_chunk.js
+web/react/scripts_tmp_rm_pb.py
+web/react/overview-*.md
+web/react/dist_*/
 
 # Node
 node_modules/
