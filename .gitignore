@@ -20,7 +20,9 @@ web/react/dist_*/
 # Node
 node_modules/
 web/react/node_modules/
+.wrangler/
 web/react/.wrangler/
+backend/.wrangler/
 
 # Python
 __pycache__/
