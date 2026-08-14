@@ -42,7 +42,7 @@ export default function ChatFloatWidget() {
             ))}
           </div>
           <div style={{ padding: '10px 16px', borderTop: '1px solid #eee', textAlign: 'center' }}>
-            <button onClick={() => navigate('/admin/chat')} style={{ border: 'none', background: 'none', color: '#1a56db', cursor: 'pointer', fontSize: 13 }}>{t('chat.viewAll')}</button>
+            <button onClick={() => navigate('/admin/chat')} style={{ border: 'none', background: 'none', color: '#1a56db', cursor: 'pointer', fontSize: 13 }}>{t('profile.viewAll')}</button>
           </div>
         </div>
       )}
