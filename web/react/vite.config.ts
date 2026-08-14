@@ -30,11 +30,12 @@ export default defineConfig({
         compact: true,
         controlFlowFlattening: false,
         deadCodeInjection: false,
-        stringArray: true,
-        stringArrayEncoding: ['base64'],
-        stringArrayThreshold: 0.5,
-        unicodeEscapeSequence: true,
-        rotateStringArray: true,
+        // ⚠️ stringArray 必须与 Vite 动态 import() 代码分割二选一：
+        // 开启后，被编码进字符串数组的 import 说明符在运行时解码回「文档相对路径」
+        // （如 /pages/admin/AdminLogin 而非 /assets/AdminLogin-xxx.js），
+        // SPA 兜底把它当 text/html 返回 → "Failed to load module script: MIME type text/html"。
+        // 关掉 stringArray（保留 hexadecimal 标识符重命名作轻量混淆），路由 import 恢复正常。
+        stringArray: false,
         renameGlobals: false,
         identifierNamesGenerator: 'hexadecimal',
         disableConsoleOutput: false,
