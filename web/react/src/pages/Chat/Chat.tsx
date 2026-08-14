@@ -869,53 +869,66 @@ export default function Chat() {
   // ── Send message ──
   const handleSend = async () => {
     if (!activeId) return
-    if (!inputText.trim() && inputAttachments.length === 0) return
-
-    const text = inputText
+    const text = inputText.trim()
     const atts = inputAttachments
+    if (!text && atts.length === 0) return
     setInputText('')
     setInputAttachments([])
     setSendError('')
 
-    // 乐观更新：立即插入本地，发送方无需等待 POST + 重拉即可看到自己消息
-    const tempId = -Date.now()
-    const optimisticMsg: ChatMessage = {
-      id: tempId,
+    // 逐条发送（文本 + 每个附件各一条，带明确 msg_type + file_url），
+    // 确保图片/视频实时存储并广播，避免「发送后需刷新才显示」(T10)。
+    type PendingSend = {
+      tempId: number
+      params: { content?: string; msg_type?: 'text' | 'image' | 'video'; file_url?: string }
+    }
+    const pending: PendingSend[] = []
+    if (text) {
+      pending.push({ tempId: -Date.now(), params: { content: text, msg_type: 'text' } })
+    }
+    for (const url of atts) {
+      const isVideo = /\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i.test(url)
+      pending.push({
+        tempId: -(Date.now() + pending.length + 1),
+        params: { content: '', msg_type: isVideo ? 'video' : 'image', file_url: url },
+      })
+    }
+
+    const optimisticMsgs: ChatMessage[] = pending.map((p) => ({
+      id: p.tempId,
       sender: 'optimistic',
       sender_type: 'user',
       sender_name: '',
-      content: text,
-      msg_type: 'text',
-      file_url: null,
+      content: p.params.content || '',
+      msg_type: (p.params.msg_type || 'text') as ChatMessage['msg_type'],
+      file_url: p.params.file_url || null,
       card_data: null,
       is_read: true,
       read_at: null,
       created_at: new Date().toISOString(),
       status: 'sending',
-    }
-    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimisticMsg] } : prev)
+    }))
+    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), ...optimisticMsgs] } : prev)
 
     try {
       setSending(true)
-      const resp = await chatAPI.sendMessage(activeId, {
-        content: text,
-        attachments: atts,
-      })
-      // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
-      setActiveConv((prev) => {
-        if (!prev) return prev
-        const copy = (prev.messages || []).slice()
-        const idx = copy.findIndex((m) => m.id === tempId)
-        if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
-        else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
-        return { ...prev, messages: copy }
-      })
+      for (const p of pending) {
+        try {
+          const resp = await chatAPI.sendMessage(activeId, p.params)
+          setActiveConv((prev) => {
+            if (!prev) return prev
+            const copy = (prev.messages || []).slice()
+            const idx = copy.findIndex((m) => m.id === p.tempId)
+            if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
+            else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
+            return { ...prev, messages: copy }
+          })
+        } catch {
+          setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== p.tempId) } : prev)
+          setSendError(t('store.chat.sendFailed'))
+        }
+      }
       await loadConversations()
-    } catch {
-      setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
-      setInputText(text)
-      setInputAttachments(atts)
-      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }

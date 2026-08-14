@@ -626,6 +626,7 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
 
             if order_item:
                 result['order_id'] = order_item.order_id
+                result['order_no'] = order_item.order.order_no
                 result['order_status'] = order_item.order.status
                 result['sku_id'] = order_item.sku_id
         except Exception as e:
@@ -686,6 +687,9 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
         order_id = card_data.get('order_id')
         if order_id:
             refs['order_id'] = order_id
+        order_no = card_data.get('order_no')
+        if order_no:
+            refs['order_no'] = order_no
         sku_id = card_data.get('sku_id')
         if sku_id:
             refs['sku_id'] = sku_id

@@ -227,6 +227,15 @@ export interface CouponFormData {
   end_time: string;
 }
 
+/** 优惠券审核申请（promotion 端点）：coupon 为嵌套对象含 id */
+export interface CouponApplicationItem {
+  id: number;
+  status: string;
+  coupon?: { id: number } | number | null;
+  coupon_name?: string;
+  coupon_code?: string;
+}
+
 export interface ActivityItem {
   id: number;
   name: string;
@@ -442,6 +451,11 @@ export const adminAPI = {
     post(`/promotion/application/${id}/submit/`, {}),
   updateCouponApplication: (id: number, data: Record<string, unknown>) =>
     patch(`/promotion/application/${id}/`, data),
+  // 优惠券审核申请：当前用户申请列表 + 新建草稿（super admin 可直接为已有券发起）
+  getMyCouponApplications: () =>
+    get<{ items: CouponApplicationItem[] }>('/promotion/application/my'),
+  createCouponApplication: (data: Record<string, unknown>) =>
+    post<CouponApplicationItem>('/promotion/application', data),
   getStaffList: () =>
     get<{ items: { id: number; username: string; is_superuser: boolean }[] }>('/goods/staff/list'),
 

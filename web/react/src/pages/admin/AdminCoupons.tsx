@@ -8,7 +8,7 @@ import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import Pagination from '../../components/admin/common/Pagination';
-import { adminAPI, Coupon, CouponFormData, type PromoCodeItem } from '../../api/admin';
+import { adminAPI, Coupon, CouponFormData, type PromoCodeItem, type CouponApplicationItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
 import { Input, Input as SearchInput, PrimaryBtn, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
@@ -169,6 +169,36 @@ const StackableText = styled.span<{ $stackable: boolean }>`
   color: ${({ $stackable }) => ($stackable ? '#2e7d32' : '#999')};
 `;
 
+const REVIEW_STATUS_LABEL: Record<string, string> = {
+  DRAFT: '草稿',
+  PENDING: '审核中',
+  APPROVED: '已通过',
+  REJECTED: '已驳回',
+  SCHEDULED: '待生效',
+  ACTIVE: '生效中',
+  EXPIRED: '已过期',
+};
+
+const ReviewStatusBadge = styled.span<{ $status: string }>`
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: ${FontSize.xs}px;
+  ${({ $status }) => {
+    const map: Record<string, [string, string]> = {
+      DRAFT: ['#eee', '#999'],
+      PENDING: ['#e3f2fd', '#1565c0'],
+      APPROVED: ['#e8f5e9', '#2e7d32'],
+      REJECTED: ['#fde8e8', '#c62828'],
+      SCHEDULED: ['#fff3e0', '#e65100'],
+      ACTIVE: ['#e8f5e9', '#2e7d32'],
+      EXPIRED: ['#eee', '#999'],
+    };
+    const [bg, fg] = map[$status] || ['#eee', '#999'];
+    return `background:${bg};color:${fg};`;
+  }}
+`;
+
 const SearchBar = styled.div`
   margin-bottom: 12px;
 `;
@@ -222,6 +252,10 @@ export default function AdminCoupons() {
   });
   const [promoBusyId, setPromoBusyId] = useState<number | null>(null);
   const [promoDeleteTarget, setPromoDeleteTarget] = useState<PromoCodeItem | null>(null);
+
+  // 优惠券审核申请（状态展示 + 提交审核）
+  const [appMap, setAppMap] = useState<Record<number, CouponApplicationItem>>({});
+  const [reviewingId, setReviewingId] = useState<number | null>(null);
 
   const openPromo = async (coupon: Coupon) => {
     setPromoTarget(coupon);
@@ -328,9 +362,26 @@ export default function AdminCoupons() {
     }
   }, [page, searchText, t]);
 
+  // 加载当前用户的优惠券审核申请，按 coupon.id 建索引（用于状态展示 + 提交审核）
+  const loadApplications = useCallback(async () => {
+    try {
+      const data = await adminAPI.getMyCouponApplications();
+      const items = data?.items || [];
+      const map: Record<number, CouponApplicationItem> = {};
+      for (const a of items) {
+        const cid = typeof a.coupon === 'number' ? a.coupon : a.coupon?.id;
+        if (cid != null) map[cid] = a;
+      }
+      setAppMap(map);
+    } catch {
+      /* 非关键：忽略申请列表加载失败 */
+    }
+  }, []);
+
   useEffect(() => {
     fetchCoupons();
-  }, [fetchCoupons]);
+    loadApplications();
+  }, [fetchCoupons, loadApplications]);
 
   // ==================== Toast ====================
 
@@ -441,16 +492,54 @@ export default function AdminCoupons() {
     return `-${record.amount}%`;
   };
 
-  const isCouponActive = (record: Coupon): boolean => {
+  const getCouponStatus = (record: Coupon): { active: boolean; label: string } => {
+    if ((record as unknown as Record<string, unknown>).is_active === false) {
+      return { active: false, label: '已停用' };
+    }
     const now = new Date().getTime();
     const start = new Date(record.start_time).getTime();
     const end = new Date(record.end_time).getTime();
-    return now >= start && now <= end;
+    if (now < start) return { active: false, label: '未开始' };
+    if (now > end) return { active: false, label: '已过期' };
+    return { active: true, label: '进行中' };
   };
 
   const handleSearchChange = (value: string) => {
     setSearchText(value);
     setPage(1);
+  };
+
+  // 提交审核：无申请则先建草稿（带入 coupon_id，审核时原地更新该券），再提交
+  const handleSubmitReview = async (coupon: Coupon) => {
+    try {
+      setReviewingId(coupon.id);
+      const existing = appMap[coupon.id];
+      let appId = existing?.id;
+      if (!appId) {
+        const created = await adminAPI.createCouponApplication({
+          coupon_id: coupon.id,
+          coupon_name: coupon.code,
+          coupon_code: coupon.code,
+          discount_type: coupon.discount_type,
+          amount: coupon.amount,
+          min_amount: coupon.min_amount,
+          max_discount: coupon.max_discount,
+          stackable: coupon.stackable,
+          total_count: coupon.total_count,
+          per_user_limit: coupon.total_count,
+          start_time: coupon.start_time,
+          end_time: coupon.end_time,
+        });
+        appId = created.id;
+      }
+      await adminAPI.submitCouponApplication(appId);
+      showMsg('success', '已提交审核，等待超级管理员审批');
+      await loadApplications();
+    } catch (err: any) {
+      showMsg('error', err?.message || '提交审核失败');
+    } finally {
+      setReviewingId(null);
+    }
   };
 
   // ==================== Columns ====================
@@ -527,47 +616,91 @@ export default function AdminCoupons() {
       key: 'status',
       title: t('admin.coupons.columnStatus'),
       width: '80px',
-      render: (_, record) => (
-        <StatusBadge $active={isCouponActive(record)}>
-          {isCouponActive(record) ? t('admin.coupons.columnActive') : t('admin.coupons.columnExpired')}
-        </StatusBadge>
-      ),
+      render: (_, record) => {
+        const s = getCouponStatus(record);
+        return <StatusBadge $active={s.active}>{s.label}</StatusBadge>;
+      },
+    },
+    {
+      key: 'review',
+      title: '审核状态',
+      width: '100px',
+      render: (_, record) => {
+        const app = appMap[record.id];
+        if (!app) return <span style={{ color: '#999' }}>未提交</span>;
+        return (
+          <ReviewStatusBadge $status={app.status}>
+            {REVIEW_STATUS_LABEL[app.status] || app.status}
+          </ReviewStatusBadge>
+        );
+      },
     },
     {
       key: 'actions',
       title: t('admin.coupons.columnActions'),
-      width: '190px',
-      render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            style={{
-              padding: '4px 10px', fontSize: 12, border: '1px solid ${Color.border.medium}',
-              background: '#fff', color: '#666', borderRadius: 2, cursor: 'pointer',
-            }}
-            onClick={() => openEdit(record)}
-          >
-            {t('admin.coupons.edit')}
-          </button>
-          <button
-            style={{
-              padding: '4px 10px', fontSize: 12, border: '1px solid #2d8cf0',
-              background: '#fff', color: '#2d8cf0', borderRadius: 2, cursor: 'pointer',
-            }}
-            onClick={() => openPromo(record)}
-          >
-            {t('admin.coupons.promoBtn')}
-          </button>
-          <button
-            style={{
-              padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c',
-              background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer',
-            }}
-            onClick={() => setDeleteTarget(record)}
-          >
-            {t('admin.coupons.delete')}
-          </button>
-        </div>
-      ),
+      width: '260px',
+      render: (_, record) => {
+        const app = appMap[record.id];
+        const canSubmit = !app || app.status === 'DRAFT' || app.status === 'REJECTED';
+        const busy = reviewingId === record.id;
+        const submitLabel = !app
+          ? '提交审核'
+          : app.status === 'REJECTED'
+            ? '重新提交'
+            : app.status === 'PENDING'
+              ? '审核中'
+              : app.status === 'APPROVED'
+                ? '已通过'
+                : app.status === 'SCHEDULED'
+                  ? '待生效'
+                  : app.status === 'ACTIVE'
+                    ? '生效中'
+                    : '提交审核';
+        return (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              style={{
+                padding: '4px 10px', fontSize: 12, border: '1px solid #999',
+                background: '#fff', color: '#666', borderRadius: 2, cursor: 'pointer',
+              }}
+              onClick={() => openEdit(record)}
+            >
+              {t('admin.coupons.edit')}
+            </button>
+            <button
+              style={{
+                padding: '4px 10px', fontSize: 12, border: '1px solid #2d8cf0',
+                background: '#fff', color: '#2d8cf0', borderRadius: 2, cursor: 'pointer',
+              }}
+              onClick={() => openPromo(record)}
+            >
+              {t('admin.coupons.promoBtn')}
+            </button>
+            <button
+              disabled={!canSubmit || busy}
+              onClick={() => handleSubmitReview(record)}
+              style={{
+                padding: '4px 10px', fontSize: 12,
+                border: '1px solid #e65100',
+                background: !canSubmit || busy ? '#f5f5f5' : '#fff',
+                color: !canSubmit || busy ? '#bbb' : '#e65100',
+                borderRadius: 2, cursor: !canSubmit || busy ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {busy ? '提交中…' : submitLabel}
+            </button>
+            <button
+              style={{
+                padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c',
+                background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer',
+              }}
+              onClick={() => setDeleteTarget(record)}
+            >
+              {t('admin.coupons.delete')}
+            </button>
+          </div>
+        );
+      },
     },
   ];
 

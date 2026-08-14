@@ -1020,21 +1020,26 @@ export default function AdminChatDetail() {
     }
   }, [id, loadDetail, scheduleListRefresh])
 
-  // 进入会话后，把「对方」的历史未读消息标记为已读（发 ACK，触发对方看到「已读」）
+  // 进入会话后，把「对方」的历史未读消息标记为已读：
+  // - WS 连通时发 ACK（实时让对方看到「已读」回执）
+  // - 同时走 HTTP 兜底标记已读，确保即使 WebSocket 未连接，左侧红点也会消失
   useEffect(() => {
-    if (!activeConv?.messages) return
-    if (wsRef.current?.readyState !== WebSocket.OPEN) return
-    let acked = false
+    if (!activeConv?.messages || !id) return
+    let hasUnread = false
     for (const m of activeConv.messages) {
       if (m.sender_type !== 'admin' && !m.is_read && m.id > 0 && !ackedRef.current.has(m.id)) {
         ackedRef.current.add(m.id)
-        wsRef.current.send(JSON.stringify({ type: 'ack', msg_id: String(m.id) }))
-        acked = true
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: 'ack', msg_id: String(m.id) }))
+        }
+        hasUnread = true
       }
     }
-    // 已读状态变化后刷新左侧列表，使红点（unread_count）及时消失
-    if (acked) scheduleListRefresh()
-  }, [activeConv?.messages, scheduleListRefresh])
+    if (hasUnread) {
+      adminChatAPI.markConversationRead(parseInt(id)).catch(() => {})
+      scheduleListRefresh()
+    }
+  }, [activeConv?.messages, id, scheduleListRefresh])
 
   // ── Product search ──
   useEffect(() => {
@@ -1068,51 +1073,72 @@ export default function AdminChatDetail() {
   // ── Send message ──
   const handleSend = async () => {
     if (!id) return
-    if (!inputText.trim() && inputAttachments.length === 0) return
-    const convId = parseInt(id)
-    const text = inputText
+    const text = inputText.trim()
     const atts = inputAttachments
+    if (!text && atts.length === 0) return
+    const convId = parseInt(id)
     setInputText('')
     setInputAttachments([])
     setSendError('')
 
-    // 乐观更新：立即把消息插入本地，消除「发送后等待 POST + loadDetail」的卡顿感
-    const tempId = -Date.now()
-    const optimisticMsg: ChatMessage = {
-      id: tempId,
+    // 构造待发送队列：文本一条 + 每个附件一条（带推导出的 msg_type / file_url）。
+    // 修复点：此前把附件塞进 attachments[] 且漏传 msg_type，后端虽存了附件消息，
+    // 但既不返回也不广播，导致「图片/视频无法显示 / 需刷新才出现」(T10)。
+    // 现改为逐条发送，每条都带明确 msg_type + file_url，后端单条存储并实时广播。
+    type PendingSend = {
+      tempId: number
+      params: { content?: string; msg_type?: 'text' | 'image' | 'video'; file_url?: string }
+    }
+    const pending: PendingSend[] = []
+    if (text) {
+      pending.push({ tempId: -Date.now(), params: { content: text, msg_type: 'text' } })
+    }
+    for (const url of atts) {
+      const isVideo = /\.(mp4|webm|ogg|mov|m4v|avi|mkv)$/i.test(url)
+      pending.push({
+        tempId: -(Date.now() + pending.length + 1),
+        params: { content: '', msg_type: isVideo ? 'video' : 'image', file_url: url },
+      })
+    }
+
+    // 乐观插入所有待发送消息，消除「发送后等待」的卡顿感
+    const optimisticMsgs: ChatMessage[] = pending.map((p) => ({
+      id: p.tempId,
       sender: 'optimistic',
       sender_type: 'admin',
       sender_name: '',
-      content: text,
-      msg_type: 'text',
-      file_url: null,
+      content: p.params.content || '',
+      msg_type: (p.params.msg_type || 'text') as ChatMessage['msg_type'],
+      file_url: p.params.file_url || null,
       card_data: null,
       is_read: true,
       read_at: null,
       created_at: new Date().toISOString(),
       status: 'sending',
-    }
-    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), optimisticMsg] } : prev)
+    }))
+    setActiveConv((prev) => prev ? { ...prev, messages: [...(prev.messages || []), ...optimisticMsgs] } : prev)
 
     try {
       setSending(true)
-      const resp = await adminChatAPI.sendMessage(convId, { content: text, attachments: atts })
-      // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
-      setActiveConv((prev) => {
-        if (!prev) return prev
-        const copy = (prev.messages || []).slice()
-        const idx = copy.findIndex((m) => m.id === tempId)
-        if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
-        else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
-        return { ...prev, messages: copy }
-      })
+      for (const p of pending) {
+        try {
+          const resp = await adminChatAPI.sendMessage(convId, p.params)
+          // 用服务端返回的真实消息替换乐观临时消息（status=sent），不再整页重载
+          setActiveConv((prev) => {
+            if (!prev) return prev
+            const copy = (prev.messages || []).slice()
+            const idx = copy.findIndex((m) => m.id === p.tempId)
+            if (idx >= 0) copy[idx] = { ...resp, status: 'sent' }
+            else if (!copy.some((m) => m.id === resp.id)) copy.push({ ...resp, status: 'sent' })
+            return { ...prev, messages: copy }
+          })
+        } catch {
+          // 单条失败回滚该条乐观消息
+          setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== p.tempId) } : prev)
+          setSendError(t('store.chat.sendFailed'))
+        }
+      }
       await loadConversations()
-    } catch {
-      // 失败回滚：移除临时消息并恢复输入
-      setActiveConv((prev) => prev ? { ...prev, messages: (prev.messages || []).filter(m => m.id !== tempId) } : prev)
-      setInputText(text)
-      setInputAttachments(atts)
-      setSendError(t('store.chat.sendFailed'))
     } finally {
       setSending(false)
     }
