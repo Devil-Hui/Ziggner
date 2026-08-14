@@ -8,6 +8,8 @@ import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import { adminAPI } from '../../api/admin';
 import { postWithProgress } from '../../api/request';
+import { resolveMediaUrl } from '../../api/chat';
+import { compressImage } from '../../utils/imageCompression';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
@@ -209,12 +211,14 @@ export default function AdminBrands() {
     }
     setUploadingLogo(true);
     try {
+      // 大图自动压缩
+      const uploadFile = await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 512, initialQuality: 0.85 });
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', uploadFile);
       // 走项目统一的 cookie + CSRF 上传通道（postWithProgress 已处理鉴权）
       const data = await postWithProgress<{ url?: string; detail?: string }>('/goods/upload/image', formData);
       if (data && data.url) {
-        setFormLogo(data.url);
+        setFormLogo(resolveMediaUrl(data.url) ?? data.url);
         showMsg('success', 'Logo 上传成功');
       } else {
         showMsg('error', data?.detail || '上传失败');
@@ -302,7 +306,7 @@ export default function AdminBrands() {
       width: '60px',
       render: (_, record) =>
         record.logo_url ? (
-          <LogoImg src={record.logo_url} alt={record.name} />
+          <LogoImg src={resolveMediaUrl(record.logo_url) ?? record.logo_url} alt={record.name} />
         ) : (
           <LogoPlaceholder>N/A</LogoPlaceholder>
         ),

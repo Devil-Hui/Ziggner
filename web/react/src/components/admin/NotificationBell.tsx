@@ -19,15 +19,11 @@ interface Notification {
   read_at?: string | null
 }
 
-type TabKey = 'all' | 'system' | 'operation' | 'notification' | 'security' | 'error'
+type TabKey = 'all' | 'notification'
 
 const TABS: { key: TabKey; labelKey: string }[] = [
   { key: 'all', labelKey: 'admin.notifications.tabAll' },
-  { key: 'system', labelKey: 'admin.notifications.tabSystem' },
-  { key: 'operation', labelKey: 'admin.notifications.tabOperation' },
   { key: 'notification', labelKey: 'admin.notifications.tabNotification' },
-  { key: 'security', labelKey: 'admin.notifications.tabSecurity' },
-  { key: 'error', labelKey: 'admin.notifications.tabError' },
 ]
 
 // ── Styled Components ──
@@ -426,14 +422,10 @@ export default function NotificationBell() {
     setOpen(false)
   }
 
-  // Filter notifications by tab（客服通知 cs_* 归入「通知」tab）
+  // 铃铛仅展示站内消息（type=notification），排除客服会话通知（cs_*）
   const filteredNotifications = activeTab === 'all'
-    ? notifications
-    : notifications.filter(n =>
-        activeTab === 'notification'
-          ? n.type === 'notification' || n.type.startsWith('cs_')
-          : n.type === activeTab,
-      )
+    ? notifications.filter(n => n.type === 'notification')
+    : notifications.filter(n => n.type === 'notification')
 
   const getTypeLabel = (type: string): string => {
     const labels: Record<string, string> = {

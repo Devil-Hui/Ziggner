@@ -21,6 +21,7 @@ import {
   mergeWsMessage,
   resolveMediaUrl,
 } from '../../api/chat'
+import { compressImage } from '../../utils/imageCompression'
 import { useDebounce } from '../../hooks/useDebounce'
 import { CONFIG } from '../../config/constants'
 
@@ -1204,7 +1205,9 @@ export default function AdminChatDetail() {
     try {
       setUploading(true)
       for (const file of Array.from(files)) {
-        const result = await adminChatAPI.uploadFile(file)
+        // 聊天图片压缩（>200KB 触发，聊天场景不需要超高画质）
+        const compressed = await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 1920, initialQuality: 0.8 })
+        const result = await adminChatAPI.uploadFile(compressed)
         // 后端 LocalStorage 返回的是回环地址（http://127.0.0.1/media/...），
         // 公网 HTTPS 页会被 Mixed Content 拦截且连不上。必须用 resolveMediaUrl
         // 改写为 API 域名（https://api.ziggner.com/media/...），否则预览/发送都失败。
