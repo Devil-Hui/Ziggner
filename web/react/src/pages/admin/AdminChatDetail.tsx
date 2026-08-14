@@ -1205,7 +1205,10 @@ export default function AdminChatDetail() {
       setUploading(true)
       for (const file of Array.from(files)) {
         const result = await adminChatAPI.uploadFile(file)
-        setInputAttachments(prev => [...prev, result.url])
+        // 后端 LocalStorage 返回的是回环地址（http://127.0.0.1/media/...），
+        // 公网 HTTPS 页会被 Mixed Content 拦截且连不上。必须用 resolveMediaUrl
+        // 改写为 API 域名（https://api.ziggner.com/media/...），否则预览/发送都失败。
+        setInputAttachments(prev => [...prev, resolveMediaUrl(result.url) ?? result.url])
       }
     } catch { /* ignore */ } finally {
       setUploading(false)
