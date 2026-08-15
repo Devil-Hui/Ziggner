@@ -1105,6 +1105,13 @@ export default function Chat() {
     return status
   }
 
+  // 新消息到达且用户位于底部时自动跟随（必须在条件 return 之前，保证 hooks 数量一致）
+  useEffect(() => {
+    if (atBottomRef.current && messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight
+    }
+  }, [filteredMessages.length])
+
   // ── Not logged in ──
   if (!isLoggedIn) return null
 
@@ -1187,13 +1194,6 @@ export default function Chat() {
     const el = messagesEndRef.current
     if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }
-
-  // 新消息到达且用户位于底部时自动跟随
-  useEffect(() => {
-    if (atBottomRef.current && messagesEndRef.current) {
-      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight
-    }
-  }, [filteredMessages.length])
 
   const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const el = e.currentTarget
