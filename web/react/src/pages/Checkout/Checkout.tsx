@@ -689,6 +689,13 @@ const IconBank = () => (
   </svg>
 )
 
+const IconAlipay = () => (
+  <svg viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="12" r="10"/>
+    <text x="12" y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">支</text>
+  </svg>
+)
+
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12"/>
@@ -756,6 +763,14 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     desc: 'Visa, Mastercard, American Express, Discover & more',
     icon: <IconCreditCard />,
     iconBg: '#635bff',
+    iconColor: '#fff',
+  },
+  {
+    value: 'alipay',
+    label: 'Alipay',
+    desc: 'Pay with Alipay',
+    icon: <IconAlipay />,
+    iconBg: '#1677ff',
     iconColor: '#fff',
   },
   {

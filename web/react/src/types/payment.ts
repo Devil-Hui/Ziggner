@@ -1,6 +1,6 @@
 /** Payment type definitions. */
 
-export type PaymentMethodType = 'stripe' | 'paypal';
+export type PaymentMethodType = 'stripe' | 'paypal' | 'alipay' | 'mock';
 
 export type PaymentStatus = 'pending' | 'success' | 'failed' | 'refunded';
 
