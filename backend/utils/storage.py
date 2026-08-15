@@ -116,7 +116,12 @@ class LocalStorage(BaseStorage):
         super().__init__()
         from django.core.files.storage import default_storage
         self.default_storage = default_storage
-        self.base_url = getattr(settings, 'DOMAIN', 'http://localhost:8000')
+        # 公网媒体基础域名：优先用 PUBLIC_MEDIA_URL（生产可指向 api 域名/公网地址），
+        # 否则回退 DOMAIN —— 避免 DOMAIN 为回环地址时上传返回 127.0.0.1 导致公网 Mixed Content。
+        self.base_url = (
+            getattr(settings, 'PUBLIC_MEDIA_URL', '')
+            or getattr(settings, 'DOMAIN', 'http://localhost:8000')
+        ).rstrip('/')
 
     def upload(self, file_name: str, file_content: bytes, content_type: str = None) -> dict:
         try:

@@ -29,10 +29,10 @@ export default function ChatFloatWidget() {
           display: 'flex', flexDirection: 'column', overflow: 'hidden',
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #eee', fontWeight: 600, fontSize: 15 }}>
-            {t('admin.sidebar.chat')}
+            {t('admin.layout.menu.chat')}
           </div>
           <div style={{ flex: 1, overflow: 'auto', padding: 8 }}>
-            {convs.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>{t('chat.noConversations')}</div>}
+            {convs.length === 0 && <div style={{ textAlign: 'center', padding: 24, color: '#999' }}>{t('store.support.noConversations')}</div>}
             {convs.map(c => (
               <div key={c.id} onClick={() => navigate(`/admin/chat/${c.id}`)}
                 style={{ padding: '10px 12px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
@@ -42,7 +42,7 @@ export default function ChatFloatWidget() {
             ))}
           </div>
           <div style={{ padding: '10px 16px', borderTop: '1px solid #eee', textAlign: 'center' }}>
-            <button onClick={() => navigate('/admin/chat')} style={{ border: 'none', background: 'none', color: '#1a56db', cursor: 'pointer', fontSize: 13 }}>{t('chat.viewAll')}</button>
+            <button onClick={() => navigate('/admin/chat')} style={{ border: 'none', background: 'none', color: '#1a56db', cursor: 'pointer', fontSize: 13 }}>{t('store.profile.viewAll')}</button>
           </div>
         </div>
       )}

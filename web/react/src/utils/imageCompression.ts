@@ -27,6 +27,27 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
   useWebWorker: true,
 }
 
+/** 压缩库实际输出格式 → 扩展名（与后端 upload_security 的 _IMAGE_FORMATS 白名单一致） */
+const EXT_BY_MIME: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+/**
+ * browser-image-compression v2 返回的 Blob 文件名固定为 "blob"（无扩展名），
+ * 直接上传会被后端扩展名校验拒绝（400「文件扩展名、真实内容或大小不符合要求」）。
+ * 依据压缩产物的真实 MIME 重命名（JPEG→.jpg / PNG→.png / WebP→.webp / GIF→.gif），
+ * MIME 无法识别时回退原文件扩展名。
+ */
+function buildUploadFilename(original: File, compressed: Blob): string {
+  const base = original.name.replace(/\.[^./\\]+$/, '') || 'image'
+  const fallbackExt = original.name.slice(base.length).replace(/^\./, '')
+  const ext = EXT_BY_MIME[compressed.type] || fallbackExt
+  return ext ? `${base}.${ext}` : base
+}
+
 /**
  * 压缩图片文件
  *
@@ -57,7 +78,12 @@ export async function compressImage(
       return file
     }
 
-    return compressed
+    // browser-image-compression v2 返回的是名为 "blob" 的纯 Blob，
+    // 需按真实内容类型重命名，否则后端扩展名校验失败（400）
+    return new File([compressed], buildUploadFilename(file, compressed), {
+      type: compressed.type || file.type,
+      lastModified: file.lastModified,
+    })
   } catch (err) {
     // 压缩失败时返回原文件，不阻断上传流程
     console.warn('[imageCompression] 压缩失败，使用原图:', err)

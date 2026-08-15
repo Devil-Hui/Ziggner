@@ -20,6 +20,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// 显式兜底：axios 在相对 baseURL 下对 withXSRFToken 的 isURLSameOrigin 判定
+// 在某些版本/场景下可能不附 X-CSRFToken 头，导致登录/写操作 403 CSRF token missing。
+// 这里在请求发出前从 document.cookie 直接读取 csrftoken 并强制写入头，确保一定携带。
+api.interceptors.request.use((config) => {
+  const method = (config.method || 'get').toLowerCase()
+  if (method === 'get' || method === 'head' || method === 'options') return config
+  const token = readCSRFCookie()
+  if (token) config.headers.set('X-CSRFToken', token)
+  return config
+})
+
 const pendingRequests = new Map<string, Promise<unknown>>()
 const DEDUP_TTL = 30_000
 
@@ -39,7 +50,7 @@ function buildRequestKey(config: InternalAxiosRequestConfig): string {
  */
 function resourceBase(url: string): string {
   const clean = url.split('?')[0]
-    .replace(/\/(create|update|delete|restore|scope|skus|migrate|audit|permanent)$/i, '')
+    .replace(/\/(create|update|delete|restore|scope|skus|migrate|audit|permanent|submit|shelf|schedule|duplicate)$/i, '')
     .replace(/\/\d+$/, '')
   return clean
 }

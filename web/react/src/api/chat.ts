@@ -128,6 +128,8 @@ export interface CreateConversationParams {
 export interface SendMessageParams {
   content?: string
   msg_type?: 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share' | 'order_card'
+  /** 单条媒体消息：直接带 file_url + msg_type（图片/视频实时显示的关键字段） */
+  file_url?: string
   attachments?: Array<string | { url: string; msg_type?: 'image' | 'video' }>
   /** product_card 消息数据 */
   product_card?: {
@@ -396,6 +398,10 @@ export const adminChatAPI = {
   /** Admin 获取对话详情 */
   getConversation: (convId: number) =>
     get<ConversationDetail>(`/chat/conversations/${convId}/`),
+
+  /** Admin 将对方未读消息标记为已读（HTTP 兜底，WS 未连接时也能清除红点） */
+  markConversationRead: (convId: number) =>
+    post<{ updated: number }>(`/chat/conversations/${convId}/read/`, {}),
 
   /** Admin 发送回复（返回单条消息，前端按 id 回填乐观消息） */
   sendMessage: async (convId: number, params: SendMessageParams): Promise<ChatMessage> => {

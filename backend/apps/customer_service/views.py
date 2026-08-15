@@ -740,6 +740,23 @@ class ConversationDetailView(BaseApiView):
         }).data)
 
 
+class ConversationMarkReadView(BaseApiView):
+    """将对方发来的未读消息标记为已读（HTTP 兜底，与 WS ACK 二选一即可）。
+    即便 WebSocket 未连接也能清除左侧红点。"""
+
+    @extend_schema(responses={200: OpenApiResponse(description='marked')})
+    def post(self, request, conv_id):
+        conv = _get_conv_for_user(conv_id, request.user)
+        if not conv:
+            return Response({'detail': '会话不存在'}, status=status.HTTP_404_NOT_FOUND)
+        other = 'admin' if not _is_cs_staff(request.user) else 'user'
+        from .models import Message
+        updated = Message.objects.filter(
+            conversation_id=conv_id, sender_type=other, is_read=False,
+        ).update(is_read=True)
+        return Response({'updated': updated})
+
+
 # ═══════════════════════════════════════════════════════════════
 # 消息列表 & 发送
 # ═══════════════════════════════════════════════════════════════

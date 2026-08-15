@@ -150,12 +150,14 @@ class CouponApplicationSerializer(serializers.ModelSerializer):
 
 
 class CouponApplicationDraftSerializer(serializers.ModelSerializer):
-    admin_group_id = serializers.IntegerField(min_value=1, write_only=True)
+    admin_group_id = serializers.IntegerField(min_value=1, write_only=True, required=False)
+    # 超级管理员可直接为已存在的券发起审核申请（审核时原地更新该券而非新建）
+    coupon_id = serializers.IntegerField(min_value=1, write_only=True, required=False)
 
     class Meta:
         model = CouponApplication
         fields = [
-            'admin_group_id', 'coupon_name', 'coupon_code', 'discount_type',
+            'admin_group_id', 'coupon_id', 'coupon_name', 'coupon_code', 'discount_type',
             'amount', 'min_amount', 'max_discount', 'stackable', 'total_count',
             'per_user_limit', 'start_time', 'end_time',
             'applicable_categories', 'applicable_products', 'applicable_brands',

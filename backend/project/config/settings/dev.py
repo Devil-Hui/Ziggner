@@ -46,9 +46,11 @@ else:
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF 跨域信任：admin/www/shop → api 子域的 POST 请求需要
-CSRF_TRUSTED_ORIGINS = [
-    origin for origin in CORS_ALLOWED_ORIGINS
-    if origin.startswith('https://')
+# 开发环境（http 源）也必须纳入，否则本地用 Vite(12700) 经代理打后端时
+# Origin 检查可能因 Host 不一致而 403。信任全部 CORS 源 + 前端开发源。
+CSRF_TRUSTED_ORIGINS = list(CORS_ALLOWED_ORIGINS) + [
+    'http://localhost:12700',
+    'http://127.0.0.1:12700',
 ]
 
 # 跨子域 Cookie：公网域名场景下 csrftoken/sessionid 落在父域 .ziggner.com，

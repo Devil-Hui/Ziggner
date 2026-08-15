@@ -953,6 +953,9 @@ const en = {
       processing: 'Processing...',
       reject: 'Reject',
       approve: 'Approve',
+      relatedChats: 'Related Chats',
+      viewAllChats: 'View All Chats',
+      noRelatedChats: 'No related chats',
     },
     mediaManager: {
       title: 'Product Media',

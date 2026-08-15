@@ -871,6 +871,10 @@ export default function AdminProductForm() {
             })
           }
         }
+
+        if (submitForReview) {
+          await adminAPI.submitAudit(spuId)
+        }
       } else {
         // ── 新建模式 ──
         const stagedItems = await getAllStagedItems()

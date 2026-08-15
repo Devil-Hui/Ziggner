@@ -953,6 +953,9 @@ const zhCN = {
       processing: '处理中...',
       reject: '驳回',
       approve: '审核通过',
+      relatedChats: '相关咨询',
+      viewAllChats: '查看全部咨询',
+      noRelatedChats: '暂无相关咨询',
     },
     mediaManager: {
       title: '商品媒体',

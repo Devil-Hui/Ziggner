@@ -475,6 +475,20 @@ class SendMessageSerializer(serializers.Serializer):
             raise serializers.ValidationError('card_data 必须是一个 JSON 对象')
         return value
 
+    def validate(self, attrs):
+        """拦截空消息：纯文本消息必须有非空内容；图片/视频靠 file_url/attachments，
+        product_card 靠 card_data，均允许 content 为空。"""
+        msg_type = attrs.get('msg_type', 'text')
+        content = (attrs.get('content') or '').strip()
+        file_url = attrs.get('file_url') or ''
+        attachments = attrs.get('attachments') or []
+        card_data = attrs.get('card_data') or attrs.get('product_card') or {}
+        has_media = bool(file_url) or len(attachments) > 0
+        has_card = bool(card_data)
+        if msg_type == 'text' and not content and not has_media and not has_card:
+            raise serializers.ValidationError({'content': '消息内容不能为空'})
+        return attrs
+
     def validate_attachments(self, value):
         """Normalize attachments to a list of {url, msg_type}.
 

@@ -467,21 +467,40 @@ class CouponApplicationService:
     @staticmethod
     @transaction.atomic
     def create_draft(user, group_id, data):
-        from apps.goods.models import AdminGroupMember
-        membership = AdminGroupMember.objects.select_related('group').filter(
-            user=user,
-            group_id=group_id,
-            role=AdminGroupMember.Role.LEADER,
-            status=AdminGroupMember.Status.ACTIVE,
-        ).first()
-        if not membership:
-            raise PermissionError('GROUP_LEADER_REQUIRED')
+        from apps.goods.models import AdminGroupMember, AdminGroup
+        from apps.rbac.constants import Role
+        from apps.rbac.services import has_role
+
+        coupon_id = data.pop('coupon_id', None)
+        if coupon_id:
+            if not Coupon.objects.filter(pk=coupon_id).exists():
+                raise ValueError('COUPON_NOT_FOUND')
+            if CouponApplication.objects.filter(coupon_id=coupon_id).exists():
+                raise ValueError('COUPON_APPLICATION_EXISTS')
+
+        admin_group = None
+        if has_role(user, Role.SUPERADMIN):
+            # 超级管理员可直接发起优惠券审核申请，无需是组长
+            if group_id:
+                admin_group = AdminGroup.objects.filter(pk=group_id).first()
+        else:
+            membership = AdminGroupMember.objects.select_related('group').filter(
+                user=user,
+                group_id=group_id,
+                role=AdminGroupMember.Role.LEADER,
+                status=AdminGroupMember.Status.ACTIVE,
+            ).first()
+            if not membership:
+                raise PermissionError('GROUP_LEADER_REQUIRED')
+            admin_group = membership.group
+
         values = {field: data[field] for field in CouponApplicationService.EDITABLE_FIELDS if field in data}
         CouponApplicationService._validate_payload(values)
         application = CouponApplication.objects.create(
             applicant=user,
-            admin_group=membership.group,
+            admin_group=admin_group,
             status=CouponApplication.Status.DRAFT,
+            coupon_id=coupon_id,
             **values,
         )
         CouponApplicationService._record(
