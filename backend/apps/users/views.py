@@ -106,9 +106,22 @@ class AdminLoginView(PublicApiView):
         User = get_user_model()
         _logger.warning('[AdminLogin] email=%r username=%r pwd_len=%d', email, username, len(password))
         try:
-            user = User.objects.get(username=username, is_staff=True)
+            user = User.objects.get(username=username)
         except User.DoesNotExist:
-            _logger.warning('[AdminLogin] FAIL: no staff user for username=%r', username)
+            _logger.warning('[AdminLogin] FAIL: no user for username=%r', username)
+            return Response({'detail': '用户名不正确'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        # 后台访问资格：超管 / 管理组组长 / 管理组组员（RBAC 角色）。
+        # 组长/组员由 AdminGroupMember 派生 admin_leader / admin_member 角色，
+        # 不再依赖 Django is_staff（is_staff 会开放 Django admin，权限面过大）。
+        from apps.rbac.constants import Role
+        from apps.rbac.services import has_role
+        if not (
+            has_role(user, Role.SUPERADMIN.value)
+            or has_role(user, Role.ADMIN_LEADER.value)
+            or has_role(user, Role.ADMIN_MEMBER.value)
+        ):
+            _logger.warning('[AdminLogin] FAIL: no backend role for username=%r', username)
             return Response({'detail': '用户名不正确'}, status=status.HTTP_401_UNAUTHORIZED)
 
         # 邮箱必须与账号绑定邮箱一致（验证码已证明该邮箱可收信）
