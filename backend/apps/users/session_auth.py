@@ -94,9 +94,19 @@ class BrowserLoginView(APIView):
         if not verified:
             raise ClientException(ErrorCodes.TURNSTILE_INVALID)
 
+        raw_login = request.data.get('username', '')
+        password = request.data.get('password', '')
+        # 支持邮箱登录：输入含 @ 时按 email 解析真实 username（占位符标注为 Email）
+        login_id = raw_login
+        if '@' in login_id:
+            from django.contrib.auth import get_user_model
+            U = get_user_model()
+            user = U.objects.filter(email__iexact=login_id).only('username').first()
+            if user:
+                login_id = user.username
         serializer = TokenObtainPairSerializer(data={
-            'username': request.data.get('username', ''),
-            'password': request.data.get('password', ''),
+            'username': login_id,
+            'password': password,
         })
         serializer.is_valid(raise_exception=True)
         refresh = RefreshToken(serializer.validated_data['refresh'])

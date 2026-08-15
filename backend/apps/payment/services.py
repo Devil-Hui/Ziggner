@@ -31,7 +31,7 @@ class PaymentService:
 
     @staticmethod
     def simulate_mock_payment(user, payment_no: str, scenario: str) -> dict:
-        if settings.DJANGO_ENV == 'prod' or not settings.ENABLE_MOCK_PAYMENT:
+        if not settings.ENABLE_MOCK_PAYMENT:
             raise ValueError('MOCK_PAYMENT_UNAVAILABLE')
         if scenario not in {'success', 'failure', 'cancel', 'timeout'}:
             raise ValueError('MOCK_SCENARIO_INVALID')

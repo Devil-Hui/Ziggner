@@ -1,17 +1,23 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import obfuscator from 'vite-plugin-javascript-obfuscator'
 import path from 'path'
 
-const proxyTarget = process.env.VITE_PROXY_TARGET || 'http://localhost:8000'
-const wsProxyTarget = process.env.VITE_WS_PROXY_TARGET || 'http://web:8001'
-const proxyOptions = {
-  target: proxyTarget,
-  changeOrigin: false,
-}
+// Vite 仅把 .env 注入客户端 import.meta.env；server 端配置(vite.config.ts)需经
+// loadEnv 才能读到 .env / .env.local 中的变量（直接读 process.env 在 dev 下取不到
+// .env.local 的覆盖值，会回退到默认的 http://web:8001，而 host 上的 Vite 解析不到
+// 容器内的 `web` 主机名，导致 WS 代理永久 Connecting）。
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const proxyTarget = env.VITE_PROXY_TARGET || 'http://localhost:8000'
+  const wsProxyTarget = env.VITE_WS_PROXY_TARGET || 'http://web:8001'
+  const proxyOptions = {
+    target: proxyTarget,
+    changeOrigin: false,
+  }
 
-export default defineConfig({
-  plugins: [
+  return {
+    plugins: [
     react({
       babel: {
         plugins: [
@@ -92,4 +98,5 @@ export default defineConfig({
       },
     },
   },
+  }
 })

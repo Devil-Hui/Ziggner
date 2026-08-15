@@ -302,6 +302,18 @@ const DetailTitle = styled.div`
   display: flex;
   align-items: center;
   gap: 10px;
+  /* 关键修复：CJK 文本无断开点，flex 子项默认 min-width:auto 会塌缩到
+     最小内容宽度（单字宽），导致标题竖排成多行、撑高头部、挤占消息列表高度。
+     这里让标题占满剩余宽度并可收缩，配合内部 ellipsis 单行显示。 */
+  flex: 1;
+  min-width: 0;
+`
+
+const DetailSubject = styled.span`
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 `
 
 const DetailUser = styled.span`
@@ -515,6 +527,7 @@ const FilterTab = styled.button<{ $active: boolean }>`
 
 const MessageListContainer = styled.div`
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1416,7 +1429,7 @@ export default function AdminChatDetail() {
           <>
             <DetailHeader>
               <DetailTitle>
-                {activeConv.subject || `${t('store.chatDetail.support')} #${activeConv.id}`}
+                <DetailSubject>{activeConv.subject || `${t('store.chatDetail.support')} #${activeConv.id}`}</DetailSubject>
                 <DetailUser>{activeConv.user?.username}</DetailUser>
                 {activeConv.spu_info && (
                   <ProductChip onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>

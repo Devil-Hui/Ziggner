@@ -483,6 +483,8 @@ class EmailVerifyService:
         _deliver_verify_email(email, code, 'verify_code')
 
         result = {'verify_id': verify_id, 'expire_seconds': expire_sec}
+        if getattr(settings, 'ENABLE_MOCK_PAYMENT', False) or settings.DEBUG:
+            result['code'] = code
         return result
 
     @staticmethod
@@ -549,7 +551,10 @@ class EmailVerifyService:
         # 账号池轮换发送（失败抛异常，由视图返回 500）
         _deliver_verify_email(email, code, 'verify_code')
 
-        return {'verify_id': verify_id, 'expire_seconds': expire_sec}
+        result = {'verify_id': verify_id, 'expire_seconds': expire_sec}
+        if getattr(settings, 'ENABLE_MOCK_PAYMENT', False) or settings.DEBUG:
+            result['code'] = code
+        return result
 
     @staticmethod
     def send_user_verify_code(email: str) -> dict:

@@ -67,7 +67,7 @@ services:
       DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@ziggner.com}
       DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-change-me-in-prod-123}
     env_file: [../.env]
-    ports: ["8000:8000"]
+    ports: ["8000:8000", "8001:8001"]
     volumes:
       - .:/backend
       - media_data:/backend/media

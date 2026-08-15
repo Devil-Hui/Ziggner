@@ -84,8 +84,12 @@ class SKUAdminBatchCreateView(BaseApiView):
                     price=p,
                     discount_price=dp,
                     stock=int(sku_item.get('stock', 0)),
-                    shelf_status=sku_item.get('shelf_status', 'on_shelf'),
+                    shelf_status=sku_item.get('shelf_status'),
                 )
+                # 防御：shelf_status 缺省或非法值统一回落到上架，避免产生不可售 SKU
+                if sku.shelf_status not in ShelfStatus.values:
+                    sku.shelf_status = ShelfStatus.ON
+                    sku.save(update_fields=['shelf_status'])
                 created.append({'id': sku.id, 'spec_values': sku.spec_values})
         else:
             # 格式A: specs 组合生成
