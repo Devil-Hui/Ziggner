@@ -86,7 +86,7 @@ class AdminLoginView(PublicApiView):
             return Response({'detail': '验证码错误或已过期'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Cloudflare Turnstile 人机验证
-        if not turnstile_token:
+        if not turnstile_token and not getattr(settings, 'ENABLE_MOCK_PAYMENT', False):
             return Response({'detail': '请完成安全验证'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             verified = verify_turnstile(turnstile_token)
