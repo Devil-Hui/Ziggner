@@ -41,7 +41,7 @@ FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', ["image/jpe
 R2_ACCOUNT_ID = os.getenv('R2_ACCOUNT_ID', '')
 R2_ACCESS_KEY_ID = os.getenv('R2_ACCESS_KEY_ID', '')
 R2_SECRET_ACCESS_KEY = os.getenv('R2_SECRET_ACCESS_KEY', '')
-R2_BUCKET = os.getenv('R2_BUCKET', 'ziggner-r2')
+R2_BUCKET = os.getenv('R2_BUCKET', '')
 R2_PUBLIC_URL = os.getenv('R2_PUBLIC_URL', '')  # e.g. https://cdn.ziggner.com
 
 # ── R2 对象存储（凭据齐全时启用；否则回退本地磁盘）──
