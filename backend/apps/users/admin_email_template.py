@@ -4,10 +4,10 @@ from rest_framework.response import Response
 
 from apps.rbac.permissions import HasPerm
 from apps.users.models import EmailTemplate
-from utils.api_base_view import AdminApiView
+from utils.api_base_view import BaseApiView
 
 
-class EmailTemplateListView(AdminApiView):
+class EmailTemplateListView(BaseApiView):
     """邮件模板列表"""
     permission_classes = [HasPerm('users.email_template.read')]
 
@@ -24,7 +24,7 @@ class EmailTemplateListView(AdminApiView):
         return Response({'code': 0, 'data': data})
 
 
-class EmailTemplateUpdateView(AdminApiView):
+class EmailTemplateUpdateView(BaseApiView):
     """更新邮件模板（不存在则创建）"""
     permission_classes = [HasPerm('users.email_template.write')]
 
@@ -55,7 +55,7 @@ class EmailTemplateUpdateView(AdminApiView):
         })
 
 
-class EmailTemplateResetView(AdminApiView):
+class EmailTemplateResetView(BaseApiView):
     """恢复默认模板（删除数据库记录，回退内置默认）"""
     permission_classes = [HasPerm('users.email_template.write')]
 
