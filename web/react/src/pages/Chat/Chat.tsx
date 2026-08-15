@@ -145,6 +145,7 @@ const EntryBtn = styled.button`
 
 const ChatCard = styled.div`
   flex: 1;
+  min-height: 0;
   background: ${Color.bg.card};
   border-radius: ${Radius.md}px;
   box-shadow: ${Shadow.card};
@@ -357,6 +358,7 @@ const FilterTab = styled.button<{ $active: boolean }>`
 
 const MessageListContainer = styled.div`
   flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;

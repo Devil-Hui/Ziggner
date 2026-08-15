@@ -175,7 +175,7 @@ class Order(models.Model):
         PromotionService.consume_for_order(self.order_no)
 
     @transaction.atomic
-    def ship(self, tracking_no):
+    def ship(self, tracking_no, carrier=None):
         if self.status != OrderStatus.PAID:
             raise ValueError(
                 f'Cannot ship from status "{self.get_status_display()}". '
@@ -185,6 +185,19 @@ class Order(models.Model):
         self.tracking_no = tracking_no
         self.shipped_at = timezone.now()
         self.save()
+        # 联动创建物流发货记录（修复 §11.7 履约→物流脱节：发货即生成可追踪运单）
+        from apps.logistics.models import Shipment, Carrier
+        if not Shipment.objects.filter(order=self).exists():
+            carrier_obj = carrier
+            if carrier_obj is None:
+                carrier_obj = Carrier.objects.filter(is_active=True).first()
+            Shipment.objects.create(
+                order=self,
+                carrier=carrier_obj,
+                tracking_no=tracking_no,
+                status=Shipment.Status.SHIPPED,
+                shipped_at=self.shipped_at,
+            )
 
     @transaction.atomic
     def deliver(self):
