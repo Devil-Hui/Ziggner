@@ -14,6 +14,11 @@ export default defineConfig(({ mode }) => {
   const proxyOptions = {
     target: proxyTarget,
     changeOrigin: false,
+    // 本地 django-app 跑 prod settings（SECURE_SSL_REDIRECT=True）：明文 HTTP 会被
+    // 301 跳 HTTPS，Vite 代理若直连 localhost:8000 会陷入重定向环。补 X-Forwarded-Proto:
+    // https 让 Django 视为安全连接（prod.py 已开 SECURE_PROXY_SSL_HEADER），与 nginx
+    // 反向代理行为一致。
+    headers: { 'X-Forwarded-Proto': 'https' },
   }
 
   return {
