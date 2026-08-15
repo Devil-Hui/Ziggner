@@ -4,7 +4,7 @@ import { post, get } from './request'
 
 export interface CreatePaymentParams {
   order_no: string
-  method: 'mock' | 'paypal' | 'stripe'
+  method: 'mock' | 'paypal' | 'stripe' | 'alipay'
   success_url: string
   cancel_url: string
 }
