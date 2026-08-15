@@ -74,10 +74,6 @@ services:
       SERVICE_TYPE: django
       DJANGO_ENV: prod
       DAPHNE_PORT: "8001"
-      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
-      R2_BUCKET: ${R2_BUCKET:-}
       AWS_REGION: ${AWS_REGION:-auto}
       STATIC_ROOT: /app/static
       REDIS_URL: redis://redis:6379/0
@@ -91,7 +87,6 @@ services:
       GUNICORN_MAX_REQUESTS_JITTER: "80"
       GUNICORN_TIMEOUT: "45"
       GUNICORN_GRACEFUL_TIMEOUT: "20"
-      TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:?TURNSTILE_SECRET_KEY is required}
     env_file: [.env.production]
     volumes:
       - media_data:/app/media
@@ -307,3 +302,4 @@ networks:
   egress: {}
   internal:
     internal: true
+
