@@ -93,8 +93,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Create app user (non-root!)
 RUN groupadd -r appuser -g 1000 \
     && useradd -r -u 1000 -g appuser -d /app -s /sbin/nologin -c "App User" appuser \
-    && mkdir -p /app /app/logs /app/media /app/static \
-    && chown -R appuser:appuser /app
+    && mkdir -p /app /app/logs /app/media /app/static /backups \
+    && chown -R appuser:appuser /app /backups
 
 WORKDIR /app
 
