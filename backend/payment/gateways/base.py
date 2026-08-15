@@ -71,7 +71,7 @@ class PaymentGatewayFactory:
         """获取网关实例，抛出 ValueError 如果未注册"""
         if method == 'mock':
             from django.conf import settings
-            if settings.DJANGO_ENV == 'prod' or not settings.ENABLE_MOCK_PAYMENT:
+            if not settings.ENABLE_MOCK_PAYMENT:
                 raise ValueError('MOCK_PAYMENT_DISABLED')
         gateway_cls = cls.GATEWAYS.get(method)
         if not gateway_cls:
