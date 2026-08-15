@@ -93,6 +93,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'utils.cookie_domain_middleware.DynamicCookieDomainMiddleware',  # 按请求 Host 动态设定 Cookie Domain（localhost 去 Domain，否则 -.ziggner.com）
     'middleware.rate_limit.RateLimitMiddleware',
     'utils.exception_middleware.CustomExceptionMiddleware',
     'middleware.api_version.APIVersionMiddleware',
