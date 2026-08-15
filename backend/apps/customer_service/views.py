@@ -212,27 +212,33 @@ def _create_attachment_messages(conv, user, sender_type: str, attachments: list)
 
 def _broadcast_new_message(conv_id, message_obj, sender_type: str) -> None:
     """
-    通过 Channel Layer 将新消息实时推送给会话组内所有 WebSocket 连接。
+    通过 Redis Pub/Sub 将新消息实时推送给会话组内所有 WebSocket 连接。
 
-    关键：REST 由 gunicorn 处理、WS 由 daphne 处理，二者跨进程，
-    必须用 Redis Channel Layer 才能把「保存成功的消息」实时投递到对方 WS。
-    失败仅告警（消息已落库），不影响发送主流程。
+    REST 由 gunicorn 处理、WS 由 daphne 处理，二者跨进程：consumer 在
+    connect() 时订阅 chat_{conv_id}（admin 额外订阅 chat_admin_broadcast），
+    此处 publish 后 daphne 直接推送 WS。channels_redis 4.2.0 的
+    group_send(zset) 与 receive(brpop) 类型不匹配导致跨进程广播不可靠，
+    故改用 Pub/Sub。失败仅告警（消息已落库），不影响发送主流程。
     """
     try:
-        from channels.layers import get_channel_layer
-        from asgiref.sync import async_to_sync
+        import json as _json
 
-        layer = get_channel_layer()
-        if not layer:
-            return
+        import redis as redis_sync
+
         payload = MessageSerializer(message_obj).data
-        async_to_sync(layer.group_send)(f'chat_{conv_id}', {
+        event = {
             'type': 'chat.message',
             'payload': payload,
             'msg_id': str(message_obj.id),
             'timestamp': message_obj.created_at.isoformat(),
             'sender_type': sender_type,
-        })
+        }
+        redis_url = getattr(settings, 'CHANNEL_REDIS_URL', 'redis://redis:6379/4')
+        r = redis_sync.from_url(redis_url)
+        r.publish(f'chat_{conv_id}', _json.dumps(event, ensure_ascii=False))
+        if sender_type == 'user':
+            # 用户发消息时同步推送给所有在线的客服（会话列表/详情实时刷新）
+            r.publish('chat_admin_broadcast', _json.dumps(event, ensure_ascii=False))
     except Exception as e:
         logger.warning(f'Broadcast new message (conv={conv_id}) failed: {e}')
 

@@ -85,14 +85,17 @@ class BrowserLoginView(APIView):
     def post(self, request):
         SessionAuthentication().enforce_csrf(request)
         turnstile_token = request.data.get('turnstile_token', '')
+        # mock/测试模式（ENABLE_MOCK_PAYMENT）跳过人机验证：与验证码直返同一开关
         if not turnstile_token:
-            raise ClientException(ErrorCodes.TURNSTILE_REQUIRED)
-        try:
-            verified = verify_turnstile(turnstile_token)
-        except TurnstileUnavailable as exc:
-            raise ServerException(ErrorCodes.TURNSTILE_UNAVAILABLE) from exc
-        if not verified:
-            raise ClientException(ErrorCodes.TURNSTILE_INVALID)
+            if not (getattr(settings, 'ENABLE_MOCK_PAYMENT', False) or settings.DEBUG):
+                raise ClientException(ErrorCodes.TURNSTILE_REQUIRED)
+        else:
+            try:
+                verified = verify_turnstile(turnstile_token)
+            except TurnstileUnavailable as exc:
+                raise ServerException(ErrorCodes.TURNSTILE_UNAVAILABLE) from exc
+            if not verified:
+                raise ClientException(ErrorCodes.TURNSTILE_INVALID)
 
         raw_login = request.data.get('username', '')
         password = request.data.get('password', '')
