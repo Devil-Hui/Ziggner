@@ -16,7 +16,10 @@ from ..services import GoodsQueryService
 
 
 class SearchRateThrottle(UserRateThrottle):
+    # 独立 scope：避免与全局 UserRateThrottle（scope='user'）共用 cache key，
+    # 否则全站所有接口的请求历史都会计入搜索限流，导致搜索被误限流。
     rate = '60/minute'
+    scope = 'search'
 
 
 class CategoryTreeView(PublicApiView):
