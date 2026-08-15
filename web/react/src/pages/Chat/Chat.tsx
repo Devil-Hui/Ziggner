@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useUser } from '../../store/UserContext'
 import { useTranslation } from '../../i18n'
@@ -715,8 +714,8 @@ export default function Chat() {
   const [inputText, setInputText] = useState('')
   const [inputAttachments, setInputAttachments] = useState<string[]>([])
 
-  // Virtual scroll
-  const virtuosoRef = useRef<VirtuosoHandle>(null)
+  // Message scroll
+  const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const atBottomRef = useRef(true)
 
@@ -1185,14 +1184,20 @@ export default function Chat() {
   // ── Scrolling helpers ──
 
   const scrollToBottom = () => {
-    virtuosoRef.current?.scrollToIndex({
-      index: filteredMessages.length - 1,
-      behavior: 'smooth',
-      align: 'end',
-    })
+    const el = messagesEndRef.current
+    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' })
   }
 
-  const handleAtBottomStateChange = (atBottom: boolean) => {
+  // 新消息到达且用户位于底部时自动跟随
+  useEffect(() => {
+    if (atBottomRef.current && messagesEndRef.current) {
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight
+    }
+  }, [filteredMessages.length])
+
+  const handleListScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
     atBottomRef.current = atBottom
     setShowScrollFab(!atBottom && filteredMessages.length > CONFIG.SCROLL_FAB_THRESHOLD)
   }
@@ -1224,12 +1229,6 @@ export default function Chat() {
     )
   }
 
-  // ── Follow output: auto scroll when at bottom and new messages arrive ──
-  const followOutput = () => {
-    // Only auto-follow if user is at the bottom
-    if (!atBottomRef.current) return 'smooth' as const
-    return 'auto' as const
-  }
 
   // ── Chat view ──
   return (
@@ -1313,47 +1312,36 @@ export default function Chat() {
               ))}
             </FilterTabs>
 
-            {/* Virtuoso message list */}
+            {/* Message list */}
             <MessageListContainer style={{ position: 'relative' }}>
-              <Virtuoso
-                ref={virtuosoRef}
-                data={filteredMessages}
-                itemContent={renderMessageItem}
-                followOutput={followOutput}
-                atBottomStateChange={handleAtBottomStateChange}
-                atBottomThreshold={CONFIG.AT_BOTTOM_THRESHOLD_PX}
-                style={{ flex: 1 }}
-                initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
-                components={{
-                  Header: () => (
-                    <>
-                      {loading ? (
-                        <div style={{ textAlign: 'center', padding: '12px', color: '#999', fontSize: '13px' }}>
-                          {t('store.chat.loading')}
-                        </div>
-                      ) : (
-                        activeConv.has_more_older && activeConv.messages.length > 0 && (
-                          <LoadOlderBar>
-                            <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
-                              {loadingOlder ? t('store.chat.loading') : '加载更早消息'}
-                            </LoadOlderBtn>
-                          </LoadOlderBar>
-                        )
-                      )}
-                    </>
-                  ),
-                  Footer: () => (
-                    <>
-                      {isOtherTyping && (
-                        <TypingIndicator name={t('store.chat.agent')} />
-                      )}
-                      {activeConv.status === 'closed' && (
-                        <SystemBubbleMessage content={t('store.chat.conversationClosed')} />
-                      )}
-                    </>
-                  ),
-                }}
-              />
+              <div
+                ref={messagesEndRef}
+                onScroll={handleListScroll}
+                style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}
+              >
+                {loading ? (
+                  <div style={{ textAlign: 'center', padding: '12px', color: '#999', fontSize: '13px' }}>
+                    {t('store.chat.loading')}
+                  </div>
+                ) : (
+                  activeConv.has_more_older && activeConv.messages.length > 0 && (
+                    <LoadOlderBar>
+                      <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
+                        {loadingOlder ? t('store.chat.loading') : '加载更多消息'}
+                      </LoadOlderBtn>
+                    </LoadOlderBar>
+                  )
+                )}
+                {filteredMessages.map((item) => (
+                  <div key={item.id} style={{ flexShrink: 0 }}>
+                    {renderMessageItem(0, item)}
+                  </div>
+                ))}
+                {isOtherTyping && <TypingIndicator name={t('store.chat.agent')} />}
+                {activeConv.status === 'closed' && (
+                  <SystemBubbleMessage content={t('store.chat.conversationClosed')} />
+                )}
+              </div>
 
               {/* Scroll to bottom FAB */}
               <ScrollToBottomFab $visible={showScrollFab} onClick={scrollToBottom}>

@@ -23,6 +23,8 @@ from django.core.cache import caches
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
+import redis.asyncio as aioredis
+
 from apps.users.session_auth import ACCESS_COOKIE
 from .policies import ConversationAccessPolicy
 
@@ -105,6 +107,11 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
         if self.is_admin:
             await self.channel_layer.group_add('chat_admin_broadcast', self.channel_name)
 
+        # 7.5 启动 Redis Pub/Sub 跨进程推送监听（gunicorn REST → Redis → daphne WS）
+        self._pubsub = None
+        self._pubsub_stop = asyncio.Event()
+        self._pubsub_task = asyncio.ensure_future(self._listen_pubsub())
+
         # 8. 接受连接
         await self.accept()
         self._connected = True
@@ -120,6 +127,23 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, close_code):
         """WebSocket 断开"""
         self._connected = False
+
+        # 取消 Pub/Sub 监听
+        if getattr(self, '_pubsub_stop', None):
+            self._pubsub_stop.set()
+        if getattr(self, '_pubsub_task', None):
+            self._pubsub_task.cancel()
+            try:
+                await self._pubsub_task
+            except (asyncio.CancelledError, Exception):
+                pass
+            self._pubsub_task = None
+        if getattr(self, '_pubsub', None) is not None:
+            try:
+                await self._pubsub.aclose()
+            except Exception:
+                pass
+            self._pubsub = None
 
         # 取消心跳任务
         if self._ping_task:
@@ -277,6 +301,71 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
     # ══════════════════════════════════════════════════════════
     # 心跳机制
     # ══════════════════════════════════════════════════════════
+
+    def _pubsub_worker(self, loop):
+        """同步 Redis Pub/Sub 监听（独立线程），收到消息后投递回 asyncio 事件循环。
+
+        用同步 redis + 轮询而非 redis.asyncio：daphne 的 asyncio 事件循环下
+        async pubsub listen() 存在唤醒兼容问题，同步方案确定性强且可干净退出。
+        """
+        import redis as redis_sync
+
+        redis_url = getattr(settings, 'CHANNEL_REDIS_URL', 'redis://redis:6379/4')
+        r = None
+        try:
+            r = redis_sync.from_url(redis_url)
+            ps = r.pubsub()
+            channels = [self.group_name]
+            if self.is_admin:
+                channels.append('chat_admin_broadcast')
+            ps.subscribe(*channels)
+            logger.info('Pub/Sub subscribed: %s conv=%s', channels, self.conv_id)
+            while not self._pubsub_stop.is_set():
+                msg = ps.get_message(timeout=1.0, ignore_subscribe_messages=True)
+                if msg and msg.get('type') == 'message':
+                    logger.info('[Pub/Sub] got msg conv=%s connected=%s', self.conv_id, self._connected)
+                    if self._connected:
+                        data = msg['data']
+                        if isinstance(data, bytes):
+                            data = data.decode('utf-8')
+                        try:
+                            event = json.loads(data)
+                        except (ValueError, TypeError):
+                            continue
+                        f = asyncio.run_coroutine_threadsafe(self._push_pubsub(event), loop)
+                        f.add_done_callback(lambda fu: logger.info('[Pub/Sub] push future done conv=%s exc=%s', self.conv_id, fu.exception() if not fu.cancelled() else 'cancelled'))
+                    else:
+                        logger.info('[Pub/Sub] skip: not connected conv=%s', self.conv_id)
+        except Exception:
+            logger.exception('Pub/Sub listener failed conv=%s', self.conv_id)
+        finally:
+            if r is not None:
+                try:
+                    r.close()
+                except Exception:
+                    pass
+
+    async def _push_pubsub(self, event):
+        """将 pub/sub 事件推送到本 WS 客户端（在 daphne 事件循环执行）"""
+        logger.info('[Pub/Sub] push_pubsub called conv=%s connected=%s', self.conv_id, self._connected)
+        if not self._connected:
+            return
+        try:
+            await self.send(json.dumps({
+                'type': 'message',
+                'payload': event.get('payload', {}),
+                'msg_id': event.get('msg_id', ''),
+                'timestamp': event.get('timestamp', ''),
+                'sender_type': event.get('sender_type', ''),
+            }))
+        except Exception:
+            logger.warning('Pub/Sub push failed conv=%s', self.conv_id)
+
+    async def _listen_pubsub(self):
+        """启动 Pub/Sub 监听线程（跨进程实时推送）"""
+        self._pubsub_stop = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, self._pubsub_worker, loop)
 
     async def _ping_loop(self):
         """每 30 秒发送 ping，等待 10 秒内收到 pong"""
