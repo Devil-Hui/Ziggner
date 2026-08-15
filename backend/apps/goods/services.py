@@ -221,6 +221,7 @@ class GoodsQueryService:
     def get_spu_detail(spu_id: int):
         if spu_id <= 0:
             return None
+        from apps.goods.models import SPU, SPUStatus
         # 布隆过滤器前置拦截：不存在的 ID 直接返回 None
         if not GoodsCacheService.spu_exists_in_bloom(spu_id):
             return None
@@ -232,7 +233,6 @@ class GoodsQueryService:
                     [{'id': spu.id, 'category_id': spu.category_id, 'brand_id': spu.brand_id}]
                 ).get(spu_id, [])
             return cached
-        from apps.goods.models import SPU, SPUStatus
         spu = SPU.objects.filter(
             id=spu_id, deleted_at__isnull=True, status=SPUStatus.ON_SALE,
         ).select_related('brand', 'category').first()

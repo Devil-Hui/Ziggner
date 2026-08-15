@@ -50,7 +50,7 @@ function buildRequestKey(config: InternalAxiosRequestConfig): string {
  */
 function resourceBase(url: string): string {
   const clean = url.split('?')[0]
-    .replace(/\/(create|update|delete|restore|scope|skus|migrate|audit|permanent)$/i, '')
+    .replace(/\/(create|update|delete|restore|scope|skus|migrate|audit|permanent|submit|shelf|schedule|duplicate)$/i, '')
     .replace(/\/\d+$/, '')
   return clean
 }

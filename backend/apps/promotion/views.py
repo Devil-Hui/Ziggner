@@ -37,7 +37,7 @@ class CouponApplicationCreateView(BaseApiView):
         serializer = CouponApplicationDraftSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         data = dict(serializer.validated_data)
-        group_id = data.pop('admin_group_id')
+        group_id = data.pop('admin_group_id', None)
         try:
             application = CouponApplicationService.create_draft(request.user, group_id, data)
         except (PermissionError, ValueError) as exc:

@@ -453,9 +453,9 @@ export const adminAPI = {
     patch(`/promotion/application/${id}/`, data),
   // 优惠券审核申请：当前用户申请列表 + 新建草稿（super admin 可直接为已有券发起）
   getMyCouponApplications: () =>
-    get<{ items: CouponApplicationItem[] }>('/promotion/application/my'),
+    get<{ items: CouponApplicationItem[] }>('/promotion/application/my/'),
   createCouponApplication: (data: Record<string, unknown>) =>
-    post<CouponApplicationItem>('/promotion/application', data),
+    post<CouponApplicationItem>('/promotion/application/', data),
   getStaffList: () =>
     get<{ items: { id: number; username: string; is_superuser: boolean }[] }>('/goods/staff/list'),
 
