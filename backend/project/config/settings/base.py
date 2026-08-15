@@ -269,7 +269,7 @@ REST_FRAMEWORK = {
     ),
     'DEFAULT_THROTTLE_RATES': {
         'anon': '100/hour',
-        'user': '1000/hour',
+        'user': '5000/hour',
         'admin_login': '5/minute',
         'admin_write': '60/minute',
         'admin_batch': '10/minute',
