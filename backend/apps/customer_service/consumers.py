@@ -322,20 +322,15 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
             logger.info('Pub/Sub subscribed: %s conv=%s', channels, self.conv_id)
             while not self._pubsub_stop.is_set():
                 msg = ps.get_message(timeout=1.0, ignore_subscribe_messages=True)
-                if msg and msg.get('type') == 'message':
-                    logger.info('[Pub/Sub] got msg conv=%s connected=%s', self.conv_id, self._connected)
-                    if self._connected:
-                        data = msg['data']
-                        if isinstance(data, bytes):
-                            data = data.decode('utf-8')
-                        try:
-                            event = json.loads(data)
-                        except (ValueError, TypeError):
-                            continue
-                        f = asyncio.run_coroutine_threadsafe(self._push_pubsub(event), loop)
-                        f.add_done_callback(lambda fu: logger.info('[Pub/Sub] push future done conv=%s exc=%s', self.conv_id, fu.exception() if not fu.cancelled() else 'cancelled'))
-                    else:
-                        logger.info('[Pub/Sub] skip: not connected conv=%s', self.conv_id)
+                if msg and msg.get('type') == 'message' and self._connected:
+                    data = msg['data']
+                    if isinstance(data, bytes):
+                        data = data.decode('utf-8')
+                    try:
+                        event = json.loads(data)
+                    except (ValueError, TypeError):
+                        continue
+                    asyncio.run_coroutine_threadsafe(self._push_pubsub(event), loop)
         except Exception:
             logger.exception('Pub/Sub listener failed conv=%s', self.conv_id)
         finally:
@@ -347,7 +342,6 @@ class CustomerServiceConsumer(AsyncWebsocketConsumer):
 
     async def _push_pubsub(self, event):
         """将 pub/sub 事件推送到本 WS 客户端（在 daphne 事件循环执行）"""
-        logger.info('[Pub/Sub] push_pubsub called conv=%s connected=%s', self.conv_id, self._connected)
         if not self._connected:
             return
         try:
