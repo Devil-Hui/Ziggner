@@ -845,6 +845,7 @@ export default function Checkout() {
 
     const cartItemIds = items.map(item => item.id)
     const idempotencyKey = `${Date.now()}_${Math.random().toString(36).slice(2)}`
+    let orderNo: string | null = null
 
     try {
       const orderRes = await publicAPI.checkout({
@@ -864,7 +865,7 @@ export default function Checkout() {
         idempotency_key: idempotencyKey,
       })
 
-      const orderNo = orderRes.order_no
+      orderNo = orderRes.order_no
       clearCart()
 
       const successUrl = `${window.location.origin}/payment/return?success=1&order_no=${orderNo}`
@@ -882,15 +883,21 @@ export default function Checkout() {
         if (paymentMethod === 'mock') payUrl.searchParams.set('order_no', orderNo)
         const safePayHref = safeHref(payUrl.toString())
         if (safePayHref) window.location.href = safePayHref
+        else navigate(`/order/${orderNo}`)
       } else {
-        setError('Failed to create payment session. Please try again.')
-        setLoading(false)
+        // 无支付跳转（未配置支付通道 / 货到付款等）：进入订单详情，避免卡在空结算页
+        navigate(`/order/${orderNo}`)
       }
     } catch (err: any) {
       const status = err?.response?.status
       // 未登录 / 会话失效（401/403）：自动跳转登录页，而非停留在错误状态
       if (status === 401 || status === 403) {
         navigate('/auth?tab=login')
+        return
+      }
+      // 订单已创建但支付环节异常：引导至订单详情，可稍后重试支付，避免死在结算页
+      if (orderNo) {
+        navigate(`/order/${orderNo}`)
         return
       }
       const msg = err?.response?.data?.message || err?.message || t('store.checkout.failed')
