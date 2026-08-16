@@ -192,13 +192,16 @@ class UploadAttachmentView(BaseApiView):
 
         # 保存到 media/support/
         from django.core.files.storage import default_storage
-        from django.conf import settings
         import uuid
 
         filename = f'support/{uuid.uuid4().hex}{extension}'
         # 图片剥离 EXIF；视频原样保存
         save_file = strip_exif(file) if content_type.startswith('image/') else file
         path = default_storage.save(filename, save_file)
-        url = f'{settings.MEDIA_URL}{path}'
+        # 统一用 default_storage.url()：local 返回 /media/support/... 相对路径，
+        # r2 返回 https://cdn.ziggner.com/support/... 绝对 CDN 地址。
+        # 注意：不可再用 f'{MEDIA_URL}{path}' —— R2 模式下 MEDIA_URL 含 /media/ 段，
+        # 会与对象实际 key（无 /media/）错位，导致附件 404。
+        url = default_storage.url(path)
 
         return Response({'url': url, 'filename': file.name})
