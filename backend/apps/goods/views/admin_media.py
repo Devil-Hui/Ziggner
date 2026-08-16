@@ -59,24 +59,36 @@ def _serialize_media(m: ProductMedia) -> dict:
     return item
 
 
-def _remove_local_file(url: str) -> None:
-    """根据媒体 URL 清理本地存储文件（FILE_STORAGE=='local' 时生效）。
+def _delete_storage_file(url: str) -> None:
+    """删除存储中的媒体文件（local / R2 通用）。
 
-    Args:
-        url: 媒体文件 URL，如 '/media/product_media/xxx.jpg'。
+    存储 key 在两种后端下完全一致（如 product_media/xxx.jpg），
+    因此只需从 URL 中剥掉 MEDIA_URL 前缀即可得到 key：
+      - local：key 映射为 MEDIA_ROOT 下的本地文件并删除
+      - r2：   通过 default_storage.delete(key) 删除 R2 对象（避免存储泄漏）
     """
-    if getattr(settings, 'FILE_STORAGE', 'local') != 'local':
-        return
     if not url:
         return
-    # URL 形如 '/media/product_media/xxx.jpg' → 本地路径 MEDIA_ROOT/product_media/xxx.jpg
+    media_url = getattr(settings, 'MEDIA_URL', '/media/')
+    key = url
+    if media_url and url.startswith(media_url):
+        key = url[len(media_url):]
+    elif url.startswith('/media/'):
+        key = url[len('/media/'):]
+    elif url.startswith('/'):
+        key = url.lstrip('/')
+
+    # R2 / 远程存储：MEDIA_URL 在 R2 模式下为绝对 CDN 地址（https://...），或 FILE_STORAGE 非 local
+    if getattr(settings, 'FILE_STORAGE', 'local') != 'local' or str(media_url).startswith('http'):
+        try:
+            default_storage.delete(key)
+        except Exception as e:  # noqa: BLE001 - 删除失败仅告警，不影响主流程
+            _logger.warning('删除远程文件失败 key=%s error=%s', key, e)
+        return
+
+    # 本地存储
     media_root = getattr(settings, 'MEDIA_ROOT', '')
-    rel = url
-    if rel.startswith('/media/'):
-        rel = rel[len('/media/'):]
-    elif rel.startswith('/'):
-        rel = rel.lstrip('/')
-    local_path = os.path.join(media_root, rel)
+    local_path = os.path.join(media_root, key)
     if os.path.exists(local_path):
         try:
             os.remove(local_path)
@@ -127,13 +139,13 @@ class MediaDeleteView(BaseApiView):
             if not can_operate_spu(request.user, spu):
                 return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # 清理本地文件（thumb/list/large/original 或视频）
+        # 清理存储文件（thumb/list/large/original 或视频；支持 local/R2）
         if media.media_type == 'image':
             for url in (media.thumb_url, media.list_url, media.large_url, media.original_url):
-                _remove_local_file(url)
+                _delete_storage_file(url)
         else:
             for url in (media.video_url, media.video_thumb_url, media.video_list_url, media.video_large_url):
-                _remove_local_file(url)
+                _delete_storage_file(url)
 
         # 清理 Redis 暂存（创建模式遗留）
         if media.redis_key:
@@ -310,12 +322,17 @@ class MediaCreateView(BaseApiView):
             f.content_type = content_type
             validated_extensions[id(f)] = extension
 
-        # 保存文件到本地存储（剥离 EXIF 元数据）
+        # 保存文件（剥离 EXIF 元数据）。URL 统一由 default_storage.url() 产生：
+        #  - local：/media/{path}（相对 MEDIA_URL）
+        #  - r2：  完整 CDN URL（S3Boto3Storage 用 AWS_S3_CUSTOM_DOMAIN 拼接）
+        # ⚠️ 注意：prod.py 中 R2 的启用由「env 凭据齐全」触发，并不依赖 FILE_STORAGE 值，
+        # 此处若再按 FILE_STORAGE=='r2' 分支返回相对路径，R2 模式下会返回错误地址导致前端 404。
+        # 因此无条件走 default_storage.url()，两种后端行为天然正确。
         def _save_file(f):
             ext = validated_extensions[id(f)]
             safe_name = f'{uuid.uuid4().hex}{ext}'
             path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
-            return f'/media/{path}'
+            return default_storage.url(path)
 
         thumb_url = _save_file(thumb)
         list_url = _save_file(list_file)
