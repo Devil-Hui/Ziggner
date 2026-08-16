@@ -18,7 +18,7 @@ import {
 // Lumiere editorial palette — keep header in sync with the storefront
 const CREAM = '#f7f4ef'
 const INK = '#1a1712'
-const CLAY = '#c8623a'
+const CLAY = '#1a56db'
 const LINE = 'rgba(26, 23, 18, 0.10)'
 
 // ── SVG icons ──
@@ -89,7 +89,7 @@ const SearchBar = styled.form`
 
     &:focus {
       border-color: ${CLAY};
-      box-shadow: 0 0 0 2px rgba(200, 98, 58, 0.12);
+      box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.12);
     }
   }
 
@@ -387,7 +387,7 @@ const CategoryButton = styled.button`
 
   &:hover {
     transform: translateY(-1px);
-    box-shadow: 0 8px 20px -8px rgba(200, 98, 58, 0.6);
+    box-shadow: 0 8px 20px -8px rgba(26, 86, 219, 0.6);
   }
 `
 

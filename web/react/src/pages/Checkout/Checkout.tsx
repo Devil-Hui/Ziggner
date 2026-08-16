@@ -19,13 +19,13 @@ import { safeHref } from '../../utils/sanitizeUrl'
 
 // ── SHEIN 设计令牌 ──────────────────────────────────
 const SHEIN = {
-  accent: '#e74c3c',
-  accentHover: '#c0392b',
-  accentLight: '#fde8e8',
+  accent: '#1a56db',
+  accentHover: '#1e40af',
+  accentLight: '#dbeafe',
   bg: '#f5f5f5',
   card: '#ffffff',
   border: '#e8e8e8',
-  borderActive: '#e74c3c',
+  borderActive: '#1a56db',
   text: '#222222',
   textSecondary: '#666666',
   textMuted: '#999999',

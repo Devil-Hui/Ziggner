@@ -89,7 +89,7 @@ const CreateButton = styled.button`
   transition: ${Transition.normal}, transform 0.15s;
 
   &:hover {
-    background: #c0392b;
+    background: ${Color.primaryHover};
   }
 
   &:active {
@@ -109,7 +109,7 @@ const SkuSaveBtn = styled.button`
   cursor: pointer;
   transition: ${Transition.normal};
   &:hover {
-    background: #c0392b;
+    background: ${Color.primaryHover};
   }
   &:disabled {
     opacity: 0.5;

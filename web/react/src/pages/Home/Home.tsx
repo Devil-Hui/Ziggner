@@ -14,14 +14,14 @@ import styled, { css, keyframes } from 'styled-components'
 import { optionalMediaUrl } from '../../utils/mediaUrl'
 
 /* ───────────────────────────────────────────────────────────
- *  Lumiere-style editorial design system
- *  (cream / ink / clay / forest palette + Playfair Display serif)
+ *  Minimalist editorial design system
+ *  (blue / ink / neutral palette + Playfair Display serif)
  * ─────────────────────────────────────────────────────────── */
 const C = {
   cream: '#f7f4ef',
   ink: '#1a1712',
   muted: '#6b6459',
-  clay: '#c8623a',
+  clay: '#1a56db',
   forest: '#2f4b3f',
   card: '#ffffff',
 } as const
@@ -130,7 +130,7 @@ const PrimaryBtn = styled.button`
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s;
-  &:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -10px rgba(200, 98, 58, 0.55); }
+  &:hover { transform: translateY(-2px); box-shadow: 0 14px 30px -10px rgba(26, 86, 219, 0.55); }
   &:active { transform: translateY(0) scale(0.98); }
 `
 

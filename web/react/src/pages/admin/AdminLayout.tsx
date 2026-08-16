@@ -73,8 +73,8 @@ const SidebarLink = styled(NavLink)`
 
   &.active {
     color: ${Color.text.inverse};
-    background: rgba(200,98,58,0.1);
-    border-left-color: #c8623a;
+    background: rgba(26,86,219,0.1);
+    border-left-color: #1a56db;
     font-weight: 500;
   }
 

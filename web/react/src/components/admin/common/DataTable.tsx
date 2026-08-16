@@ -6,7 +6,7 @@ import { useTranslation } from '../../../i18n';
 /* Lumiere palette — aligned with storefront */
 const INK = '#1a1712'
 const MUTED = '#8a8175'
-const CLAY = '#c8623a'
+const CLAY = '#1a56db'
 const LINE = 'rgba(26, 23, 18, 0.10)'
 
 const TableScroll = styled.div`
@@ -57,7 +57,7 @@ const Tr = styled.tr<{ $clickable?: boolean }>`
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
 
   &:hover {
-    background: ${({ $clickable }) => ($clickable ? 'rgba(200, 98, 58, 0.04)' : 'transparent')};
+    background: ${({ $clickable }) => ($clickable ? 'rgba(26, 86, 219, 0.04)' : 'transparent')};
   }
 
   &:last-child td {
