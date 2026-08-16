@@ -1091,7 +1091,6 @@ const en = {
       loadError: 'Failed to load products',
     },
     category: {
-      all: 'All',
       home: 'Home',
       allCategories: 'All Categories',
       products: 'Products',

@@ -16,27 +16,6 @@ import { optionalMediaUrl } from '../../utils/mediaUrl'
 const HEART_ICON = '/static/images/icons/heart.svg'
 const LOVEIN_ICON = '/static/images/icons/Lovein.svg'
 
-const AlphabetNav = styled.div`
-  background-color: #f0f0f0;
-  padding: 0.8vh 2vw;
-  display: flex;
-  align-items: center;
-  gap: 1vw;
-  overflow-x: auto;
-
-  span {
-    font-size: 1rem;
-    color: ${Color.primaryHover};
-    padding: 0.4vh 0.8vw;
-    cursor: pointer;
-    border-radius: 3px;
-
-    &:hover {
-      background-color: ${Color.border.medium};
-    }
-  }
-`
-
 const BreadcrumbBar = styled.div`
   max-width: 1200px;
   margin: 1.5vh 2vw 0 2vw;
@@ -586,15 +565,6 @@ export default function Category() {
 
   return (
     <PageLayout>
-
-      <AlphabetNav>
-        <span onClick={() => navigate('/category')}>{t('store.category.all')}</span>
-        {categories.map(cat => (
-          <span key={cat.id} onClick={() => navigate(`/category?cat_id=${cat.id}`)}>
-            {cat.name}
-          </span>
-        ))}
-      </AlphabetNav>
 
       <BreadcrumbBar>
         <Breadcrumb>
