@@ -1,6 +1,6 @@
 // TypeScript strict mode enabled
 import React, { useCallback, useEffect, useState } from 'react';
-import styled, { keyframes } from 'styled-components'
+import styled, { keyframes, css } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
 import { adminAPI, Activity, ActivityFormData } from '../../api/admin';
@@ -137,7 +137,7 @@ const RefreshBtn = styled.button<{ $spinning?: boolean }>`
   cursor: pointer;
   transition: ${Transition.normal};
   svg {
-    ${({ $spinning }) => $spinning && `animation: ${spin} 0.8s linear infinite;`}
+    ${({ $spinning }) => $spinning && css`animation: ${spin} 0.8s linear infinite;`}
   }
   &:hover {
     background: ${Color.primaryLight};
