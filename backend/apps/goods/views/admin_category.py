@@ -128,7 +128,8 @@ class CategoryAdminDeleteView(BaseApiView):
 
         if category.children.exists():
             return Response({'detail': Messages.ADMIN_CATEGORY_HAS_CHILDREN}, status=status.HTTP_400_BAD_REQUEST)
-        if SPU.objects.filter(category=category, deleted_at__isnull=True).exists():
+        # 含软删 SPU：软删商品仍持有外键引用，直接 delete 会触发 ProtectedError -> 500
+        if SPU.objects.filter(category=category).exists():
             return Response({'detail': Messages.ADMIN_CATEGORY_HAS_SPUS}, status=status.HTTP_400_BAD_REQUEST)
 
         category.delete()

@@ -63,7 +63,8 @@ class BrandAdminDeleteView(BaseApiView):
             brand = Brand.objects.get(id=brand_id)
         except Brand.DoesNotExist:
             return Response({'detail': 'Brand not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if SPU.objects.filter(brand=brand, deleted_at__isnull=True).exists():
+        # 含软删 SPU：软删商品仍持有外键引用，直接 delete 会触发 ProtectedError -> 500
+        if SPU.objects.filter(brand=brand).exists():
             return Response({'detail': Messages.ADMIN_BRAND_HAS_SPUS}, status=status.HTTP_400_BAD_REQUEST)
         brand.delete()
         GoodsCacheService.invalidate_brand()
