@@ -60,6 +60,12 @@ const MainContent = styled.div`
     grid-template-columns: 150px 1fr;
     gap: 2vw;
   }
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: 3vw;
+    padding: 0 3vw;
+  }
 `
 
 const Sidebar = styled.aside`
@@ -71,6 +77,13 @@ const Sidebar = styled.aside`
   border-radius: ${Radius.md}px;
   box-shadow: ${Shadow.card};
   overflow-y: auto;
+
+  @media (max-width: 640px) {
+    position: static;
+    height: auto;
+    overflow-y: visible;
+    padding: 2vh 3vw;
+  }
 `
 
 const SidebarSection = styled.div`
@@ -108,7 +121,7 @@ const PriceRange = styled.input`
     height: 18px;
     border-radius: 50%;
     background: ${Color.bg.card};
-    border: 3px solid #ff6b6b;
+    border: 3px solid ${Color.primary};
     pointer-events: all;
     cursor: pointer;
   }
@@ -322,7 +335,7 @@ const ProductInfo = styled.div`
 `
 
 const ProductTitle = styled.div`
-  font-size: 0.8rem;
+  font-size: clamp(0.72rem, 2.4vw, 0.85rem);
   font-weight: 500;
   margin-bottom: 6px;
   color: ${Color.primaryHover};
@@ -338,9 +351,9 @@ const CardFooter = styled.div`
 `
 
 const CardPrice = styled.div`
-  font-size: 0.9rem;
+  font-size: clamp(0.85rem, 2vw, 1rem);
   font-weight: 600;
-  color: #e74c3c;
+  color: #111;
   display: flex;
   align-items: baseline;
   gap: 4px;

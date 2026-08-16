@@ -193,6 +193,24 @@ class ChangeUsernameSerializer(serializers.Serializer):
         return value
 
 
+class ChangePasswordSerializer(serializers.Serializer):
+    """修改密码 —— 需旧密码校验，新密码需确认"""
+    old_password = serializers.CharField(write_only=True, help_text='Current password.')
+    new_password = serializers.CharField(
+        write_only=True,
+        min_length=8,
+        max_length=128,
+        help_text='New password, 8-128 chars.',
+    )
+    confirm_password = serializers.CharField(write_only=True, help_text='Repeat new password.')
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['confirm_password']:
+            raise serializers.ValidationError({'confirm_password': '两次输入的新密码不一致'})
+        return attrs
+
+
+
 # ============================================================
 # 邮箱验证码
 # ============================================================

@@ -126,6 +126,15 @@ class UserService:
 
         return user
 
+    @staticmethod
+    def change_password(user, old_password, new_password):
+        """修改密码 —— 校验旧密码后设置新密码"""
+        if not user.check_password(old_password):
+            raise ValueError('OLD_PASSWORD_INCORRECT')
+        user.set_password(new_password)
+        user.save(update_fields=['password', 'updated_at'])
+        return user
+
     # ============================================================
     # 注销账号（软删除）
     # ============================================================
