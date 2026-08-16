@@ -62,7 +62,7 @@ const Container = styled.div`
 
 const PageHeader = styled.div`
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: ${Spacing.xl}px;
@@ -122,10 +122,50 @@ const HeaderStatus = styled.span<{ $editing: boolean }>`
   }
 `
 
+// ── Header Action Buttons (publish / draft moved from side rail) ──
+
+const HeaderActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+`
+
+const HeaderBtnPrimary = styled(PrimaryBtn)`
+  padding: 9px 20px;
+  font-size: ${FontSize.sm}px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+`
+
+const HeaderBtnSecondary = styled(SecondaryBtn)`
+  padding: 9px 16px;
+  font-size: ${FontSize.sm}px;
+  white-space: nowrap;
+`
+
+const HeaderBtnText = styled.button`
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: ${Color.text.muted};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color ${Transition.fast};
+
+  &:hover {
+    color: ${Color.text.secondary};
+    text-decoration: underline;
+  }
+`
+
 const Layout = styled.div`
   display: flex;
   align-items: flex-start;
-  gap: ${Spacing.xxl}px;
+  gap: ${Spacing.xl}px;
 
   @media (max-width: 1024px) {
     flex-direction: column;
@@ -141,7 +181,7 @@ const MainCol = styled.div`
 `
 
 const SideRail = styled.aside`
-  width: 280px;
+  width: 200px;
   flex-shrink: 0;
   order: -1;
   position: sticky;
@@ -149,7 +189,7 @@ const SideRail = styled.aside`
   align-self: flex-start;
   display: flex;
   flex-direction: column;
-  gap: ${Spacing.lg}px;
+  gap: ${Spacing.md}px;
 
   @media (max-width: 1024px) {
     position: static;
@@ -270,29 +310,30 @@ const SectionBody = styled.div`
   }
 `
 
-// ── Side Cards ──
+// ── Side Cards (slim) ──
 
 const SideCard = styled.div`
   background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.lg}px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
-  padding: ${Spacing.lg}px;
+  padding: ${Spacing.md}px ${Spacing.sm}px;
 `
 
 const SideCardHead = styled.div`
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 6px;
+  margin-bottom: 10px;
   color: ${Color.text.heading};
 `
 
 const SideCardTitle = styled.h4`
-  font-size: ${FontSize.sm}px;
+  font-size: ${FontSize.xs}px;
   font-weight: 600;
   margin: 0;
   letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: ${Color.text.muted};
 `
 
 const SideCardIcon = styled.span`
@@ -300,37 +341,29 @@ const SideCardIcon = styled.span`
   color: ${Color.primary};
 `
 
-// Publish card
+// Publish card (compact)
 
 const SidePrimaryBtn = styled(PrimaryBtn)`
   width: 100%;
-  padding: 11px 20px;
-  font-size: ${FontSize.base}px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  padding: 8px 14px;
+  font-size: ${FontSize.sm}px;
 `
 
 const SideSecondaryBtn = styled(SecondaryBtn)`
   width: 100%;
-  padding: 11px 20px;
-  font-size: ${FontSize.base}px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
+  padding: 7px 14px;
+  font-size: ${FontSize.sm}px;
 `
 
 const CancelLink = styled.button`
   width: 100%;
-  margin-top: 10px;
+  margin-top: 6px;
   border: none;
   background: none;
   color: ${Color.text.muted};
   font-size: ${FontSize.xs}px;
   cursor: pointer;
-  padding: 4px;
+  padding: 2px;
   transition: color ${Transition.fast};
 
   &:hover {
@@ -339,28 +372,28 @@ const CancelLink = styled.button`
   }
 `
 
-// Section nav
+// Section nav (compact)
 
 const SectionNav = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 `
 
 const SectionNavItem = styled.button<{ $active?: boolean }>`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   text-align: left;
   border: none;
   background: ${({ $active }) => ($active ? Color.primaryLight : 'transparent')};
   border-left: 2px solid ${({ $active }) => ($active ? Color.primary : 'transparent')};
   color: ${({ $active }) => ($active ? Color.primary : Color.text.secondary)};
-  padding: 8px 10px;
+  padding: 7px 8px;
   border-radius: 0 ${Radius.sm}px ${Radius.sm}px 0;
   cursor: pointer;
-  font-size: ${FontSize.sm}px;
+  font-size: ${FontSize.xs}px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   transition: background ${Transition.fast}, color ${Transition.fast};
 
@@ -372,13 +405,13 @@ const SectionNavItem = styled.button<{ $active?: boolean }>`
 
 const NavMark = styled.span<{ $state: 'done' | 'todo' | 'optional' }>`
   flex-shrink: 0;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   border: 1.5px solid
     ${({ $state }) =>
@@ -392,29 +425,32 @@ const NavLabel = styled.span`
   min-width: 0;
 `
 
-// Summary
+// Summary (compact)
 
 const SummaryGrid = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid ${Color.border.light};
 `
 
 const SummaryRow = styled.div`
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
 `
 
 const SummaryLabel = styled.span`
-  font-size: ${FontSize.xs}px;
+  font-size: 11px;
   color: ${Color.text.muted};
   white-space: nowrap;
 `
 
 const SummaryValue = styled.span`
-  font-size: ${FontSize.sm}px;
+  font-size: ${FontSize.xs}px;
   color: ${Color.text.heading};
   font-weight: 500;
   text-align: right;
@@ -1370,6 +1406,17 @@ export default function AdminProductForm() {
           </BackRow>
           <Title>{isEdit ? t('admin.productForm.editTitle') : t('admin.productForm.createTitle')}</Title>
         </HeaderLeft>
+        <HeaderActions>
+          <HeaderBtnSecondary type="button" disabled={isSaving || isSubmitting} onClick={handleSaveDraft}>
+            {isSaving ? <><SpinIcon><Icon name="refresh" size={12} /></SpinIcon> {t('admin.productForm.saveDraft')}</> : t('admin.productForm.saveDraft')}
+          </HeaderBtnSecondary>
+          <HeaderBtnPrimary type="button" disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
+            {isSubmitting ? <><SpinIcon><Icon name="refresh" size={12} /></SpinIcon> {t('admin.productForm.saveAndSubmit')}</> : t('admin.productForm.saveAndSubmit')}
+          </HeaderBtnPrimary>
+          <HeaderBtnText type="button" onClick={() => navigate('/admin/products')}>
+            {t('common.cancel')}
+          </HeaderBtnText>
+        </HeaderActions>
         <HeaderStatus $editing={isEdit}>
           {isEdit ? t('admin.productForm.statusEditing') : t('admin.productForm.statusDraft')}
         </HeaderStatus>
@@ -1735,13 +1782,13 @@ export default function AdminProductForm() {
           </Pager>
         </MainCol>
 
-        {/* ── 左侧状态栏：区块导航 / 发布 / 概览 ── */}
+        {/* ── 左侧状态栏：紧凑导航 + 概览 ── */}
         <SideRail>
           <SideCard>
             <SideCardHead>
-              <SideCardIcon><Icon name="grid" size={15} /></SideCardIcon>
+              <SideCardIcon><Icon name="grid" size={13} /></SideCardIcon>
               <SideCardTitle>{t('admin.productForm.sidebarSections')}</SideCardTitle>
-              <span style={{ marginLeft: 'auto', fontSize: FontSize.xs, color: Color.text.muted, fontWeight: 600 }}>
+              <span style={{ marginLeft: 'auto', fontSize: '11px', color: Color.text.muted, fontWeight: 600 }}>
                 {MODULE_ITEMS.filter((i) => sectionState(i.key) !== 'todo').length}/{MODULE_ITEMS.length}
               </span>
             </SideCardHead>
@@ -1757,7 +1804,7 @@ export default function AdminProductForm() {
                     onClick={() => setActiveSection(item.key)}
                   >
                     <NavMark $state={st}>
-                      {st === 'done' ? <Icon name="check" size={11} /> : i + 1}
+                      {st === 'done' ? <Icon name="check" size={9} /> : i + 1}
                     </NavMark>
                     <NavLabel>
                       {item.label}
@@ -1767,29 +1814,6 @@ export default function AdminProductForm() {
                 )
               })}
             </SectionNav>
-          </SideCard>
-
-          <SideCard>
-            <SideCardHead>
-              <SideCardIcon><Icon name="save" size={15} /></SideCardIcon>
-              <SideCardTitle>{t('admin.productForm.sidebarPublish')}</SideCardTitle>
-            </SideCardHead>
-            <SidePrimaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
-              {isSubmitting ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> {t('admin.productForm.saveAndSubmit')}</> : t('admin.productForm.saveAndSubmit')}
-            </SidePrimaryBtn>
-            <SideSecondaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveDraft}>
-              {isSaving ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> {t('admin.productForm.saveDraft')}</> : t('admin.productForm.saveDraft')}
-            </SideSecondaryBtn>
-            <CancelLink type="button" onClick={() => navigate('/admin/products')}>
-              {t('common.cancel')}
-            </CancelLink>
-          </SideCard>
-
-          <SideCard>
-            <SideCardHead>
-              <SideCardIcon><Icon name="info" size={15} /></SideCardIcon>
-              <SideCardTitle>{t('admin.productForm.sidebarSummary')}</SideCardTitle>
-            </SideCardHead>
             <SummaryGrid>
               <SummaryRow>
                 <SummaryLabel>{t('admin.productForm.summaryType')}</SummaryLabel>
