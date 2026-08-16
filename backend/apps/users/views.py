@@ -13,6 +13,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse
 from apps.users.constants import Messages
 from apps.users.email_service import EmailService, EmailVerifyService, EmailRateLimitError
 from apps.users.serializers import (
+    ChangePasswordSerializer,
     ChangeUsernameSerializer,
     LogoutSerializer,
     RegisterSerializer,
@@ -418,6 +419,41 @@ class ChangeUsernameView(BaseApiView):
 
         return Response(
             {'detail': Messages.PROFILE_UPDATED},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChangePasswordView(BaseApiView):
+    """修改密码 —— 校验旧密码后设置新密码"""
+    """POST /api/users/password/ —— Change account password"""
+
+    @extend_schema(
+        request=ChangePasswordSerializer,
+        responses={
+            200: OpenApiResponse(description='Password updated'),
+            400: OpenApiResponse(description='Invalid old password / mismatch'),
+        }
+    )
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            UserService.change_password(
+                request.user,
+                serializer.validated_data['old_password'],
+                serializer.validated_data['new_password'],
+            )
+        except ValueError as e:
+            if str(e) == 'OLD_PASSWORD_INCORRECT':
+                return Response(
+                    {'detail': 'Old password is incorrect.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            raise
+
+        return Response(
+            {'detail': 'Password updated.'},
             status=status.HTTP_200_OK,
         )
 

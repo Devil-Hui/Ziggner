@@ -9,6 +9,7 @@ from apps.users.views import (
     AdminLoginView,
     AvatarUploadView,
     ChangeUsernameView,
+    ChangePasswordView,
     DeactivateView,
     EmailVerifyCheckView,
     EmailVerifySendView,
@@ -57,6 +58,7 @@ urlpatterns = [
     path('me/', UserMeView.as_view(), name='user-me'),
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('username/', ChangeUsernameView.as_view(), name='user-change-username'),
+    path('password/', ChangePasswordView.as_view(), name='user-change-password'),
     path('upload-avatar/', AvatarUploadView.as_view(), name='avatar-upload'),
 
     # 邮箱验证码
