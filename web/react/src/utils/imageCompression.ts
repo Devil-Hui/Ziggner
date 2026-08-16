@@ -4,6 +4,8 @@
  * 在上传前对图片进行客户端压缩，在体积与视觉质量间取得平衡（保真优先）。
  * 使用 MozJPEG 有损压缩算法（Canvas.toBlob JPEG），仅对 >200KB 的图生效。
  * 默认档位：最长边 ≤2560px、目标 ≤2.5MB、JPEG 质量 0.92（接近视觉无损）。
+ * 注：useWebWorker 必须为 false —— browser-image-compression@2 在 Vite/CF 生产构建下
+ * 起 Web Worker 会因 import.meta.url 解析失败而返回损坏/0 字节 Blob，导致预览空白。
  */
 import imageCompression from 'browser-image-compression'
 
@@ -14,7 +16,7 @@ export interface CompressionOptions {
   maxWidthOrHeight?: number
   /** 初始压缩质量 0-1，默认 0.85（视觉无损点） */
   initialQuality?: number
-  /** 是否使用 Web Worker（不阻塞主线程），默认 true */
+  /** 是否使用 Web Worker（不阻塞主线程），默认 false（避免 Vite 构建下 worker 解析失败） */
   useWebWorker?: boolean
 }
 
@@ -22,7 +24,7 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
   maxSizeMB: 2.5,
   maxWidthOrHeight: 2560,
   initialQuality: 0.92,
-  useWebWorker: true,
+  useWebWorker: false,
 }
 
 /** 压缩库实际输出格式 → 扩展名（与后端 upload_security 的 _IMAGE_FORMATS 白名单一致） */
@@ -71,8 +73,9 @@ export async function compressImage(
   try {
     const compressed = await imageCompression(file, config)
 
-    // 如果压缩后反而更大（罕见：已压缩的 PNG/WebP），返回原文件
-    if (compressed.size >= file.size) {
+    // 防御：压缩产物损坏（0 字节 / 非图片 / 比原图还大）时回退原图，
+    // 避免上传/预览出现空白图（Web Worker 异常时易产生 0 字节 Blob）
+    if (!compressed || compressed.size === 0 || !compressed.type.startsWith('image/') || compressed.size >= file.size) {
       return file
     }
 
