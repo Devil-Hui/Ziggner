@@ -1291,10 +1291,12 @@ export default function AdminProductForm() {
         for (const item of stagedItems) {
           if (item.mediaType === 'image') {
             const fd = new FormData()
-            if (item.thumbBlob) fd.append('thumb', item.thumbBlob, `thumb_${item.fileName}`)
-            if (item.listBlob) fd.append('list', item.listBlob, `list_${item.fileName}`)
-            if (item.largeBlob) fd.append('large', item.largeBlob, `large_${item.fileName}`)
-            if (item.originalBlob) fd.append('original', item.originalBlob, `original_${item.fileName}`)
+            // 裁剪器输出恒为 WebP，文件名必须带 .webp 扩展名，否则后端扩展名校验会拒绝。
+            const base = (item.fileName || 'image').replace(/\.[^.]+$/, '')
+            if (item.thumbBlob) fd.append('thumb', item.thumbBlob, `thumb_${base}.webp`)
+            if (item.listBlob) fd.append('list', item.listBlob, `list_${base}.webp`)
+            if (item.largeBlob) fd.append('large', item.largeBlob, `large_${base}.webp`)
+            if (item.originalBlob) fd.append('original', item.originalBlob, `original_${base}.webp`)
             // 端点要求 thumb/list/large/original 四尺寸齐全，缺一不可
             if (fd.has('thumb') && fd.has('list') && fd.has('large') && fd.has('original')) {
               try {

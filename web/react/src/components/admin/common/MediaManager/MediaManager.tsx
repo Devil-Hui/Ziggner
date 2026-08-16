@@ -166,10 +166,13 @@ export default function MediaManager({
         if (isEditMode && spuId) {
           // 编辑模式：构建 FormData 上传到已有 SPU（XHR 进度）
           const formData = new FormData()
-          formData.append('thumb', result.thumb.blob, `thumb_${sourceFile.name}`)
-          formData.append('list', result.list.blob, `list_${sourceFile.name}`)
-          formData.append('large', result.large.blob, `large_${sourceFile.name}`)
-          formData.append('original', result.original.blob, `original_${sourceFile.name}`)
+          // 裁剪器输出恒为 WebP（见 ImageCropper），文件名必须带 .webp 扩展名，
+          // 否则后端 validate_image_upload 会因「扩展名≠真实格式」拒绝（WebP 化改造遗漏）。
+          const base = sourceFile.name.replace(/\.[^.]+$/, '')
+          formData.append('thumb', result.thumb.blob, `thumb_${base}.webp`)
+          formData.append('list', result.list.blob, `list_${base}.webp`)
+          formData.append('large', result.large.blob, `large_${base}.webp`)
+          formData.append('original', result.original.blob, `original_${base}.webp`)
           formData.append('alt_text', '')
           setUploadQueue((q) => ({ ...q, percent: 0, currentFileName: sourceFile.name }))
           const newMedia = await adminAPI.uploadMedia(spuId, formData, (percent) => {

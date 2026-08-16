@@ -98,4 +98,4 @@ MEDIA_PATH = os.getenv('MEDIA_PATH', 'media') or 'media'
 MEDIA_URL = f"/{MEDIA_PATH.strip('/')}/"
 MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_PATH)
 FILE_STORAGE_MAX_SIZE = os.getenv('FILE_STORAGE_MAX_SIZE', 5)  # 5MB
-FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', "image/jpeg,image/png").split(',')
+FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', "image/jpeg,image/png,image/webp").split(',')
