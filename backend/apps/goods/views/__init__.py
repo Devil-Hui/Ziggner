@@ -16,7 +16,7 @@ from .admin_spu import (
 from .admin_spu_batch import SPUAdminBatchView, SPUAdminBatchTaskView
 from .admin_sku import (
     SKUAdminListView, SKUAdminBatchCreateView, SKUAdminUpdateView,
-    SKUAdminDeleteView,
+    SKUAdminDeleteView, SKUSearchView,
 )
 from .admin_category import (
     CategoryAdminCreateView, CategoryAdminUpdateView,

@@ -1,5 +1,5 @@
 // TypeScript strict mode enabled
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
@@ -389,7 +389,10 @@ const AdminActivities: React.FC = () => {
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   const [deleting, setDeleting] = useState(false);
   /* ---- SKU link state ---- */
-  const [skuIds, setSkuIds] = useState('');
+  const [skuSelected, setSkuSelected] = useState<{ id: number; sku_code: string; spu_name?: string; price?: string | number }[]>([]);
+  const [skuSearchQuery, setSkuSearchQuery] = useState('');
+  const [skuSearchResults, setSkuSearchResults] = useState<{ id: number; sku_code: string; spu_name?: string; price?: string | number }[]>([]);
+  const skuSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activityPrice, setActivityPrice] = useState('');
   const [skuSaving, setSkuSaving] = useState(false);
   const [skuToast, setSkuToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -401,7 +404,7 @@ const AdminActivities: React.FC = () => {
 
   const handleSaveSKUs = async () => {
     if (!editingActivity) return;
-    const ids = skuIds.split(',').map((s) => s.trim()).filter(Boolean).map(Number);
+    const ids = skuSelected.map((s) => s.id);
     if (ids.length === 0) {
       showSkuMsg('error', t('admin.activities.skuIdsRequired'));
       return;
@@ -418,6 +421,34 @@ const AdminActivities: React.FC = () => {
     } finally {
       setSkuSaving(false);
     }
+  };
+
+  /* ---- SKU search & select ---- */
+  const handleSkuSearch = (q: string) => {
+    setSkuSearchQuery(q);
+    if (skuSearchTimer.current) clearTimeout(skuSearchTimer.current);
+    if (!q.trim()) {
+      setSkuSearchResults([]);
+      return;
+    }
+    skuSearchTimer.current = setTimeout(async () => {
+      try {
+        const res = await adminAPI.searchSKUs(q.trim());
+        setSkuSearchResults(res?.items || []);
+      } catch {
+        setSkuSearchResults([]);
+      }
+    }, 300);
+  };
+
+  const addSku = (sku: { id: number; sku_code: string; spu_name?: string; price?: string | number }) => {
+    setSkuSelected((prev) => (prev.some((s) => s.id === sku.id) ? prev : [...prev, sku]));
+    setSkuSearchQuery('');
+    setSkuSearchResults([]);
+  };
+
+  const removeSku = (id: number) => {
+    setSkuSelected((prev) => prev.filter((s) => s.id !== id));
   };
 
   /* ---- fetch ---- */
@@ -455,7 +486,9 @@ const AdminActivities: React.FC = () => {
 
   const openEditDialog = (activity: Activity) => {
     setEditingActivity(activity);
-    setSkuIds('');
+    setSkuSelected([]);
+    setSkuSearchQuery('');
+    setSkuSearchResults([]);
     setActivityPrice('');
     setSkuToast(null);
     setFormData({
@@ -883,11 +916,54 @@ const AdminActivities: React.FC = () => {
         {editingActivity && (
           <FormGroup>
             <FormLabel>{t('admin.activities.skuLinkTitle')}</FormLabel>
-            <FormInput
-              placeholder={t('admin.activities.skuIdsPlaceholder')}
-              value={skuIds}
-              onChange={(e) => setSkuIds(e.target.value)}
-            />
+            <div style={{ position: 'relative' }}>
+              <FormInput
+                placeholder={t('admin.activities.skuSearchPlaceholder')}
+                value={skuSearchQuery}
+                onChange={(e) => handleSkuSearch(e.target.value)}
+              />
+              {skuSearchResults.length > 0 && (
+                <div
+                  style={{
+                    position: 'absolute', zIndex: 10, top: '100%', left: 0, right: 0,
+                    background: '#fff', border: '1px solid #ddd', borderRadius: 6,
+                    maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  {skuSearchResults.map((sku) => (
+                    <div
+                      key={sku.id}
+                      onClick={() => addSku(sku)}
+                      style={{
+                        padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                        display: 'flex', justifyContent: 'space-between', gap: 8,
+                      }}
+                    >
+                      <span style={{ fontWeight: 600, color: '#1a56db', whiteSpace: 'nowrap' }}>{sku.sku_code}</span>
+                      <span style={{ color: '#666', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.spu_name}</span>
+                      <span style={{ color: '#111', whiteSpace: 'nowrap' }}>${sku.price}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            {skuSelected.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                {skuSelected.map((sku) => (
+                  <span
+                    key={sku.id}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 6,
+                      background: '#dbeafe', color: '#1a56db', borderRadius: 999,
+                      padding: '3px 10px', fontSize: 12,
+                    }}
+                  >
+                    {sku.sku_code}
+                    <span style={{ cursor: 'pointer', fontWeight: 700 }} onClick={() => removeSku(sku.id)}>×</span>
+                  </span>
+                ))}
+              </div>
+            )}
             <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
               <FormInput
                 type="number"

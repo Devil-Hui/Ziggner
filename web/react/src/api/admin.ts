@@ -47,6 +47,8 @@ export interface SKUItem {
   barcode: string;
   weight: string;
   track_inventory: boolean;
+  spu_name?: string;
+  spu_id?: number;
 }
 
 export interface CategoryNode {
@@ -354,6 +356,8 @@ export const adminAPI = {
   // SKU
   getSKUs: (spuId: number) =>
     get<SKUItem[]>(`/goods/sku/admin?spu_id=${spuId}`),
+  searchSKUs: (q: string) =>
+    get<{ items: (SKUItem & { spu_name: string; spu_id: number })[] }>(`/goods/sku/search?q=${encodeURIComponent(q)}&limit=20`),
   batchCreateSKU: (data: Record<string, unknown>) =>
     post<SKUItem[]>('/goods/sku/batch', data),
   updateSKU: (id: number, data: Record<string, unknown>) =>

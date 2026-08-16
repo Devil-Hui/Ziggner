@@ -4,9 +4,10 @@ Admin SKU 视图 — 批量创建 + 更新 + 删除
 
 from decimal import Decimal
 
+from django.db.models import Q
 from rest_framework import status
 from rest_framework.response import Response
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes, OpenApiParameter
 
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
@@ -199,3 +200,41 @@ class SKUAdminDeleteView(BaseApiView):
             return Response({'detail': Messages.SKU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
         sku.delete()
         return Response({'message': 'Deleted successfully.'})
+
+
+class SKUSearchView(BaseApiView):
+    """全局 SKU 搜索（按 sku_code / 商品名 模糊匹配），供活动关联 SKU 等场景使用"""
+    permission_classes = [HasPerm('goods.sku.write')]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter('q', OpenApiTypes.STR, description='sku_code 或商品名关键词'),
+            OpenApiParameter('limit', OpenApiTypes.INT, description='返回条数上限（默认 20）'),
+        ],
+        responses={200: OpenApiResponse(description='Search results')},
+    )
+    def get(self, request):
+        q = (request.query_params.get('q') or '').strip()
+        try:
+            limit = min(int(request.query_params.get('limit', 20)), 50)
+        except (TypeError, ValueError):
+            limit = 20
+        if not q:
+            return Response({'items': []})
+        skus = (
+            SKU.objects
+            .filter(Q(sku_code__icontains=q) | Q(spu__name__icontains=q), spu__deleted_at__isnull=True)
+            .select_related('spu')
+            .order_by('-id')[:limit]
+        )
+        items = [{
+            'id': s.id,
+            'sku_code': s.sku_code,
+            'spu_id': s.spu_id,
+            'spu_name': s.spu.name,
+            'price': str(s.price),
+            'stock': s.stock,
+            'spec_values': s.spec_values,
+            'image_url': s.image_url,
+        } for s in skus]
+        return Response({'items': items})

@@ -687,7 +687,7 @@ const en = {
       noActivities: 'No discount activities',
       fieldsRequired: 'Please check required fields: name, start/end time, rules',
       skuLinkTitle: 'Link Product SKUs (optional)',
-      skuIdsPlaceholder: 'SKU IDs, comma separated, e.g. 101,102,103',
+      skuSearchPlaceholder: 'Search SKU code or product name...',
       activityPricePlaceholder: 'Activity price (uniform, optional)',
       saveSkus: 'Save SKU link',
       skuIdsRequired: 'Enter at least one SKU ID',
