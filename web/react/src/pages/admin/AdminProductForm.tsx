@@ -55,170 +55,434 @@ interface TagItem {
 // ── Styled ──
 
 const Container = styled.div`
-  max-width: 900px;
-  margin: 0 0 0 auto;
-  padding-right: 24px;
-`
-
-const Title = styled.h2`
-  font-size: 1.25rem;
-  margin-bottom: 20px;
-  color: ${Color.text.heading};
-`
-
-const Form = styled.form`
-  background: ${Color.bg.card};
-  padding: ${Spacing.xxl}px;
-  border-radius: ${Radius.md}px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-`
-
-const Section = styled.div`
-  margin-bottom: 24px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid ${Color.border.light};
-
-  &:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-  }
-`
-
-const SectionHeader = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
   width: 100%;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 2px 0;
-  text-align: left;
+`
 
-  &:hover .chevron {
+const PageHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: ${Spacing.xl}px;
+`
+
+const HeaderLeft = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`
+
+const BackRow = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  color: ${Color.text.secondary};
+  font-size: ${FontSize.xs}px;
+  transition: color ${Transition.fast};
+
+  &:hover {
     color: ${Color.primary};
   }
 `
 
-const SectionTitle = styled.h3`
-  font-size: 0.95rem;
+const Title = styled.h2`
+  font-size: ${FontSize.xxl}px;
+  line-height: 1.2;
+  margin: 0;
+  color: ${Color.text.heading};
   font-weight: 600;
-  color: ${Color.primaryHover};
-  margin-bottom: 0;
-  display: flex;
+  letter-spacing: -0.01em;
+`
+
+const HeaderStatus = styled.span<{ $editing: boolean }>`
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 5px 12px;
+  border-radius: ${Radius.full}px;
+  font-size: ${FontSize.xs}px;
+  font-weight: 500;
+  background: ${({ $editing }) => ($editing ? 'rgba(26,86,219,0.10)' : 'rgba(107,114,128,0.12)')};
+  color: ${({ $editing }) => ($editing ? Color.primary : Color.text.secondary)};
+
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
 `
 
-const SectionBody = styled.div`
-  margin-top: 14px;
-`
-
-// ── 模块导航（右侧栏结构，与左侧状态栏呼应） ──
-const FormLayout = styled.div`
+const Layout = styled.div`
   display: flex;
-  gap: 20px;
   align-items: flex-start;
+  gap: ${Spacing.xxl}px;
 
-  @media (max-width: 900px) {
+  @media (max-width: 1024px) {
     flex-direction: column;
   }
 `
 
-const ModuleNav = styled.nav`
-  width: 200px;
-  flex-shrink: 0;
-  background: ${Color.bg.card};
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.md}px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  padding: 10px;
+const MainCol = styled.div`
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: ${Spacing.xl}px;
+`
 
-  @media (max-width: 900px) {
+const SideRail = styled.aside`
+  width: 280px;
+  flex-shrink: 0;
+  order: -1;
+  position: sticky;
+  top: 24px;
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: ${Spacing.lg}px;
+
+  @media (max-width: 1024px) {
+    position: static;
     width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
+    order: 0;
   }
 `
 
-const ModuleNavItem = styled.button<{ $active?: boolean }>`
+// ── Pager (single-section nav) ──
+
+const Pager = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 10px 12px;
-  border: none;
-  background: ${(props) => (props.$active ? Color.primaryLight : "transparent")};
-  color: ${(props) => (props.$active ? Color.primary : Color.text.secondary)};
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: ${(props) => (props.$active ? 600 : 400)};
-  margin-bottom: 4px;
-  text-align: left;
-  transition: all 0.15s;
+  gap: 12px;
+  margin-top: 4px;
+`
 
-  &:hover {
-    background: ${(props) => (props.$active ? Color.primaryLight : "#f2f4f7")};
+const PagerSpacer = styled.div`
+  flex: 1;
+`
+
+const PagerBtn = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  transition: ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    border-color: ${Color.primary};
     color: ${Color.primary};
   }
-
-  span.required-mark {
-    color: ${Color.status.error};
-    font-weight: 700;
-  }
-
-  @media (max-width: 900px) {
-    width: auto;
-    margin-bottom: 0;
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 `
 
-const ModuleContent = styled.div`
+// ── Section Card (left column) ──
+
+const SectionCard = styled.section<{ $hidden?: boolean }>`
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.lg}px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  padding: ${Spacing.xxl}px;
+  scroll-margin-top: 84px;
+  display: ${({ $hidden }) => ($hidden ? 'none' : 'block')};
+
+  @media (max-width: 600px) {
+    padding: ${Spacing.lg}px;
+  }
+`
+
+const SectionHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: ${Spacing.lg}px;
+`
+
+const StepBadge = styled.span<{ $active: boolean }>`
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: ${FontSize.sm}px;
+  font-weight: 600;
+  background: ${({ $active }) => ($active ? Color.primary : Color.primaryLight)};
+  color: ${({ $active }) => ($active ? '#fff' : Color.primary)};
+  transition: background ${Transition.fast};
+`
+
+const SectionTitles = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   flex: 1;
   min-width: 0;
 `
 
-const Field = styled.div`
+const SectionTitleText = styled.h3`
+  font-size: ${FontSize.md}px;
+  font-weight: 600;
+  color: ${Color.text.heading};
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+`
+
+const RequiredDot = styled.span`
+  color: ${Color.status.error};
+  font-weight: 700;
+  font-size: ${FontSize.sm}px;
+`
+
+const SectionDesc = styled.p`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  margin: 0;
+`
+
+const SectionBody = styled.div`
+  padding-left: 40px;
+
+  @media (max-width: 600px) {
+    padding-left: 0;
+  }
+`
+
+// ── Side Cards ──
+
+const SideCard = styled.div`
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.lg}px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 1px 3px rgba(16, 24, 40, 0.06);
+  padding: ${Spacing.lg}px;
+`
+
+const SideCardHead = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin-bottom: 14px;
+  color: ${Color.text.heading};
+`
+
+const SideCardTitle = styled.h4`
+  font-size: ${FontSize.sm}px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 0.01em;
+`
+
+const SideCardIcon = styled.span`
+  display: inline-flex;
+  color: ${Color.primary};
+`
+
+// Publish card
+
+const SidePrimaryBtn = styled(PrimaryBtn)`
+  width: 100%;
+  padding: 11px 20px;
+  font-size: ${FontSize.base}px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+`
+
+const SideSecondaryBtn = styled(SecondaryBtn)`
+  width: 100%;
+  padding: 11px 20px;
+  font-size: ${FontSize.base}px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+`
+
+const CancelLink = styled.button`
+  width: 100%;
+  margin-top: 10px;
+  border: none;
+  background: none;
+  color: ${Color.text.muted};
+  font-size: ${FontSize.xs}px;
+  cursor: pointer;
+  padding: 4px;
+  transition: color ${Transition.fast};
+
+  &:hover {
+    color: ${Color.text.secondary};
+    text-decoration: underline;
+  }
+`
+
+// Section nav
+
+const SectionNav = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`
+
+const SectionNavItem = styled.button<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: ${({ $active }) => ($active ? Color.primaryLight : 'transparent')};
+  border-left: 2px solid ${({ $active }) => ($active ? Color.primary : 'transparent')};
+  color: ${({ $active }) => ($active ? Color.primary : Color.text.secondary)};
+  padding: 8px 10px;
+  border-radius: 0 ${Radius.sm}px ${Radius.sm}px 0;
+  cursor: pointer;
+  font-size: ${FontSize.sm}px;
+  font-weight: ${({ $active }) => ($active ? 600 : 400)};
+  transition: background ${Transition.fast}, color ${Transition.fast};
+
+  &:hover {
+    background: ${({ $active }) => ($active ? Color.primaryLight : '#f3f4f6')};
+    color: ${Color.primary};
+  }
+`
+
+const NavMark = styled.span<{ $state: 'done' | 'todo' | 'optional' }>`
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1.5px solid
+    ${({ $state }) =>
+      $state === 'done' ? Color.primary : $state === 'todo' ? Color.status.error : Color.border.medium};
+  color: ${({ $state }) => ($state === 'done' ? Color.primary : $state === 'todo' ? Color.status.error : Color.text.muted)};
+  background: ${({ $state }) => ($state === 'done' ? 'rgba(26,86,219,0.10)' : 'transparent')};
+`
+
+const NavLabel = styled.span`
+  flex: 1;
+  min-width: 0;
+`
+
+// Summary
+
+const SummaryGrid = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`
+
+const SummaryRow = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+`
+
+const SummaryLabel = styled.span`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  white-space: nowrap;
+`
+
+const SummaryValue = styled.span`
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.heading};
+  font-weight: 500;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+// Error alert
+
+const AlertBar = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: ${Spacing.lg}px;
+  padding: 12px 14px;
+  background: rgba(220, 38, 38, 0.06);
+  border: 1px solid rgba(220, 38, 38, 0.2);
+  border-radius: ${Radius.md}px;
+  color: ${Color.status.error};
+  font-size: ${FontSize.sm}px;
+`
+
+// ── Fields (reused across sections) ──
+
+const Field = styled.div`
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
 `
 
 const Row = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `
 
 const Label = styled.label`
   display: block;
-  font-size: 0.813rem;
+  font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 `
 
 const TextArea = styled.textarea`
   width: 100%;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border: 1px solid ${Color.border.medium};
-  border-radius: 6px;
-  font-size: 0.875rem;
-  min-height: 80px;
+  border-radius: ${Radius.md}px;
+  font-size: ${FontSize.base}px;
+  min-height: 96px;
   resize: vertical;
   box-sizing: border-box;
+  color: ${Color.text.body};
+  background: ${Color.bg.card};
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+    border-color: ${Color.primary};
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
   }
-`
-
-const BtnGroup = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-top: 20px;
 `
 
 const SpinIcon = styled.span`
@@ -241,37 +505,37 @@ const SpecConfigRow = styled.div`
 `
 
 const SpecNameInput = styled(Input)`
-  width: 120px;
+  width: 140px;
 `
 
 const SpecValueInput = styled(Input)`
-  width: 100px;
+  width: 120px;
 `
 
 const SpecValueChip = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 10px;
-  border: 1px solid #e74c3c;
+  padding: 4px 10px;
+  border: 1px solid ${Color.primary};
   border-radius: 14px;
-  font-size: 0.75rem;
-  color: #e74c3c;
-  background: #fef2f2;
+  font-size: ${FontSize.xs}px;
+  color: ${Color.primary};
+  background: ${Color.primaryLight};
 `
 
 const SpecValueRemove = styled.span`
   cursor: pointer;
   font-weight: 700;
   margin-left: 2px;
-  &:hover { color: #c0392b; }
+  &:hover { color: ${Color.primaryHover}; }
 `
 
 const SpecGroup = styled.div`
-  background: ${Color.primaryLight};
+  background: ${Color.bg.page};
   border: 1px solid ${Color.border.light};
-  border-radius: 8px;
-  padding: 12px 14px;
+  border-radius: ${Radius.md}px;
+  padding: 14px 16px;
   margin-bottom: 10px;
 `
 
@@ -279,31 +543,33 @@ const SpecGroupHeader = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 `
 
 const SpecGroupName = styled.span`
   font-weight: 600;
-  font-size: 0.85rem;
-  color: ${Color.primaryHover};
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.heading};
 `
 
 const SmallBtn = styled.button`
-  padding: 3px 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  background: #fff;
-  font-size: 0.7rem;
+  padding: 4px 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.sm}px;
+  background: ${Color.bg.card};
+  font-size: ${FontSize.xs}px;
   cursor: pointer;
-  color: #999;
-  &:hover { border-color: #e74c3c; color: #e74c3c; }
+  color: ${Color.text.secondary};
+  transition: ${Transition.fast};
+
+  &:hover { border-color: ${Color.primary}; color: ${Color.primary}; }
 `
 
 const SmallBtnPrimary = styled(SmallBtn)`
-  border-color: #e74c3c;
-  color: #e74c3c;
-  background: #fef2f2;
-  &:hover { background: #e74c3c; color: #fff; }
+  border-color: ${Color.primary};
+  color: ${Color.primary};
+  background: ${Color.primaryLight};
+  &:hover { background: ${Color.primary}; color: #fff; }
 `
 
 // ── Variant Card Styles (Shopify-style) ──
@@ -315,7 +581,7 @@ const VariantCardList = styled.div`
 `
 
 const VariantCard = styled.div`
-  background: ${Color.primaryLight};
+  background: ${Color.bg.page};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
   padding: ${Spacing.lg}px;
@@ -341,8 +607,8 @@ const VariantName = styled.span`
 `
 
 const VariantRemoveBtn = styled.button`
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -357,9 +623,9 @@ const VariantRemoveBtn = styled.button`
   transition: ${Transition.fast};
 
   &:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
-    background: #fef2f2;
+    border-color: ${Color.status.error};
+    color: ${Color.status.error};
+    background: rgba(220, 38, 38, 0.06);
   }
 
   &:disabled {
@@ -388,43 +654,45 @@ const VariantFieldLabel = styled.label`
 `
 
 const VariantPriceInput = styled.input`
-  padding: 7px 10px;
-  border: 1px solid ${Color.border.light};
+  padding: 8px 12px;
+  border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.sm}px;
-  color: ${Color.primaryHover};
+  color: ${Color.text.heading};
   background: ${Color.bg.card};
   width: 100%;
   box-sizing: border-box;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+    border-color: ${Color.primary};
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
   }
 `
 
 const VariantStockGroup = styled.div`
   display: flex;
   align-items: stretch;
-  border: 1px solid ${Color.border.light};
+  border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.sm}px;
   background: ${Color.bg.card};
   overflow: hidden;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus-within {
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+    border-color: ${Color.primary};
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
   }
 `
 
 const VariantStockBtn = styled.button`
-  width: 32px;
+  width: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: none;
-  background: ${Color.primaryLight};
+  background: ${Color.bg.page};
   color: ${Color.primaryHover};
   font-size: ${FontSize.lg}px;
   font-weight: ${FontWeight.semibold};
@@ -451,11 +719,11 @@ const VariantStockBtn = styled.button`
 const VariantStockInput = styled.input`
   flex: 1;
   width: 100%;
-  padding: 7px 6px;
+  padding: 8px 6px;
   border: none;
   font-size: ${FontSize.lg}px;
   font-weight: ${FontWeight.bold};
-  color: ${Color.primaryHover};
+  color: ${Color.text.heading};
   text-align: center;
   background: transparent;
   box-sizing: border-box;
@@ -465,7 +733,6 @@ const VariantStockInput = styled.input`
     outline: none;
   }
 
-  /* Hide spinners for number input */
   &::-webkit-outer-spin-button,
   &::-webkit-inner-spin-button {
     -webkit-appearance: none;
@@ -477,19 +744,24 @@ const VariantStockInput = styled.input`
 `
 
 const VariantDiscountInput = styled.input`
-  padding: 7px 10px;
-  border: 1px solid ${Color.border.light};
+  padding: 8px 12px;
+  border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
   background: ${Color.bg.card};
   width: 100%;
   box-sizing: border-box;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+    border-color: ${Color.primary};
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
+  }
+
+  &::placeholder {
+    color: ${Color.text.muted};
   }
 `
 
@@ -499,22 +771,27 @@ const VariantMetaRow = styled.div`
   gap: ${Spacing.md}px;
   align-items: end;
   margin-top: ${Spacing.sm}px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
 `
 
 const VariantMetaInput = styled.input`
-  padding: 6px 10px;
-  border: 1px solid ${Color.border.light};
+  padding: 7px 12px;
+  border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.xs}px;
   color: ${Color.text.secondary};
   background: ${Color.bg.card};
   width: 100%;
   box-sizing: border-box;
+  transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
-    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.1);
+    border-color: ${Color.primary};
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.15);
   }
 
   &::placeholder {
@@ -567,27 +844,28 @@ const ToggleLabel = styled.span<{ $on: boolean }>`
 const VariantAddBtn = styled.button`
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 14px;
-  border: 1px dashed #e74c3c;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px dashed ${Color.primary};
   border-radius: ${Radius.sm}px;
   background: ${Color.bg.card};
-  color: #e74c3c;
-  font-size: 0.75rem;
+  color: ${Color.primary};
+  font-size: ${FontSize.sm}px;
   cursor: pointer;
-  margin-top: 10px;
+  margin-top: 12px;
+  transition: ${Transition.fast};
 
   &:hover {
-    background: #fef2f2;
+    background: ${Color.primaryLight};
   }
 `
 
 const NotTrackingText = styled.span`
   display: block;
-  padding: 7px 10px;
+  padding: 8px 12px;
   font-size: ${FontSize.sm}px;
   color: ${Color.text.muted};
-  background: ${Color.primaryLight};
+  background: ${Color.bg.page};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.sm}px;
   text-align: center;
@@ -603,18 +881,18 @@ const TagList = styled.div`
 `
 
 const TagChip = styled.button<{ $selected: boolean; $color?: string }>`
-  padding: 4px 12px;
-  border: 1px solid ${({ $selected, $color }) => ($selected ? ($color || '#e74c3c') : ($color || '#ddd'))};
+  padding: 5px 14px;
+  border: 1px solid ${({ $selected, $color }) => ($selected ? ($color || Color.primary) : ($color || Color.border.medium))};
   border-radius: 16px;
-  background: ${({ $selected, $color }) => ($selected ? ($color || '#e74c3c') : '#fff')};
-  color: ${({ $selected }) => ($selected ? '#fff' : '#666')};
-  font-size: 0.75rem;
+  background: ${({ $selected, $color }) => ($selected ? ($color || Color.primary) : '#fff')};
+  color: ${({ $selected }) => ($selected ? '#fff' : Color.text.secondary)};
+  font-size: ${FontSize.sm}px;
   cursor: pointer;
   transition: ${Transition.fast};
 
   &:hover {
-    border-color: ${({ $color }) => ($color || '#e74c3c')};
-    color: ${({ $selected, $color }) => ($selected ? '#fff' : ($color || '#e74c3c'))};
+    border-color: ${({ $color }) => ($color || Color.primary)};
+    color: ${({ $selected, $color }) => ($selected ? '#fff' : ($color || Color.primary))};
   }
 `
 
@@ -634,7 +912,7 @@ function flattenTree(nodes: CategoryNode[], prefix = ''): { id: number; label: s
 
 /** 格式化变体名称: 按活跃规格顺序拼接 spec values，无规格时返回默认标题 */
 function formatVariantName(specValues: Record<string, string>, specNames: string[], t?: (key: string) => string): string {
-  const defaultTitle = t ? t('admin.productVariant.defaultTitle') : 'Default Title'
+  const defaultTitle = t ? t('admin.productForm.defaultTitle') : 'Default Title'
   if (specNames.length === 0) return defaultTitle
   const parts = specNames.map(name => specValues[name] || '').filter(Boolean)
   return parts.length > 0 ? parts.join(' / ') : defaultTitle
@@ -660,15 +938,15 @@ export default function AdminProductForm() {
   const [requiresShipping, setRequiresShipping] = useState(true)
   const [taxable, setTaxable] = useState(true)
   const [productKind, setProductKind] = useState<'physical' | 'virtual'>('physical')  // 实体/虚拟商品
-  // 模块导航：右侧栏一次只显示当前模块（与左侧状态栏一致的栏式设计）
+  // 右侧栏当前激活区块（scroll-spy）
   const [activeSection, setActiveSection] = useState<string>('productType')
   const MODULE_ITEMS = [
-    { key: 'productType', label: t('admin.productForm.productTypeTitle'), required: false },
-    { key: 'titleDesc', label: t('admin.productForm.titleDescription'), required: true },
-    { key: 'media', label: t('admin.productForm.mediaSection'), required: false },
-    { key: 'organization', label: t('admin.productForm.organization'), required: true },
-    { key: 'sku', label: t('admin.productForm.skuManagement'), required: false },
-    { key: 'schedule', label: t('admin.productForm.schedule'), required: false },
+    { key: 'productType', label: t('admin.productForm.productTypeTitle'), required: false, desc: t('admin.productForm.sectionDescType') },
+    { key: 'titleDesc', label: t('admin.productForm.titleDescription'), required: true, desc: t('admin.productForm.sectionDescTitle') },
+    { key: 'media', label: t('admin.productForm.mediaSection'), required: false, desc: t('admin.productForm.sectionDescMedia') },
+    { key: 'organization', label: t('admin.productForm.organization'), required: true, desc: t('admin.productForm.sectionDescOrg') },
+    { key: 'sku', label: t('admin.productForm.skuManagement'), required: false, desc: t('admin.productForm.sectionDescSku') },
+    { key: 'schedule', label: t('admin.productForm.schedule'), required: false, desc: t('admin.productForm.sectionDescSchedule') },
   ]
 
   // Data sources
@@ -709,10 +987,6 @@ export default function AdminProductForm() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
-
-  // `beforeunload` 事件绑定在上方 useEffect 中已完成
-  // React Router v6 的 useBlocker 需要 data router，当前使用 BrowserRouter
-  // 改用 beforeunload + 导航前手动确认
 
   // ── Load Data ──
 
@@ -994,7 +1268,6 @@ export default function AdminProductForm() {
               formData.append('media_metadata', JSON.stringify(meta))
               if (item.thumbBlob) formData.append('media_files', item.thumbBlob, `thumb_${item.fileName}`)
               if (item.listBlob) formData.append('media_files', item.listBlob, `list_${item.fileName}`)
-              if (item.largeBlob) formData.append('media_files', item.largeBlob, `large_${item.fileName}`)
               if (item.originalBlob) formData.append('media_files', item.originalBlob, `original_${item.fileName}`)
             } else if (item.mediaType === 'video') {
               const meta = { fileName: item.fileName, sortOrder: sortOrder++, mediaType: 'video' }
@@ -1067,40 +1340,79 @@ export default function AdminProductForm() {
   )
 
   const activeSpecNames = specs.filter(s => s.name.trim()).map(s => s.name.trim())
+  const activeIndex = MODULE_ITEMS.findIndex((i) => i.key === activeSection)
+
+  // ── 区块完成状态（用于左侧状态栏标记） ──
+  const sectionState = (key: string): 'done' | 'todo' | 'optional' => {
+    if (key === 'titleDesc') return name.trim() ? 'done' : 'todo'
+    if (key === 'organization') return (brandId && categoryId) ? 'done' : 'todo'
+    if (key === 'sku') return skus.every((s) => s.price !== '' && Number(s.price) > 0) ? 'done' : 'todo'
+    if (key === 'media') return 'optional'
+    return 'done'
+  }
+
+  // ── 概览摘要 ──
+  const brandName = brands.find((b) => String(b.id) === brandId)?.name || t('admin.productForm.summaryNotSet')
+  const categoryName = flatCategories.find((c) => String(c.id) === categoryId)?.label || t('admin.productForm.summaryNotSet')
+  const totalStock = skus.reduce(
+    (sum, s) => sum + (s.track_inventory === 'true' ? (parseInt(s.stock, 10) || 0) : 0),
+    0,
+  )
+  const kindLabel = productKind === 'physical' ? t('admin.productForm.kindPhysical') : t('admin.productForm.kindVirtual')
 
   return (
     <Container>
-      <Title>{isEdit ? t('admin.productForm.editTitle') : t('admin.productForm.createTitle')}</Title>
+      <PageHeader>
+        <HeaderLeft>
+          <BackRow type="button" onClick={() => navigate('/admin/products')}>
+            <Icon name="chevron-left" size={12} />
+            {t('admin.productForm.backToProducts')}
+          </BackRow>
+          <Title>{isEdit ? t('admin.productForm.editTitle') : t('admin.productForm.createTitle')}</Title>
+        </HeaderLeft>
+        <HeaderStatus $editing={isEdit}>
+          {isEdit ? t('admin.productForm.statusEditing') : t('admin.productForm.statusDraft')}
+        </HeaderStatus>
+      </PageHeader>
 
-      {error && (
-        <div style={{ color: '#e74c3c', marginBottom: 16, fontSize: '0.875rem', padding: '10px 14px', background: '#f5f5f5', borderRadius: 6, border: '1px solid #fecaca' }}>
-          {error}
-        </div>
-      )}
+      <Layout>
+        <MainCol>
+          {error && (
+            <AlertBar>
+              <Icon name="alert" size={16} />
+              {error}
+            </AlertBar>
+          )}
 
-      <FormLayout>
-        <ModuleNav>
-          {MODULE_ITEMS.map((item) => (
-            <ModuleNavItem key={item.key} $active={activeSection === item.key} onClick={() => setActiveSection(item.key)}>
-              <span>{item.label}{item.required && <span className="required-mark"> *</span>}</span>
-            </ModuleNavItem>
-          ))}
-        </ModuleNav>
-        <ModuleContent>
-      <Form onSubmit={(e) => { e.preventDefault(); handleSaveDraft() }}>
-        {/* ── 商品类型开关 ── */}
-        {activeSection === 'productType' && (
-        <Section>
-          <SectionBody>
+          {/* ── 商品类型 ── */}
+          <SectionCard $hidden={activeSection !== 'productType'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'productType'}>1</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>
+                  {t('admin.productForm.productTypeTitle')}
+                </SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescType')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
               <ProductKindToggle value={productKind} onChange={handleProductKindChange} />
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        {/* ── Title & Description ── */}
-        {activeSection === 'titleDesc' && (
-        <Section>
-          <SectionBody>
+          {/* ── 标题与描述 ── */}
+          <SectionCard $hidden={activeSection !== 'titleDesc'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'titleDesc'}>2</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>
+                  {t('admin.productForm.titleDescription')}
+                  <RequiredDot>*</RequiredDot>
+                </SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescTitle')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
               <Field>
                 <Label>{t('admin.productForm.productName')} *</Label>
                 <Input value={name} onChange={(e) => { setName(e.target.value); markDirty() }} required placeholder={t('admin.productForm.productNamePlaceholder')} />
@@ -1110,15 +1422,20 @@ export default function AdminProductForm() {
                 <TextArea value={description} onChange={(e) => { setDescription(e.target.value); markDirty() }} placeholder={t('admin.productForm.descriptionPlaceholder')} />
               </Field>
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        {/* ── Media (shown for all product kinds) ── */}
-        {activeSection === 'media' && (
-        <Section>
-          <SectionBody>
+          {/* ── 媒体 ── */}
+          <SectionCard $hidden={activeSection !== 'media'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'media'}>3</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>{t('admin.productForm.mediaSection')}</SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescMedia')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
               <MediaManager
-                onChange={(staged) => { /* 创建模式暂存项由 MediaManager 内部管理 IndexedDB */ }}
+                onChange={() => { /* 创建模式暂存项由 MediaManager 内部管理 IndexedDB */ }}
                 {...(isEdit && id ? {
                   spuId: Number(id),
                   savedMedia,
@@ -1126,251 +1443,264 @@ export default function AdminProductForm() {
                 } : {})}
               />
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        {/* ── Organization ── */}
-        {activeSection === 'organization' && (
-        <Section>
-          <SectionBody>
+          {/* ── 组织信息 ── */}
+          <SectionCard $hidden={activeSection !== 'organization'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'organization'}>4</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>
+                  {t('admin.productForm.organization')}
+                  <RequiredDot>*</RequiredDot>
+                </SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescOrg')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
               <Row>
-            <Field>
-              <Label>{t('admin.productForm.brand')} *</Label>
-              <Select value={brandId} onChange={(e) => { setBrandId(e.target.value); markDirty() }} required>
-                <option value="">{t('admin.productForm.selectBrand')}</option>
-                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </Select>
-            </Field>
-            <Field>
-              <Label>{t('admin.productForm.category')} *</Label>
-              <Select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); markDirty() }} required>
-                <option value="">{t('admin.productForm.selectCategory')}</option>
-                {flatCategories.map((c) => (
-                  <option key={c.id} value={c.id} style={{ paddingLeft: `${c.level * 12}px` }}>
-                    {c.label}{c.level === 1 ? ' (L1)' : c.level === 2 ? ' (L2)' : ' (L3)'}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </Row>
-          <Field>
-            <Label>{t('admin.productForm.tags')}</Label>
-            <TagList>
-              {tags.map((tag) => (
-                <TagChip
-                  key={tag.id}
-                  type="button"
-                  $selected={selectedTags.includes(tag.id)}
-                  $color={tag.color || DEFAULT_TAG_COLOR}
-                  onClick={() => toggleTag(tag.id)}
-                >
-                  {tag.name}
-                </TagChip>
-              ))}
-            </TagList>
+                <Field>
+                  <Label>{t('admin.productForm.brand')} *</Label>
+                  <Select value={brandId} onChange={(e) => { setBrandId(e.target.value); markDirty() }} required>
+                    <option value="">{t('admin.productForm.selectBrand')}</option>
+                    {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </Select>
+                </Field>
+                <Field>
+                  <Label>{t('admin.productForm.category')} *</Label>
+                  <Select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); markDirty() }} required>
+                    <option value="">{t('admin.productForm.selectCategory')}</option>
+                    {flatCategories.map((c) => (
+                      <option key={c.id} value={c.id} style={{ paddingLeft: `${c.level * 12}px` }}>
+                        {c.label}{c.level === 1 ? ' (L1)' : c.level === 2 ? ' (L2)' : ' (L3)'}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </Row>
+              <Field>
+                <Label>{t('admin.productForm.tags')}</Label>
+                <TagList>
+                  {tags.map((tag) => (
+                    <TagChip
+                      key={tag.id}
+                      type="button"
+                      $selected={selectedTags.includes(tag.id)}
+                      $color={tag.color || DEFAULT_TAG_COLOR}
+                      onClick={() => toggleTag(tag.id)}
+                    >
+                      {tag.name}
+                    </TagChip>
+                  ))}
+                </TagList>
               </Field>
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        {/* ── Variants ── */}
-        {activeSection === 'sku' && (
-        <Section>
-          <SectionBody>
-
-          {/* Spec Configuration */}
-          {specs.map((spec, idx) => (
-            <SpecGroup key={idx}>
-              <SpecGroupHeader>
-                <SpecGroupName>规格 {idx + 1}</SpecGroupName>
-                <SmallBtn type="button" onClick={() => removeSpec(idx)}>删除</SmallBtn>
-              </SpecGroupHeader>
-              <SpecConfigRow>
-                <SpecNameInput
-                  placeholder="规格名称（如：颜色）"
-                  value={spec.name}
-                  onChange={(e) => updateSpecName(idx, e.target.value)}
-                />
-                {spec.name.trim() && (
-                  <>
-                    {spec.values.map((val, vi) => (
-                      <SpecValueChip key={vi}>
-                        {val}
-                        <SpecValueRemove onClick={() => removeSpecValue(idx, vi)}><Icon name="x" size={12} /></SpecValueRemove>
-                      </SpecValueChip>
-                    ))}
-                    <SpecValueInput
-                      placeholder="添加规格值"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          addSpecValue(idx, (e.target as HTMLInputElement).value)
-                          ;(e.target as HTMLInputElement).value = ''
-                        }
-                      }}
+          {/* ── SKU 管理 ── */}
+          <SectionCard $hidden={activeSection !== 'sku'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'sku'}>5</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>{t('admin.productForm.skuManagement')}</SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescSku')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
+              {specs.map((spec, idx) => (
+                <SpecGroup key={idx}>
+                  <SpecGroupHeader>
+                    <SpecGroupName>规格 {idx + 1}</SpecGroupName>
+                    <SmallBtn type="button" onClick={() => removeSpec(idx)}>删除</SmallBtn>
+                  </SpecGroupHeader>
+                  <SpecConfigRow>
+                    <SpecNameInput
+                      placeholder="规格名称（如：颜色）"
+                      value={spec.name}
+                      onChange={(e) => updateSpecName(idx, e.target.value)}
                     />
-                  </>
-                )}
-              </SpecConfigRow>
-            </SpecGroup>
-          ))}
+                    {spec.name.trim() && (
+                      <>
+                        {spec.values.map((val, vi) => (
+                          <SpecValueChip key={vi}>
+                            {val}
+                            <SpecValueRemove onClick={() => removeSpecValue(idx, vi)}><Icon name="x" size={12} /></SpecValueRemove>
+                          </SpecValueChip>
+                        ))}
+                        <SpecValueInput
+                          placeholder="添加规格值"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault()
+                              addSpecValue(idx, (e.target as HTMLInputElement).value)
+                              ;(e.target as HTMLInputElement).value = ''
+                            }
+                          }}
+                        />
+                      </>
+                    )}
+                  </SpecConfigRow>
+                </SpecGroup>
+              ))}
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <SmallBtn type="button" onClick={addSpec}>+ 添加规格维度</SmallBtn>
-          </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <SmallBtn type="button" onClick={addSpec}>+ 添加规格维度</SmallBtn>
+              </div>
 
-          {/* Variant Cards */}
-          <VariantCardList>
-            {skus.map((sku, idx) => {
-              const variantName = formatVariantName(sku.spec_values, activeSpecNames)
-              const isOnShelf = sku.shelf_status === 'on_shelf'
-              return (
-                <VariantCard key={idx}>
-                  <VariantCardHeader>
-                    <VariantName>{variantName}</VariantName>
-                    <VariantRemoveBtn
-                      type="button"
-                      disabled={skus.length <= 1}
-                      onClick={() => removeSKU(idx)}
-                      title="移除变体"
-                    >
-                      <Icon name="x" size={14} />
-                    </VariantRemoveBtn>
-                  </VariantCardHeader>
-
-                  {/* Price / Stock / Discount Price — three-column */}
-                  <VariantMainRow>
-                    <VariantField>
-                      <VariantFieldLabel>Price *</VariantFieldLabel>
-                      <VariantPriceInput
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={sku.price}
-                        onChange={(e) => updateSKU(idx, 'price', e.target.value)}
-                      />
-                    </VariantField>
-                    <VariantField>
-                      <VariantFieldLabel>Stock</VariantFieldLabel>
-                      <ToggleWrapper>
-                        <ToggleTrack
+              <VariantCardList>
+                {skus.map((sku, idx) => {
+                  const variantName = formatVariantName(sku.spec_values, activeSpecNames)
+                  const isOnShelf = sku.shelf_status === 'on_shelf'
+                  return (
+                    <VariantCard key={idx}>
+                      <VariantCardHeader>
+                        <VariantName>{variantName}</VariantName>
+                        <VariantRemoveBtn
                           type="button"
-                          $on={sku.track_inventory === 'true'}
-                          onClick={() => updateSKU(idx, 'track_inventory', sku.track_inventory === 'true' ? 'false' : 'true')}
-                          aria-label={t('admin.productForm.trackInventory')}
+                          disabled={skus.length <= 1}
+                          onClick={() => removeSKU(idx)}
+                          title="移除变体"
                         >
-                          <ToggleThumb $on={sku.track_inventory === 'true'} />
-                        </ToggleTrack>
-                        <ToggleLabel $on={sku.track_inventory === 'true'}>
-                          {t('admin.productForm.trackInventory')}
-                        </ToggleLabel>
-                      </ToggleWrapper>
-                      {sku.track_inventory === 'true' ? (
-                        <VariantStockGroup>
-                          <VariantStockBtn
-                            type="button"
-                            disabled={parseInt(sku.stock, 10) <= 0}
-                            onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, -1) }}
-                            onMouseUp={stopStockAdjust}
-                            onMouseLeave={stopStockAdjust}
-                            aria-label="减少库存"
-                          >
-                            −
-                          </VariantStockBtn>
-                          <VariantStockInput
+                          <Icon name="x" size={14} />
+                        </VariantRemoveBtn>
+                      </VariantCardHeader>
+
+                      <VariantMainRow>
+                        <VariantField>
+                          <VariantFieldLabel>Price *</VariantFieldLabel>
+                          <VariantPriceInput
                             type="number"
                             min="0"
-                            placeholder="0"
-                            value={sku.stock}
-                            onChange={(e) => {
-                              const raw = e.target.value
-                              if (raw === '' || /^\d+$/.test(raw)) {
-                                updateSKU(idx, 'stock', raw === '' ? '' : String(parseInt(raw, 10)))
-                              }
-                            }}
-                            onBlur={(e) => {
-                              const value = parseInt(e.target.value, 10)
-                              if (isNaN(value) || value < 0) updateSKU(idx, 'stock', '0')
-                            }}
+                            step="0.01"
+                            placeholder="0.00"
+                            value={sku.price}
+                            onChange={(e) => updateSKU(idx, 'price', e.target.value)}
                           />
-                          <VariantStockBtn
-                            type="button"
-                            onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, 1) }}
-                            onMouseUp={stopStockAdjust}
-                            onMouseLeave={stopStockAdjust}
-                            aria-label="增加库存"
-                          >
-                            +
-                          </VariantStockBtn>
-                        </VariantStockGroup>
-                      ) : (
-                        <NotTrackingText>{t('admin.productForm.notTracking')}</NotTrackingText>
-                      )}
-                    </VariantField>
-                    <VariantField>
-                      <VariantFieldLabel>Discount Price</VariantFieldLabel>
-                      <VariantDiscountInput
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={sku.discount_price}
-                        onChange={(e) => updateSKU(idx, 'discount_price', e.target.value)}
-                      />
-                    </VariantField>
-                  </VariantMainRow>
+                        </VariantField>
+                        <VariantField>
+                          <VariantFieldLabel>Stock</VariantFieldLabel>
+                          <ToggleWrapper>
+                            <ToggleTrack
+                              type="button"
+                              $on={sku.track_inventory === 'true'}
+                              onClick={() => updateSKU(idx, 'track_inventory', sku.track_inventory === 'true' ? 'false' : 'true')}
+                              aria-label={t('admin.productForm.trackInventory')}
+                            >
+                              <ToggleThumb $on={sku.track_inventory === 'true'} />
+                            </ToggleTrack>
+                            <ToggleLabel $on={sku.track_inventory === 'true'}>
+                              {t('admin.productForm.trackInventory')}
+                            </ToggleLabel>
+                          </ToggleWrapper>
+                          {sku.track_inventory === 'true' ? (
+                            <VariantStockGroup>
+                              <VariantStockBtn
+                                type="button"
+                                disabled={parseInt(sku.stock, 10) <= 0}
+                                onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, -1) }}
+                                onMouseUp={stopStockAdjust}
+                                onMouseLeave={stopStockAdjust}
+                                aria-label="减少库存"
+                              >
+                                −
+                              </VariantStockBtn>
+                              <VariantStockInput
+                                type="number"
+                                min="0"
+                                placeholder="0"
+                                value={sku.stock}
+                                onChange={(e) => {
+                                  const raw = e.target.value
+                                  if (raw === '' || /^\d+$/.test(raw)) {
+                                    updateSKU(idx, 'stock', raw === '' ? '' : String(parseInt(raw, 10)))
+                                  }
+                                }}
+                                onBlur={(e) => {
+                                  const value = parseInt(e.target.value, 10)
+                                  if (isNaN(value) || value < 0) updateSKU(idx, 'stock', '0')
+                                }}
+                              />
+                              <VariantStockBtn
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, 1) }}
+                                onMouseUp={stopStockAdjust}
+                                onMouseLeave={stopStockAdjust}
+                                aria-label="增加库存"
+                              >
+                                +
+                              </VariantStockBtn>
+                            </VariantStockGroup>
+                          ) : (
+                            <NotTrackingText>{t('admin.productForm.notTracking')}</NotTrackingText>
+                          )}
+                        </VariantField>
+                        <VariantField>
+                          <VariantFieldLabel>Discount Price</VariantFieldLabel>
+                          <VariantDiscountInput
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={sku.discount_price}
+                            onChange={(e) => updateSKU(idx, 'discount_price', e.target.value)}
+                          />
+                        </VariantField>
+                      </VariantMainRow>
 
-                  {/* SKU Code / Barcode / Shelf Toggle */}
-                  <VariantMetaRow>
-                    <VariantField>
-                      <VariantFieldLabel>SKU Code</VariantFieldLabel>
-                      <VariantMetaInput
-                        type="text"
-                        placeholder="e.g. TS-RED-S"
-                        value={sku.sku_code || ''}
-                        onChange={(e) => updateSKU(idx, 'sku_code', e.target.value)}
-                      />
-                    </VariantField>
-                    <VariantField>
-                      <VariantFieldLabel>Barcode</VariantFieldLabel>
-                      <VariantMetaInput
-                        type="text"
-                        placeholder="e.g. 5901234123457"
-                        value={sku.barcode || ''}
-                        onChange={(e) => updateSKU(idx, 'barcode', e.target.value)}
-                      />
-                    </VariantField>
-                    <VariantField>
-                      <VariantFieldLabel>Shelf Status</VariantFieldLabel>
-                      <ToggleWrapper>
-                        <ToggleTrack
-                          type="button"
-                          $on={isOnShelf}
-                          onClick={() => updateSKU(idx, 'shelf_status', isOnShelf ? 'off_shelf' : 'on_shelf')}
-                          aria-label={isOnShelf ? '下架' : '上架'}
-                        >
-                          <ToggleThumb $on={isOnShelf} />
-                        </ToggleTrack>
-                        <ToggleLabel $on={isOnShelf}>
-                          {isOnShelf ? 'On Shelf' : 'Off Shelf'}
-                        </ToggleLabel>
-                      </ToggleWrapper>
-                    </VariantField>
-                  </VariantMetaRow>
-                </VariantCard>
-              )
-            })}
-          </VariantCardList>
-          <VariantAddBtn type="button" onClick={addSKU}>+ {t('admin.productForm.addSku')}</VariantAddBtn>
+                      <VariantMetaRow>
+                        <VariantField>
+                          <VariantFieldLabel>SKU Code</VariantFieldLabel>
+                          <VariantMetaInput
+                            type="text"
+                            placeholder="e.g. TS-RED-S"
+                            value={sku.sku_code || ''}
+                            onChange={(e) => updateSKU(idx, 'sku_code', e.target.value)}
+                          />
+                        </VariantField>
+                        <VariantField>
+                          <VariantFieldLabel>Barcode</VariantFieldLabel>
+                          <VariantMetaInput
+                            type="text"
+                            placeholder="e.g. 5901234123457"
+                            value={sku.barcode || ''}
+                            onChange={(e) => updateSKU(idx, 'barcode', e.target.value)}
+                          />
+                        </VariantField>
+                        <VariantField>
+                          <VariantFieldLabel>Shelf Status</VariantFieldLabel>
+                          <ToggleWrapper>
+                            <ToggleTrack
+                              type="button"
+                              $on={isOnShelf}
+                              onClick={() => updateSKU(idx, 'shelf_status', isOnShelf ? 'off_shelf' : 'on_shelf')}
+                              aria-label={isOnShelf ? '下架' : '上架'}
+                            >
+                              <ToggleThumb $on={isOnShelf} />
+                            </ToggleTrack>
+                            <ToggleLabel $on={isOnShelf}>
+                              {isOnShelf ? 'On Shelf' : 'Off Shelf'}
+                            </ToggleLabel>
+                          </ToggleWrapper>
+                        </VariantField>
+                      </VariantMetaRow>
+                    </VariantCard>
+                  )
+                })}
+              </VariantCardList>
+              <VariantAddBtn type="button" onClick={addSKU}>+ {t('admin.productForm.addSku')}</VariantAddBtn>
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        {/* ── Schedule ── */}
-        {activeSection === 'schedule' && (
-        <Section>
-          <SectionBody>
+          {/* ── 定时上下架 ── */}
+          <SectionCard $hidden={activeSection !== 'schedule'}>
+            <SectionHead>
+              <StepBadge $active={activeSection === 'schedule'}>6</StepBadge>
+              <SectionTitles>
+                <SectionTitleText>{t('admin.productForm.schedule')}</SectionTitleText>
+                <SectionDesc>{t('admin.productForm.sectionDescSchedule')}</SectionDesc>
+              </SectionTitles>
+            </SectionHead>
+            <SectionBody>
               <Row>
                 <Field>
                   <Label>{t('admin.productForm.publishAt')}</Label>
@@ -1382,24 +1712,109 @@ export default function AdminProductForm() {
                 </Field>
               </Row>
             </SectionBody>
-        </Section>
-        )}
+          </SectionCard>
 
-        <BtnGroup>
-          <SecondaryBtn type="submit" disabled={isSaving || isSubmitting}>
-            {isSaving ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> Saving…</> : t('admin.productForm.saveDraft')}
-          </SecondaryBtn>
-          <PrimaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
-            {isSubmitting ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> Submitting…</> : t('admin.productForm.saveAndSubmit')}
-          </PrimaryBtn>
-          <SecondaryBtn type="button" onClick={() => navigate('/admin/products')}>
-            {t('common.cancel')}
-          </SecondaryBtn>
-        </BtnGroup>
-      </Form>
-        </ModuleContent>
-      </FormLayout>
+          <Pager>
+            <PagerBtn
+              type="button"
+              disabled={activeIndex === 0}
+              onClick={() => setActiveSection(MODULE_ITEMS[activeIndex - 1].key)}
+            >
+              <Icon name="chevron-left" size={14} />
+              {t('admin.productForm.prevSection')}
+            </PagerBtn>
+            <PagerSpacer />
+            <PagerBtn
+              type="button"
+              disabled={activeIndex === MODULE_ITEMS.length - 1}
+              onClick={() => setActiveSection(MODULE_ITEMS[activeIndex + 1].key)}
+            >
+              {t('admin.productForm.nextSection')}
+              <Icon name="chevron-right" size={14} />
+            </PagerBtn>
+          </Pager>
+        </MainCol>
 
+        {/* ── 左侧状态栏：区块导航 / 发布 / 概览 ── */}
+        <SideRail>
+          <SideCard>
+            <SideCardHead>
+              <SideCardIcon><Icon name="grid" size={15} /></SideCardIcon>
+              <SideCardTitle>{t('admin.productForm.sidebarSections')}</SideCardTitle>
+              <span style={{ marginLeft: 'auto', fontSize: FontSize.xs, color: Color.text.muted, fontWeight: 600 }}>
+                {MODULE_ITEMS.filter((i) => sectionState(i.key) !== 'todo').length}/{MODULE_ITEMS.length}
+              </span>
+            </SideCardHead>
+            <SectionNav>
+              {MODULE_ITEMS.map((item, i) => {
+                const st = sectionState(item.key)
+                const isActive = activeSection === item.key
+                return (
+                  <SectionNavItem
+                    key={item.key}
+                    type="button"
+                    $active={isActive}
+                    onClick={() => setActiveSection(item.key)}
+                  >
+                    <NavMark $state={st}>
+                      {st === 'done' ? <Icon name="check" size={11} /> : i + 1}
+                    </NavMark>
+                    <NavLabel>
+                      {item.label}
+                      {item.required && <RequiredDot>*</RequiredDot>}
+                    </NavLabel>
+                  </SectionNavItem>
+                )
+              })}
+            </SectionNav>
+          </SideCard>
+
+          <SideCard>
+            <SideCardHead>
+              <SideCardIcon><Icon name="save" size={15} /></SideCardIcon>
+              <SideCardTitle>{t('admin.productForm.sidebarPublish')}</SideCardTitle>
+            </SideCardHead>
+            <SidePrimaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveSubmit}>
+              {isSubmitting ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> {t('admin.productForm.saveAndSubmit')}</> : t('admin.productForm.saveAndSubmit')}
+            </SidePrimaryBtn>
+            <SideSecondaryBtn type="button" disabled={isSaving || isSubmitting} onClick={handleSaveDraft}>
+              {isSaving ? <><SpinIcon><Icon name="refresh" size={14} /></SpinIcon> {t('admin.productForm.saveDraft')}</> : t('admin.productForm.saveDraft')}
+            </SideSecondaryBtn>
+            <CancelLink type="button" onClick={() => navigate('/admin/products')}>
+              {t('common.cancel')}
+            </CancelLink>
+          </SideCard>
+
+          <SideCard>
+            <SideCardHead>
+              <SideCardIcon><Icon name="info" size={15} /></SideCardIcon>
+              <SideCardTitle>{t('admin.productForm.sidebarSummary')}</SideCardTitle>
+            </SideCardHead>
+            <SummaryGrid>
+              <SummaryRow>
+                <SummaryLabel>{t('admin.productForm.summaryType')}</SummaryLabel>
+                <SummaryValue>{kindLabel}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>{t('admin.productForm.summaryBrand')}</SummaryLabel>
+                <SummaryValue>{brandName}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>{t('admin.productForm.summaryCategory')}</SummaryLabel>
+                <SummaryValue>{categoryName}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>{t('admin.productForm.summaryVariants')}</SummaryLabel>
+                <SummaryValue>{skus.length}</SummaryValue>
+              </SummaryRow>
+              <SummaryRow>
+                <SummaryLabel>{t('admin.productForm.summaryStock')}</SummaryLabel>
+                <SummaryValue>{totalStock}</SummaryValue>
+              </SummaryRow>
+            </SummaryGrid>
+          </SideCard>
+        </SideRail>
+      </Layout>
     </Container>
   )
 }
