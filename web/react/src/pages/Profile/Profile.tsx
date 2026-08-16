@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from 'react'
+import { useState, useEffect, useCallback, type ReactElement } from 'react'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { Container } from '../../components/layout/PageLayout/shared'
@@ -9,6 +9,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 import { reviewAPI, type ReviewItem } from '../../api/review'
+import { publicAPI } from '../../api/public'
 
 // 配色对齐商城设计令牌（Ziggner Blue）
 const BRAND = {
@@ -76,6 +77,13 @@ const BellIcon = () => (
 const HeartIcon = () => (
   <svg {...iconProps}>
     <path d="M12 20s-7-4.4-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7 2.7C19 15.6 12 20 12 20z" />
+  </svg>
+)
+
+const AddressIcon = () => (
+  <svg {...iconProps}>
+    <path d="M12 21s-7-5.3-7-11a7 7 0 0 1 14 0c0 5.7-7 11-7 11z" />
+    <circle cx="12" cy="10" r="2.5" />
   </svg>
 )
 
@@ -258,6 +266,130 @@ const AddressSub = styled.div`
   font-size: 11px;
   color: #aaa;
   margin-top: 2px;
+`
+
+// ── addresses module ──
+const AddrList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const AddrItem = styled.div`
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+`
+
+const AddrInfo = styled.div`
+  font-size: 13px;
+  color: #444;
+  line-height: 1.7;
+  min-width: 0;
+`
+
+const AddrName = styled.div`
+  font-weight: 600;
+  color: #222;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const AddrDefaultTag = styled.span`
+  font-size: 10px;
+  font-weight: 500;
+  color: ${Color.primary};
+  border: 1px solid ${Color.primary};
+  border-radius: 999px;
+  padding: 1px 8px;
+`
+
+const AddrActions = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+`
+
+const AddrActionBtn = styled.button`
+  background: none;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: ${Color.text.secondary};
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: ${Color.primary};
+    color: ${Color.primary};
+  }
+`
+
+const AddrDeleteBtn = styled(AddrActionBtn)`
+  color: #c0392b;
+  border-color: #e8c9c4;
+
+  &:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+  }
+`
+
+const AddrForm = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 16px;
+`
+
+const AddrField = styled.label`
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: ${Color.text.secondary};
+`
+
+const AddrInput = styled.input`
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 8px;
+  font-size: 13px;
+  color: #333;
+  background: #fff;
+
+  &:focus {
+    outline: none;
+    border-color: ${Color.primary};
+  }
+`
+
+const AddrRow2 = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: ${Breakpoint.mobile}px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+const AddrCheck = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: ${Color.text.secondary};
+  cursor: pointer;
 `
 
 // ── right content ──
@@ -556,7 +688,7 @@ const LoginDesc = styled.p`
 const browseHistory: any[] = []
 const coupons: any[] = []
 
-type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'notifications' | 'favorites'
+type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'addresses' | 'notifications' | 'favorites'
 
 export default function Profile() {
   const { t } = useTranslation()
@@ -570,6 +702,68 @@ export default function Profile() {
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [reviews, setReviews] = useState<ReviewItem[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
+
+  // ── addresses ──
+  const [addresses, setAddresses] = useState<any[]>([])
+  const [addressesLoading, setAddressesLoading] = useState(false)
+  const [showAddressForm, setShowAddressForm] = useState(false)
+  const [addrForm, setAddrForm] = useState({
+    name: '', phone: '', region: '', city: '', address_line: '', postal_code: '', is_default: false,
+  })
+  const [addrSaving, setAddrSaving] = useState(false)
+
+  const fetchAddresses = useCallback(async () => {
+    setAddressesLoading(true)
+    try {
+      const data = await publicAPI.getAddresses()
+      setAddresses(Array.isArray(data) ? data : [])
+    } catch {
+      setAddresses([])
+    } finally {
+      setAddressesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (user && activeTab === 'addresses') fetchAddresses()
+  }, [user, activeTab, fetchAddresses])
+
+  const handleSaveAddress = async () => {
+    const f = addrForm
+    if (!f.name.trim() || !f.phone.trim() || !f.region.trim() || !f.city.trim() || !f.address_line.trim()) {
+      alert(t('store.profile.fillAddressFields'))
+      return
+    }
+    setAddrSaving(true)
+    try {
+      await publicAPI.createAddress({ ...f, country: 'China' })
+      setShowAddressForm(false)
+      setAddrForm({ name: '', phone: '', region: '', city: '', address_line: '', postal_code: '', is_default: false })
+      fetchAddresses()
+    } catch {
+      alert(t('store.profile.saveAddressFailed'))
+    } finally {
+      setAddrSaving(false)
+    }
+  }
+
+  const handleDeleteAddress = async (id: number) => {
+    try {
+      await publicAPI.deleteAddress(id)
+      fetchAddresses()
+    } catch {
+      alert(t('store.profile.deleteAddressFailed'))
+    }
+  }
+
+  const handleSetDefault = async (addr: any) => {
+    try {
+      await publicAPI.updateAddress(addr.id, { is_default: true })
+      fetchAddresses()
+    } catch {
+      alert(t('store.profile.saveAddressFailed'))
+    }
+  }
 
   useEffect(() => {
     if (!user || activeTab !== 'orders') return
@@ -627,6 +821,7 @@ export default function Profile() {
 
   const navItems: { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string }[] = [
     { key: 'orders', label: t('store.profile.myOrdersTab'), icon: <OrderIcon />, tab: 'orders' },
+    { key: 'addresses', label: t('store.profile.addresses'), icon: <AddressIcon />, tab: 'addresses' },
     { key: 'coupons', label: t('store.profile.myCouponsTab'), icon: <CouponIcon />, tab: 'coupons' },
     { key: 'history', label: t('store.profile.browseHistoryTab'), icon: <HistoryIcon />, tab: 'history' },
     { key: 'reviews', label: t('store.profile.myReviewsTab'), icon: <ReviewIcon />, tab: 'reviews' },
@@ -766,6 +961,91 @@ export default function Profile() {
     </ContentCard>
   )
 
+  const renderAddresses = () => (
+    <ContentCard>
+      <ModuleTitle style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>{t('store.profile.addresses')}</span>
+        <Button variant="primary" size="sm" onClick={() => setShowAddressForm(v => !v)}>
+          {showAddressForm ? t('common.cancel') : t('store.profile.addAddress')}
+        </Button>
+      </ModuleTitle>
+
+      {showAddressForm && (
+        <AddrForm>
+          <AddrField>
+            {t('store.profile.receiverName')}
+            <AddrInput value={addrForm.name} onChange={(e) => setAddrForm(f => ({ ...f, name: e.target.value }))} />
+          </AddrField>
+          <AddrField>
+            {t('store.profile.phoneNumber')}
+            <AddrInput value={addrForm.phone} onChange={(e) => setAddrForm(f => ({ ...f, phone: e.target.value }))} />
+          </AddrField>
+          <AddrRow2>
+            <AddrField>
+              {t('store.profile.region')}
+              <AddrInput value={addrForm.region} onChange={(e) => setAddrForm(f => ({ ...f, region: e.target.value }))} />
+            </AddrField>
+            <AddrField>
+              {t('store.profile.city')}
+              <AddrInput value={addrForm.city} onChange={(e) => setAddrForm(f => ({ ...f, city: e.target.value }))} />
+            </AddrField>
+          </AddrRow2>
+          <AddrField>
+            {t('store.profile.addressLine')}
+            <AddrInput value={addrForm.address_line} onChange={(e) => setAddrForm(f => ({ ...f, address_line: e.target.value }))} />
+          </AddrField>
+          <AddrRow2>
+            <AddrField>
+              {t('store.profile.postalCode')}
+              <AddrInput value={addrForm.postal_code} onChange={(e) => setAddrForm(f => ({ ...f, postal_code: e.target.value }))} />
+            </AddrField>
+            <AddrCheck>
+              <input
+                type="checkbox"
+                checked={addrForm.is_default}
+                onChange={(e) => setAddrForm(f => ({ ...f, is_default: e.target.checked }))}
+              />
+              {t('store.profile.setDefault')}
+            </AddrCheck>
+          </AddrRow2>
+          <Button variant="primary" size="sm" disabled={addrSaving} onClick={handleSaveAddress}>
+            {addrSaving ? t('common.loading') : t('common.save')}
+          </Button>
+        </AddrForm>
+      )}
+
+      {addressesLoading ? (
+        <EmptyState>{t('common.loading')}</EmptyState>
+      ) : addresses.length === 0 ? (
+        <EmptyState>
+          {t('store.profile.noAddresses')}
+        </EmptyState>
+      ) : (
+        <AddrList>
+          {addresses.map((addr: any) => (
+            <AddrItem key={addr.id}>
+              <AddrInfo>
+                <AddrName>
+                  {addr.name}
+                  {addr.is_default && <AddrDefaultTag>{t('store.profile.default')}</AddrDefaultTag>}
+                </AddrName>
+                <div>{addr.phone}</div>
+                <div>{[addr.region, addr.city, addr.address_line].filter(Boolean).join(', ')}</div>
+                {addr.postal_code && <div style={{ color: '#aaa', fontSize: 12 }}>{addr.postal_code}</div>}
+              </AddrInfo>
+              <AddrActions>
+                {!addr.is_default && (
+                  <AddrActionBtn onClick={() => handleSetDefault(addr)}>{t('store.profile.setDefault')}</AddrActionBtn>
+                )}
+                <AddrDeleteBtn onClick={() => handleDeleteAddress(addr.id)}>{t('common.delete')}</AddrDeleteBtn>
+              </AddrActions>
+            </AddrItem>
+          ))}
+        </AddrList>
+      )}
+    </ContentCard>
+  )
+
   const goTab = (item: { tab?: ProfileTab; route?: string }) => {
     if (item.tab) setActiveTab(item.tab)
     else if (item.route) navigate(item.route)
@@ -806,10 +1086,14 @@ export default function Profile() {
               ))}
             </Nav>
 
-            <AddressCard onClick={() => navigate('/profile')}>
+            <AddressCard onClick={() => setActiveTab('addresses')}>
               <div>
                 <AddressText>{t('store.profile.addresses')}</AddressText>
-                <AddressSub>{t('store.profile.addressDesc')}</AddressSub>
+                <AddressSub>
+                  {addresses.length > 0
+                    ? t('store.profile.addressCount').replace('{count}', String(addresses.length))
+                    : t('store.profile.addressDesc')}
+                </AddressSub>
               </div>
             </AddressCard>
           </div>
@@ -836,6 +1120,7 @@ export default function Profile() {
             {activeTab === 'history' && renderHistory()}
             {activeTab === 'support' && renderSupport()}
             {activeTab === 'reviews' && renderReviews()}
+            {activeTab === 'addresses' && renderAddresses()}
           </Right>
         </Shell>
       </Container>

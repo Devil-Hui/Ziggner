@@ -25,12 +25,18 @@ import { PrimaryBtn, DangerBtn, OutlinePrimaryBtn, Input, Select, FormGroup, Lab
 /* ========== Member Panel ========== */
 
 const MemberPanel = styled.div`
-  margin-top: ${Spacing.lg}px;
-  margin-bottom: ${Spacing.lg}px;
+  width: 400px;
+  flex-shrink: 0;
+  max-height: 72vh;
+  overflow-y: auto;
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
-  overflow: hidden;
   box-shadow: ${Shadow.card};
+
+  @media (max-width: 1024px) {
+    width: 100%;
+    max-height: none;
+  }
 `;
 
 const MemberPanelHeader = styled.div`
@@ -349,9 +355,9 @@ export default function AdminGroups() {
     {
       key: 'actions',
       title: t('admin.groups.columnActions'),
-      width: '120px',
+      width: '240px',
       render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap' }}>
           <ExpandBtn onClick={() => handleExpand(record.id)}>
             {expandedGroupId === record.id ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
           </ExpandBtn>
@@ -380,20 +386,23 @@ export default function AdminGroups() {
 
       {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}
 
-      <DataTable
-        columns={columns}
-        data={groups}
-        loading={loading}
-        error={error}
-        onRetry={fetchGroups}
-        emptyTitle={t('admin.groups.noGroups')}
-        emptyIcon="groups"
-        rowKey="id"
-      />
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 480px', minWidth: 0 }}>
+          <DataTable
+            columns={columns}
+            data={groups}
+            loading={loading}
+            error={error}
+            onRetry={fetchGroups}
+            emptyTitle={t('admin.groups.noGroups')}
+            emptyIcon="groups"
+            rowKey="id"
+          />
+        </div>
 
-      {/* ====== Member Panel ====== */}
-      {expandedGroupId !== null && !loading && !error && (
-        <MemberPanel>
+        {/* ====== Member Panel (right side) ====== */}
+        {expandedGroupId !== null && !loading && !error && (
+          <MemberPanel>
           <MemberPanelHeader>
             <MemberPanelTitle>
               {expandedGroup ? expandedGroup.name : ''}{t('admin.groups.memberListTitle')}
@@ -500,7 +509,8 @@ export default function AdminGroups() {
             </OutlinePrimaryBtn>
           </AddMemberRow>
         </MemberPanel>
-      )}
+        )}
+      </div>
 
       {/* ====== Create Form Dialog (reuses common FormDialog) ====== */}
       <FormDialog

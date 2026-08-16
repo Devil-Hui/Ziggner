@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useProducts, useCategories } from '../../hooks/useProducts'
-import { publicAPI, type PublicSKU, type PublicBrand } from '../../api/public'
+import { publicAPI, type PublicSKU } from '../../api/public'
 import { PromoTags } from '../../components/business/PromoTags'
 import { useInfiniteScroll } from '../../hooks/useInfiniteScroll'
 import { useTranslation } from '../../i18n'
@@ -485,47 +485,8 @@ const VFeedPrice = styled.div`
 `
 
 /* ───────────────────────────────────────────────────────────
- *  BRANDS wall
+ *  Static content
  * ─────────────────────────────────────────────────────────── */
-const BrandWall = styled.div`
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2.5rem;
-  justify-content: center;
-  align-items: center;
-`
-
-const BrandItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.6rem;
-  cursor: pointer;
-  min-width: 90px;
-`
-
-const BrandLogo = styled.div`
-  width: 76px;
-  height: 76px;
-  border-radius: 9999px;
-  background: ${C.card};
-  border: 1px solid ${C.ink}1a;
-  display: grid;
-  place-items: center;
-  font-family: ${SERIF};
-  font-size: 1.5rem;
-  color: ${C.clay};
-  transition: box-shadow 0.3s ease;
-  ${BrandItem}:hover & { box-shadow: 0 6px 18px -6px rgba(26, 23, 18, 0.3); }
-`
-
-const BrandLabel = styled.span`
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 0.8rem;
-  color: ${C.muted};
-`
-
-// ── Static content ──
 const MARQUEE_ITEMS = [
   'Free shipping over $150',
   'Handmade in small batches',
@@ -551,7 +512,6 @@ export default function Home() {
   const [hasMore, setHasMore] = useState(true)
   const [currentPage, setCurrentPage] = useState(1)
   const [hotProducts, setHotProducts] = useState<PublicSKU[]>([])
-  const [brands, setBrands] = useState<PublicBrand[]>([])
   const [offset, setOffset] = useState(0)
 
   useEffect(() => {
@@ -568,9 +528,6 @@ export default function Home() {
 
   useEffect(() => {
     publicAPI.getHotProducts().then(d => setHotProducts(d || [])).catch(() => {})
-  }, [])
-  useEffect(() => {
-    publicAPI.getBrandList().then(d => setBrands(d || [])).catch(() => {})
   }, [])
 
   const categoryProducts = categories.slice(0, 3).map(cat => ({
@@ -783,28 +740,6 @@ export default function Home() {
                     )
                   })}
                 </VFeed>
-              </div>
-            </Shell>
-          </Section>
-        )}
-
-        {/* ── BRANDS ── */}
-        {brands.length > 0 && (
-          <Section style={{ paddingTop: 0 }}>
-            <Shell>
-              <Reveal>
-                <Eyebrow>Trusted labels</Eyebrow>
-                <SectionTitle>{t('store.home.brands')}</SectionTitle>
-              </Reveal>
-              <div style={{ marginTop: '2.5rem' }}>
-                <BrandWall>
-                  {brands.map(brand => (
-                    <BrandItem key={brand.id}>
-                      <BrandLogo>{brand.name.charAt(0).toUpperCase()}</BrandLogo>
-                      <BrandLabel>{brand.name}</BrandLabel>
-                    </BrandItem>
-                  ))}
-                </BrandWall>
               </div>
             </Shell>
           </Section>
