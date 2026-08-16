@@ -245,7 +245,7 @@ export default function ImageCropper({
         return { x: Math.max(0, x), y: Math.max(0, y), w, h }
       })
     }
-  }, [getCanvasPos, aspectRatio])
+  }, [getCanvasPos, aspectRatio, selectedRatio])
 
   const handleMouseUp = useCallback(() => {
     dragRef.current = null
