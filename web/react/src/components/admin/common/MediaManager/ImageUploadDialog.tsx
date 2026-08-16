@@ -6,7 +6,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAppContext } from '../../../../store/AppContext'
 import ImageCropper from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
-import { compressImage } from '../../../../utils/imageCompression'
+import { prepareImageForUpload } from '../../../../utils/imageCompression'
 import * as S from './MediaManager.styles'
 
 interface Props {
@@ -26,61 +26,50 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
   const [compressing, setCompressing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 队列模式：外部传入 file 时直接进入裁剪
+  // 队列模式：外部传入 file 时，先校验+压缩再进入裁剪
+  // 修复：原先直接 setSelectedFile(file) 绕过了尺寸/压缩防护，导致大图进裁剪器 OOM 闪退
+  const preparedRef = useRef<File | null>(null)
   useEffect(() => {
-    if (file) {
-      setSelectedFile(file)
+    if (!file) {
+      preparedRef.current = null
+      return
+    }
+    if (preparedRef.current === file) return
+    let cancelled = false
+    setCompressing(true)
+    prepareImageForUpload(file, {
+      onReject: (msg) => {
+        if (!cancelled) showToast(msg, 'warning')
+      },
+    }).then((res) => {
+      if (cancelled) return
+      setCompressing(false)
+      if (res.ok && res.file) {
+        preparedRef.current = file // 仅在成功后才标记，兼容 StrictMode 双调用
+        setSelectedFile(res.file)
+      } else if (onSkip) {
+        preparedRef.current = file
+        onSkip() // 被拒绝的文件在队列中跳过，避免整批卡死
+      }
+    })
+    return () => {
+      cancelled = true
     }
   }, [file])
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0]
-    if (f) {
-      if (!f.type.startsWith('image/')) {
-        showToast('请选择图片文件', 'warning')
-        return
-      }
-      // 超大文件直接拒绝，避免浏览器端 canvas 解码 OOM 导致页面闪退
-      if (f.size > 15 * 1024 * 1024) {
-        showToast('图片过大（>15MB），请压缩后再上传', 'warning')
-        return
-      }
-      // 超大尺寸图片先检查（createImageBitmap 轻量解码），>8192px 拒绝
-      try {
-        const bmp = await createImageBitmap(f)
-        const { width, height } = bmp
-        bmp.close()
-        if (width > 8192 || height > 8192) {
-          showToast(`图片尺寸过大（${width}×${height}），请先缩小至 8192px 以内`, 'warning')
-          return
-        }
-      } catch {
-        // 解码失败继续尝试压缩流程（后端仍有校验）
-      }
-      // 大图自动压缩（>200KB 触发，~85% 质量 JPEG）
-      if (f.size > 200 * 1024) {
-        setCompressing(true)
-        try {
-          const compressed = await compressImage(f, { maxSizeMB: 1, maxWidthOrHeight: 2048, initialQuality: 0.85 })
-          const ratio = ((1 - compressed.size / f.size) * 100).toFixed(0)
-          if (compressed.size < f.size) {
-            showToast(`图片已压缩 (-${ratio}%)`, 'success')
-          }
-          setSelectedFile(compressed)
-        } catch {
-          // 压缩失败：原图 >5MB 拒绝（避免把超大原图送进裁剪器再次 OOM），否则用原图
-          if (f.size > 5 * 1024 * 1024) {
-            showToast('压缩失败且原图过大，请选择更小的图片', 'warning')
-          } else {
-            setSelectedFile(f)
-          }
-        } finally {
-          setCompressing(false)
-        }
-      } else {
-        setSelectedFile(f)
-      }
+    if (!f) return
+    setCompressing(true)
+    const res = await prepareImageForUpload(f, {
+      onReject: (msg) => showToast(msg, 'warning'),
+    })
+    setCompressing(false)
+    if (!res.ok || !res.file) return
+    if (res.compressed && res.ratio != null) {
+      showToast(`图片已压缩 (-${res.ratio}%)`, 'success')
     }
+    setSelectedFile(res.file)
   }
 
   const handleCropConfirm = (results: MultiSizeCropResult) => {

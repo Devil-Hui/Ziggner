@@ -100,3 +100,75 @@ export async function compressImages(
 ): Promise<File[]> {
   return Promise.all(files.map((f) => compressImage(f, options)))
 }
+
+/**
+ * 上传前统一预处理：体积/尺寸护栏 + 自动压缩。
+ *
+ * 同时服务于「dropzone 队列直传」与「对话框内手动选图」两条入口。
+ * 原先护栏只写在 ImageUploadDialog 的 handleFileSelect（手动选图）里，
+ * 队列模式走 useEffect 直接 setSelectedFile 绕过了它，导致大图未经压缩
+ * 直接进 ImageCropper 触发 canvas 解码 OOM（页面闪退）。集中到这里后两条
+ * 路径都受保护。
+ *
+ * @returns ok=false 表示被护栏拒绝（已通过 onReject 提示）；ok=true 时 file 为最终待裁剪文件
+ */
+export interface PrepareImageResult {
+  ok: boolean
+  file?: File
+  compressed?: boolean
+  ratio?: number
+}
+
+export async function prepareImageForUpload(
+  file: File,
+  opts: { onReject?: (msg: string) => void } = {},
+): Promise<PrepareImageResult> {
+  if (!file.type.startsWith('image/')) {
+    opts.onReject?.('请选择图片文件')
+    return { ok: false }
+  }
+
+  const MAX_BYTES = 15 * 1024 * 1024
+  if (file.size > MAX_BYTES) {
+    opts.onReject?.('图片过大（>15MB），请压缩后再上传')
+    return { ok: false }
+  }
+
+  // 轻量解码检查尺寸，>8192px 直接拒绝（避免后续 canvas 解码 OOM）
+  try {
+    const bmp = await createImageBitmap(file)
+    const { width, height } = bmp
+    bmp.close()
+    if (width > 8192 || height > 8192) {
+      opts.onReject?.(`图片尺寸过大（${width}×${height}），请先缩小至 8192px 以内`)
+      return { ok: false }
+    }
+  } catch {
+    // 解码失败：交给压缩流程/后端兜底校验
+  }
+
+  // 大图自动压缩（>200KB 触发，compressImage 内部对更小文件直接透传）
+  if (file.size > 200 * 1024) {
+    try {
+      const compressed = await compressImage(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight: 2048,
+        initialQuality: 0.85,
+      })
+      if (compressed.size < file.size) {
+        const ratio = ((1 - compressed.size / file.size) * 100).toFixed(0)
+        return { ok: true, file: compressed, compressed: true, ratio: Number(ratio) }
+      }
+      return { ok: true, file }
+    } catch {
+      // 压缩失败：原图 >5MB 则拒绝（避免超大原图送进裁剪器再次 OOM），否则透传原图
+      if (file.size > 5 * 1024 * 1024) {
+        opts.onReject?.('压缩失败且原图过大，请选择更小的图片')
+        return { ok: false }
+      }
+      return { ok: true, file }
+    }
+  }
+
+  return { ok: true, file }
+}
