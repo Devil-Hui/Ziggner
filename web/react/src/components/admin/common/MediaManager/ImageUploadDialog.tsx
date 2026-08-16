@@ -102,7 +102,6 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
                   onSkip()
                 }
               }}
-              aspectRatio={1}
               maxWidth={2560}
             />
             {file && onSkip && (

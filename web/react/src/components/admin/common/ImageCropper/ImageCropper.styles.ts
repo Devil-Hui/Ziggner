@@ -73,3 +73,24 @@ export const Info = styled.div`
   color: ${Color.text.muted};
   text-align: center;
 `
+
+export const RatioBar = styled.div`
+  display: flex;
+  gap: ${Spacing.sm}px;
+  align-items: center;
+  flex-wrap: wrap;
+`
+
+export const RatioBtn = styled.button<{ $active?: boolean }>`
+  padding: 6px ${Spacing.lg}px;
+  border: 1px solid ${({ $active }) => ($active ? Color.status.error : Color.border.medium)};
+  border-radius: ${Radius.sm}px;
+  background: ${({ $active }) => ($active ? Color.status.error : Color.bg.card)};
+  color: ${({ $active }) => ($active ? Color.text.inverse : Color.text.secondary)};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? '#c0392b' : Color.primaryLight)};
+  }
+`

@@ -41,11 +41,21 @@ function dataURLToBlob(dataUrl: string): Blob {
   return new Blob([arr], { type: mime })
 }
 
+/** 比例数值 → 展示标签（0=自由；常见预设直映射，避免浮点比展示误差） */
+function ratioLabel(r: number): string {
+  if (r === 0) return '自由'
+  if (Math.abs(r - 1) < 1e-6) return '1:1'
+  if (Math.abs(r - 4 / 5) < 1e-6) return '4:5'
+  if (Math.abs(r - 3 / 4) < 1e-6) return '3:4'
+  return `${r.toFixed(2)}:1`
+}
+
 export default function ImageCropper({
   file,
   onCrop,
   onCancel,
   aspectRatio = 1,
+  aspectRatioOptions,
   maxWidth = 800,
   canvasWidth = 400,
 }: ImageCropperProps) {
@@ -57,6 +67,9 @@ export default function ImageCropper({
   const [cropRect, setCropRect] = useState<CropRect>({ x: 0, y: 0, w: 200, h: 200 })
   const dragRef = useRef<DragState | null>(null)
   const [scale, setScale] = useState(1)
+  // 用户可选比例（选择器当前值）；0 表示自由比例。
+  const [selectedRatio, setSelectedRatio] = useState(aspectRatio)
+  const ratioOptions = aspectRatioOptions ?? [1, 4 / 5, 3 / 4, 0]
 
   // 加载图片
   useEffect(() => {
@@ -221,10 +234,10 @@ export default function ImageCropper({
           h = newH
         }
 
-        // 宽高比锁定
-        if (aspectRatio > 0) {
+        // 宽高比锁定（使用用户当前所选比例；自由比例 selectedRatio===0 时不锁定）
+        if (selectedRatio > 0) {
           if (corner === 'tl' || corner === 'br' || corner === 'tr' || corner === 'bl') {
-            h = w / aspectRatio
+            h = w / selectedRatio
             if (corner.includes('t')) y = dragState.startRect.y + dragState.startRect.h - h
           }
         }
@@ -238,6 +251,21 @@ export default function ImageCropper({
     dragRef.current = null
   }, [])
 
+  // 切换比例时，按新比例重算居中裁剪框（不重载图片，直接基于已解码的 imgRef）。
+  // ratio>0 锁定该比例；ratio===0（自由）时初始仍给正方形，后续可任意拖拽。
+  const resetCropForRatio = useCallback((ratio: number) => {
+    const img = imgRef.current
+    if (!img) return
+    const cropW = Math.min(img.width * 0.6, img.width)
+    const cropH = ratio > 0 ? cropW / ratio : cropW
+    setCropRect({
+      x: (img.width - cropW) / 2,
+      y: (img.height - cropH) / 2,
+      w: cropW,
+      h: cropH,
+    })
+  }, [])
+
   // 确认裁剪
   const handleConfirm = useCallback(() => {
     const img = imgRef.current
@@ -246,14 +274,16 @@ export default function ImageCropper({
       console.error('[ImageCropper] 确认裁剪时图片未就绪，已跳过')
       return
     }
+    // 派生尺寸：宽度固定，高度按当前比例派生（自由比例用裁剪框实际宽高比）。
+    const sizeRatio = selectedRatio > 0 ? selectedRatio : (cropRect.h ? cropRect.w / cropRect.h : 1)
+    const deriveH = (w: number) => Math.max(1, Math.round(w / sizeRatio))
     const maxOriginalW = Math.min(maxWidth, cropRect.w)
-    const maxOriginalH = maxOriginalW / aspectRatio
 
     const sizes = [
-      { key: 'thumb', w: 200, h: 200 },
-      { key: 'list', w: 400, h: 400 },
-      { key: 'large', w: 800, h: 800 },
-      { key: 'original', w: maxOriginalW, h: maxOriginalH },
+      { key: 'thumb', w: 200, h: deriveH(200) },
+      { key: 'list', w: 400, h: deriveH(400) },
+      { key: 'large', w: 800, h: deriveH(800) },
+      { key: 'original', w: maxOriginalW, h: deriveH(maxOriginalW) },
     ] as const
 
     const results: Record<string, { blob: Blob; dataUrl: string }> = {}
@@ -283,7 +313,7 @@ export default function ImageCropper({
     Promise.all(sizes.map((size) => generateSize(size.key, size.w, size.h))).then(() => {
       onCrop(results as unknown as MultiSizeCropResult)
     })
-  }, [cropRect, maxWidth, aspectRatio, onCrop])
+  }, [cropRect, maxWidth, selectedRatio, onCrop])
 
   if (!file) return null
 
@@ -292,8 +322,19 @@ export default function ImageCropper({
       <S.Dialog onClick={e => e.stopPropagation()}>
         <S.Header>
           <S.Title>{t('admin.imageCropper.title')}</S.Title>
-          <S.Info>{t('admin.imageCropper.info').replace('{ratio}', String(aspectRatio))}</S.Info>
+          <S.Info>{t('admin.imageCropper.info').replace('{ratio}', ratioLabel(selectedRatio))}</S.Info>
         </S.Header>
+        <S.RatioBar>
+          {ratioOptions.map((r) => (
+            <S.RatioBtn
+              key={r}
+              $active={selectedRatio === r}
+              onClick={() => { setSelectedRatio(r); resetCropForRatio(r) }}
+            >
+              {ratioLabel(r)}
+            </S.RatioBtn>
+          ))}
+        </S.RatioBar>
         <S.CanvasContainer>
           <S.Canvas
             ref={canvasRef}

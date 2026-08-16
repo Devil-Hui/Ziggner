@@ -14,8 +14,10 @@ export interface ImageCropperProps {
   onCrop: (results: MultiSizeCropResult) => void
   /** 取消裁剪 */
   onCancel: () => void
-  /** 裁剪宽高比 (默认 1:1) */
+  /** 裁剪宽高比 (默认 1:1)；作为选择器初始值 */
   aspectRatio?: number
+  /** 可选比例预设 (0 表示自由比例)；组件内渲染比例选择栏。默认 [1, 4/5, 3/4, 0] */
+  aspectRatioOptions?: number[]
   /** 原图最大宽度 (默认 2560) */
   maxWidth?: number
   /** 画布宽度 (默认 400) */
