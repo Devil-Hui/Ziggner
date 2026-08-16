@@ -10,6 +10,7 @@ import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
 import { reviewAPI, type ReviewItem } from '../../api/review'
 import { publicAPI } from '../../api/public'
+import { patch } from '../../api/request'
 
 // 配色对齐商城设计令牌（Ziggner Blue）
 const BRAND = {
@@ -84,6 +85,20 @@ const AddressIcon = () => (
   <svg {...iconProps}>
     <path d="M12 21s-7-5.3-7-11a7 7 0 0 1 14 0c0 5.7-7 11-7 11z" />
     <circle cx="12" cy="10" r="2.5" />
+  </svg>
+)
+
+const UserIcon = () => (
+  <svg {...iconProps}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
+  </svg>
+)
+
+const LockIcon = () => (
+  <svg {...iconProps}>
+    <rect x="5" y="11" width="14" height="9" rx="2" />
+    <path d="M8 11V8a4 4 0 0 1 8 0v3" />
   </svg>
 )
 
@@ -210,6 +225,23 @@ const Nav = styled.nav`
     position: static;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+`
+
+const NavGroupTitle = styled.div`
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: ${Color.text.muted};
+  padding: 14px 12px 6px;
+
+  &:first-child {
+    padding-top: 4px;
+  }
+
+  @media (max-width: ${Breakpoint.mobile}px) {
+    flex-basis: 100%;
   }
 `
 
@@ -390,6 +422,27 @@ const AddrCheck = styled.label`
   font-size: 12px;
   color: ${Color.text.secondary};
   cursor: pointer;
+`
+
+// ── profile info rows ──
+const ProfileInfoRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid ${Color.border.light};
+  font-size: 13px;
+`
+
+const ProfileLabel = styled.div`
+  width: 110px;
+  flex-shrink: 0;
+  color: ${Color.text.muted};
+`
+
+const ProfileValue = styled.div`
+  color: ${Color.text.body};
+  word-break: break-all;
 `
 
 // ── right content ──
@@ -688,11 +741,11 @@ const LoginDesc = styled.p`
 const browseHistory: any[] = []
 const coupons: any[] = []
 
-type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'addresses' | 'notifications' | 'favorites'
+type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'addresses' | 'notifications' | 'favorites' | 'profile' | 'password' | 'security'
 
 export default function Profile() {
   const { t } = useTranslation()
-  const { user, logout } = useUser()
+  const { user, logout, refreshUser } = useUser()
   const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('orders')
@@ -711,6 +764,14 @@ export default function Profile() {
     name: '', phone: '', region: '', city: '', address_line: '', postal_code: '', is_default: false,
   })
   const [addrSaving, setAddrSaving] = useState(false)
+
+  // ── profile / password / security ──
+  const [nicknameDraft, setNicknameDraft] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [pwOld, setPwOld] = useState('')
+  const [pwNew, setPwNew] = useState('')
+  const [pwConfirm, setPwConfirm] = useState('')
+  const [savingPw, setSavingPw] = useState(false)
 
   const fetchAddresses = useCallback(async () => {
     setAddressesLoading(true)
@@ -768,7 +829,7 @@ export default function Profile() {
   useEffect(() => {
     if (!user || activeTab !== 'orders') return
     setOrdersLoading(true)
-    const status = activeOrder === 'refund' ? '' : activeOrder
+    const status = (activeOrder === 'refund' || activeOrder === 'all') ? '' : activeOrder
     orderAPI.list(status, 1, paymentFilter).then(data => {
       setOrders(data.results || [])
     }).catch(() => setOrders([])).finally(() => setOrdersLoading(false))
@@ -819,15 +880,47 @@ export default function Profile() {
     { key: 'unpaid', label: t('store.profile.unpaid') },
   ]
 
-  const navItems: { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string }[] = [
-    { key: 'orders', label: t('store.profile.myOrdersTab'), icon: <OrderIcon />, tab: 'orders' },
-    { key: 'addresses', label: t('store.profile.addresses'), icon: <AddressIcon />, tab: 'addresses' },
-    { key: 'coupons', label: t('store.profile.myCouponsTab'), icon: <CouponIcon />, tab: 'coupons' },
-    { key: 'history', label: t('store.profile.browseHistoryTab'), icon: <HistoryIcon />, tab: 'history' },
-    { key: 'reviews', label: t('store.profile.myReviewsTab'), icon: <ReviewIcon />, tab: 'reviews' },
-    { key: 'support', label: t('store.profile.supportTab'), icon: <SupportIcon />, tab: 'support' },
-    { key: 'notifications', label: t('store.nav.notifications'), icon: <BellIcon />, route: '/notifications' },
-    { key: 'favorites', label: t('store.nav.favorites'), icon: <HeartIcon />, route: '/favorites' },
+  type NavItemDef = { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string; orderKey?: string }
+  const navGroups: { title: string; items: NavItemDef[] }[] = [
+    {
+      title: t('store.profile.groupOrders'),
+      items: [
+        { key: 'all_orders', label: t('store.profile.allOrders'), icon: <OrderIcon />, orderKey: 'all' },
+        { key: 'pending_payment', label: t('store.profile.pendingPayment'), icon: <OrderIcon />, orderKey: 'pending_payment' },
+        { key: 'delivered', label: t('store.profile.pendingReceipt'), icon: <OrderIcon />, orderKey: 'delivered' },
+        { key: 'refund', label: t('store.profile.refund'), icon: <OrderIcon />, orderKey: 'refund' },
+      ],
+    },
+    {
+      title: t('store.profile.groupAccount'),
+      items: [
+        { key: 'profile', label: t('store.profile.personalInfoTab'), icon: <UserIcon />, tab: 'profile' },
+        { key: 'password', label: t('store.profile.changePassword'), icon: <LockIcon />, tab: 'password' },
+        { key: 'addresses', label: t('store.profile.addresses'), icon: <AddressIcon />, tab: 'addresses' },
+      ],
+    },
+    {
+      title: t('store.profile.groupMore'),
+      items: [
+        { key: 'coupons', label: t('store.profile.myCouponsTab'), icon: <CouponIcon />, tab: 'coupons' },
+        { key: 'history', label: t('store.profile.browseHistoryTab'), icon: <HistoryIcon />, tab: 'history' },
+        { key: 'reviews', label: t('store.profile.myReviewsTab'), icon: <ReviewIcon />, tab: 'reviews' },
+        { key: 'favorites', label: t('store.nav.favorites'), icon: <HeartIcon />, route: '/favorites' },
+        { key: 'notifications', label: t('store.nav.notifications'), icon: <BellIcon />, route: '/notifications' },
+      ],
+    },
+    {
+      title: t('store.profile.groupSupport'),
+      items: [
+        { key: 'support', label: t('store.profile.supportTab'), icon: <SupportIcon />, tab: 'support' },
+      ],
+    },
+    {
+      title: t('store.profile.groupSecurity'),
+      items: [
+        { key: 'security', label: t('store.profile.securityPrivacy'), icon: <LockIcon />, tab: 'security' },
+      ],
+    },
   ]
 
   const renderOrders = () => (
@@ -1046,10 +1139,102 @@ export default function Profile() {
     </ContentCard>
   )
 
-  const goTab = (item: { tab?: ProfileTab; route?: string }) => {
-    if (item.tab) setActiveTab(item.tab)
-    else if (item.route) navigate(item.route)
+  const goTab = (item: NavItemDef) => {
+    if (item.orderKey) {
+      setActiveTab('orders')
+      setActiveOrder(item.orderKey)
+    } else if (item.tab) {
+      setActiveTab(item.tab)
+    } else if (item.route) {
+      navigate(item.route)
+    }
   }
+
+  const renderProfile = () => {
+    const handleSaveNickname = async () => {
+      setSavingProfile(true)
+      try {
+        await patch('/users/me/', { nickname: nicknameDraft.trim() })
+        await refreshUser()
+        setSavingProfile(false)
+        alert(t('store.profile.profileSaved'))
+      } catch {
+        setSavingProfile(false)
+        alert(t('store.profile.profileSaveFailed'))
+      }
+    }
+    return (
+      <ContentCard>
+        <ModuleTitle>{t('store.profile.personalInfoTab')}</ModuleTitle>
+        <ProfileInfoRow><ProfileLabel>{t('store.profile.personalInfo')}</ProfileLabel><ProfileValue>{user.nickname || user.name}</ProfileValue></ProfileInfoRow>
+        <ProfileInfoRow><ProfileLabel>{t('store.profile.email')}</ProfileLabel><ProfileValue>{user.email}</ProfileValue></ProfileInfoRow>
+        <ProfileInfoRow><ProfileLabel>{t('store.profile.nickname')}</ProfileLabel>
+          <ProfileValue>
+            <AddrInput
+              value={nicknameDraft}
+              onChange={(e) => setNicknameDraft(e.target.value)}
+              placeholder={user.nickname || user.name || ''}
+              style={{ width: 240 }}
+            />
+          </ProfileValue>
+        </ProfileInfoRow>
+        <div style={{ marginTop: 12 }}>
+          <Button variant="primary" size="sm" disabled={savingProfile} onClick={handleSaveNickname}>
+            {savingProfile ? t('common.loading') : t('store.profile.saveNickname')}
+          </Button>
+        </div>
+      </ContentCard>
+    )
+  }
+
+  const renderPassword = () => {
+    const handleChangePw = async () => {
+      if (!pwOld || !pwNew || !pwConfirm) {
+        alert(t('store.profile.fillPasswordFields'))
+        return
+      }
+      if (pwNew !== pwConfirm) {
+        alert(t('store.profile.passwordMismatch'))
+        return
+      }
+      setSavingPw(true)
+      try {
+        await publicAPI.changePassword({ old_password: pwOld, new_password: pwNew, confirm_password: pwConfirm })
+        setPwOld('')
+        setPwNew('')
+        setPwConfirm('')
+        alert(t('store.profile.changePasswordSuccess'))
+      } catch {
+        alert(t('store.profile.changePasswordFailed'))
+      } finally {
+        setSavingPw(false)
+      }
+    }
+    return (
+      <ContentCard>
+        <ModuleTitle>{t('store.profile.changePassword')}</ModuleTitle>
+        <AddrField>{t('store.profile.oldPassword')}<AddrInput type="password" value={pwOld} onChange={(e) => setPwOld(e.target.value)} /></AddrField>
+        <AddrField>{t('store.profile.newPassword')}<AddrInput type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} /></AddrField>
+        <AddrField>{t('store.profile.confirmPassword')}<AddrInput type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} /></AddrField>
+        <div style={{ marginTop: 12 }}>
+          <Button variant="primary" size="sm" disabled={savingPw} onClick={handleChangePw}>
+            {savingPw ? t('common.loading') : t('store.profile.changePassword')}
+          </Button>
+        </div>
+      </ContentCard>
+    )
+  }
+
+  const renderSecurity = () => (
+    <ContentCard>
+      <ModuleTitle>{t('store.profile.securityPrivacy')}</ModuleTitle>
+      <SupportDesc style={{ marginBottom: 16 }}>{t('store.profile.accountSecurityDesc')}</SupportDesc>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+        <Button variant="primary" size="sm" onClick={() => setActiveTab('password')}>{t('store.profile.changePassword')}</Button>
+        <Button size="sm" onClick={() => { logout(); navigate('/') }}>{t('store.profile.logout')}</Button>
+      </div>
+    </ContentCard>
+  )
 
   return (
     <PageLayout>
@@ -1071,18 +1256,25 @@ export default function Profile() {
             </HeroLogout>
           </Hero>
 
-          {/* 左：导航 + 地址 */}
+          {/* 左：分组导航 + 地址 */}
           <div>
             <Nav>
-              {navItems.map(item => (
-                <NavItem
-                  key={item.key}
-                  $active={item.tab ? activeTab === item.tab : false}
-                  onClick={() => goTab(item)}
-                >
-                  {item.icon}
-                  {item.label}
-                </NavItem>
+              {navGroups.map(group => (
+                <div key={group.title}>
+                  <NavGroupTitle>{group.title}</NavGroupTitle>
+                  {group.items.map(item => (
+                    <NavItem
+                      key={item.key}
+                      $active={item.orderKey
+                        ? (activeTab === 'orders' && activeOrder === item.orderKey)
+                        : item.tab ? activeTab === item.tab : false}
+                      onClick={() => goTab(item)}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavItem>
+                  ))}
+                </div>
               ))}
             </Nav>
 
@@ -1121,6 +1313,9 @@ export default function Profile() {
             {activeTab === 'support' && renderSupport()}
             {activeTab === 'reviews' && renderReviews()}
             {activeTab === 'addresses' && renderAddresses()}
+            {activeTab === 'profile' && renderProfile()}
+            {activeTab === 'password' && renderPassword()}
+            {activeTab === 'security' && renderSecurity()}
           </Right>
         </Shell>
       </Container>

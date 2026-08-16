@@ -222,6 +222,10 @@ export const publicAPI = {
 
   logout: () => post<void>('/users/session/logout/', {}),
 
+  /** 修改密码（需旧密码） */
+  changePassword: (data: { old_password: string; new_password: string; confirm_password: string }) =>
+    post<{ detail: string }>('/users/password/', data),
+
   /** 用户注册 */
   register: (data: {
     username: string;
