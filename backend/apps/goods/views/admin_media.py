@@ -34,6 +34,9 @@ from ..services import GoodsCacheService
 
 _logger = logging.getLogger('biz')
 
+# WebP 编码质量（0-100，Pillow 档）。前端对应 WEBP_QUALITY=0.9，强度一致。
+WEBP_QUALITY = 90
+
 
 def _serialize_media(m: ProductMedia) -> dict:
     """序列化单个 ProductMedia 为响应 dict（含 alt_text）。"""
@@ -342,7 +345,11 @@ class MediaCreateView(BaseApiView):
                 try:
                     f.seek(0)
                     with Image.open(f) as probe:
-                        probe.load()  # 强制解码，校验文件完整可解码
+                        probe.load()  # 强制全量像素解码，校验文件完整可解码
+                        # 真实格式必须是 WEBP：防止伪造 content_type/扩展名（实为 PNG/JPEG 字节）
+                        # 却以 .webp 后缀裸存导致展示损坏 —— 不符则降级到下方 Pillow 重编码。
+                        if (probe.format or '').upper() != 'WEBP':
+                            raise ValueError(f'声明 WebP 但实际格式为 {probe.format}')
                     f.seek(0)
                     raw = f.read()
                     safe_name = f'{uuid.uuid4().hex}.webp'
@@ -367,8 +374,8 @@ class MediaCreateView(BaseApiView):
                     else:
                         img = img.convert('RGB')
                     buf = BytesIO()
-                    # lossless=False + quality=90：视觉近无损；method=4 平衡压缩率与上传耗时
-                    img.save(buf, 'WEBP', lossless=False, quality=90, method=4)
+                    # lossless=False + quality=WEBP_QUALITY：视觉近无损；method=4 平衡压缩率与上传耗时
+                    img.save(buf, 'WEBP', lossless=False, quality=WEBP_QUALITY, method=4)
                 buf.seek(0)
                 safe_name = f'{uuid.uuid4().hex}.webp'
                 path = default_storage.save(

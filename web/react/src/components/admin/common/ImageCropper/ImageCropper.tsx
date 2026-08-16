@@ -9,6 +9,7 @@ import { useRef, useEffect, useState, useCallback } from 'react'
 import { useTranslation } from '../../../../i18n'
 import type { ImageCropperProps, MultiSizeCropResult } from './ImageCropper.types'
 import * as S from './ImageCropper.styles'
+import { WEBP_QUALITY } from '../../../../utils/imageCompression'
 
 interface CropRect {
   x: number
@@ -264,9 +265,9 @@ export default function ImageCropper({
         canvas.height = h
         const ctx = canvas.getContext('2d')!
         ctx.drawImage(img, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, w, h)
-        // 直接出 WebP q0.9（视觉近无损，体积优于 JPEG）；后端对已发 WebP 校验后原样落盘，免二次编码。
+        // 直接出 WebP（视觉近无损，体积优于 JPEG）；后端对已发 WebP 校验后原样落盘，免二次编码。
         // 透明背景由 WebP alpha 保留，无需铺白底。
-        const dataUrl = canvas.toDataURL('image/webp', 0.9)
+        const dataUrl = canvas.toDataURL('image/webp', WEBP_QUALITY)
         canvas.toBlob(
           (blob) => {
             if (blob) results[key] = { blob, dataUrl }
@@ -274,7 +275,7 @@ export default function ImageCropper({
             resolve()
           },
           'image/webp',
-          0.9
+          WEBP_QUALITY
         )
       })
     }

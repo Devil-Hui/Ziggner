@@ -40,6 +40,9 @@ const DEFAULT_OPTIONS: Required<CompressionOptions> = {
   minQuality: 0.4,
 }
 
+/** WebP 编码质量（0-1，浏览器档）。后端对应 WEBP_QUALITY=90，强度一致，集中管理避免散落。 */
+export const WEBP_QUALITY = 0.9
+
 /** canvas → Blob 的 Promise 封装（toBlob 回调可能返回 null） */
 function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
@@ -92,8 +95,8 @@ export async function compressImage(
     ctx.drawImage(bmp, 0, 0, targetW, targetH)
     bmp.close()
 
-    // 优先出 WebP q0.9（视觉近无损）；toBlob 返回 null（极旧环境）→ 回退 PNG，后端仍归一化 WebP
-    const webpBlob = await canvasToBlob(canvas, 'image/webp', 0.9)
+    // 优先出 WebP（视觉近无损）；toBlob 返回 null（极旧环境）→ 回退 PNG，后端仍归一化 WebP
+    const webpBlob = await canvasToBlob(canvas, 'image/webp', WEBP_QUALITY)
     const blob = webpBlob || (await canvasToBlob(canvas, 'image/png'))
 
     // 防御：编码失败 / 0 字节 → 回退原图（仅防异常，不防体积膨胀）

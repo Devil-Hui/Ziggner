@@ -5,6 +5,8 @@
  * 返回原视频的 blob URL 用于 CSS 预览
  */
 
+import { WEBP_QUALITY } from './imageCompression'
+
 export interface VideoFrameResult {
   thumb: { blob: Blob; dataUrl: string }   // 200x200
   list: { blob: Blob; dataUrl: string }    // 400x400
@@ -42,8 +44,8 @@ function generateFrameSizes(
         const sx = (videoWidth - sw) / 2
         const sy = (videoHeight - sh) / 2
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, size.w, size.h)
-        // 视频封面也统一 WebP q0.9，与全局图片策略一致
-        const dataUrl = canvas.toDataURL('image/webp', 0.9)
+        // 视频封面也统一 WebP，与全局图片策略一致
+        const dataUrl = canvas.toDataURL('image/webp', WEBP_QUALITY)
         canvas.toBlob(
           (blob) => {
             completed++
@@ -54,7 +56,7 @@ function generateFrameSizes(
             }
           },
           'image/webp',
-          0.9
+          WEBP_QUALITY
         )
       }
     }
