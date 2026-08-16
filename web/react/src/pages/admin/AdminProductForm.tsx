@@ -8,7 +8,6 @@ import type { ProductMediaItem } from '../../api/admin'
 import { useTranslation } from '../../i18n'
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit'
 import { MediaManager } from '../../components/admin/common/MediaManager'
-import { ProductKindToggle } from '../../components/admin/common/ProductKindToggle'
 import { Icon } from '../../components/admin/common/Icon'
 import {
   getAllStagedItems,
@@ -308,6 +307,13 @@ const SectionBody = styled.div`
   @media (max-width: 600px) {
     padding-left: 0;
   }
+`
+
+const SubHead = styled.h4`
+  margin: ${Spacing.xl}px 0 ${Spacing.md}px;
+  font-size: ${FontSize.base}px;
+  font-weight: ${FontWeight.medium};
+  color: ${Color.text.primary};
 `
 
 // ── Side Cards (slim) ──
@@ -967,13 +973,11 @@ export default function AdminProductForm() {
   const [taxable, setTaxable] = useState(true)
   const [productKind, setProductKind] = useState<'physical' | 'virtual'>('physical')  // 实体/虚拟商品
   // 右侧栏当前激活区块（scroll-spy）
-  const [activeSection, setActiveSection] = useState<string>('productType')
+  const [activeSection, setActiveSection] = useState<string>('basic')
   const MODULE_ITEMS = [
-    { key: 'productType', label: t('admin.productForm.productTypeTitle'), required: false, desc: t('admin.productForm.sectionDescType') },
-    { key: 'titleDesc', label: t('admin.productForm.titleDescription'), required: true, desc: t('admin.productForm.sectionDescTitle') },
+    { key: 'basic', label: t('admin.productForm.basicInfo'), required: true, desc: t('admin.productForm.sectionDescBasic') },
     { key: 'media', label: t('admin.productForm.mediaSection'), required: false, desc: t('admin.productForm.sectionDescMedia') },
-    { key: 'organization', label: t('admin.productForm.organization'), required: true, desc: t('admin.productForm.sectionDescOrg') },
-    { key: 'sku', label: t('admin.productForm.skuManagement'), required: false, desc: t('admin.productForm.sectionDescSku') },
+    { key: 'orgSku', label: t('admin.productForm.orgSku'), required: true, desc: t('admin.productForm.sectionDescOrgSku') },
     { key: 'schedule', label: t('admin.productForm.schedule'), required: false, desc: t('admin.productForm.sectionDescSchedule') },
   ]
 
@@ -1372,9 +1376,8 @@ export default function AdminProductForm() {
 
   // ── 区块完成状态（用于左侧状态栏标记） ──
   const sectionState = (key: string): 'done' | 'todo' | 'optional' => {
-    if (key === 'titleDesc') return name.trim() ? 'done' : 'todo'
-    if (key === 'organization') return (brandId && categoryId) ? 'done' : 'todo'
-    if (key === 'sku') return skus.every((s) => s.price !== '' && Number(s.price) > 0) ? 'done' : 'todo'
+    if (key === 'basic') return name.trim() ? 'done' : 'todo'
+    if (key === 'orgSku') return (brandId && categoryId) ? 'done' : 'todo'
     if (key === 'media') return 'optional'
     return 'done'
   }
@@ -1423,35 +1426,29 @@ export default function AdminProductForm() {
             </AlertBar>
           )}
 
-          {/* ── 商品类型 ── */}
-          <SectionCard $hidden={activeSection !== 'productType'}>
+          {/* ── 基础信息 ── */}
+          <SectionCard $hidden={activeSection !== 'basic'}>
             <SectionHead>
-              <StepBadge $active={activeSection === 'productType'}>1</StepBadge>
+              <StepBadge $active={activeSection === 'basic'}>1</StepBadge>
               <SectionTitles>
                 <SectionTitleText>
-                  {t('admin.productForm.productTypeTitle')}
-                </SectionTitleText>
-                <SectionDesc>{t('admin.productForm.sectionDescType')}</SectionDesc>
-              </SectionTitles>
-            </SectionHead>
-            <SectionBody>
-              <ProductKindToggle value={productKind} onChange={handleProductKindChange} />
-            </SectionBody>
-          </SectionCard>
-
-          {/* ── 标题与描述 ── */}
-          <SectionCard $hidden={activeSection !== 'titleDesc'}>
-            <SectionHead>
-              <StepBadge $active={activeSection === 'titleDesc'}>2</StepBadge>
-              <SectionTitles>
-                <SectionTitleText>
-                  {t('admin.productForm.titleDescription')}
+                  {t('admin.productForm.basicInfo')}
                   <RequiredDot>*</RequiredDot>
                 </SectionTitleText>
-                <SectionDesc>{t('admin.productForm.sectionDescTitle')}</SectionDesc>
+                <SectionDesc>{t('admin.productForm.sectionDescBasic')}</SectionDesc>
               </SectionTitles>
             </SectionHead>
             <SectionBody>
+              <Field>
+                <Label>{t('admin.productForm.productTypeTitle')}</Label>
+                <Select value={productKind} onChange={(e) => handleProductKindChange(e.target.value as 'physical' | 'virtual')}>
+                  <option value="physical">{t('admin.productForm.kindPhysical')}</option>
+                  <option value="virtual">{t('admin.productForm.kindVirtual')}</option>
+                </Select>
+                {productKind === 'virtual' && (
+                  <SectionDesc style={{ marginTop: 8 }}>{t('admin.productForm.virtualHint')}</SectionDesc>
+                )}
+              </Field>
               <Field>
                 <Label>{t('admin.productForm.productName')} *</Label>
                 <Input value={name} onChange={(e) => { setName(e.target.value); markDirty() }} required placeholder={t('admin.productForm.productNamePlaceholder')} />
@@ -1466,7 +1463,7 @@ export default function AdminProductForm() {
           {/* ── 媒体 ── */}
           <SectionCard $hidden={activeSection !== 'media'}>
             <SectionHead>
-              <StepBadge $active={activeSection === 'media'}>3</StepBadge>
+              <StepBadge $active={activeSection === 'media'}>2</StepBadge>
               <SectionTitles>
                 <SectionTitleText>{t('admin.productForm.mediaSection')}</SectionTitleText>
                 <SectionDesc>{t('admin.productForm.sectionDescMedia')}</SectionDesc>
@@ -1484,16 +1481,16 @@ export default function AdminProductForm() {
             </SectionBody>
           </SectionCard>
 
-          {/* ── 组织信息 ── */}
-          <SectionCard $hidden={activeSection !== 'organization'}>
+          {/* ── 分类与规格 ── */}
+          <SectionCard $hidden={activeSection !== 'orgSku'}>
             <SectionHead>
-              <StepBadge $active={activeSection === 'organization'}>4</StepBadge>
+              <StepBadge $active={activeSection === 'orgSku'}>3</StepBadge>
               <SectionTitles>
                 <SectionTitleText>
-                  {t('admin.productForm.organization')}
+                  {t('admin.productForm.orgSku')}
                   <RequiredDot>*</RequiredDot>
                 </SectionTitleText>
-                <SectionDesc>{t('admin.productForm.sectionDescOrg')}</SectionDesc>
+                <SectionDesc>{t('admin.productForm.sectionDescOrgSku')}</SectionDesc>
               </SectionTitles>
             </SectionHead>
             <SectionBody>
@@ -1533,19 +1530,7 @@ export default function AdminProductForm() {
                   ))}
                 </TagList>
               </Field>
-            </SectionBody>
-          </SectionCard>
-
-          {/* ── SKU 管理 ── */}
-          <SectionCard $hidden={activeSection !== 'sku'}>
-            <SectionHead>
-              <StepBadge $active={activeSection === 'sku'}>5</StepBadge>
-              <SectionTitles>
-                <SectionTitleText>{t('admin.productForm.skuManagement')}</SectionTitleText>
-                <SectionDesc>{t('admin.productForm.sectionDescSku')}</SectionDesc>
-              </SectionTitles>
-            </SectionHead>
-            <SectionBody>
+              <SubHead>{t('admin.productForm.skuManagement')}</SubHead>
               {specs.map((spec, idx) => (
                 <SpecGroup key={idx}>
                   <SpecGroupHeader>
@@ -1729,7 +1714,7 @@ export default function AdminProductForm() {
           {/* ── 定时上下架 ── */}
           <SectionCard $hidden={activeSection !== 'schedule'}>
             <SectionHead>
-              <StepBadge $active={activeSection === 'schedule'}>6</StepBadge>
+              <StepBadge $active={activeSection === 'schedule'}>4</StepBadge>
               <SectionTitles>
                 <SectionTitleText>{t('admin.productForm.schedule')}</SectionTitleText>
                 <SectionDesc>{t('admin.productForm.sectionDescSchedule')}</SectionDesc>
