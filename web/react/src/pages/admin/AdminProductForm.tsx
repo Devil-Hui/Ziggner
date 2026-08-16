@@ -115,6 +115,72 @@ const SectionBody = styled.div`
   margin-top: 14px;
 `
 
+// ── 模块导航（右侧栏结构，与左侧状态栏呼应） ──
+const FormLayout = styled.div`
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
+`
+
+const ModuleNav = styled.nav`
+  width: 200px;
+  flex-shrink: 0;
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.md}px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 10px;
+
+  @media (max-width: 900px) {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+`
+
+const ModuleNavItem = styled.button<{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: ${(props) => (props.$active ? Color.primaryLight : "transparent")};
+  color: ${(props) => (props.$active ? Color.primary : Color.text.secondary)};
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: ${(props) => (props.$active ? 600 : 400)};
+  margin-bottom: 4px;
+  text-align: left;
+  transition: all 0.15s;
+
+  &:hover {
+    background: ${(props) => (props.$active ? Color.primaryLight : "#f2f4f7")};
+    color: ${Color.primary};
+  }
+
+  span.required-mark {
+    color: ${Color.status.error};
+    font-weight: 700;
+  }
+
+  @media (max-width: 900px) {
+    width: auto;
+    margin-bottom: 0;
+  }
+`
+
+const ModuleContent = styled.div`
+  flex: 1;
+  min-width: 0;
+`
+
 const Field = styled.div`
   margin-bottom: 14px;
 `
@@ -594,9 +660,16 @@ export default function AdminProductForm() {
   const [requiresShipping, setRequiresShipping] = useState(true)
   const [taxable, setTaxable] = useState(true)
   const [productKind, setProductKind] = useState<'physical' | 'virtual'>('physical')  // 实体/虚拟商品
-  // 折叠模块（默认全部收起，点击标题展开）
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
-  const toggleSection = (key: string) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
+  // 模块导航：右侧栏一次只显示当前模块（与左侧状态栏一致的栏式设计）
+  const [activeSection, setActiveSection] = useState<string>('productType')
+  const MODULE_ITEMS = [
+    { key: 'productType', label: t('admin.productForm.productTypeTitle'), required: false },
+    { key: 'titleDesc', label: t('admin.productForm.titleDescription'), required: true },
+    { key: 'media', label: t('admin.productForm.mediaSection'), required: false },
+    { key: 'organization', label: t('admin.productForm.organization'), required: true },
+    { key: 'sku', label: t('admin.productForm.skuManagement'), required: false },
+    { key: 'schedule', label: t('admin.productForm.schedule'), required: false },
+  ]
 
   // Data sources
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([])
@@ -1005,28 +1078,29 @@ export default function AdminProductForm() {
         </div>
       )}
 
+      <FormLayout>
+        <ModuleNav>
+          {MODULE_ITEMS.map((item) => (
+            <ModuleNavItem key={item.key} $active={activeSection === item.key} onClick={() => setActiveSection(item.key)}>
+              <span>{item.label}{item.required && <span className="required-mark"> *</span>}</span>
+            </ModuleNavItem>
+          ))}
+        </ModuleNav>
+        <ModuleContent>
       <Form onSubmit={(e) => { e.preventDefault(); handleSaveDraft() }}>
         {/* ── 商品类型开关 ── */}
+        {activeSection === 'productType' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('productType')}>
-            <SectionTitle>商品类型</SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['productType'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['productType'] && (
-            <SectionBody>
+          <SectionBody>
               <ProductKindToggle value={productKind} onChange={handleProductKindChange} />
             </SectionBody>
-          )}
         </Section>
+        )}
 
         {/* ── Title & Description ── */}
+        {activeSection === 'titleDesc' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('titleDesc')}>
-            <SectionTitle>{t('admin.productForm.titleDescription')} *</SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['titleDesc'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['titleDesc'] && (
-            <SectionBody>
+          <SectionBody>
               <Field>
                 <Label>{t('admin.productForm.productName')} *</Label>
                 <Input value={name} onChange={(e) => { setName(e.target.value); markDirty() }} required placeholder={t('admin.productForm.productNamePlaceholder')} />
@@ -1036,17 +1110,13 @@ export default function AdminProductForm() {
                 <TextArea value={description} onChange={(e) => { setDescription(e.target.value); markDirty() }} placeholder={t('admin.productForm.descriptionPlaceholder')} />
               </Field>
             </SectionBody>
-          )}
         </Section>
+        )}
 
         {/* ── Media (shown for all product kinds) ── */}
+        {activeSection === 'media' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('media')}>
-            <SectionTitle>{t('admin.productForm.mediaSection')}</SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['media'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['media'] && (
-            <SectionBody>
+          <SectionBody>
               <MediaManager
                 onChange={(staged) => { /* 创建模式暂存项由 MediaManager 内部管理 IndexedDB */ }}
                 {...(isEdit && id ? {
@@ -1056,17 +1126,13 @@ export default function AdminProductForm() {
                 } : {})}
               />
             </SectionBody>
-          )}
         </Section>
+        )}
 
         {/* ── Organization ── */}
+        {activeSection === 'organization' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('organization')}>
-            <SectionTitle>{t('admin.productForm.organization')} *</SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['organization'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['organization'] && (
-            <SectionBody>
+          <SectionBody>
               <Row>
             <Field>
               <Label>{t('admin.productForm.brand')} *</Label>
@@ -1104,24 +1170,13 @@ export default function AdminProductForm() {
             </TagList>
               </Field>
             </SectionBody>
-          )}
         </Section>
+        )}
 
         {/* ── Variants ── */}
+        {activeSection === 'sku' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('sku')}>
-            <SectionTitle>
-              {t('admin.productForm.skuManagement')}
-              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#999' }}>
-                {activeSpecNames.length > 0
-                  ? `当前规格：${activeSpecNames.join(' × ')} ｜ ${skus.length} 个变体`
-                  : t('admin.productForm.skuHint')}
-              </span>
-            </SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['sku'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['sku'] && (
-            <SectionBody>
+          <SectionBody>
 
           {/* Spec Configuration */}
           {specs.map((spec, idx) => (
@@ -1309,17 +1364,13 @@ export default function AdminProductForm() {
           </VariantCardList>
           <VariantAddBtn type="button" onClick={addSKU}>+ {t('admin.productForm.addSku')}</VariantAddBtn>
             </SectionBody>
-          )}
         </Section>
+        )}
 
         {/* ── Schedule ── */}
+        {activeSection === 'schedule' && (
         <Section>
-          <SectionHeader type="button" onClick={() => toggleSection('schedule')}>
-            <SectionTitle>{t('admin.productForm.schedule')}</SectionTitle>
-            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['schedule'] ? '▲' : '▼'}</span>
-          </SectionHeader>
-          {openSections['schedule'] && (
-            <SectionBody>
+          <SectionBody>
               <Row>
                 <Field>
                   <Label>{t('admin.productForm.publishAt')}</Label>
@@ -1331,8 +1382,8 @@ export default function AdminProductForm() {
                 </Field>
               </Row>
             </SectionBody>
-          )}
         </Section>
+        )}
 
         <BtnGroup>
           <SecondaryBtn type="submit" disabled={isSaving || isSubmitting}>
@@ -1346,6 +1397,8 @@ export default function AdminProductForm() {
           </SecondaryBtn>
         </BtnGroup>
       </Form>
+        </ModuleContent>
+      </FormLayout>
 
     </Container>
   )

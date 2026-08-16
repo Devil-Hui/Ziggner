@@ -185,6 +185,7 @@ const zhCN = {
       descriptionLabel: '描述',
       descriptionPlaceholder: '商品描述...',
       skuManagement: 'SKU 管理',
+      productTypeTitle: '商品类型',
       skuHint: '(规格, 颜色, 价格, 库存)',
       skuSpec: '规格',
       skuPrice: '价格',

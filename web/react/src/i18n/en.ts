@@ -187,6 +187,7 @@ const en = {
       descriptionLabel: 'Description',
       descriptionPlaceholder: 'Product description...',
       skuManagement: 'SKU Management',
+      productTypeTitle: 'Product Type',
       skuHint: '(size, color, price, stock)',
       skuSpec: 'Spec',
       skuPrice: 'Price',
