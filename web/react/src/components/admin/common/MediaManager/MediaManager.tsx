@@ -387,11 +387,16 @@ export default function MediaManager({
             <S.ProgressBarFill $percent={progressPercent} />
           </S.ProgressBarTrack>
           <S.ProgressLabel>
-            <span>
+            <S.ProgressFile>
+              {uploadQueue.status === 'done' ? (
+                <S.DoneCheck>✓</S.DoneCheck>
+              ) : (
+                <S.Spinner $size={14} />
+              )}
               {uploadQueue.status === 'done'
                 ? t('admin.mediaManager.processingDone')
                 : t('admin.mediaManager.processingFile').replace('{name}', uploadQueue.currentFileName || '')}
-            </span>
+            </S.ProgressFile>
             <span>{uploadQueue.completed}/{uploadQueue.total}（{progressPercent}%）</span>
           </S.ProgressLabel>
         </S.QueueProgress>

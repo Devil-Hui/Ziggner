@@ -536,6 +536,79 @@ const SpinIcon = styled.span`
   }
 `
 
+// ── 新建模式：提交时图片上传进度遮罩 ──
+
+const UploadOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+`
+
+const UploadCard = styled.div`
+  width: 360px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 12px;
+  padding: 28px 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  text-align: center;
+`
+
+const UploadSpin = styled.span`
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #1a56db;
+  border-radius: 50%;
+  animation: up-spin 0.8s linear infinite;
+  @keyframes up-spin {
+    to { transform: rotate(360deg); }
+  }
+`
+
+const UploadTitle = styled.div`
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  margin: 14px 0 16px;
+`
+
+const UploadTrack = styled.div`
+  width: 100%;
+  height: 8px;
+  background: #eef0f3;
+  border-radius: 999px;
+  overflow: hidden;
+`
+
+const UploadFill = styled.div<{ $percent: number }>`
+  height: 100%;
+  width: ${(p) => p.$percent}%;
+  background: #1a56db;
+  border-radius: 999px;
+  transition: width 0.2s ease;
+`
+
+const UploadMeta = styled.div`
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+
+  span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 60%;
+  }
+`
+
 // ── Spec Config Styles ──
 
 const SpecConfigRow = styled.div`
@@ -1007,6 +1080,15 @@ export default function AdminProductForm() {
   const [error, setError] = useState('')
   const [isDirty, setIsDirty] = useState(false)
 
+  // 新建模式：提交时图片上传进度（逐张 XHR 进度聚合）
+  const [uploadState, setUploadState] = useState<{
+    active: boolean
+    uploaded: number
+    total: number
+    percent: number
+    fileName: string
+  }>({ active: false, uploaded: 0, total: 0, percent: 0, fileName: '' })
+
   const markDirty = useCallback(() => { setIsDirty(true) }, [])
 
   // ── Unsaved Changes Guard ──
@@ -1288,6 +1370,15 @@ export default function AdminProductForm() {
         const spuRes = await adminAPI.createSPU(spuData) as unknown as { id: number }
         spuId = spuRes.id
 
+        // 仅统计有效图片（四尺寸齐全）用于进度总数
+        const imageItems = stagedItems.filter(
+          (it) =>
+            it.mediaType === 'image' &&
+            it.thumbBlob && it.listBlob && it.largeBlob && it.originalBlob,
+        )
+        const totalImages = imageItems.length
+        setUploadState({ active: true, uploaded: 0, total: totalImages, percent: 0, fileName: '' })
+
         for (const item of stagedItems) {
           if (item.mediaType === 'image') {
             const fd = new FormData()
@@ -1300,15 +1391,19 @@ export default function AdminProductForm() {
             // 端点要求 thumb/list/large/original 四尺寸齐全，缺一不可
             if (fd.has('thumb') && fd.has('list') && fd.has('large') && fd.has('original')) {
               try {
-                await adminAPI.uploadMedia(spuId, fd)
+                await adminAPI.uploadMedia(spuId, fd, (p) => {
+                  setUploadState((s) => ({ ...s, percent: p, fileName: item.fileName || 'image' }))
+                })
               } catch (e) {
                 console.warn('[AdminProductForm] 上传图片媒体失败 spu=%s:', spuId, e)
               }
             }
+            setUploadState((s) => ({ ...s, uploaded: s.uploaded + 1, percent: 0 }))
           }
           // 视频：/goods/media/spu/{id}/upload 当前仅支持 image（video 为独立能力），
           // create 模式下视频本就未被后端接收，此处不重复塞入被忽略的字段。
         }
+        setUploadState((s) => ({ ...s, active: false }))
 
         if (skus.length > 0) {
           // Validate all SKUs have prices
@@ -1388,6 +1483,37 @@ export default function AdminProductForm() {
 
   return (
     <Container>
+      {uploadState.active && (
+        <UploadOverlay>
+          <UploadCard>
+            <UploadSpin />
+            <UploadTitle>{t('admin.productForm.uploadingImages')}</UploadTitle>
+            <UploadTrack>
+              <UploadFill
+                $percent={
+                  uploadState.total
+                    ? Math.round(
+                        ((uploadState.uploaded + uploadState.percent / 100) / uploadState.total) * 100,
+                      )
+                    : 0
+                }
+              />
+            </UploadTrack>
+            <UploadMeta>
+              <span>{uploadState.fileName}</span>
+              <span>
+                {uploadState.uploaded}/{uploadState.total}（
+                {uploadState.total
+                  ? Math.round(
+                      ((uploadState.uploaded + uploadState.percent / 100) / uploadState.total) * 100,
+                    )
+                  : 0}
+                %）
+              </span>
+            </UploadMeta>
+          </UploadCard>
+        </UploadOverlay>
+      )}
       <PageHeader>
         <HeaderLeft>
           <BackRow type="button" onClick={() => navigate('/admin/products')}>

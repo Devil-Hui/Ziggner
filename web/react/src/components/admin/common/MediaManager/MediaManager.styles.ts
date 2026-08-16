@@ -139,9 +139,50 @@ export const ProgressBarFill = styled.div<{ $percent: number }>`
 export const ProgressLabel = styled.div`
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: ${FontSize.xs}px;
   color: ${Color.text.secondary};
   margin-top: 4px;
+`
+
+/** 上传中旋转加载圈 */
+export const Spinner = styled.span<{ $size?: number }>`
+  display: inline-block;
+  width: ${(p) => p.$size || 14}px;
+  height: ${(p) => p.$size || 14}px;
+  border: 2px solid ${Color.border.medium};
+  border-top-color: ${Color.primary};
+  border-radius: 50%;
+  animation: mm-spin 0.8s linear infinite;
+  @keyframes mm-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`
+
+export const ProgressFile = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+export const DoneCheck = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: ${Color.status.success};
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+  flex-shrink: 0;
 `
 
 // ── 媒体网格 ──

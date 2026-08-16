@@ -217,6 +217,7 @@ const zhCN = {
       notTracking: '不跟踪库存',
       saveDraft: '保存草稿',
       saveAndSubmit: '保存并提交审核',
+      uploadingImages: '正在上传商品图片…',
       loadFailed: '加载商品失败',
       backToProducts: '返回商品列表',
       sidebarPublish: '发布',

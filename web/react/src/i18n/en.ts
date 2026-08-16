@@ -219,6 +219,7 @@ const en = {
       notTracking: 'Not tracking',
       saveDraft: 'Save Draft',
       saveAndSubmit: 'Save & Submit for Review',
+      uploadingImages: 'Uploading product images…',
       loadFailed: 'Failed to load product',
       backToProducts: 'Back to Products',
       sidebarPublish: 'Publish',
