@@ -3,6 +3,7 @@
 import os
 import uuid
 import logging
+from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -60,35 +61,36 @@ def _serialize_media(m: ProductMedia) -> dict:
 
 
 def _delete_storage_file(url: str) -> None:
-    """删除存储中的媒体文件（local / R2 通用）。
+    """删除存储中的媒体文件（local / R2 通用，按 URL 自身形态判定后端）。
 
-    存储 key 在两种后端下完全一致（如 product_media/xxx.jpg），
-    因此只需从 URL 中剥掉 MEDIA_URL 前缀即可得到 key：
-      - local：key 映射为 MEDIA_ROOT 下的本地文件并删除
-      - r2：   通过 default_storage.delete(key) 删除 R2 对象（避免存储泄漏）
+    - 绝对 URL（https://cdn.ziggner.com/... 或 https://api.ziggner.com/media/...）→ 远程 R2：
+      剥掉域名与可选 /media/ 前缀得到对象 key，调 default_storage.delete(key)。
+    - 相对路径 /media/... → 本地文件：MEDIA_ROOT 下删除。
+
+    ⚠️ 必须以「URL 本身的形态」为准，而非当前 settings.FILE_STORAGE / MEDIA_URL。
+    否则在 R2 模式下删除旧的「相对路径」记录时，会去 R2 删一个不存在的对象，
+    导致本地卷里的文件永远删不掉（存储泄漏）。这是历史本地→R2 过渡期的典型坑。
     """
     if not url:
         return
-    media_url = getattr(settings, 'MEDIA_URL', '/media/')
-    key = url
-    if media_url and url.startswith(media_url):
-        key = url[len(media_url):]
-    elif url.startswith('/media/'):
-        key = url[len('/media/'):]
-    elif url.startswith('/'):
-        key = url.lstrip('/')
-
-    # R2 / 远程存储：MEDIA_URL 在 R2 模式下为绝对 CDN 地址（https://...），或 FILE_STORAGE 非 local
-    if getattr(settings, 'FILE_STORAGE', 'local') != 'local' or str(media_url).startswith('http'):
+    if url.startswith('http://') or url.startswith('https://'):
+        path = urlparse(url).path  # /product_media/x.jpg 或 /media/product_media/x.jpg
+        key = path.lstrip('/')
+        if key.startswith('media/'):
+            key = key[len('media/'):]
         try:
             default_storage.delete(key)
         except Exception as e:  # noqa: BLE001 - 删除失败仅告警，不影响主流程
             _logger.warning('删除远程文件失败 key=%s error=%s', key, e)
         return
 
-    # 本地存储
-    media_root = getattr(settings, 'MEDIA_ROOT', '')
-    local_path = os.path.join(media_root, key)
+    # 相对路径 /media/... → 本地文件
+    key = url
+    if key.startswith('/media/'):
+        key = key[len('/media/'):]
+    elif key.startswith('/'):
+        key = key.lstrip('/')
+    local_path = os.path.join(getattr(settings, 'MEDIA_ROOT', ''), key)
     if os.path.exists(local_path):
         try:
             os.remove(local_path)
