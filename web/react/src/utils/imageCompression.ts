@@ -1,100 +1,143 @@
 /**
- * 图片压缩工具 —— 基于 browser-image-compression
+ * 图片压缩工具 —— 纯原生 Canvas 实现（零第三方依赖）
+ * ============================================================
+ * 设计目标：可靠性 + 视觉无损。
  *
- * 在上传前对图片进行客户端压缩，在体积与视觉质量间取得平衡（保真优先）。
- * 使用 MozJPEG 有损压缩算法（Canvas.toBlob JPEG），仅对 >200KB 的图生效。
- * 默认档位：最长边 ≤2560px、目标 ≤2.5MB、JPEG 质量 0.92（接近视觉无损）。
- * 注：useWebWorker 必须为 false —— browser-image-compression@2 在 Vite/CF 生产构建下
- * 起 Web Worker 会因 import.meta.url 解析失败而返回损坏/0 字节 Blob，导致预览空白。
+ * 为何抛弃 browser-image-compression：
+ *   browser-image-compression@2 在 Vite / Cloudflare Pages 生产构建下，
+ *   起 Web Worker 会因 import.meta.url 解析失败而返回损坏/0 字节 Blob，
+ *   导致裁剪器 `new Image()` 加载失败、预览空白，且界面与日志均无提示，
+ *   极难排查。两次线上反馈「压缩完图片不显示」根因皆在此。
+ *
+ * 现改用浏览器原生 Canvas 解码 + 重编码，产物 100% 可控、可验证。
+ *
+ * 视觉无损策略：
+ *   · PNG 原图      → 输出 PNG（无损，保留透明通道），仅按需缩放
+ *   · JPEG / WebP   → 输出高质量 JPEG（initialQuality，默认 0.95，肉眼无损）
+ *   · 仅当最长边超过 maxWidthOrHeight 时才等比缩放，避免无谓重编码
+ *   · 压缩后体积 ≥ 原图则回退原图，绝不膨胀
+ *
+ * maxSizeMB（可选）：启用「质量阶梯」从高到低逼近目标体积（聊天图/Logo 等小体积场景）；
+ *   不传则该参数则固定 initialQuality，保证最高画质（商品画廊走此路径）。
  */
-import imageCompression from 'browser-image-compression'
-
 export interface CompressionOptions {
-  /** 最大文件大小 (MB)，默认 1MB */
-  maxSizeMB?: number
-  /** 最大宽或高 (px)，默认 2048（超过则等比缩放） */
+  /** 最大宽或高 (px)，默认 2560（超过则等比缩放） */
   maxWidthOrHeight?: number
-  /** 初始压缩质量 0-1，默认 0.85（视觉无损点） */
+  /** JPEG 输出质量 0-1，默认 0.95（视觉无损） */
   initialQuality?: number
-  /** 是否使用 Web Worker（不阻塞主线程），默认 false（避免 Vite 构建下 worker 解析失败） */
-  useWebWorker?: boolean
+  /** 目标体积上限 (MB)，启用质量阶梯逼近；0/不传 = 不限制（纯视觉无损） */
+  maxSizeMB?: number
+  /** 质量阶梯下限，默认 0.4（仅 maxSizeMB 生效时） */
+  minQuality?: number
 }
 
 const DEFAULT_OPTIONS: Required<CompressionOptions> = {
-  maxSizeMB: 2.5,
   maxWidthOrHeight: 2560,
-  initialQuality: 0.92,
-  useWebWorker: false,
+  initialQuality: 0.95,
+  maxSizeMB: 0,
+  minQuality: 0.4,
 }
 
-/** 压缩库实际输出格式 → 扩展名（与后端 upload_security 的 _IMAGE_FORMATS 白名单一致） */
-const EXT_BY_MIME: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
+/** canvas → Blob 的 Promise 封装（toBlob 回调可能返回 null） */
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
+}
+
+/** 生成从高到低的质量阶梯（含下限），步长 0.15 */
+function qualitySteps(start: number, min: number): number[] {
+  const out: number[] = []
+  let q = start
+  while (q >= min - 1e-6) {
+    out.push(Number(q.toFixed(2)))
+    q -= 0.15
+  }
+  const last = Number(min.toFixed(2))
+  if (out[out.length - 1] !== last) out.push(last)
+  return out
 }
 
 /**
- * browser-image-compression v2 返回的 Blob 文件名固定为 "blob"（无扩展名），
- * 直接上传会被后端扩展名校验拒绝（400「文件扩展名、真实内容或大小不符合要求」）。
- * 依据压缩产物的真实 MIME 重命名（JPEG→.jpg / PNG→.png / WebP→.webp / GIF→.gif），
- * MIME 无法识别时回退原文件扩展名。
- */
-function buildUploadFilename(original: File, compressed: Blob): string {
-  const base = original.name.replace(/\.[^./\\]+$/, '') || 'image'
-  const fallbackExt = original.name.slice(base.length).replace(/^\./, '')
-  const ext = EXT_BY_MIME[compressed.type] || fallbackExt
-  return ext ? `${base}.${ext}` : base
-}
-
-/**
- * 压缩图片文件
+ * 压缩图片文件（原生 Canvas 实现）
  *
- * - 文件 <= 200KB：跳过压缩（原样返回）
- * - 文件 > 200KB：执行压缩，输出 JPEG/WebP
- * - 压缩后体积 >= 原始体积：返回原始文件（strict 模式保证不膨胀）
+ * - 文件 <= 200KB：跳过压缩（原样返回，100% 无损）
+ * - 文件 > 200KB：按需缩放 + 高质量重编码（或按 maxSizeMB 阶梯减肥）
  *
- * @param file 原始图片 File 对象
- * @param options 压缩选项（可选）
- * @returns 压缩后的 File 对象（可能为原文件）
+ * @returns 处理后的 File（可能等于原文件，失败时安全回退原图）
  */
 export async function compressImage(
   file: File,
   options: CompressionOptions = {},
 ): Promise<File> {
-  // 小文件跳过压缩（压缩收益不足以抵消开销）
-  if (file.size <= 200 * 1024) {
-    return file
-  }
+  // 小文件跳过压缩（压缩收益不足以抵消开销，且保持原画质）
+  if (file.size <= 200 * 1024) return file
 
   const config = { ...DEFAULT_OPTIONS, ...options }
 
   try {
-    const compressed = await imageCompression(file, config)
+    const bmp = await createImageBitmap(file)
+    const { width, height } = bmp
 
-    // 解码校验：压缩产物虽合法 image 类型但像素损坏时，createImageBitmap 会抛错 → 回退原图
-    try {
-      const bmp = await createImageBitmap(compressed)
+    // 仅在超过尺寸上限时等比缩放（保留原尺寸即不缩放，避免无谓重编码）
+    const longest = Math.max(width, height)
+    let targetW = width
+    let targetH = height
+    if (longest > config.maxWidthOrHeight) {
+      const ratio = config.maxWidthOrHeight / longest
+      targetW = Math.max(1, Math.round(width * ratio))
+      targetH = Math.max(1, Math.round(height * ratio))
+    }
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetW
+    canvas.height = targetH
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
       bmp.close()
-    } catch {
       return file
     }
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
+    // PNG 透明图：输出 JPEG 前铺白底，避免透明区域变黑；PNG 输出则保留透明
+    if (file.type !== 'image/png') {
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, targetW, targetH)
+    }
+    ctx.drawImage(bmp, 0, 0, targetW, targetH)
+    bmp.close()
 
-    // 防御：压缩产物损坏（0 字节 / 非图片 / 比原图还大）时回退原图，
-    // 避免上传/预览出现空白图（Web Worker 异常时易产生 0 字节 Blob）
-    if (!compressed || compressed.size === 0 || !compressed.type.startsWith('image/') || compressed.size >= file.size) {
-      return file
+    // 视觉无损格式策略：PNG 无损保留透明；其余高质量 JPEG
+    const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+
+    const encode = (q?: number): Promise<Blob | null> => canvasToBlob(canvas, outputType, q)
+
+    let blob: Blob | null = null
+    if (outputType === 'image/png' || !config.maxSizeMB) {
+      // PNG 仅缩放（无损）；或无体积限制 → 固定 initialQuality（视觉无损）
+      blob = await encode(outputType === 'image/png' ? undefined : config.initialQuality)
+    } else {
+      // 有体积上限：质量阶梯从高到低逼近
+      const maxBytes = config.maxSizeMB * 1024 * 1024
+      for (const q of qualitySteps(config.initialQuality, config.minQuality)) {
+        const candidate = await encode(q)
+        if (candidate && candidate.size <= maxBytes) {
+          blob = candidate
+          break
+        }
+        blob = candidate // 暂存最后一个，作为兜底
+      }
     }
 
-    // browser-image-compression v2 返回的是名为 "blob" 的纯 Blob，
-    // 需按真实内容类型重命名，否则后端扩展名校验失败（400）
-    return new File([compressed], buildUploadFilename(file, compressed), {
-      type: compressed.type || file.type,
+    // 防御：编码失败 / 0 字节 / 比原图还大 → 回退原图，绝不膨胀或空白
+    if (!blob || blob.size === 0 || blob.size >= file.size) return file
+
+    const base = file.name.replace(/\.[^./\\]+$/, '') || 'image'
+    const ext = outputType === 'image/png' ? 'png' : 'jpg'
+    return new File([blob], `${base}.${ext}`, {
+      type: outputType,
       lastModified: file.lastModified,
     })
   } catch (err) {
-    // 压缩失败时返回原文件，不阻断上传流程
+    // 压缩失败：安全回退原图，不阻断上传流程
     console.warn('[imageCompression] 压缩失败，使用原图:', err)
     return file
   }
@@ -156,13 +199,13 @@ export async function prepareImageForUpload(
     // 解码失败：交给压缩流程/后端兜底校验
   }
 
-  // 大图自动压缩（>200KB 触发，compressImage 内部对更小文件直接透传）
+  // 大图自动压缩（>200KB 触发，compressImage 内部对更小文件直接透传）。
+  // 商品画廊走「纯视觉无损」路径：不传 maxSizeMB，仅缩放 + 高质量 JPEG/PNG。
   if (file.size > 200 * 1024) {
     try {
       const compressed = await compressImage(file, {
-        maxSizeMB: 2.5,
         maxWidthOrHeight: 2560,
-        initialQuality: 0.92,
+        initialQuality: 0.95,
       })
       if (compressed.size < file.size) {
         const ratio = ((1 - compressed.size / file.size) * 100).toFixed(0)
