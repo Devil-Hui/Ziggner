@@ -341,7 +341,7 @@ const ProductPrice = styled.div`
 const CurrentPrice = styled.span`
   font-size: 1.6rem;
   font-weight: 700;
-  color: #e74c3c;
+  color: #111;
 `
 
 const OriginalPrice = styled.span`
@@ -466,10 +466,10 @@ const SecondaryRow = styled.div`
 const FavButton = styled.button<{ $active?: boolean }>`
   width: 100%;
   padding: 10px;
-  border: 1px solid ${({ $active }) => ($active ? '#e74c3c' : '#ddd')};
+  border: 1px solid ${({ $active }) => ($active ? Color.primary : '#ddd')};
   border-radius: 6px;
-  background: ${({ $active }) => ($active ? '#fff5f5' : '#fff')};
-  color: ${({ $active }) => ($active ? '#e74c3c' : '#333')};
+  background: ${({ $active }) => ($active ? Color.primaryLight : '#fff')};
+  color: ${({ $active }) => ($active ? Color.primary : '#333')};
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;

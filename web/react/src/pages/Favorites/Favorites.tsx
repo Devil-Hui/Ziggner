@@ -71,7 +71,7 @@ const CardName = styled.div`
 const CardPrice = styled.div`
   font-size: ${FontSize.md}px;
   font-weight: 700;
-  color: #e74c3c;
+  color: #111;
 `
 
 const ContactBtn = styled.button`
@@ -98,7 +98,7 @@ const RemoveBtn = styled.button`
   font-size: 18px;
   padding: 4px 8px;
   float: right;
-  &:hover { color: #e74c3c; }
+  &:hover { color: ${Color.primary}; }
 `
 
 const EmptyState = styled.div`
