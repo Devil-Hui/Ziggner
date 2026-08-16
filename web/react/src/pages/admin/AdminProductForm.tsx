@@ -56,7 +56,8 @@ interface TagItem {
 
 const Container = styled.div`
   max-width: 900px;
-  margin: 0 auto;
+  margin: 0 0 0 auto;
+  padding-right: 24px;
 `
 
 const Title = styled.h2`
@@ -84,14 +85,34 @@ const Section = styled.div`
   }
 `
 
+const SectionHeader = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  text-align: left;
+
+  &:hover .chevron {
+    color: ${Color.primary};
+  }
+`
+
 const SectionTitle = styled.h3`
   font-size: 0.95rem;
   font-weight: 600;
   color: ${Color.primaryHover};
-  margin-bottom: 14px;
+  margin-bottom: 0;
   display: flex;
   align-items: center;
   gap: 8px;
+`
+
+const SectionBody = styled.div`
+  margin-top: 14px;
 `
 
 const Field = styled.div`
@@ -573,6 +594,9 @@ export default function AdminProductForm() {
   const [requiresShipping, setRequiresShipping] = useState(true)
   const [taxable, setTaxable] = useState(true)
   const [productKind, setProductKind] = useState<'physical' | 'virtual'>('physical')  // 实体/虚拟商品
+  // 折叠模块（默认全部收起，点击标题展开）
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({})
+  const toggleSection = (key: string) => setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }))
 
   // Data sources
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([])
@@ -984,40 +1008,66 @@ export default function AdminProductForm() {
       <Form onSubmit={(e) => { e.preventDefault(); handleSaveDraft() }}>
         {/* ── 商品类型开关 ── */}
         <Section>
-          <SectionTitle>商品类型</SectionTitle>
-          <ProductKindToggle value={productKind} onChange={handleProductKindChange} />
+          <SectionHeader type="button" onClick={() => toggleSection('productType')}>
+            <SectionTitle>商品类型</SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['productType'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['productType'] && (
+            <SectionBody>
+              <ProductKindToggle value={productKind} onChange={handleProductKindChange} />
+            </SectionBody>
+          )}
         </Section>
 
         {/* ── Title & Description ── */}
         <Section>
-          <SectionTitle>{t('admin.productForm.titleDescription')}</SectionTitle>
-          <Field>
-            <Label>{t('admin.productForm.productName')} *</Label>
-            <Input value={name} onChange={(e) => { setName(e.target.value); markDirty() }} required placeholder={t('admin.productForm.productNamePlaceholder')} />
-          </Field>
-          <Field>
-            <Label>{t('admin.productForm.descriptionLabel')}</Label>
-            <TextArea value={description} onChange={(e) => { setDescription(e.target.value); markDirty() }} placeholder={t('admin.productForm.descriptionPlaceholder')} />
-          </Field>
+          <SectionHeader type="button" onClick={() => toggleSection('titleDesc')}>
+            <SectionTitle>{t('admin.productForm.titleDescription')} *</SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['titleDesc'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['titleDesc'] && (
+            <SectionBody>
+              <Field>
+                <Label>{t('admin.productForm.productName')} *</Label>
+                <Input value={name} onChange={(e) => { setName(e.target.value); markDirty() }} required placeholder={t('admin.productForm.productNamePlaceholder')} />
+              </Field>
+              <Field>
+                <Label>{t('admin.productForm.descriptionLabel')}</Label>
+                <TextArea value={description} onChange={(e) => { setDescription(e.target.value); markDirty() }} placeholder={t('admin.productForm.descriptionPlaceholder')} />
+              </Field>
+            </SectionBody>
+          )}
         </Section>
 
         {/* ── Media (shown for all product kinds) ── */}
         <Section>
-          <SectionTitle>{t('admin.productForm.mediaSection')}</SectionTitle>
-          <MediaManager
-            onChange={(staged) => { /* 创建模式暂存项由 MediaManager 内部管理 IndexedDB */ }}
-            {...(isEdit && id ? {
-              spuId: Number(id),
-              savedMedia,
-              onMediaUpdate: handleMediaUpdate,
-            } : {})}
-          />
+          <SectionHeader type="button" onClick={() => toggleSection('media')}>
+            <SectionTitle>{t('admin.productForm.mediaSection')}</SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['media'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['media'] && (
+            <SectionBody>
+              <MediaManager
+                onChange={(staged) => { /* 创建模式暂存项由 MediaManager 内部管理 IndexedDB */ }}
+                {...(isEdit && id ? {
+                  spuId: Number(id),
+                  savedMedia,
+                  onMediaUpdate: handleMediaUpdate,
+                } : {})}
+              />
+            </SectionBody>
+          )}
         </Section>
 
         {/* ── Organization ── */}
         <Section>
-          <SectionTitle>{t('admin.productForm.organization')}</SectionTitle>
-          <Row>
+          <SectionHeader type="button" onClick={() => toggleSection('organization')}>
+            <SectionTitle>{t('admin.productForm.organization')} *</SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['organization'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['organization'] && (
+            <SectionBody>
+              <Row>
             <Field>
               <Label>{t('admin.productForm.brand')} *</Label>
               <Select value={brandId} onChange={(e) => { setBrandId(e.target.value); markDirty() }} required>
@@ -1052,19 +1102,26 @@ export default function AdminProductForm() {
                 </TagChip>
               ))}
             </TagList>
-          </Field>
+              </Field>
+            </SectionBody>
+          )}
         </Section>
 
         {/* ── Variants ── */}
         <Section>
-          <SectionTitle>
-            {t('admin.productForm.skuManagement')}
-            <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#999' }}>
-              {activeSpecNames.length > 0
-                ? `当前规格：${activeSpecNames.join(' × ')} ｜ ${skus.length} 个变体`
-                : t('admin.productForm.skuHint')}
-            </span>
-          </SectionTitle>
+          <SectionHeader type="button" onClick={() => toggleSection('sku')}>
+            <SectionTitle>
+              {t('admin.productForm.skuManagement')}
+              <span style={{ fontSize: '0.75rem', fontWeight: 400, color: '#999' }}>
+                {activeSpecNames.length > 0
+                  ? `当前规格：${activeSpecNames.join(' × ')} ｜ ${skus.length} 个变体`
+                  : t('admin.productForm.skuHint')}
+              </span>
+            </SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['sku'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['sku'] && (
+            <SectionBody>
 
           {/* Spec Configuration */}
           {specs.map((spec, idx) => (
@@ -1251,21 +1308,30 @@ export default function AdminProductForm() {
             })}
           </VariantCardList>
           <VariantAddBtn type="button" onClick={addSKU}>+ {t('admin.productForm.addSku')}</VariantAddBtn>
+            </SectionBody>
+          )}
         </Section>
 
         {/* ── Schedule ── */}
         <Section>
-          <SectionTitle>{t('admin.productForm.schedule')}</SectionTitle>
-          <Row>
-            <Field>
-              <Label>{t('admin.productForm.publishAt')}</Label>
-              <Input type="datetime-local" value={publishAt} onChange={(e) => { setPublishAt(e.target.value); markDirty() }} />
-            </Field>
-            <Field>
-              <Label>{t('admin.productForm.unpublishAt')}</Label>
-              <Input type="datetime-local" value={unpublishAt} onChange={(e) => { setUnpublishAt(e.target.value); markDirty() }} />
-            </Field>
-          </Row>
+          <SectionHeader type="button" onClick={() => toggleSection('schedule')}>
+            <SectionTitle>{t('admin.productForm.schedule')}</SectionTitle>
+            <span className="chevron" style={{ fontSize: 12, color: '#999' }}>{openSections['schedule'] ? '▲' : '▼'}</span>
+          </SectionHeader>
+          {openSections['schedule'] && (
+            <SectionBody>
+              <Row>
+                <Field>
+                  <Label>{t('admin.productForm.publishAt')}</Label>
+                  <Input type="datetime-local" value={publishAt} onChange={(e) => { setPublishAt(e.target.value); markDirty() }} />
+                </Field>
+                <Field>
+                  <Label>{t('admin.productForm.unpublishAt')}</Label>
+                  <Input type="datetime-local" value={unpublishAt} onChange={(e) => { setUnpublishAt(e.target.value); markDirty() }} />
+                </Field>
+              </Row>
+            </SectionBody>
+          )}
         </Section>
 
         <BtnGroup>
