@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { PromoTags } from '../../components/business/PromoTags'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
-import { useProducts, useFlatCategories } from '../../hooks/useProducts'
+import { useProducts, useFlatCategories, useCategories } from '../../hooks/useProducts'
 import { useTranslation } from '../../i18n'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, FontSize } from '../../theme/tokens'
@@ -97,6 +97,22 @@ const SidebarTitle = styled.h3`
   color: #111;
   padding-bottom: 0.6vh;
   border-bottom: 1px solid ${Color.border.light};
+`
+
+const CatNodeBtn = styled.button<{ $active?: boolean; $level: number }>`
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: ${({ $active }) => ($active ? Color.primaryLight : 'none')};
+  color: ${({ $active }) => ($active ? Color.primaryHover : Color.text.body)};
+  border: none;
+  padding: 7px 10px;
+  padding-left: ${({ $level }) => 10 + $level * 14}px;
+  font-size: ${({ $level }) => ($level === 0 ? '0.95rem' : '0.88rem')};
+  font-weight: ${({ $level, $active }) => ($level === 0 || $active ? 600 : 400)};
+  cursor: pointer;
+  border-radius: 6px;
+  &:hover { background: ${Color.bg.page}; color: ${Color.primaryHover}; }
 `
 
 const PriceTrack = styled.div`
@@ -467,6 +483,39 @@ const ListItemActions = styled.div`
   gap: 0.8vw;
 `
 
+type TreeItem = { id: number; name: string; level?: number; children?: TreeItem[] }
+
+function CategoryTree({
+  nodes,
+  catId,
+  level = 0,
+  onPick,
+}: {
+  nodes: TreeItem[]
+  catId?: string
+  level?: number
+  onPick: (id: number) => void
+}) {
+  return (
+    <>
+      {nodes.map((node) => (
+        <div key={node.id}>
+          <CatNodeBtn
+            $level={level}
+            $active={catId ? String(node.id) === catId : false}
+            onClick={() => onPick(node.id)}
+          >
+            {node.name}
+          </CatNodeBtn>
+          {node.children && node.children.length > 0 && (
+            <CategoryTree nodes={node.children} catId={catId} level={level + 1} onPick={onPick} />
+          )}
+        </div>
+      ))}
+    </>
+  )
+}
+
 export default function Category() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -485,6 +534,7 @@ export default function Category() {
   const searchQuery = searchParams.get('q')?.trim() || ''
   const { products, total } = useProducts(1, 20, numericCatId, searchQuery)
   const { categories } = useFlatCategories()
+  const { categories: categoryTree } = useCategories()
   const { t } = useTranslation()
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [minPrice, setMinPrice] = useState(0)
@@ -580,6 +630,14 @@ export default function Category() {
 
       <MainContent>
         <Sidebar>
+          <SidebarSection>
+            <SidebarTitle>{t('store.nav.categories')}</SidebarTitle>
+            <CategoryTree
+              nodes={categoryTree}
+              catId={catId || undefined}
+              onPick={(id) => navigate(`/category?cat_id=${id}`)}
+            />
+          </SidebarSection>
           <SidebarSection>
             <SidebarTitle>{t('store.category.priceRange')}</SidebarTitle>
             <FilterButton onClick={() => {

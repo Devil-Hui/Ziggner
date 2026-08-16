@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useCart } from '../../../store/CartContext'
 import { useUser } from '../../../store/UserContext'
 import CartDropdown from '../../../components/business/CartDropdown/CartDropdown'
+import UtilityBar from './UtilityBar'
 import { useCategories } from '../../../hooks/useProducts'
 import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
@@ -622,6 +623,7 @@ export default function Navigation() {
 
   return (
     <Header>
+      <UtilityBar />
       <TopBar>
         <Logo src="/logo.png" alt="Ziggner" onClick={handleLogoClick} />
 
@@ -690,7 +692,7 @@ export default function Navigation() {
                 <div className="user-info">{user?.nickname || user?.name || t('store.nav.user')}</div>
                 <DropdownItem onClick={handleProfileClick}>{t('store.nav.profile')}</DropdownItem>
                 <DropdownItem onClick={handleOpenNicknameModal}>{t('store.nav.changeNickname')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/cart')}>{t('store.nav.myOrders')}</DropdownItem>
+                <DropdownItem onClick={() => navigate('/profile')}>{t('store.nav.myOrders')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/coupons')}>{t('store.nav.myCoupons')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/coupons/center')}>{t('store.nav.couponCenter')}</DropdownItem>
                 <DropdownItem onClick={() => navigate('/history')}>{t('store.nav.recentlyViewed')}</DropdownItem>

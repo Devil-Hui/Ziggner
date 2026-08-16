@@ -4,6 +4,7 @@
 
 import { type ReactNode } from 'react'
 import Navigation from '../Navigation/Navigation'
+import Footer from '../Footer/Footer'
 
 type PageLayoutProps = {
   children: ReactNode
@@ -14,6 +15,7 @@ export default function PageLayout({ children }: PageLayoutProps) {
     <div>
       <Navigation />
       {children}
+      <Footer />
     </div>
   )
 }

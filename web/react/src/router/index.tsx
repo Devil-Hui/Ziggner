@@ -16,6 +16,8 @@ import Coupons from '../pages/Coupons/Coupons'
 import CouponCenter from '../pages/CouponCenter/CouponCenter'
 import CouponShare from '../pages/CouponShare/CouponShare'
 import History from '../pages/History/History'
+import TrackOrder from '../pages/TrackOrder/TrackOrder'
+import DownloadApp from '../pages/DownloadApp/DownloadApp'
 import AboutPage from '../pages/AboutPage/AboutPage'
 import Support from '../pages/Support/Support'
 import Chat from '../pages/Chat/Chat'
@@ -90,6 +92,8 @@ export const routes: RouteObject[] = [
   { path: '/order/:order_no', element: <OrderDetail /> },
   { path: '/notifications', element: <Notifications /> },
   { path: '/favorites', element: <Favorites /> },
+  { path: '/track', element: <TrackOrder /> },
+  { path: '/download', element: <DownloadApp /> },
 
   // ── Admin login (standalone, no layout) ──
   {

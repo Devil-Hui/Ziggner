@@ -7,6 +7,7 @@ import GlobalErrorToast from './components/common/GlobalErrorToast'
 import MiniCartToast from './components/common/MiniCartToast'
 import { CartProvider } from './store/CartContext'
 import { UserProvider } from './store/UserContext'
+import { CurrencyProvider } from './store/CurrencyContext'
 import { routes } from './router'
 import AppErrorBoundary from './components/common/AppErrorBoundary/AppErrorBoundary'
 import CustomerServiceFAB from './components/common/CustomerServiceFAB'
@@ -22,6 +23,7 @@ function App() {
     <AppProvider>
       <GlobalLoading />
       <GlobalErrorToast />
+      <CurrencyProvider>
       <UserProvider>
       <CartProvider>
         <AdminAuthProvider>
@@ -32,7 +34,8 @@ function App() {
         </BrowserRouter>
         </AdminAuthProvider>
       </CartProvider>
-    </UserProvider>
+      </UserProvider>
+      </CurrencyProvider>
     </AppProvider>
     </AppErrorBoundary>
     </I18nProvider>
