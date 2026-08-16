@@ -687,7 +687,7 @@ const zhCN = {
       noActivities: '暂无折扣活动',
       fieldsRequired: '请检查必填项：活动名称、开始/结束时间、满减规则',
       skuLinkTitle: '关联商品 SKU（可选）',
-      skuIdsPlaceholder: 'SKU ID，逗号分隔，如 101,102,103',
+      skuSearchPlaceholder: '搜索 SKU 编码或商品名称...',
       activityPricePlaceholder: '活动价（统一价，可留空）',
       saveSkus: '保存 SKU 关联',
       skuIdsRequired: '请至少填写一个 SKU ID',

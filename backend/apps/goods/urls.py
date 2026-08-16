@@ -14,7 +14,7 @@ from .views import (
     SPUAdminBatchView, SPUAdminBatchTaskView,
     # Admin SKU
     SKUAdminListView, SKUAdminBatchCreateView, SKUAdminUpdateView,
-    SKUAdminDeleteView,
+    SKUAdminDeleteView, SKUSearchView,
     # Admin Category
     CategoryAdminCreateView, CategoryAdminUpdateView,
     CategoryAdminDeleteView, CategoryAdminSubtreeView,
@@ -84,6 +84,7 @@ urlpatterns = [
 
     # ==================== Admin SKU ====================
     path('sku/admin', SKUAdminListView.as_view(), name='admin-sku-list'),
+    path('sku/search', SKUSearchView.as_view(), name='admin-sku-search'),
     path('sku/batch', SKUAdminBatchCreateView.as_view(), name='admin-sku-batch-create'),
     path('sku/<int:sku_id>/update', SKUAdminUpdateView.as_view(), name='admin-sku-update'),
     path('sku/<int:sku_id>/delete', SKUAdminDeleteView.as_view(), name='admin-sku-delete'),
