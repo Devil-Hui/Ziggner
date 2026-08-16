@@ -153,7 +153,13 @@ class Cache:
             backend = (configured.get(alias) or {}).get('BACKEND', '')
             if 'redis' in backend.lower() or 'django_redis' in backend.lower():
                 client = get_redis_connection(alias)
-                match = f"{pattern_suffix}*"
+                # Django 存 Redis 的完整 key = {KEY_PREFIX}:{version}:{业务 key}，
+                # 必须拼上 KEY_PREFIX + version，否则 SCAN 永远匹配不到真实 key（缓存失效无效）。
+                backend_cache = caches[alias]
+                key_prefix = getattr(backend_cache, 'key_prefix', '') or ''
+                version = getattr(backend_cache, 'version', 1) or 1
+                full_pattern = f"{key_prefix}:{version}:{pattern_suffix}" if key_prefix else pattern_suffix
+                match = f"{full_pattern}*"
                 cursor = 0
                 keys_to_delete = []
                 while True:
