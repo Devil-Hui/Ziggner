@@ -334,21 +334,22 @@ class MediaCreateView(BaseApiView):
         # 此处若再按 FILE_STORAGE=='r2' 分支返回相对路径，R2 模式下会返回错误地址导致前端 404。
         # 因此无条件走 default_storage.url()，两种后端行为天然正确。
         def _save_file(f):
-            # 转存为「无损 WebP」（Google libwebp，大厂开源）：同画质体积优于 PNG 且真无损。
+            # 转存为「高质量 WebP」（Google libwebp，大厂开源）：q=90 视觉近无损，
+            # 体积比无损 WebP 再小 50–70%，比 PNG 更小且画质肉眼无差。
             # EXIF 方向校正 + 剥离元数据（重编码天然剥离）；转码失败回退原格式（strip_exif）。
             try:
                 f.seek(0)
                 with Image.open(f) as img:
                     img = ImageOps.exif_transpose(img)  # 校正手机拍摄方向
                     img.load()
-                    # 保留透明通道（WebP 支持无损透明），否则转 RGB 减小体积
+                    # 保留透明通道（WebP 支持带 alpha 的有损），否则转 RGB 减小体积
                     if img.mode in ('RGBA', 'LA', 'P', 'PA'):
                         img = img.convert('RGBA')
                     else:
                         img = img.convert('RGB')
                     buf = BytesIO()
-                    # lossless=True + quality=100：真无损；method=4 平衡压缩率与耗时
-                    img.save(buf, 'WEBP', lossless=True, quality=100, method=4)
+                    # lossless=False + quality=90：视觉近无损；method=4 平衡压缩率与上传耗时
+                    img.save(buf, 'WEBP', lossless=False, quality=90, method=4)
                 buf.seek(0)
                 safe_name = f'{uuid.uuid4().hex}.webp'
                 path = default_storage.save(
@@ -357,7 +358,7 @@ class MediaCreateView(BaseApiView):
                 )
                 return default_storage.url(path)
             except Exception as exc:  # noqa: BLE001 - 转码失败回退原格式，保证可用
-                _logger.warning('WebP 无损转码失败，回退原格式保存: %s', exc)
+                _logger.warning('WebP 转码失败，回退原格式保存: %s', exc)
                 f.seek(0)
                 ext = validated_extensions[id(f)]
                 safe_name = f'{uuid.uuid4().hex}{ext}'
