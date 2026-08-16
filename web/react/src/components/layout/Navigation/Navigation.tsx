@@ -391,69 +391,6 @@ const CategoryButton = styled.button`
   }
 `
 
-const ScrollWrapper = styled.div`
-  display: flex;
-  align-items: center;
-  flex-grow: 1;
-  position: relative;
-  overflow: hidden;
-`
-
-const ScrollArrow = styled.button`
-  position: absolute;
-  z-index: ${zIndex.content};
-  width: 36px;
-  height: 36px;
-  background: ${Color.bg.card};
-  border: 1px solid ${Color.border.medium};
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-
-  &:hover {
-    background: ${Color.primaryLight};
-  }
-
-  img {
-    width: 14px;
-    height: 14px;
-  }
-
-  &.left {
-    left: 0;
-  }
-
-  &.right {
-    right: 0;
-  }
-`
-
-const AlphabetNav = styled.div`
-  display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
-  padding: 1vh 4vw;
-  gap: 2.5vw;
-  flex-grow: 1;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-
-  span {
-    font-size: 1rem;
-    color: ${Color.text.secondary};
-    cursor: pointer;
-
-    &:hover {
-      color: ${CLAY};
-    }
-  }
-`
-
 const MegaMenu = styled.div<{ $active?: boolean }>`
   position: absolute;
   top: 100%;
@@ -573,8 +510,6 @@ export default function Navigation() {
   const [showMegaMenu, setShowMegaMenu] = useState(false)
   const [activeLevel1, setActiveLevel1] = useState(-1)
   const [activeLevel2, setActiveLevel2] = useState(0)
-  const [showLeftArrow, setShowLeftArrow] = useState(false)
-  const [showRightArrow, setShowRightArrow] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
 
   // Nickname modal state
@@ -626,15 +561,6 @@ export default function Navigation() {
       if (timer) window.clearTimeout(timer)
     }
   }, [])
-
-  const handleScroll = () => {
-    const scrollBox = document.querySelector('.alphabet-scroll') as HTMLElement
-    if (scrollBox) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollBox
-      setShowLeftArrow(scrollLeft > 0)
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10)
-    }
-  }
 
   const currentCategory = activeLevel1 >= 0 ? categoryTree[activeLevel1] : null
   const currentSubCategories = currentCategory?.children || []
@@ -821,32 +747,6 @@ export default function Navigation() {
             </MenuGroup>
           </MenuDetail>
         </MegaMenu>
-
-        <ScrollWrapper>
-          {showLeftArrow && (
-            <ScrollArrow className="left" onClick={() => {
-              const scrollBox = document.querySelector('.alphabet-scroll') as HTMLElement
-              if (scrollBox) scrollBox.scrollBy({ left: -200, behavior: 'smooth' })
-            }}>
-              <img src="/static/images/icons/arrow-left.svg" alt="left" />
-            </ScrollArrow>
-          )}
-          <AlphabetNav className="alphabet-scroll" onScroll={handleScroll}>
-            {categoryTree.map(category => (
-              <span key={category.id} onClick={() => handleCategoryClick(category.id)}>
-                {category.name}
-              </span>
-            ))}
-          </AlphabetNav>
-          {showRightArrow && (
-            <ScrollArrow className="right" onClick={() => {
-              const scrollBox = document.querySelector('.alphabet-scroll') as HTMLElement
-              if (scrollBox) scrollBox.scrollBy({ left: 200, behavior: 'smooth' })
-            }}>
-              <img src="/static/images/icons/arrow-right.svg" alt="right" />
-            </ScrollArrow>
-          )}
-        </ScrollWrapper>
       </BottomNav>
 
       {showNicknameModal && (

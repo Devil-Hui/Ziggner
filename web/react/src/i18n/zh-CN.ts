@@ -1091,7 +1091,6 @@ const zhCN = {
       loadError: '加载失败',
     },
     category: {
-      all: '全部',
       home: '首页',
       allCategories: '全部分类',
       products: '商品',
