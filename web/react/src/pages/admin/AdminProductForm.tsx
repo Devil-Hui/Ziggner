@@ -1282,38 +1282,31 @@ export default function AdminProductForm() {
         // ── 新建模式 ──
         const stagedItems = await getAllStagedItems()
 
-        let spuRes: { id: number }
-        if (stagedItems.length === 0) {
-          spuRes = await adminAPI.createSPU(spuData) as unknown as { id: number }
-        } else {
-          const formData = new FormData()
-          formData.append('name', name.trim())
-          formData.append('brand_id', String(brandId))
-          formData.append('category_id', String(categoryId))
-          formData.append('description', description.trim())
-          formData.append('specs', JSON.stringify(validSpecs))
+        // 新建商品：后端 /goods/spu/create 不处理媒体文件，必须先把 SPU 建出来拿到 spuId，
+        // 再逐项调用「已验证」的 /goods/media/spu/{id}/upload 端点上传（与编辑模式同一路径，
+        // 该端点负责校验、WebP 转码、ProductMedia 落库与 main_image 同步）。
+        const spuRes = await adminAPI.createSPU(spuData) as unknown as { id: number }
+        spuId = spuRes.id
 
-          let sortOrder = 0
-          for (const item of stagedItems) {
-            if (item.mediaType === 'image') {
-              const meta = { fileName: item.fileName, sortOrder: sortOrder++, mediaType: 'image' }
-              formData.append('media_metadata', JSON.stringify(meta))
-              if (item.thumbBlob) formData.append('media_files', item.thumbBlob, `thumb_${item.fileName}`)
-              if (item.listBlob) formData.append('media_files', item.listBlob, `list_${item.fileName}`)
-              if (item.originalBlob) formData.append('media_files', item.originalBlob, `original_${item.fileName}`)
-            } else if (item.mediaType === 'video') {
-              const meta = { fileName: item.fileName, sortOrder: sortOrder++, mediaType: 'video' }
-              formData.append('media_metadata', JSON.stringify(meta))
-              if (item.videoBlob) formData.append('media_files', item.videoBlob, item.fileName)
-              if (item.videoFrameThumb) formData.append('media_files', item.videoFrameThumb, `video_thumb_${item.fileName}`)
-              if (item.videoFrameList) formData.append('media_files', item.videoFrameList, `video_list_${item.fileName}`)
-              if (item.videoFrameLarge) formData.append('media_files', item.videoFrameLarge, `video_large_${item.fileName}`)
+        for (const item of stagedItems) {
+          if (item.mediaType === 'image') {
+            const fd = new FormData()
+            if (item.thumbBlob) fd.append('thumb', item.thumbBlob, `thumb_${item.fileName}`)
+            if (item.listBlob) fd.append('list', item.listBlob, `list_${item.fileName}`)
+            if (item.largeBlob) fd.append('large', item.largeBlob, `large_${item.fileName}`)
+            if (item.originalBlob) fd.append('original', item.originalBlob, `original_${item.fileName}`)
+            // 端点要求 thumb/list/large/original 四尺寸齐全，缺一不可
+            if (fd.has('thumb') && fd.has('list') && fd.has('large') && fd.has('original')) {
+              try {
+                await adminAPI.uploadMedia(spuId, fd)
+              } catch (e) {
+                console.warn('[AdminProductForm] 上传图片媒体失败 spu=%s:', spuId, e)
+              }
             }
           }
-
-          spuRes = await adminAPI.createSPUWithMedia(formData) as unknown as { id: number }
+          // 视频：/goods/media/spu/{id}/upload 当前仅支持 image（video 为独立能力），
+          // create 模式下视频本就未被后端接收，此处不重复塞入被忽略的字段。
         }
-        spuId = spuRes.id
 
         if (skus.length > 0) {
           // Validate all SKUs have prices
