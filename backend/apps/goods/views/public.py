@@ -7,8 +7,9 @@ from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiRespon
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.throttling import UserRateThrottle
+from rest_framework.permissions import BasePermission
 
-from utils.api_base_view import PublicApiView, AdminApiView
+from utils.api_base_view import PublicApiView, BaseApiView
 from utils.api_base_pagination import parse_pagination
 from utils.response_codes import Messages
 from .serializers import ProductSearchSerializer
@@ -191,9 +192,19 @@ class TagListView(PublicApiView):
         return Response(tags)
 
 
-class AdminImageUploadView(AdminApiView):
+class UploadImagePermission(BasePermission):
+    """图片上传：商品写 或 品牌写 权限任一即可（兼容品牌 logo 与商品图片上传）"""
+    message = '没有上传图片的权限'
+
+    def has_permission(self, request, view):
+        from apps.rbac.services import has_perm
+        return has_perm(request.user, 'goods.spu.write') or has_perm(request.user, 'goods.brand.write')
+
+
+class AdminImageUploadView(BaseApiView):
     """管理员图片上传。"""
 
+    permission_classes = [UploadImagePermission]
     ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.webp'}
     MAX_UPLOAD_SIZE = 5 * 1024 * 1024  # 5MB
 

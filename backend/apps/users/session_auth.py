@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 
 from apps.users.turnstile import TurnstileUnavailable, verify_turnstile
 from utils.api_jwt_authentication import UsersJWTAuthentication
@@ -127,7 +128,11 @@ class BrowserRefreshView(APIView):
         raw_refresh = request.COOKIES.get(REFRESH_COOKIE)
         if not raw_refresh:
             raise exceptions.AuthenticationFailed('Refresh cookie is missing.')
-        refresh = RefreshToken(raw_refresh)
+        try:
+            refresh = RefreshToken(raw_refresh)
+        except TokenError:
+            # 无效/过期 refresh token 返回 401（前端引导重新登录），而非 500
+            raise exceptions.AuthenticationFailed('Refresh token is invalid or expired.')
         response = Response({'authenticated': True})
         set_auth_cookies(response, refresh)
         return response
