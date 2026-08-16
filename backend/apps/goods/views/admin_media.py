@@ -146,6 +146,8 @@ class MediaDeleteView(BaseApiView):
         # 失效媒体列表缓存
         if spu_id:
             GoodsCacheService.invalidate_media_list(spu_id)
+            GoodsCacheService.invalidate_spu(spu_id)
+            GoodsCacheService.invalidate_spu_list()
             # 同步 main_image
             MediaService.sync_main_image(spu_id)
         return Response({'detail': '已删除'})
@@ -188,6 +190,8 @@ class MediaReorderView(BaseApiView):
         for sid in spu_ids:
             if sid:
                 GoodsCacheService.invalidate_media_list(sid)
+                GoodsCacheService.invalidate_spu(sid)
+                GoodsCacheService.invalidate_spu_list()
         return Response({'detail': '排序已更新', 'count': len(media_ids)})
 
 
@@ -235,6 +239,8 @@ class MediaUpdateView(BaseApiView):
             # 失效媒体列表缓存
             if media.spu_id:
                 GoodsCacheService.invalidate_media_list(media.spu_id)
+                GoodsCacheService.invalidate_spu(media.spu_id)
+                GoodsCacheService.invalidate_spu_list()
 
         return Response({
             'id': media.id,
@@ -337,5 +343,7 @@ class MediaCreateView(BaseApiView):
         MediaService.sync_main_image(spu_id)
         # 失效媒体列表缓存
         GoodsCacheService.invalidate_media_list(spu_id)
+        GoodsCacheService.invalidate_spu(spu_id)
+        GoodsCacheService.invalidate_spu_list()
 
         return Response(_serialize_media(media), status=status.HTTP_201_CREATED)
