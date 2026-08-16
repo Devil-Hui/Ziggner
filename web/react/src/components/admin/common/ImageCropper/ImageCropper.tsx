@@ -33,7 +33,7 @@ function dataURLToBlob(dataUrl: string): Blob {
   const idx = dataUrl.indexOf(',')
   const head = idx >= 0 ? dataUrl.slice(0, idx) : ''
   const body = idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl
-  const mime = head.match(/:(.*?);/) ?.[1] || 'image/jpeg'
+  const mime = head.match(/:(.*?);/) ?.[1] || 'image/webp'
   const bin = atob(body)
   const arr = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
@@ -264,15 +264,17 @@ export default function ImageCropper({
         canvas.height = h
         const ctx = canvas.getContext('2d')!
         ctx.drawImage(img, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, w, h)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.95)
+        // 直接出 WebP q0.9（视觉近无损，体积优于 JPEG）；后端对已发 WebP 校验后原样落盘，免二次编码。
+        // 透明背景由 WebP alpha 保留，无需铺白底。
+        const dataUrl = canvas.toDataURL('image/webp', 0.9)
         canvas.toBlob(
           (blob) => {
             if (blob) results[key] = { blob, dataUrl }
             else results[key] = { blob: dataURLToBlob(dataUrl), dataUrl }
             resolve()
           },
-          'image/jpeg',
-          0.95
+          'image/webp',
+          0.9
         )
       })
     }

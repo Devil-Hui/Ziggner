@@ -334,9 +334,28 @@ class MediaCreateView(BaseApiView):
         # 此处若再按 FILE_STORAGE=='r2' 分支返回相对路径，R2 模式下会返回错误地址导致前端 404。
         # 因此无条件走 default_storage.url()，两种后端行为天然正确。
         def _save_file(f):
-            # 转存为「高质量 WebP」（Google libwebp，大厂开源）：q=90 视觉近无损，
-            # 体积比无损 WebP 再小 50–70%，比 PNG 更小且画质肉眼无差。
-            # EXIF 方向校正 + 剥离元数据（重编码天然剥离）；转码失败回退原格式（strip_exif）。
+            content_type = getattr(f, 'content_type', '') or ''
+            ext = validated_extensions[id(f)]
+            # 前端已直出 WebP（q90）或历史 WebP → 校验完整性后原样落盘：
+            #   避免二次编码损耗，且保留透明通道（strip_exif 对 WEBP 会拍平 RGBA 致透明变黑）。
+            if content_type == 'image/webp' or ext.lower() == '.webp':
+                try:
+                    f.seek(0)
+                    with Image.open(f) as probe:
+                        probe.load()  # 强制解码，校验文件完整可解码
+                    f.seek(0)
+                    raw = f.read()
+                    safe_name = f'{uuid.uuid4().hex}.webp'
+                    path = default_storage.save(
+                        f'product_media/{safe_name}',
+                        ContentFile(raw),
+                    )
+                    return default_storage.url(path)
+                except Exception as exc:  # noqa: BLE001 - WebP 直存失败 → 落入下方重编码兜底
+                    _logger.warning('WebP 直存校验失败，转 Pillow 重编码: %s', exc)
+
+            # 其余格式（PNG/JPEG/...）→ Pillow 转「高质量 WebP」 q90（Google libwebp）：
+            #   视觉近无损，体积比无损 WebP 再小 50–70%；EXIF 方向校正 + 重编码剥离元数据。
             try:
                 f.seek(0)
                 with Image.open(f) as img:
@@ -360,7 +379,6 @@ class MediaCreateView(BaseApiView):
             except Exception as exc:  # noqa: BLE001 - 转码失败回退原格式，保证可用
                 _logger.warning('WebP 转码失败，回退原格式保存: %s', exc)
                 f.seek(0)
-                ext = validated_extensions[id(f)]
                 safe_name = f'{uuid.uuid4().hex}{ext}'
                 path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
                 return default_storage.url(path)

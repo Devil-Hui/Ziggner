@@ -11,14 +11,16 @@
  *
  * 现改用浏览器原生 Canvas 解码 + 重编码，产物 100% 可控、可验证。
  *
- * 无损策略（配合后端转存无损 WebP）：
- *   · 前端只做「必要尺寸缩放」，不做有损压缩 —— 保证端到端无损。
- *   · 尺寸未超限（<= maxWidthOrHeight）→ 原样返回，保留原始画质（不再做有损 JPEG）。
- *   · 尺寸超限 → 等比缩放后输出 PNG 无损（保留透明通道），后端再转存为无损 WebP。
- *   · 小文件（<= 200KB）直接透传（100% 无损）。
+ * 高质量策略（配合后端归一化 WebP q90）：
+ *   · 前端直接出 WebP q0.9（视觉近无损，体积优于 JPEG/PNG）—— 整条链路 WebP 化。
+ *   · 尺寸未超限（<= maxWidthOrHeight）→ 原样返回，后端归一化为 WebP。
+ *   · 尺寸超限 → 等比缩放后输出 WebP q0.9（保留透明通道 alpha）。
+ *   · 小文件（<= 200KB）直接透传（后端归一化为 WebP）。
+ *   · 极少数环境不支持 canvas WebP 编码时，回退 PNG，后端仍会归一化为 WebP。
  *
- * 为何前端不出 WebP：浏览器原生 toBlob('image/webp') 无 lossless 模式
- * （quality=1 仍是有损），故前端出 PNG 无损、后端用 libwebp 出真无损 WebP。
+ * 注：浏览器原生 toBlob('image/webp') 仅「有损」支持（无 lossless 模式），
+ * 但本项目已采用 q90 高质量有损 WebP（视觉近无损），故前端可直接出 WebP，
+ * 后端对已发 WebP 校验后原样落盘，避免二次编码。
  */
 export interface CompressionOptions {
   /** 最大宽或高 (px)，默认 2560（超过则等比缩放） */
@@ -86,24 +88,21 @@ export async function compressImage(
     }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    // 非 PNG 源（如 JPEG）铺白底，避免透明区域变黑；PNG 保留透明
-    if (file.type !== 'image/png') {
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, targetW, targetH)
-    }
+    // WebP 支持 alpha，无需铺白底；透明 PNG 源经 WebP 保留透明通道
     ctx.drawImage(bmp, 0, 0, targetW, targetH)
     bmp.close()
 
-    // 统一输出 PNG 无损（保留透明通道）；后端将转存为无损 WebP。
-    // 不复用「体积 >= 原图则回退」逻辑 —— 我们要的是无损，PNG 体积偏大是预期代价。
-    const blob = await canvasToBlob(canvas, 'image/png')
+    // 优先出 WebP q0.9（视觉近无损）；toBlob 返回 null（极旧环境）→ 回退 PNG，后端仍归一化 WebP
+    const webpBlob = await canvasToBlob(canvas, 'image/webp', 0.9)
+    const blob = webpBlob || (await canvasToBlob(canvas, 'image/png'))
 
     // 防御：编码失败 / 0 字节 → 回退原图（仅防异常，不防体积膨胀）
     if (!blob || blob.size === 0) return file
 
     const base = file.name.replace(/\.[^./\\]+$/, '') || 'image'
-    return new File([blob], `${base}.png`, {
-      type: 'image/png',
+    const isWebp = blob.type === 'image/webp'
+    return new File([blob], `${base}.${isWebp ? 'webp' : 'png'}`, {
+      type: blob.type,
       lastModified: file.lastModified,
     })
   } catch (err) {
@@ -170,16 +169,15 @@ export async function prepareImageForUpload(
   }
 
   // 大图自动处理（>200KB 触发，compressImage 内部对更小文件直接透传）。
-  // 无忧损路径：尺寸超限则缩放后 PNG 无损；未超限原样返回（保留原始画质）。
+  // WebP 路径：尺寸超限则缩放后出 WebP q0.9；未超限原样返回（后端归一化为 WebP）。
   if (file.size > 200 * 1024) {
     try {
       const compressed = await compressImage(file, {
         maxWidthOrHeight: 2560,
         initialQuality: 0.95,
       })
-      // compressImage 仅在「尺寸超限」时返回新 PNG（无损，体积可能偏大）；
-      // 或在「未超限/异常」时返回原 file。故以「是否返回新对象」判定是否采用，
-      // 避免 PNG 体积大于原 JPEG 时被误回退到原图（有损）。
+      // compressImage 仅在「尺寸超限」时返回新文件（WebP/PNG）；
+      // 或在「未超限/异常」时返回原 file。故以「是否返回新对象」判定是否采用。
       if (compressed !== file) {
         const ratio = compressed.size < file.size
           ? Number(((1 - compressed.size / file.size) * 100).toFixed(0))

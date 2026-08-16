@@ -42,7 +42,8 @@ function generateFrameSizes(
         const sx = (videoWidth - sw) / 2
         const sy = (videoHeight - sh) / 2
         ctx.drawImage(video, sx, sy, sw, sh, 0, 0, size.w, size.h)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        // 视频封面也统一 WebP q0.9，与全局图片策略一致
+        const dataUrl = canvas.toDataURL('image/webp', 0.9)
         canvas.toBlob(
           (blob) => {
             completed++
@@ -52,8 +53,8 @@ function generateFrameSizes(
               resolve(results as any)
             }
           },
-          'image/jpeg',
-          0.85
+          'image/webp',
+          0.9
         )
       }
     }
