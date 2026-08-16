@@ -11,7 +11,7 @@ import { post, ensureCSRFCookie } from '../../api/request'
 const CREAM = '#f7f4ef'
 const INK = '#1a1712'
 const MUTED = '#6b6459'
-const CLAY = '#c8623a'
+const CLAY = '#1a56db'
 const LINE = 'rgba(26, 23, 18, 0.10)'
 
 const Container = styled.div`
@@ -88,7 +88,7 @@ const Input = styled.input`
 
   &:focus {
     border-color: ${CLAY};
-    box-shadow: 0 0 0 3px rgba(200, 98, 58, 0.12);
+    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
   }
 
   &::placeholder {
@@ -111,7 +111,7 @@ const Button = styled.button<{ $loading?: boolean }>`
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 10px 24px -10px rgba(200, 98, 58, 0.55);
+    box-shadow: 0 10px 24px -10px rgba(26, 86, 219, 0.55);
   }
 
   &:active:not(:disabled) {
@@ -137,7 +137,7 @@ const SendCodeBtn = styled.button<{ $disabled?: boolean }>`
   transition: background 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(200, 98, 58, 0.08);
+    background: rgba(26, 86, 219, 0.08);
   }
 `
 

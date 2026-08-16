@@ -180,23 +180,6 @@ const ColorButton = styled.button`
   }
 `
 
-const FilterList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1vh;
-`
-
-const FilterLink = styled.div`
-  font-size: 1rem;
-  color: ${Color.text.secondary};
-  cursor: pointer;
-  padding: 0.4vh 0;
-
-  &:hover, &.active {
-    color: #111;
-  }
-`
-
 const TagList = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -595,24 +578,6 @@ export default function Category() {
               <PriceRange type="range" min="0" max="500" value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} />
             </PriceTrack>
             <PriceLabel>${minPrice} - ${maxPrice}</PriceLabel>
-          </SidebarSection>
-
-          <SidebarSection>
-            <SidebarTitle>{t('store.category.productCategory')}</SidebarTitle>
-            <FilterList>
-              <FilterLink className={!activeFilters['category']?.length && !catId ? 'active' : ''} onClick={() => navigate('/category')}>
-                {t('store.category.allProducts')}
-              </FilterLink>
-              {categories.map(cat => (
-                <FilterLink
-                  key={cat.id}
-                  className={String(cat.id) === catId || activeFilters['category']?.includes(cat.name) ? 'active' : ''}
-                  onClick={() => navigate(`/category?cat_id=${cat.id}`)}
-                >
-                  {cat.name}
-                </FilterLink>
-              ))}
-            </FilterList>
           </SidebarSection>
         </Sidebar>
 
