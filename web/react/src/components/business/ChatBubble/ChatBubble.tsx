@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens'
 import ProductCard from './ProductCard'
 import type { ProductCardData } from './ProductCard'
+import { resolveMediaUrl } from '../../../api/chat'
 
 // ── Types ──
 
@@ -367,7 +368,7 @@ export default function ChatBubble({
                 }}
               >
                 <ProductCardImg
-                  src={productSnapshot.main_image}
+                  src={resolveMediaUrl(productSnapshot.main_image) || productSnapshot.main_image}
                   alt={productSnapshot.name}
                 />
                 <ProductCardInfo>
@@ -392,7 +393,7 @@ export default function ChatBubble({
               <ProductCard product={{
                 id: productSnapshot.id,
                 name: productSnapshot.name,
-                main_image: productSnapshot.main_image,
+                main_image: resolveMediaUrl(productSnapshot.main_image) || productSnapshot.main_image,
                 price: productSnapshot.price,
               }} />
             )}

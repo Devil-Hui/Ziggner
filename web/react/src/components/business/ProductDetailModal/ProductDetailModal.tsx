@@ -6,7 +6,6 @@ import { useTranslation } from '../../../i18n'
 import { useUser } from '../../../store/UserContext'
 import { Color, FontSize, Transition } from '../../../theme/tokens'
 import { zIndex } from '../../../styles/zIndex'
-import { optionalMediaUrl } from '../../../utils/mediaUrl'
 import { resolveMediaUrl } from '../../../api/chat'
 
 export interface ProductDetailModalProps {
@@ -729,7 +728,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     : undefined
 
   const images = useMemo(() => collectImages(detail, selectedSku), [detail, selectedSku])
-  const selectedImageUrl = optionalMediaUrl(images[selectedImageIndex] || detail?.main_image)
+  const selectedImageUrl = resolveMediaUrl(images[selectedImageIndex] || detail?.main_image)
 
   useEffect(() => {
     setSelectedImageIndex(0)

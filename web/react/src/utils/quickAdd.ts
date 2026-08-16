@@ -1,6 +1,7 @@
 import type { PublicSKU, PublicSPUDetail } from '../api/public'
 import { showMiniCartToast } from '../components/common/MiniCartToast'
 import { openCartDropdown } from './cartEvents'
+import { resolveMediaUrl } from '../api/chat'
 
 type AddItemFn = (
   skuId: number,
@@ -20,7 +21,7 @@ export async function commitQuickAddToCart(
   options?: { openDropdownMs?: number },
 ) {
   const price = Number(sku.discount_price ?? sku.price ?? 0)
-  const image = sku.image_url || product.main_image || ''
+  const image = resolveMediaUrl(sku.image_url) || sku.image_url || resolveMediaUrl(product.main_image) || product.main_image || ''
   await addItem(skuId, quantity, product.name, price, image)
   const specsText = sku.spec_values
     ? Object.entries(sku.spec_values)

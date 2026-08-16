@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens'
+import { resolveMediaUrl } from '../../../api/chat'
 
 // ── Types ──
 
@@ -256,7 +257,7 @@ export default function ProductCard({ product, loading = false, imageError = fal
             </BrokenImgPlaceholder>
           ) : (
             <ThumbImg
-              src={product.main_image || undefined}
+              src={resolveMediaUrl(product.main_image) || product.main_image || undefined}
               alt={product.name}
               loading="lazy"
               onError={() => setImgErr(true)}

@@ -1468,7 +1468,7 @@ export default function AdminChatDetail() {
               {activeConv.spu_info && (
                 <CtxProduct onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}>
                   <CtxProductImg
-                    src={activeConv.spu_info.main_image || undefined}
+                    src={resolveMediaUrl(activeConv.spu_info.main_image) || activeConv.spu_info.main_image || undefined}
                     alt={activeConv.spu_info.name}
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
                   />
@@ -1710,7 +1710,7 @@ export default function AdminChatDetail() {
               {productResults.map(product => (
                 <ProductItem key={product.id}>
                   <ProductItemImg
-                    src={product.main_image}
+                    src={resolveMediaUrl(product.main_image) || product.main_image}
                     alt={product.name}
                     onError={(e) => {
                       (e.target as HTMLImageElement).style.display = 'none'

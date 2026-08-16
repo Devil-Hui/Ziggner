@@ -8,7 +8,7 @@ import LoadingSkeleton from '../../components/admin/common/LoadingSkeleton';
 import ErrorRetry from '../../components/admin/common/ErrorRetry';
 import StatusBadge from '../../components/admin/common/StatusBadge';
 import { adminAPI } from '../../api/admin';
-import { adminChatAPI, type ConversationSummary } from '../../api/chat';
+import { adminChatAPI, resolveMediaUrl, type ConversationSummary } from '../../api/chat';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
 import { SuccessBtn as ApproveBtn, DangerBtn as RejectBtn } from '../../components/admin/common/ui';
@@ -533,7 +533,7 @@ export default function AdminProductAudit() {
                 <InfoLabel>{t('admin.productAudit.mainImage')}</InfoLabel>
                 <div style={{ marginTop: 8 }}>
                   {spu.main_image ? (
-                    <MainImage src={spu.main_image} alt={spu.name} />
+                    <MainImage src={resolveMediaUrl(spu.main_image) || spu.main_image} alt={spu.name} />
                   ) : (
                     <div style={{ width: 200, height: 200, background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc', fontSize: 13 }}>
                       {t('admin.productAudit.noImage')}

@@ -13,6 +13,7 @@ import { publicAPI, type PublicSPUDetail } from '../../api/public'
 import { reviewAPI, type ReviewItem } from '../../api/review'
 import { Color, Radius, Shadow, Layout } from '../../theme/tokens'
 import { addProductToCart } from './productCartAction'
+import { resolveMediaUrl } from '../../api/chat'
 
 const Container = styled.div`
   min-height: calc(100vh - ${Layout.headerHeight}px);
@@ -417,7 +418,7 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!selectedSku || !product) return
-    const img = selectedSku.image_url || product.main_image || ''
+    const img = resolveMediaUrl(selectedSku.image_url) || selectedSku.image_url || resolveMediaUrl(product.main_image) || product.main_image || ''
     const specsText = selectedSku.spec_values
       ? Object.entries(selectedSku.spec_values).map(([k, v]) => `${k}: ${v}`).join(' · ')
       : undefined
@@ -496,7 +497,7 @@ export default function ProductDetail() {
             {/* Image */}
             <ImageSection>
               {product.main_image
-                ? <img src={product.main_image} alt={product.name} />
+                ? <img src={resolveMediaUrl(product.main_image) || product.main_image} alt={product.name} />
                 : <Placeholder>📦</Placeholder>
               }
             </ImageSection>
@@ -564,7 +565,7 @@ export default function ProductDetail() {
                 variant="outline"
                 size="lg"
                 style={{ marginTop: '1vh' }}
-                onClick={() => navigate(`/support?spu_id=${product.id}&spu_name=${encodeURIComponent(product.name)}&spu_image=${encodeURIComponent(product.main_image || '')}&spu_price=${price}`)}
+                onClick={() => navigate(`/support?spu_id=${product.id}&spu_name=${encodeURIComponent(product.name)}&spu_image=${encodeURIComponent(resolveMediaUrl(product.main_image) || product.main_image || '')}&spu_price=${price}`)}
               >
                 {t('store.product.contactSupport')}
               </Button>

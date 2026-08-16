@@ -1263,7 +1263,7 @@ export default function Chat() {
                 {activeConv.spu_info && (
                   <>
                     <PCtxImg
-                      src={activeConv.spu_info.main_image || undefined}
+                      src={resolveMediaUrl(activeConv.spu_info.main_image) || activeConv.spu_info.main_image || undefined}
                       alt={activeConv.spu_info.name}
                       onClick={() => navigate(`/product/${activeConv.spu_info!.id}`)}
                       onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}

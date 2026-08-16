@@ -12,6 +12,7 @@ import ProductDetailModal from '../../components/business/ProductDetailModal/Pro
 import { useQuickAddModal } from '../../hooks/useQuickAddModal'
 import styled, { css, keyframes } from 'styled-components'
 import { optionalMediaUrl } from '../../utils/mediaUrl'
+import { resolveMediaUrl } from '../../api/chat'
 
 /* ───────────────────────────────────────────────────────────
  *  Minimalist editorial design system
@@ -548,7 +549,7 @@ export default function Home() {
           id: spu.id,
           name: spu.name,
           price: parseFloat(spu.min_price || '0') || 0,
-          image: spu.main_image || '',
+          image: resolveMediaUrl(spu.main_image) || spu.main_image || '',
           category: spu.category_name || '',
           description: spu.description || '',
           rating: 0,

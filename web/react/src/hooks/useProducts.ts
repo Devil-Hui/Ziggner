@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { publicAPI, type PublicSPU, type PublicCategory, type PromoTag } from '../api/public';
+import { resolveMediaUrl } from '../api/chat';
 
 // ── 类型 ──────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ function mapSPUToProduct(spu: PublicSPU): Product {
     id: spu.id,
     name: spu.name,
     price: parseFloat(spu.min_price || '0') || 0,
-    image: spu.main_image || '',
+    image: resolveMediaUrl(spu.main_image) || spu.main_image || '',
     category: spu.category_name || '',
     description: spu.description || '',
     rating: 0,
@@ -114,7 +115,7 @@ export function useProductDetail(spuId: number) {
             id: detail.id,
             name: detail.name,
             price: minPrice,
-            image: detail.main_image || detail.skus?.[0]?.image_url || '',
+            image: resolveMediaUrl(detail.main_image) || detail.main_image || detail.skus?.[0]?.image_url || '',
             category: detail.category_path || '',
             categoryId: detail.category_id,
             description: detail.description || '',

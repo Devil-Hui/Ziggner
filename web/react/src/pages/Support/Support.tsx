@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
+import { resolveMediaUrl } from '../../api/chat'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import Button from '../../components/common/Button/Button'
@@ -675,7 +676,7 @@ export default function Support() {
     if (!snapshot) return null
     return (
       <ProductCard onClick={() => navigate(`/product/${snapshot.id}`)}>
-        <ProductCardImg src={snapshot.main_image} alt={snapshot.name} />
+        <ProductCardImg src={resolveMediaUrl(snapshot.main_image) || snapshot.main_image} alt={snapshot.name} />
         <ProductCardInfo>
           <ProductCardName>{snapshot.name}</ProductCardName>
           <ProductCardPrice>¥{snapshot.price}</ProductCardPrice>
