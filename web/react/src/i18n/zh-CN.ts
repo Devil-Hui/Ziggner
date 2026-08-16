@@ -1096,8 +1096,6 @@ const zhCN = {
       products: '商品',
       priceRange: '价格区间',
       filter: '筛选',
-      productCategory: '商品分类',
-      allProducts: '全部商品',
       defaultSorting: '默认排序',
       priceLowHigh: '价格：从低到高',
       priceHighLow: '价格：从高到低',

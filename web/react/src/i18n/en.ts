@@ -1096,8 +1096,6 @@ const en = {
       products: 'Products',
       priceRange: 'Price Range',
       filter: 'Filter',
-      productCategory: 'Product Category',
-      allProducts: 'All Products',
       defaultSorting: 'Default Sorting',
       priceLowHigh: 'Price: Low to High',
       priceHighLow: 'Price: High to Low',
