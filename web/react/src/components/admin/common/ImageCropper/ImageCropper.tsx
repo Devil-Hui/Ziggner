@@ -28,6 +28,18 @@ interface DragState {
 const HANDLE_SIZE = 8
 const MIN_CROP = 50
 
+/** dataURL → Blob（toBlob 回调拿到 null 时的兜底，保证每个尺寸都有可用 Blob） */
+function dataURLToBlob(dataUrl: string): Blob {
+  const idx = dataUrl.indexOf(',')
+  const head = idx >= 0 ? dataUrl.slice(0, idx) : ''
+  const body = idx >= 0 ? dataUrl.slice(idx + 1) : dataUrl
+  const mime = head.match(/:(.*?);/) ?.[1] || 'image/jpeg'
+  const bin = atob(body)
+  const arr = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i)
+  return new Blob([arr], { type: mime })
+}
+
 export default function ImageCropper({
   file,
   onCrop,
@@ -40,6 +52,7 @@ export default function ImageCropper({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const imgRef = useRef<HTMLImageElement | null>(null)
   const [imgLoaded, setImgLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
   const [cropRect, setCropRect] = useState<CropRect>({ x: 0, y: 0, w: 200, h: 200 })
   const dragRef = useRef<DragState | null>(null)
   const [scale, setScale] = useState(1)
@@ -47,6 +60,8 @@ export default function ImageCropper({
   // 加载图片
   useEffect(() => {
     if (!file) return
+    setImgLoaded(false)
+    setLoadError(false)
     const img = new Image()
     img.onload = () => {
       imgRef.current = img
@@ -62,6 +77,11 @@ export default function ImageCropper({
         h: cropH,
       })
       setImgLoaded(true)
+    }
+    // 关键：缺少 onerror 时，压缩产物若解码失败会静默空白且无任何提示
+    img.onerror = () => {
+      setLoadError(true)
+      console.error('[ImageCropper] 图片解码失败（可能是压缩产物损坏）')
     }
     img.src = URL.createObjectURL(file)
     return () => { URL.revokeObjectURL(img.src) }
@@ -219,7 +239,12 @@ export default function ImageCropper({
 
   // 确认裁剪
   const handleConfirm = useCallback(() => {
-    const img = imgRef.current!
+    const img = imgRef.current
+    if (!img) {
+      // 图片尚未加载/解码失败，避免 drawImage(null) 静默崩
+      console.error('[ImageCropper] 确认裁剪时图片未就绪，已跳过')
+      return
+    }
     const maxOriginalW = Math.min(maxWidth, cropRect.w)
     const maxOriginalH = maxOriginalW / aspectRatio
 
@@ -243,6 +268,7 @@ export default function ImageCropper({
         canvas.toBlob(
           (blob) => {
             if (blob) results[key] = { blob, dataUrl }
+            else results[key] = { blob: dataURLToBlob(dataUrl), dataUrl }
             resolve()
           },
           'image/jpeg',
@@ -274,9 +300,20 @@ export default function ImageCropper({
             onMouseLeave={handleMouseUp}
           />
         </S.CanvasContainer>
+        {loadError && (
+          <div style={{ color: '#e74c3c', fontSize: 13, padding: '8px 16px', textAlign: 'center' }}>
+            图片加载失败，无法裁剪。请关闭后重新选择，或换一张图片。
+          </div>
+        )}
         <S.Actions>
           <S.Btn onClick={onCancel}>{t('admin.imageCropper.cancel')}</S.Btn>
-          <S.Btn $primary onClick={handleConfirm}>{t('admin.imageCropper.confirm')}</S.Btn>
+          <S.Btn
+            $primary
+            onClick={(!imgLoaded || loadError) ? undefined : handleConfirm}
+            style={(!imgLoaded || loadError) ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+          >
+            {t('admin.imageCropper.confirm')}
+          </S.Btn>
         </S.Actions>
       </S.Dialog>
     </S.Overlay>

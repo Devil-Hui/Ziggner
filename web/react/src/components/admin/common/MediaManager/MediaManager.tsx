@@ -162,41 +162,42 @@ export default function MediaManager({
 
   const handleCropConfirm = useCallback(
     async (result: MultiSizeCropResult, sourceFile: File) => {
-      if (isEditMode && spuId) {
-        // 编辑模式：构建 FormData 上传到已有 SPU（XHR 进度）
-        const formData = new FormData()
-        formData.append('thumb', result.thumb.blob, `thumb_${sourceFile.name}`)
-        formData.append('list', result.list.blob, `list_${sourceFile.name}`)
-        formData.append('large', result.large.blob, `large_${sourceFile.name}`)
-        formData.append('original', result.original.blob, `original_${sourceFile.name}`)
-        formData.append('alt_text', '')
-        try {
+      try {
+        if (isEditMode && spuId) {
+          // 编辑模式：构建 FormData 上传到已有 SPU（XHR 进度）
+          const formData = new FormData()
+          formData.append('thumb', result.thumb.blob, `thumb_${sourceFile.name}`)
+          formData.append('list', result.list.blob, `list_${sourceFile.name}`)
+          formData.append('large', result.large.blob, `large_${sourceFile.name}`)
+          formData.append('original', result.original.blob, `original_${sourceFile.name}`)
+          formData.append('alt_text', '')
           setUploadQueue((q) => ({ ...q, percent: 0, currentFileName: sourceFile.name }))
           const newMedia = await adminAPI.uploadMedia(spuId, formData, (percent) => {
             setUploadQueue((q) => ({ ...q, percent }))
           })
           setSavedItems((prev) => [...prev, newMedia])
           advanceQueue()
-        } catch (err) {
-          showToast(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'))
+        } else {
+          // 创建模式：暂存 IndexedDB
+          const staged: StagedMediaItem = {
+            mediaType: 'image',
+            thumbBlob: result.thumb.blob,
+            listBlob: result.list.blob,
+            largeBlob: result.large.blob,
+            originalBlob: result.original.blob,
+            previewDataUrl: result.thumb.dataUrl,
+            fileName: sourceFile.name,
+            fileSize: sourceFile.size,
+            createdAt: Date.now(),
+          }
+          const stagedId = await addStagedItem(staged)
+          const updated = [...items, { ...staged, id: stagedId }]
+          notifyChange(updated)
           advanceQueue()
         }
-      } else {
-        // 创建模式：暂存 IndexedDB
-        const staged: StagedMediaItem = {
-          mediaType: 'image',
-          thumbBlob: result.thumb.blob,
-          listBlob: result.list.blob,
-          largeBlob: result.large.blob,
-          originalBlob: result.original.blob,
-          previewDataUrl: result.thumb.dataUrl,
-          fileName: sourceFile.name,
-          fileSize: sourceFile.size,
-          createdAt: Date.now(),
-        }
-        const stagedId = await addStagedItem(staged)
-        const updated = [...items, { ...staged, id: stagedId }]
-        notifyChange(updated)
+      } catch (err) {
+        // 任何异常都弹出可见错误，避免静默空白
+        showToast(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'), 'error')
         advanceQueue()
       }
     },

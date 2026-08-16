@@ -73,6 +73,14 @@ export async function compressImage(
   try {
     const compressed = await imageCompression(file, config)
 
+    // 解码校验：压缩产物虽合法 image 类型但像素损坏时，createImageBitmap 会抛错 → 回退原图
+    try {
+      const bmp = await createImageBitmap(compressed)
+      bmp.close()
+    } catch {
+      return file
+    }
+
     // 防御：压缩产物损坏（0 字节 / 非图片 / 比原图还大）时回退原图，
     // 避免上传/预览出现空白图（Web Worker 异常时易产生 0 字节 Blob）
     if (!compressed || compressed.size === 0 || !compressed.type.startsWith('image/') || compressed.size >= file.size) {
