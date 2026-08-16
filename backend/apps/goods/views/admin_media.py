@@ -3,10 +3,13 @@
 import os
 import uuid
 import logging
+from io import BytesIO
 from urllib.parse import urlparse
 
 from django.conf import settings
+from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
+from PIL import Image, ImageOps
 from rest_framework.response import Response
 from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
@@ -331,10 +334,35 @@ class MediaCreateView(BaseApiView):
         # 此处若再按 FILE_STORAGE=='r2' 分支返回相对路径，R2 模式下会返回错误地址导致前端 404。
         # 因此无条件走 default_storage.url()，两种后端行为天然正确。
         def _save_file(f):
-            ext = validated_extensions[id(f)]
-            safe_name = f'{uuid.uuid4().hex}{ext}'
-            path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
-            return default_storage.url(path)
+            # 转存为「无损 WebP」（Google libwebp，大厂开源）：同画质体积优于 PNG 且真无损。
+            # EXIF 方向校正 + 剥离元数据（重编码天然剥离）；转码失败回退原格式（strip_exif）。
+            try:
+                f.seek(0)
+                with Image.open(f) as img:
+                    img = ImageOps.exif_transpose(img)  # 校正手机拍摄方向
+                    img.load()
+                    # 保留透明通道（WebP 支持无损透明），否则转 RGB 减小体积
+                    if img.mode in ('RGBA', 'LA', 'P', 'PA'):
+                        img = img.convert('RGBA')
+                    else:
+                        img = img.convert('RGB')
+                    buf = BytesIO()
+                    # lossless=True + quality=100：真无损；method=4 平衡压缩率与耗时
+                    img.save(buf, 'WEBP', lossless=True, quality=100, method=4)
+                buf.seek(0)
+                safe_name = f'{uuid.uuid4().hex}.webp'
+                path = default_storage.save(
+                    f'product_media/{safe_name}',
+                    ContentFile(buf.getvalue()),
+                )
+                return default_storage.url(path)
+            except Exception as exc:  # noqa: BLE001 - 转码失败回退原格式，保证可用
+                _logger.warning('WebP 无损转码失败，回退原格式保存: %s', exc)
+                f.seek(0)
+                ext = validated_extensions[id(f)]
+                safe_name = f'{uuid.uuid4().hex}{ext}'
+                path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
+                return default_storage.url(path)
 
         thumb_url = _save_file(thumb)
         list_url = _save_file(list_file)

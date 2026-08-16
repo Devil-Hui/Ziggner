@@ -11,23 +11,23 @@
  *
  * 现改用浏览器原生 Canvas 解码 + 重编码，产物 100% 可控、可验证。
  *
- * 视觉无损策略：
- *   · PNG 原图      → 输出 PNG（无损，保留透明通道），仅按需缩放
- *   · JPEG / WebP   → 输出高质量 JPEG（initialQuality，默认 0.95，肉眼无损）
- *   · 仅当最长边超过 maxWidthOrHeight 时才等比缩放，避免无谓重编码
- *   · 压缩后体积 ≥ 原图则回退原图，绝不膨胀
+ * 无损策略（配合后端转存无损 WebP）：
+ *   · 前端只做「必要尺寸缩放」，不做有损压缩 —— 保证端到端无损。
+ *   · 尺寸未超限（<= maxWidthOrHeight）→ 原样返回，保留原始画质（不再做有损 JPEG）。
+ *   · 尺寸超限 → 等比缩放后输出 PNG 无损（保留透明通道），后端再转存为无损 WebP。
+ *   · 小文件（<= 200KB）直接透传（100% 无损）。
  *
- * maxSizeMB（可选）：启用「质量阶梯」从高到低逼近目标体积（聊天图/Logo 等小体积场景）；
- *   不传则该参数则固定 initialQuality，保证最高画质（商品画廊走此路径）。
+ * 为何前端不出 WebP：浏览器原生 toBlob('image/webp') 无 lossless 模式
+ * （quality=1 仍是有损），故前端出 PNG 无损、后端用 libwebp 出真无损 WebP。
  */
 export interface CompressionOptions {
   /** 最大宽或高 (px)，默认 2560（超过则等比缩放） */
   maxWidthOrHeight?: number
-  /** JPEG 输出质量 0-1，默认 0.95（视觉无损） */
+  /** 保留字段（向后兼容）；PNG 无损输出不依赖此参数 */
   initialQuality?: number
-  /** 目标体积上限 (MB)，启用质量阶梯逼近；0/不传 = 不限制（纯视觉无损） */
+  /** 保留字段（向后兼容）；PNG 无损无法质量阶梯，仅尺寸缩放控制体积 */
   maxSizeMB?: number
-  /** 质量阶梯下限，默认 0.4（仅 maxSizeMB 生效时） */
+  /** 保留字段（向后兼容） */
   minQuality?: number
 }
 
@@ -43,19 +43,6 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality?: number)
   return new Promise((resolve) => canvas.toBlob(resolve, type, quality))
 }
 
-/** 生成从高到低的质量阶梯（含下限），步长 0.15 */
-function qualitySteps(start: number, min: number): number[] {
-  const out: number[] = []
-  let q = start
-  while (q >= min - 1e-6) {
-    out.push(Number(q.toFixed(2)))
-    q -= 0.15
-  }
-  const last = Number(min.toFixed(2))
-  if (out[out.length - 1] !== last) out.push(last)
-  return out
-}
-
 /**
  * 压缩图片文件（原生 Canvas 实现）
  *
@@ -68,7 +55,7 @@ export async function compressImage(
   file: File,
   options: CompressionOptions = {},
 ): Promise<File> {
-  // 小文件跳过压缩（压缩收益不足以抵消开销，且保持原画质）
+  // 小文件跳过处理（原样返回，100% 无损）
   if (file.size <= 200 * 1024) return file
 
   const config = { ...DEFAULT_OPTIONS, ...options }
@@ -77,15 +64,17 @@ export async function compressImage(
     const bmp = await createImageBitmap(file)
     const { width, height } = bmp
 
-    // 仅在超过尺寸上限时等比缩放（保留原尺寸即不缩放，避免无谓重编码）
+    // 仅在超过尺寸上限时等比缩放；未超限则不重编码，原样返回
+    // （保留原始画质，不再做有损 JPEG 压缩）
     const longest = Math.max(width, height)
-    let targetW = width
-    let targetH = height
-    if (longest > config.maxWidthOrHeight) {
-      const ratio = config.maxWidthOrHeight / longest
-      targetW = Math.max(1, Math.round(width * ratio))
-      targetH = Math.max(1, Math.round(height * ratio))
+    if (longest <= config.maxWidthOrHeight) {
+      bmp.close()
+      return file
     }
+
+    const ratio = config.maxWidthOrHeight / longest
+    const targetW = Math.max(1, Math.round(width * ratio))
+    const targetH = Math.max(1, Math.round(height * ratio))
 
     const canvas = document.createElement('canvas')
     canvas.width = targetW
@@ -97,7 +86,7 @@ export async function compressImage(
     }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    // PNG 透明图：输出 JPEG 前铺白底，避免透明区域变黑；PNG 输出则保留透明
+    // 非 PNG 源（如 JPEG）铺白底，避免透明区域变黑；PNG 保留透明
     if (file.type !== 'image/png') {
       ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, targetW, targetH)
@@ -105,40 +94,21 @@ export async function compressImage(
     ctx.drawImage(bmp, 0, 0, targetW, targetH)
     bmp.close()
 
-    // 视觉无损格式策略：PNG 无损保留透明；其余高质量 JPEG
-    const outputType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+    // 统一输出 PNG 无损（保留透明通道）；后端将转存为无损 WebP。
+    // 不复用「体积 >= 原图则回退」逻辑 —— 我们要的是无损，PNG 体积偏大是预期代价。
+    const blob = await canvasToBlob(canvas, 'image/png')
 
-    const encode = (q?: number): Promise<Blob | null> => canvasToBlob(canvas, outputType, q)
-
-    let blob: Blob | null = null
-    if (outputType === 'image/png' || !config.maxSizeMB) {
-      // PNG 仅缩放（无损）；或无体积限制 → 固定 initialQuality（视觉无损）
-      blob = await encode(outputType === 'image/png' ? undefined : config.initialQuality)
-    } else {
-      // 有体积上限：质量阶梯从高到低逼近
-      const maxBytes = config.maxSizeMB * 1024 * 1024
-      for (const q of qualitySteps(config.initialQuality, config.minQuality)) {
-        const candidate = await encode(q)
-        if (candidate && candidate.size <= maxBytes) {
-          blob = candidate
-          break
-        }
-        blob = candidate // 暂存最后一个，作为兜底
-      }
-    }
-
-    // 防御：编码失败 / 0 字节 / 比原图还大 → 回退原图，绝不膨胀或空白
-    if (!blob || blob.size === 0 || blob.size >= file.size) return file
+    // 防御：编码失败 / 0 字节 → 回退原图（仅防异常，不防体积膨胀）
+    if (!blob || blob.size === 0) return file
 
     const base = file.name.replace(/\.[^./\\]+$/, '') || 'image'
-    const ext = outputType === 'image/png' ? 'png' : 'jpg'
-    return new File([blob], `${base}.${ext}`, {
-      type: outputType,
+    return new File([blob], `${base}.png`, {
+      type: 'image/png',
       lastModified: file.lastModified,
     })
   } catch (err) {
-    // 压缩失败：安全回退原图，不阻断上传流程
-    console.warn('[imageCompression] 压缩失败，使用原图:', err)
+    // 处理失败：安全回退原图，不阻断上传流程
+    console.warn('[imageCompression] 处理失败，使用原图:', err)
     return file
   }
 }
@@ -199,17 +169,22 @@ export async function prepareImageForUpload(
     // 解码失败：交给压缩流程/后端兜底校验
   }
 
-  // 大图自动压缩（>200KB 触发，compressImage 内部对更小文件直接透传）。
-  // 商品画廊走「纯视觉无损」路径：不传 maxSizeMB，仅缩放 + 高质量 JPEG/PNG。
+  // 大图自动处理（>200KB 触发，compressImage 内部对更小文件直接透传）。
+  // 无忧损路径：尺寸超限则缩放后 PNG 无损；未超限原样返回（保留原始画质）。
   if (file.size > 200 * 1024) {
     try {
       const compressed = await compressImage(file, {
         maxWidthOrHeight: 2560,
         initialQuality: 0.95,
       })
-      if (compressed.size < file.size) {
-        const ratio = ((1 - compressed.size / file.size) * 100).toFixed(0)
-        return { ok: true, file: compressed, compressed: true, ratio: Number(ratio) }
+      // compressImage 仅在「尺寸超限」时返回新 PNG（无损，体积可能偏大）；
+      // 或在「未超限/异常」时返回原 file。故以「是否返回新对象」判定是否采用，
+      // 避免 PNG 体积大于原 JPEG 时被误回退到原图（有损）。
+      if (compressed !== file) {
+        const ratio = compressed.size < file.size
+          ? Number(((1 - compressed.size / file.size) * 100).toFixed(0))
+          : 0
+        return { ok: true, file: compressed, compressed: true, ratio }
       }
       return { ok: true, file }
     } catch {
