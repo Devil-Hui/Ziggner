@@ -835,46 +835,38 @@ const VariantMetaInput = styled.input`
   }
 `
 
-const ToggleWrapper = styled.div`
-  display: flex;
+// ── Checkbox (replaces toggle switches) ──
+
+const CheckRow = styled.label`
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  white-space: nowrap;
-`
-
-const ToggleTrack = styled.button<{ $on: boolean }>`
-  position: relative;
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  border: none;
-  background: ${({ $on }) => ($on ? Color.status.success : Color.border.medium)};
   cursor: pointer;
-  padding: 0;
-  transition: background ${Transition.fast};
-
-  &:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.25);
-  }
-`
-
-const ToggleThumb = styled.span<{ $on: boolean }>`
-  position: absolute;
-  top: 2px;
-  left: ${({ $on }) => ($on ? '20px' : '2px')};
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
-  transition: left ${Transition.fast};
-`
-
-const ToggleLabel = styled.span<{ $on: boolean }>`
+  white-space: nowrap;
   font-size: ${FontSize.xs}px;
-  font-weight: ${FontWeight.medium};
-  color: ${({ $on }) => ($on ? Color.status.success : Color.text.muted)};
+  color: ${Color.text.secondary};
+  user-select: none;
+`
+
+const CheckBox = styled.span<{ $checked: boolean }>`
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1.5px solid ${({ $checked }) => ($checked ? Color.primary : Color.border.medium)};
+  background: ${({ $checked }) => ($checked ? Color.primary : 'transparent')};
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: background ${Transition.fast}, border-color ${Transition.fast};
+`
+
+const CheckInput = styled.input`
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
 `
 
 const VariantAddBtn = styled.button`
@@ -1626,19 +1618,17 @@ export default function AdminProductForm() {
                         </VariantField>
                         <VariantField>
                           <VariantFieldLabel>Stock</VariantFieldLabel>
-                          <ToggleWrapper>
-                            <ToggleTrack
-                              type="button"
-                              $on={sku.track_inventory === 'true'}
-                              onClick={() => updateSKU(idx, 'track_inventory', sku.track_inventory === 'true' ? 'false' : 'true')}
-                              aria-label={t('admin.productForm.trackInventory')}
-                            >
-                              <ToggleThumb $on={sku.track_inventory === 'true'} />
-                            </ToggleTrack>
-                            <ToggleLabel $on={sku.track_inventory === 'true'}>
-                              {t('admin.productForm.trackInventory')}
-                            </ToggleLabel>
-                          </ToggleWrapper>
+                          <CheckRow>
+                            <CheckInput
+                              type="checkbox"
+                              checked={sku.track_inventory === 'true'}
+                              onChange={() => updateSKU(idx, 'track_inventory', sku.track_inventory === 'true' ? 'false' : 'true')}
+                            />
+                            <CheckBox $checked={sku.track_inventory === 'true'}>
+                              {sku.track_inventory === 'true' && <Icon name="check" size={11} />}
+                            </CheckBox>
+                            {t('admin.productForm.trackInventory')}
+                          </CheckRow>
                           {sku.track_inventory === 'true' ? (
                             <VariantStockGroup>
                               <VariantStockBtn
@@ -1714,20 +1704,18 @@ export default function AdminProductForm() {
                           />
                         </VariantField>
                         <VariantField>
-                          <VariantFieldLabel>Shelf Status</VariantFieldLabel>
-                          <ToggleWrapper>
-                            <ToggleTrack
-                              type="button"
-                              $on={isOnShelf}
-                              onClick={() => updateSKU(idx, 'shelf_status', isOnShelf ? 'off_shelf' : 'on_shelf')}
-                              aria-label={isOnShelf ? '下架' : '上架'}
-                            >
-                              <ToggleThumb $on={isOnShelf} />
-                            </ToggleTrack>
-                            <ToggleLabel $on={isOnShelf}>
-                              {isOnShelf ? 'On Shelf' : 'Off Shelf'}
-                            </ToggleLabel>
-                          </ToggleWrapper>
+                          <VariantFieldLabel>{t('admin.productForm.shelfStatus')}</VariantFieldLabel>
+                          <CheckRow>
+                            <CheckInput
+                              type="checkbox"
+                              checked={isOnShelf}
+                              onChange={() => updateSKU(idx, 'shelf_status', isOnShelf ? 'off_shelf' : 'on_shelf')}
+                            />
+                            <CheckBox $checked={isOnShelf}>
+                              {isOnShelf && <Icon name="check" size={11} />}
+                            </CheckBox>
+                            {t('admin.productForm.onShelf')}
+                          </CheckRow>
                         </VariantField>
                       </VariantMetaRow>
                     </VariantCard>
