@@ -1,11 +1,9 @@
 /**
  * 图片压缩工具 —— 基于 browser-image-compression
  *
- * 在上传前对图片进行客户端压缩，显著减小文件体积同时保持视觉质量。
- * 使用 MozJPEG-quality 有损压缩算法（Canvas.toBlob JPEG），
- * 对 >500KB 的图片效果最明显（通常可减小 60-80% 体积）。
- *
- * @see https://github.com/donaldcwl/browser-image-compression
+ * 在上传前对图片进行客户端压缩，在体积与视觉质量间取得平衡（保真优先）。
+ * 使用 MozJPEG 有损压缩算法（Canvas.toBlob JPEG），仅对 >200KB 的图生效。
+ * 默认档位：最长边 ≤2560px、目标 ≤2.5MB、JPEG 质量 0.92（接近视觉无损）。
  */
 import imageCompression from 'browser-image-compression'
 
@@ -21,9 +19,9 @@ export interface CompressionOptions {
 }
 
 const DEFAULT_OPTIONS: Required<CompressionOptions> = {
-  maxSizeMB: 1,
-  maxWidthOrHeight: 2048,
-  initialQuality: 0.85,
+  maxSizeMB: 2.5,
+  maxWidthOrHeight: 2560,
+  initialQuality: 0.92,
   useWebWorker: true,
 }
 
@@ -151,9 +149,9 @@ export async function prepareImageForUpload(
   if (file.size > 200 * 1024) {
     try {
       const compressed = await compressImage(file, {
-        maxSizeMB: 1,
-        maxWidthOrHeight: 2048,
-        initialQuality: 0.85,
+        maxSizeMB: 2.5,
+        maxWidthOrHeight: 2560,
+        initialQuality: 0.92,
       })
       if (compressed.size < file.size) {
         const ratio = ((1 - compressed.size / file.size) * 100).toFixed(0)

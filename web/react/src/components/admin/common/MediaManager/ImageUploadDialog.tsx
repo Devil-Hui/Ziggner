@@ -1,6 +1,6 @@
 /** ImageUploadDialog —— 图片上传 + 裁剪弹窗。
  * 支持队列模式：接收 dropzone 预选文件，直接进入裁剪流程。
- * 上传前自动压缩图片（>200KB 触发，目标 ~85% 质量 JPEG）。
+ * 上传前自动压缩图片（>200KB 触发，保真优先：最长边≤2560px / ≤2.5MB / JPEG 0.92）。
  */
 import { useState, useRef, useEffect } from 'react'
 import { useAppContext } from '../../../../store/AppContext'
@@ -103,7 +103,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
                 }
               }}
               aspectRatio={1}
-              maxWidth={2048}
+              maxWidth={2560}
             />
             {file && onSkip && (
               <S.DialogActions>
@@ -119,7 +119,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
                   <div>正在压缩图片...</div>
-                  <div style={{ fontSize: 12, marginTop: 8, color: '#999' }}>大图自动压缩可减小 60-80% 体积</div>
+                  <div style={{ fontSize: 12, marginTop: 8, color: '#999' }}>大图自动压缩（保真优先，最长边≤2560px）</div>
                 </div>
               ) : (
                 <>

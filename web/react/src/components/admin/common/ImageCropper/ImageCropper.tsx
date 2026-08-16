@@ -239,14 +239,14 @@ export default function ImageCropper({
         canvas.height = h
         const ctx = canvas.getContext('2d')!
         ctx.drawImage(img, cropRect.x, cropRect.y, cropRect.w, cropRect.h, 0, 0, w, h)
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
         canvas.toBlob(
           (blob) => {
             if (blob) results[key] = { blob, dataUrl }
             resolve()
           },
           'image/jpeg',
-          0.85
+          0.92
         )
       })
     }
