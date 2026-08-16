@@ -7,6 +7,7 @@ import { useUser } from '../../../store/UserContext'
 import { Color, FontSize, Transition } from '../../../theme/tokens'
 import { zIndex } from '../../../styles/zIndex'
 import { optionalMediaUrl } from '../../../utils/mediaUrl'
+import { resolveMediaUrl } from '../../../api/chat'
 
 export interface ProductDetailModalProps {
   productId: number | null
@@ -548,17 +549,17 @@ function isSkuSellable(sku: PublicSKU): boolean {
 function collectImages(detail: PublicSPUDetail | null, selectedSku: PublicSKU | null): string[] {
   if (!detail) return []
   const list: string[] = []
-  if (selectedSku?.image_url) list.push(selectedSku.image_url)
+  if (selectedSku?.image_url) list.push(resolveMediaUrl(selectedSku.image_url) || selectedSku.image_url)
   for (const m of detail.media || []) {
     if (m.media_type === 'video') {
       const thumb = m.video_large_url || m.video_list_url || m.video_thumb_url
-      if (thumb) list.push(thumb)
+      if (thumb) list.push(resolveMediaUrl(thumb) || thumb)
       continue
     }
     const url = m.large_url || m.original_url || m.list_url || m.thumb_url
-    if (url) list.push(url)
+    if (url) list.push(resolveMediaUrl(url) || url)
   }
-  if (detail.main_image) list.push(detail.main_image)
+  if (detail.main_image) list.push(resolveMediaUrl(detail.main_image) || detail.main_image)
   return Array.from(new Set(list.filter(Boolean)))
 }
 

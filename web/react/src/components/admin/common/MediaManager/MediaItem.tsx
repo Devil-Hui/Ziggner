@@ -4,6 +4,7 @@
 import * as S from './MediaManager.styles'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import type { ProductMediaItem } from '../../../../api/admin'
+import { resolveMediaUrl } from '../../../../api/chat'
 
 interface Props {
   item: StagedMediaItem | ProductMediaItem
@@ -23,13 +24,14 @@ export default function MediaItem({ item, onRemove, onEdit }: Props) {
   const id = saved ? item.id : (item as StagedMediaItem).id
   const fileName = saved ? (item.alt_text || `媒体#${item.id}`) : (item as StagedMediaItem).fileName
 
-  // 缩略图 src
+  // 缩略图 src（编辑模式需 resolveMediaUrl 把 /media/ 相对路径转为后端绝对 URL）
   let src: string
   if (saved) {
     const mediaItem = item as ProductMediaItem
-    src = mediaItem.media_type === 'image'
+    const rawUrl = mediaItem.media_type === 'image'
       ? (mediaItem.thumb_url || mediaItem.list_url || mediaItem.large_url || '')
       : (mediaItem.video_thumb_url || mediaItem.video_url || '')
+    src = resolveMediaUrl(rawUrl) || rawUrl
   } else {
     const stagedItem = item as StagedMediaItem
     src = stagedItem.mediaType === 'image'

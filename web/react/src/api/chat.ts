@@ -16,9 +16,27 @@ function apiOrigin(): string {
  * 公网浏览器无法访问。统一改写为 API 域名（同源后端托管 /media/），
  * 确保聊天图片/视频在任何部署环境都能加载（修复「视频/图片无法显示」）。
  */
+/**
+ * 统一媒体 URL 解析：
+ * 1. 回环地址（127.0.0.1 / localhost）→ 替换为 API 域名
+ * 2. 相对路径（/media/...）→ 拼接为后端绝对 URL（前端在 CF Pages 时 /media/ 不会命中 Django）
+ * 3. 已是绝对 URL → 原样返回
+ *
+ * 适用场景：聊天附件、商品媒体缩略图、品牌 Logo 等所有从后端获取的媒体 URL。
+ */
 export function resolveMediaUrl(url: string | null | undefined): string | null {
   if (!url) return null
-  return url.replace(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i, apiOrigin())
+  const trimmed = url.trim()
+  if (!trimmed) return null
+  // 回环地址 → API 域名
+  if (/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i.test(trimmed)) {
+    return trimmed.replace(/^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/i, apiOrigin())
+  }
+  // 相对路径（/media/... 等）→ 后端绝对 URL
+  if (trimmed.startsWith('/')) {
+    return `${apiOrigin()}${trimmed}`
+  }
+  return trimmed
 }
 
 // ── Types ──

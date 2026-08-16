@@ -4,6 +4,7 @@
 import { useState } from 'react'
 import * as S from './MediaManager.styles'
 import type { MediaEditPanelProps } from './MediaManager.types'
+import { resolveMediaUrl } from '../../../../api/chat'
 
 export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPanelProps) {
   const [altText, setAltText] = useState(media.alt_text || '')
@@ -15,11 +16,12 @@ export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPane
     onSave({ alt_text: altText.trim(), sort_order: Number(sortOrder) || 0 })
   }
 
-  // 缩略图预览
-  const previewSrc =
+  // 缩略图预览（resolveMediaUrl 把 /media/ 相对路径转为后端绝对 URL）
+  const rawUrl =
     media.media_type === 'image'
       ? media.thumb_url || media.list_url || media.large_url || ''
       : media.video_thumb_url || media.video_url || ''
+  const previewSrc = resolveMediaUrl(rawUrl) || rawUrl
 
   return (
     <S.DialogOverlay onClick={onClose}>
