@@ -1468,7 +1468,7 @@ export default function AdminProductForm() {
   const sectionState = (key: string): 'done' | 'todo' | 'optional' => {
     if (key === 'basic') return name.trim() ? 'done' : 'todo'
     if (key === 'orgSku') return (brandId && categoryId) ? 'done' : 'todo'
-    if (key === 'media') return 'optional'
+    if (key === 'media') return productKind === 'virtual' ? 'optional' : 'todo'
     return 'done'
   }
 
