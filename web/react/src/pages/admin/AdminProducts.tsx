@@ -242,8 +242,8 @@ export default function AdminProducts() {
   const onChat = useCallback((id: number) => navigate(`/admin/chat?product_id=${id}`), [navigate])
   const onDelete = useCallback((id: number) => setDeleteTarget(id), [])
   const onSubmitAudit = useCallback((id: number) => {
-    adminAPI.submitAudit(id).then(fetchProducts).catch(() => {})
-  }, [fetchProducts])
+    adminAPI.submitAudit(id).then(fetchProducts).catch(() => setError(t('admin.products.submitFailed')))
+  }, [fetchProducts, setError])
 
   const handleBatchAction = async (action: string) => {
     if (selected.size === 0) return

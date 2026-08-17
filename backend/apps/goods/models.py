@@ -335,6 +335,16 @@ class SPU(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['deleted_at']),
         ]
+        constraints = [
+            # D1 修复：SUBMITTED 状态必须有关联提交人，杜绝审核页「提交人 -」
+            models.CheckConstraint(
+                condition=(
+                    models.Q(status=SPUStatus.SUBMITTED, submitted_by__isnull=False)
+                    | ~models.Q(status=SPUStatus.SUBMITTED)
+                ),
+                name='spu_submitted_by_required_when_submitted',
+            ),
+        ]
 
     def __str__(self):
         return f'{self.name} [{self.get_status_display()}]'

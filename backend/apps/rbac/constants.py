@@ -136,11 +136,13 @@ _ADMIN_LEADER_PERMS = _ADMIN_MEMBER_PERMS | {
 }
 
 #: 运维是**只读**角色：能看全站权限与用户，不能改任何业务数据。
+#: D3 修复：授权邮件模板只读（邮件模板属系统配置，运维审计可见）
 _OPS_PERMS = frozenset({
     'rbac.matrix.read',
     'rbac.user.read',
     'rbac.audit.read',
     'users.read',
+    'users.email_template.read',
     'goods.spu.read',
     'goods.stats.read',
     'order.read',
