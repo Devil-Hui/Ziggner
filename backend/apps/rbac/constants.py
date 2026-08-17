@@ -75,10 +75,9 @@ PERMISSIONS: tuple[Perm, ...] = (
     # ── 工单域 ──
     Perm('support.ticket.read', 'support', '查看工单'),
     Perm('support.ticket.write', 'support', '处理工单'),
-    # ── 用户域 ──
-    Perm('users.read', 'users', '查看用户'),
-    Perm('users.write', 'users', '编辑用户'),
     # ── 通知域 ──
+    # 注：users.read / users.write 为死权限（无对应视图，真实用户角色操作在 rbac 域），
+    # 已于 D4 从注册表移除，避免矩阵出现永不授予的幽灵权限。
     Perm('notification.broadcast', 'notification', '发送站内通知'),
     # ── 权限域（运维核查用）──
     Perm('rbac.matrix.read', 'rbac', '查看角色权限矩阵'),
@@ -137,11 +136,11 @@ _ADMIN_LEADER_PERMS = _ADMIN_MEMBER_PERMS | {
 
 #: 运维是**只读**角色：能看全站权限与用户，不能改任何业务数据。
 #: D3 修复：授权邮件模板只读（邮件模板属系统配置，运维审计可见）
+#: D4：移除死权限 users.read（无对应视图）
 _OPS_PERMS = frozenset({
     'rbac.matrix.read',
     'rbac.user.read',
     'rbac.audit.read',
-    'users.read',
     'users.email_template.read',
     'goods.spu.read',
     'goods.stats.read',
