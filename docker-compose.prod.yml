@@ -16,6 +16,12 @@ x-app-security: &app-security
   security_opt:
     - no-new-privileges:true
 
+# =============================================================================
+# 资源预算（2 vCPU / 4GB RAM 主机）
+# 设计目标：任意负载下 CPU 硬上限之和 = 1.40 vCPU = 70% of 2.0，保证峰值 ≤70%。
+# 内存硬上限之和 ≈ 1.86GB（< 70% of 4GB = 2.8GB）。gunicorn 单 worker×4 线程为内存安全取向。
+# 注意：cpus 为 Docker 硬上限（--cpus），即使满载也不会突破该比例；真实利用率取决于流量。
+# =============================================================================
 services:
   nginx:
     build:
@@ -48,7 +54,7 @@ services:
     mem_limit: 64m
     mem_reservation: 32m
     memswap_limit: 64m
-    cpus: "0.15"
+    cpus: "0.10"
     pids_limit: 32
     read_only: true
     security_opt:
@@ -103,7 +109,7 @@ services:
     mem_limit: 544m
     mem_reservation: 384m
     memswap_limit: 544m
-    cpus: "0.65"
+    cpus: "0.50"
     pids_limit: 96
     <<: *app-security
     ulimits:
@@ -147,7 +153,7 @@ services:
     mem_limit: 256m
     mem_reservation: 160m
     memswap_limit: 256m
-    cpus: "0.25"
+    cpus: "0.20"
     pids_limit: 48
     <<: *app-security
     healthcheck:
@@ -178,7 +184,7 @@ services:
     mem_limit: 192m
     mem_reservation: 128m
     memswap_limit: 192m
-    cpus: "0.10"
+    cpus: "0.05"
     pids_limit: 32
     <<: *app-security
     healthcheck:
@@ -200,7 +206,7 @@ services:
     mem_limit: 96m
     mem_reservation: 64m
     memswap_limit: 96m
-    cpus: "0.15"
+    cpus: "0.10"
     pids_limit: 24
     read_only: true
     security_opt:
@@ -233,7 +239,7 @@ services:
     mem_limit: 640m
     mem_reservation: 384m
     memswap_limit: 640m
-    cpus: "0.50"
+    cpus: "0.40"
     pids_limit: 96
     security_opt:
       - no-new-privileges:true
@@ -264,7 +270,7 @@ services:
     mem_limit: 64m
     mem_reservation: 32m
     memswap_limit: 64m
-    cpus: "0.10"
+    cpus: "0.05"
     pids_limit: 32
     read_only: true
     tmpfs:

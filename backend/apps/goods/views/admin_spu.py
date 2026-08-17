@@ -487,6 +487,10 @@ class SPUAdminShelfView(BaseApiView):
         action = request.data.get('action')
         try:
             if action == 'put_on_sale':
+                # 草稿免审上架仅限组长/超管（与审核权对齐）；组员必须走 提交→审核 流程
+                if spu.status == SPUStatus.DRAFT and not can_audit_spu(request.user, spu):
+                    return Response({'detail': Messages.ADMIN_SPU_AUDIT_NOT_ALLOWED},
+                                    status=status.HTTP_403_FORBIDDEN)
                 spu.put_on_sale()
             elif action == 'put_off_sale':
                 spu.put_off_sale()

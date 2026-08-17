@@ -18,7 +18,7 @@ from ..models import SPU, SPUStatus, SKU
 from apps.rbac.permissions import HasPerm
 from apps.rbac.services import has_role, has_perm
 from apps.rbac.constants import Role
-from ..admin_permissions import can_operate_spu
+from ..admin_permissions import can_operate_spu, can_audit_spu
 
 BATCH_SYNC_LIMIT = 50  # 超过此数量的批量操作转为异步
 
@@ -31,6 +31,10 @@ def execute_batch(spus, action, params, user) -> dict:
     if action == 'put_on_sale':
         for spu in spus:
             try:
+                # 草稿免审上架仅限组长/超管；组员对草稿必须走 提交→审核 流程
+                if spu.status == SPUStatus.DRAFT and not can_audit_spu(user, spu):
+                    errors.append(f'SPU#{spu.id}: 草稿需先提交审核，仅组长/超管可免审上架')
+                    continue
                 spu.put_on_sale()
                 affected += 1
             except ValueError as e:
