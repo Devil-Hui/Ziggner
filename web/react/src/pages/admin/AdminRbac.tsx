@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
-import { PrimaryBtn as SaveBtn, Input as SearchInput, SecondaryBtn, SecondaryBtn as ActionBtn, SecondaryBtn as CancelBtn } from '../../components/admin/common/ui'
+import { PrimaryBtn as SaveBtn, Input as SearchInput, SecondaryBtn, SecondaryBtn as ActionBtn, SecondaryBtn as CancelBtn, FormGroup, Label, ErrorText, Hint } from '../../components/admin/common/ui'
+import FormDialog from '../../components/admin/common/FormDialog'
 import { adminAPI, type RbacMatrix, type RbacUser, type RbacDomain } from '../../api/admin'
 import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import Pagination from '../../components/admin/common/Pagination'
@@ -213,6 +214,13 @@ export default function AdminRbac() {
 
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null)
 
+  // Create admin dialog（超管创建管理员，与普通用户自助注册彻底分离）
+  const [showCreateAdmin, setShowCreateAdmin] = useState(false)
+  const [createForm, setCreateForm] = useState({ username: '', password: '', email: '' })
+  const [createErrors, setCreateErrors] = useState<{ username?: string; password?: string; email?: string }>({})
+  const [creating, setCreating] = useState(false)
+  const [createdAccountNo, setCreatedAccountNo] = useState<string | null>(null)
+
   const showMsg = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg })
     setTimeout(() => setToast(null), 3000)
@@ -309,6 +317,46 @@ export default function AdminRbac() {
       showMsg('error', err instanceof Error ? err.message : t('admin.rbac.userRoleSaveFailed'))
     } finally {
       setSavingUser(false)
+    }
+  }
+
+  /* ---- Create Admin（超管创建管理员账号） ---- */
+
+  const openCreateAdmin = () => {
+    setCreateForm({ username: '', password: '', email: '' })
+    setCreateErrors({})
+    setCreatedAccountNo(null)
+    setShowCreateAdmin(true)
+  }
+
+  const handleCreateAdmin = async () => {
+    // 创建成功后，提交按钮变为「再创建一个」：重置回输入态
+    if (createdAccountNo) {
+      setCreatedAccountNo(null)
+      setCreateForm({ username: '', password: '', email: '' })
+      setCreateErrors({})
+      return
+    }
+    const username = createForm.username.trim()
+    const password = createForm.password
+    const email = createForm.email.trim()
+    const errs: { username?: string; password?: string; email?: string } = {}
+    if (!username) errs.username = t('admin.rbac.createAdminUsernameRequired')
+    if (!password || password.length < 8) errs.password = t('admin.rbac.createAdminPasswordHint')
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.rbac.createAdminEmailInvalid')
+    setCreateErrors(errs)
+    if (Object.keys(errs).some((k) => errs[k as keyof typeof errs])) return
+    try {
+      setCreating(true)
+      const res = await adminAPI.createAdminUser({ username, password, email: email || undefined })
+      setCreatedAccountNo(res.account_no)
+      setCreateForm({ username: '', password: '', email: '' })
+      setCreateErrors({})
+      fetchUsers()
+    } catch (err: unknown) {
+      showMsg('error', err instanceof Error ? err.message : t('admin.rbac.createAdminFailed'))
+    } finally {
+      setCreating(false)
     }
   }
 
@@ -430,7 +478,7 @@ export default function AdminRbac() {
 
       {activeTab === 'users' && (
         <>
-          <div style={{ marginBottom: Spacing.md, display: 'flex', gap: 8 }}>
+          <div style={{ marginBottom: Spacing.md, display: 'flex', gap: 8, alignItems: 'center' }}>
             <SearchInput
               placeholder={t('admin.rbac.searchPlaceholder')}
               value={search}
@@ -439,6 +487,7 @@ export default function AdminRbac() {
                 setPage(1)
               }}
             />
+            <SaveBtn onClick={openCreateAdmin}>{t('admin.rbac.createAdmin')}</SaveBtn>
           </div>
           <DataTable<RbacUser>
             columns={userColumns}
@@ -484,6 +533,73 @@ export default function AdminRbac() {
             </ModalActions>
           </ModalCard>
         </ModalOverlay>
+      )}
+
+      {showCreateAdmin && (
+        <FormDialog
+          open={showCreateAdmin}
+          title={t('admin.rbac.createAdminTitle')}
+          submitLabel={createdAccountNo ? t('admin.rbac.createAnother') : creating ? t('admin.rbac.creating') : t('admin.rbac.create')}
+          submitDisabled={creating}
+          submitVariant="primary"
+          cancelLabel={t('common.cancel')}
+          onClose={() => setShowCreateAdmin(false)}
+          onSubmit={handleCreateAdmin}
+        >
+          {createdAccountNo ? (
+            <div>
+              <div style={{ color: Color.status.success, fontWeight: 600, marginBottom: Spacing.md }}>
+                {t('admin.rbac.createAdminSuccess')}
+              </div>
+              <div style={{ padding: Spacing.lg, background: Color.primaryLight, borderRadius: Radius.sm, marginBottom: Spacing.md }}>
+                <div style={{ fontSize: FontSize.xs, color: Color.text.muted, marginBottom: 4 }}>{t('admin.rbac.accountNoLabel')}</div>
+                <div style={{ fontSize: FontSize.lg, fontWeight: 600, color: Color.primaryHover, fontFamily: 'monospace', wordBreak: 'break-all' }}>{createdAccountNo}</div>
+              </div>
+              <Hint>{t('admin.rbac.createAdminCopyHint')}</Hint>
+            </div>
+          ) : (
+            <>
+              <FormGroup>
+                <Label>{t('admin.rbac.createAdminUsername')}</Label>
+                <SearchInput
+                  value={createForm.username}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, username: e.target.value }))
+                    if (createErrors.username) setCreateErrors((p) => ({ ...p, username: undefined }))
+                  }}
+                  placeholder={t('admin.rbac.createAdminUsernamePlaceholder')}
+                />
+                {createErrors.username && <ErrorText>{createErrors.username}</ErrorText>}
+              </FormGroup>
+              <FormGroup>
+                <Label>{t('admin.rbac.createAdminPassword')}</Label>
+                <SearchInput
+                  type="password"
+                  value={createForm.password}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, password: e.target.value }))
+                    if (createErrors.password) setCreateErrors((p) => ({ ...p, password: undefined }))
+                  }}
+                  placeholder={t('admin.rbac.createAdminPasswordPlaceholder')}
+                />
+                {createErrors.password && <ErrorText>{createErrors.password}</ErrorText>}
+              </FormGroup>
+              <FormGroup>
+                <Label>{t('admin.rbac.createAdminEmail')}</Label>
+                <SearchInput
+                  value={createForm.email}
+                  onChange={(e) => {
+                    setCreateForm((p) => ({ ...p, email: e.target.value }))
+                    if (createErrors.email) setCreateErrors((p) => ({ ...p, email: undefined }))
+                  }}
+                  placeholder={t('admin.rbac.createAdminEmailPlaceholder')}
+                />
+                <Hint>{t('admin.rbac.createAdminEmailHint')}</Hint>
+                {createErrors.email && <ErrorText>{createErrors.email}</ErrorText>}
+              </FormGroup>
+            </>
+          )}
+        </FormDialog>
       )}
 
       {toast && <ToastMsg $type={toast.type}>{toast.msg}</ToastMsg>}

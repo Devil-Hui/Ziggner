@@ -104,19 +104,6 @@ const MemberTr = styled.tr`
   }
 `;
 
-const AddMemberRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: ${Spacing.sm}px;
-  padding: ${Spacing.sm}px ${Spacing.lg}px;
-  border-top: 1px solid ${Color.border.light};
-`;
-
-const AddMemberLabel = styled.span`
-  font-size: ${FontSize.sm}px;
-  color: ${Color.text.secondary};
-`;
-
 const ExpandBtn = styled.button`
   padding: 4px 10px;
   font-size: ${FontSize.xs}px;
@@ -190,6 +177,7 @@ export default function AdminGroups() {
   const [addMemberAccountNo, setAddMemberAccountNo] = useState('');
   const [addMemberRole, setAddMemberRole] = useState<'leader' | 'member'>('member');
   const [addingMember, setAddingMember] = useState(false);
+  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
 
   // Remove member confirmation state
   const [removeMemberTarget, setRemoveMemberTarget] = useState<GroupMember | null>(null);
@@ -293,6 +281,7 @@ export default function AdminGroups() {
       await groupRepo.addMember(expandedGroupSlug, { account_no: res.account_no!, role: res.role });
       showMsg('success', t('admin.groups.memberAdded'));
       setAddMemberAccountNo('');
+      setShowAddMemberDialog(false);
       fetchMembers(expandedGroupSlug);
     } catch (err: any) {
       showMsg('error', err.message || t('admin.groups.addMemberFailed'));
@@ -407,14 +396,24 @@ export default function AdminGroups() {
             <MemberPanelTitle>
               {expandedGroup ? expandedGroup.name : ''}{t('admin.groups.memberListTitle')}
             </MemberPanelTitle>
-            <MemberPanelClose
-              onClick={() => {
-                setExpandedGroupSlug(null);
-                setMembers([]);
-              }}
-            >
-              &times;
-            </MemberPanelClose>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <OutlinePrimaryBtn
+                onClick={() => {
+                  setAddMemberAccountNo('');
+                  setShowAddMemberDialog(true);
+                }}
+              >
+                {t('admin.groups.addMemberBtn')}
+              </OutlinePrimaryBtn>
+              <MemberPanelClose
+                onClick={() => {
+                  setExpandedGroupSlug(null);
+                  setMembers([]);
+                }}
+              >
+                &times;
+              </MemberPanelClose>
+            </div>
           </MemberPanelHeader>
 
           {/* Members loading */}
@@ -477,37 +476,7 @@ export default function AdminGroups() {
             </div>
           )}
 
-          {/* Add member row */}
-          <AddMemberRow>
-            <AddMemberLabel>{t('admin.groups.addMember')}</AddMemberLabel>
-            {isSuperAdmin && (
-              <Select
-                value={addMemberRole}
-                onChange={(e) => setAddMemberRole(e.target.value as 'leader' | 'member')}
-                title={t('admin.groups.addMemberRoleTitle')}
-              >
-                <option value="member">{t('admin.groups.roleMember')}</option>
-                <option value="leader">{t('admin.groups.roleLeader')}</option>
-              </Select>
-            )}
-            <Input
-              $compact
-              style={{ width: 200 }}
-              type="text"
-              placeholder={t('admin.groups.addMemberPlaceholder')}
-              value={addMemberAccountNo}
-              onChange={(e) => setAddMemberAccountNo(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddMember();
-              }}
-            />
-            <OutlinePrimaryBtn
-              onClick={handleAddMember}
-              $disabled={addingMember}
-            >
-              {addingMember ? t('admin.groups.adding') : t('admin.groups.add')}
-            </OutlinePrimaryBtn>
-          </AddMemberRow>
+          {/* Add member dialog trigger is in the panel header (添加成员 button) */}
         </MemberPanel>
         )}
       </div>
