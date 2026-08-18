@@ -463,7 +463,7 @@ export const adminAPI = {
     email: string;
     first_name: string;
     last_name: string;
-    role: 'superadmin' | 'ops';
+    role: 'superadmin' | 'ops' | 'admin_leader' | 'admin_member';
     country_code?: string;
     phone?: string;
     department?: string;

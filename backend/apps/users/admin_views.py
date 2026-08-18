@@ -112,7 +112,9 @@ class AdminUserCreateView(BaseApiView):
 
         account_no = ensure_account_no(user)
 
-        # 可选初始角色（superadmin / ops）。派生角色不可在创建时指派。
+        # 可选初始角色（superadmin / ops / admin_leader / admin_member）。
+        # admin_leader / admin_member 仍可由管理组成员身份自动派生（见 goods/signals），
+        # 此处也允许超管直接指派，便于一次性开通「商品管理员组长 / 管理员」账号。
         roles: list = []
         raw_role = data.get('role') or ''
         if raw_role:

@@ -149,8 +149,13 @@ class AdminCreateSerializer(serializers.Serializer):
     )
     role = serializers.ChoiceField(
         required=True,
-        choices=[('superadmin', '超级管理员'), ('ops', '运维')],
-        help_text='Initial role: superadmin or ops.',
+        choices=[
+            ('superadmin', '超级管理员'),
+            ('ops', '运维'),
+            ('admin_leader', '管理组组长'),
+            ('admin_member', '管理组组员'),
+        ],
+        help_text='Initial role: superadmin / ops / admin_leader / admin_member.',
     )
     country_code = serializers.CharField(
         required=False,

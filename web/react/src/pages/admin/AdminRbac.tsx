@@ -276,7 +276,7 @@ export default function AdminRbac() {
     email: '',
     first_name: '',
     last_name: '',
-    role: 'ops' as 'ops' | 'superadmin',
+    role: 'ops' as 'ops' | 'superadmin' | 'admin_leader' | 'admin_member',
     department: '',
     country_code: '',
     phone: '',
@@ -300,7 +300,7 @@ export default function AdminRbac() {
     email: '',
     first_name: '',
     last_name: '',
-    role: 'ops' as 'ops' | 'superadmin',
+    role: 'ops' as 'ops' | 'superadmin' | 'admin_leader' | 'admin_member',
     department: '',
     country_code: '',
     phone: '',
@@ -471,9 +471,11 @@ export default function AdminRbac() {
     }
   }
 
-  const createRoleOptions: { value: 'ops' | 'superadmin'; key: string }[] = [
+  const createRoleOptions: { value: 'ops' | 'superadmin' | 'admin_leader' | 'admin_member'; key: string }[] = [
     { value: 'ops', key: 'admin.rbac.createAdminRoleOps' },
     { value: 'superadmin', key: 'admin.rbac.createAdminRoleSuperadmin' },
+    { value: 'admin_leader', key: 'admin.rbac.createAdminRoleLeader' },
+    { value: 'admin_member', key: 'admin.rbac.createAdminRoleMember' },
   ]
 
   const roleOptions = (matrix?.roles || []).filter((r) => r.value !== 'superadmin')
@@ -741,7 +743,7 @@ export default function AdminRbac() {
                 <Select
                   value={createForm.role}
                   onChange={(e) => {
-                    setCreateForm((p) => ({ ...p, role: e.target.value as 'ops' | 'superadmin' }))
+                    setCreateForm((p) => ({ ...p, role: e.target.value as 'ops' | 'superadmin' | 'admin_leader' | 'admin_member' }))
                     if (createErrors.role) setCreateErrors((p) => ({ ...p, role: undefined }))
                   }}
                 >

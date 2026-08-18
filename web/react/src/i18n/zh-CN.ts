@@ -1034,6 +1034,8 @@ const zhCN = {
       createAdminRoleRequired: '请选择角色',
       createAdminRoleOps: '运维',
       createAdminRoleSuperadmin: '超级管理员',
+      createAdminRoleLeader: '管理组组长',
+      createAdminRoleMember: '管理组组员',
       createAdminEmailRequired: '邮箱（必填）',
       createAdminDepartment: '部门（可选）',
       createAdminDepartmentPlaceholder: '例如：商品运营组',

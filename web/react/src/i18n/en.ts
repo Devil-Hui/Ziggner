@@ -1030,6 +1030,8 @@ const en = {
       createAdminRoleRequired: 'Please select a role',
       createAdminRoleOps: 'Ops',
       createAdminRoleSuperadmin: 'Super Admin',
+      createAdminRoleLeader: 'Group Leader',
+      createAdminRoleMember: 'Group Member',
       createAdminEmailRequired: 'Email (required)',
       createAdminDepartment: 'Department (optional)',
       createAdminDepartmentPlaceholder: 'e.g. Product Ops',

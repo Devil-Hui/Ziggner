@@ -195,9 +195,11 @@ const COUNTRY_OPTIONS: { value: string; key: string }[] = [
   { value: '+966', key: 'admin.groups.adminCountryCodeSA' },
 ];
 
-const ROLE_OPTIONS: { value: 'ops' | 'superadmin'; key: string }[] = [
+const ROLE_OPTIONS: { value: 'ops' | 'superadmin' | 'admin_leader' | 'admin_member'; key: string }[] = [
   { value: 'ops', key: 'admin.groups.roleOps' },
   { value: 'superadmin', key: 'admin.groups.roleSuperadmin' },
+  { value: 'admin_leader', key: 'admin.rbac.createAdminRoleLeader' },
+  { value: 'admin_member', key: 'admin.rbac.createAdminRoleMember' },
 ];
 
 // ── Toggle switch (is_active) ──
@@ -280,7 +282,7 @@ export default function AdminGroups() {
   const [adminDepartment, setAdminDepartment] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminCountryCode, setAdminCountryCode] = useState('');
-  const [adminRole, setAdminRole] = useState<'ops' | 'superadmin'>('ops');
+  const [adminRole, setAdminRole] = useState<'ops' | 'superadmin' | 'admin_leader' | 'admin_member'>('ops');
   const [adminIsActive, setAdminIsActive] = useState(true);
   const [adminErrors, setAdminErrors] = useState<{ username?: string; password?: string; email?: string; first_name?: string; last_name?: string }>({});
   const [creatingAdmin, setCreatingAdmin] = useState(false);
@@ -827,7 +829,7 @@ export default function AdminGroups() {
             </FormGroup>
             <FormGroup>
               <Label>{t('admin.groups.adminRoleLabel')}</Label>
-              <Select value={adminRole} onChange={(e) => setAdminRole(e.target.value as 'ops' | 'superadmin')}>
+              <Select value={adminRole} onChange={(e) => setAdminRole(e.target.value as 'ops' | 'superadmin' | 'admin_leader' | 'admin_member')}>
                 {ROLE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{t(o.key)}</option>
                 ))}

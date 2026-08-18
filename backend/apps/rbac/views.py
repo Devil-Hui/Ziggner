@@ -26,10 +26,17 @@ from apps.users.tokens import rotate_user_stamp
 from utils.api_base_view import BaseApiView
 
 #: 由 AdminGroupMember 派生，不可手工指派 —— 否则两处数据会打架
-DERIVED_ROLES = frozenset({Role.ADMIN_LEADER.value, Role.ADMIN_MEMBER.value})
+# admin_leader / admin_member 既可由管理组成员身份自动派生（见 apps.goods.signals），
+# 也允许超管在「创建管理员」时直接指派（满足五身份开通需求），故不再作为"仅派生"角色。
+DERIVED_ROLES = frozenset()
 
 #: 可手工指派的角色。customer 是兜底默认值，不需要落行。
-ASSIGNABLE_ROLES = frozenset({Role.SUPERADMIN.value, Role.OPS.value})
+ASSIGNABLE_ROLES = frozenset({
+    Role.SUPERADMIN.value,
+    Role.OPS.value,
+    Role.ADMIN_LEADER.value,
+    Role.ADMIN_MEMBER.value,
+})
 
 MAX_PAGE_SIZE = 100
 
