@@ -447,7 +447,7 @@ if not EMAIL_ACCOUNTS:
 # Simple JWT settings
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timezone.timedelta(minutes=15),  # 访问令牌有效期15分钟 (F-003 修复)
-    'REFRESH_TOKEN_LIFETIME': timezone.timedelta(days=7),  # 刷新令牌有效期7天
+    'REFRESH_TOKEN_LIFETIME': timezone.timedelta(hours=2),  # 刷新令牌 2 小时；配合 ROTATE_REFRESH_TOKENS 实现空闲超时（活跃刷新即续期，闲置>2h 自动登出）
     'ROTATE_REFRESH_TOKENS': True,  # 刷新令牌时自动更新刷新令牌
     'BLACKLIST_AFTER_ROTATION': True,  # 刷新后将旧的刷新令牌加入黑名单
     'UPDATE_LAST_LOGIN': True,  # 更新用户最后登录时间

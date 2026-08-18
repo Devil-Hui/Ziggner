@@ -72,9 +72,9 @@ STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timezone.timedelta(days=9999),  # ⚠️ 仅限本地开发！生产环境由 prod.py 覆盖为 15 分钟
-    'REFRESH_TOKEN_LIFETIME': timezone.timedelta(days=9999),  # ⚠️ 仅限本地开发！生产环境由 prod.py 覆盖为 7 天
-    'ROTATE_REFRESH_TOKENS': False,  # 开发环境不轮换刷新令牌，避免并发竞态导致黑名单
+    'ACCESS_TOKEN_LIFETIME': timezone.timedelta(minutes=15),  # 本地开发：访问令牌 15 分钟（与线上一致，避免超长cookie）
+    'REFRESH_TOKEN_LIFETIME': timezone.timedelta(hours=2),  # 本地开发：刷新令牌 2 小时（原 9999 天≈27 年，已修正）
+    'ROTATE_REFRESH_TOKENS': False,  # 开发环境不轮换刷新令牌，避免并发竞态导致黑名单（故 dev 为严格 2h 会话，prod 为空闲续期）
     'BLACKLIST_AFTER_ROTATION': False,  # 开发环境禁用黑名单，防止页面刷新后 token 丢失
     'UPDATE_LAST_LOGIN': True,  # 更新用户最后登录时间
     'ALGORITHM': 'HS256',  # 使用的加密算法

@@ -11,9 +11,9 @@ for _logger_name in ('django', 'django.request', 'celery', 'celery.task', 'celer
     if _logger_name in LOGGING.get('loggers', {}):
         LOGGING['loggers'][_logger_name]['level'] = LOG_LEVEL
 
-# JWT Token 有效期（生产环境 15min access / 7d refresh）
+# JWT Token 有效期（生产环境 15min access / 2h refresh 空闲超时）
 SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'] = datetime.timedelta(minutes=15)
-SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'] = datetime.timedelta(days=7)
+SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'] = datetime.timedelta(hours=2)
 
 # 允许的域名（从环境变量获取）
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
