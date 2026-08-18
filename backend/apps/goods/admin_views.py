@@ -51,6 +51,7 @@ class AdminGroupListView(BaseApiView):
         )
         return Response([
             {
+                'id': g.id,
                 'slug': g.slug,
                 'name': g.name,
                 'member_count': g.member_count,
@@ -83,7 +84,7 @@ class AdminGroupCreateView(BaseApiView):
         create_audit_log(request.user, 'admin_group.create', 'admin_group', group.id,
                          changes={'name': name, 'slug': slug},
                          ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'slug': group.slug, 'name': group.name}, status=status.HTTP_201_CREATED)
+        return Response({'id': group.id, 'slug': group.slug, 'name': group.name}, status=status.HTTP_201_CREATED)
 
 
 class AdminGroupMembersView(BaseApiView):
@@ -190,7 +191,7 @@ class AdminGroupUpdateView(BaseApiView):
             create_audit_log(request.user, 'admin_group.update', 'admin_group', group.id,
                              changes={f: str(getattr(group, f)) for f in fields},
                              ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'slug': group.slug, 'name': group.name})
+        return Response({'id': group.id, 'slug': group.slug, 'name': group.name})
 
 
 class AdminGroupDeleteView(BaseApiView):

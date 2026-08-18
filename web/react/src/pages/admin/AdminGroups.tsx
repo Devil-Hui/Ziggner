@@ -310,7 +310,7 @@ export default function AdminGroups() {
   const handleDeleteGroup = async () => {
     if (!deleteGroupTarget) return;
     try {
-      await groupRepo.deleteGroup(deleteGroupTarget.id);
+      await groupRepo.deleteGroup(deleteGroupTarget.slug);
       showMsg('success', t('admin.groups.groupDeleted'));
       setDeleteGroupTarget(null);
       if (expandedGroupSlug === deleteGroupTarget.slug) {

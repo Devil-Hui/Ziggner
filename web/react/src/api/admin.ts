@@ -437,22 +437,23 @@ export const adminAPI = {
       `/goods/media/spu/${spuId}/upload`, formData, onProgress,
     ),
 
-  // Admin Group —— 普通用户自助面 /api/users/ 之外，管理面走 /api/admin/groups/，
-  // 分组以 slug 寻址、成员以 account_no 指认（不暴露内部 id、不以 PII 查询）。
+  // Admin Group —— 管理面统一走 /api/admin/groups/，分组以 slug 寻址、成员以 account_no
+  // 指认（不暴露内部 id、不以 PII 查询）。列表/创建仍带 id 仅用于 AdminCategories /
+  // AdminApplications 设置 admin_group_id 外键关联，寻址一律用 slug。
   getAdminGroups: () =>
-    get<GroupItem[]>('/goods/admin_group'),
+    get<GroupItem[]>('/admin/groups/'),
   createAdminGroup: (data: { name: string; slug: string }) =>
-    post<GroupItem>('/goods/admin_group/create', data),
+    post<GroupItem>('/admin/groups/create', data),
   getGroupMembers: (slug: string) =>
     get<{ slug: string; name: string; members: GroupMember[] }>(`/admin/groups/${slug}/members`),
   addGroupMember: (slug: string, data: { account_no: string; role: string }) =>
     post(`/admin/groups/${slug}/members`, data),
   removeGroupMember: (slug: string, accountNo: string) =>
     del(`/admin/groups/${slug}/members/${accountNo}`),
-  updateGroup: (id: number, data: { name?: string; slug?: string; description?: string }) =>
-    put<GroupItem>(`/goods/admin_group/${id}/update`, data),
-  deleteGroup: (id: number) =>
-    del(`/goods/admin_group/${id}/delete`),
+  updateGroup: (slug: string, data: { name?: string; slug?: string; description?: string }) =>
+    put<GroupItem>(`/admin/groups/${slug}/update`, data),
+  deleteGroup: (slug: string) =>
+    del(`/admin/groups/${slug}/delete`),
 
   // 管理员账号（超管创建/开通，与普通用户自助注册分离）
   createAdminUser: (data: { username: string; password: string; email?: string; country_code?: string; phone?: string }) =>

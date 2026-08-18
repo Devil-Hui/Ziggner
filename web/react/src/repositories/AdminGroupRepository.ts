@@ -14,8 +14,8 @@ export interface AdminGroupRepository {
   listMembers(slug: string): Promise<GroupMember[]>;
   addMember(slug: string, data: { account_no: string; role: string }): Promise<void>;
   removeMember(slug: string, accountNo: string): Promise<void>;
-  updateGroup(id: number, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem>;
-  deleteGroup(id: number): Promise<void>;
+  updateGroup(slug: string, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem>;
+  deleteGroup(slug: string): Promise<void>;
 }
 
 // 默认实现：HTTP 适配器，包裹 adminAPI 的 group 方法并归一化响应形状。
@@ -44,12 +44,12 @@ export class HttpAdminGroupRepository implements AdminGroupRepository {
     await adminAPI.removeGroupMember(slug, accountNo);
   }
 
-  async updateGroup(id: number, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem> {
-    return adminAPI.updateGroup(id, data);
+  async updateGroup(slug: string, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem> {
+    return adminAPI.updateGroup(slug, data);
   }
 
-  async deleteGroup(id: number): Promise<void> {
-    await adminAPI.deleteGroup(id);
+  async deleteGroup(slug: string): Promise<void> {
+    await adminAPI.deleteGroup(slug);
   }
 }
 
