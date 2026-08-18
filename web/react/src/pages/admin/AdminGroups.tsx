@@ -854,6 +854,41 @@ export default function AdminGroups() {
         )}
       </FormDialog>
 
+      {/* ====== Add Member Dialog ======
+          修复：showAddMemberDialog / addMemberAccountNo / addMemberRole / handleAddMember
+          此前为孤儿状态（定义+set 但从未在 JSX 渲染），Add Member 按钮点击无任何反馈。 */}
+      {showAddMemberDialog && (
+        <FormDialog
+          open={showAddMemberDialog}
+          title={t('admin.groups.addMemberBtn')}
+          submitLabel={addingMember ? t('admin.groups.memberAdded') : t('admin.groups.addMemberBtn')}
+          submitDisabled={addingMember}
+          cancelLabel={t('common.cancel')}
+          onClose={() => setShowAddMemberDialog(false)}
+          onSubmit={handleAddMember}
+        >
+          <FormGroup>
+            <Label>{t('admin.groups.accountNoLabel')}</Label>
+            <Input
+              value={addMemberAccountNo}
+              onChange={(e) => setAddMemberAccountNo(e.target.value)}
+              placeholder="ZG-…"
+            />
+            <Hint>{t('admin.groups.addMemberHint')}</Hint>
+          </FormGroup>
+          <FormGroup>
+            <Label>{t('admin.groups.roleLabel')}</Label>
+            <Select
+              value={addMemberRole}
+              onChange={(e) => setAddMemberRole(e.target.value as 'leader' | 'member')}
+            >
+              <option value="member">{t('admin.groups.roleMember')}</option>
+              {isSuperAdmin && <option value="leader">{t('admin.groups.roleLeader')}</option>}
+            </Select>
+          </FormGroup>
+        </FormDialog>
+      )}
+
       {/* ====== Remove Member Confirmation ====== */}
       {removeMemberTarget && removeMemberGroupSlug !== null && (
         <ConfirmDialog

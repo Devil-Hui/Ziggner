@@ -840,6 +840,7 @@ const en = {
       hideMembers: 'Hide Members',
       roleLeader: 'Group Leader',
       roleMember: 'Member',
+      roleLabel: 'Role',
       viewMembers: 'View Members',
       memberListTitle: ' - Member List',
       loadingMembers: 'Loading members...',

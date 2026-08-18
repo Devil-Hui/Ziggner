@@ -840,6 +840,7 @@ const zhCN = {
       hideMembers: '收起成员',
       roleLeader: '组长',
       roleMember: '组员',
+      roleLabel: '角色',
       viewMembers: '查看成员',
       memberListTitle: ' - 成员列表',
       loadingMembers: '加载成员中...',
