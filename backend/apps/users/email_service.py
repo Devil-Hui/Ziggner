@@ -70,6 +70,32 @@ def _render_template(template_type: str, context: dict) -> dict:
     if tpl:
         return tpl.render(context)
     # 内置默认（数据库模板未配置时）
+    if template_type == 'admin_welcome':
+        platform_name = context.get('platform_name', 'Ziggner')
+        year = context.get('year', str(datetime.now(dt_timezone.utc).year))
+        return {
+            'subject': f'欢迎加入 {platform_name} 管理后台',
+            'html': (
+                f'<div style="max-width:480px;margin:0 auto;padding:32px 24px;'
+                f'font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',Roboto,sans-serif;'
+                f'color:#1a1a2e;background:#fff;border-radius:8px;">'
+                f'<div style="font-size:22px;font-weight:600;">{platform_name}</div>'
+                f'<div style="font-size:18px;font-weight:600;margin:12px 0;">'
+                f'欢迎，{context.get("real_name", context.get("username", ""))}！</div>'
+                f'<div style="font-size:14px;line-height:1.7;color:#444;">'
+                f'您的后台管理员账号已创建成功。请验证邮箱以接收系统通知与登录验证码：'
+                f'<br/><a href="{context.get("verify_url", "")}">{context.get("verify_url", "")}</a>'
+                f'</div>'
+                f'<div style="font-size:11px;color:#aaa;text-align:center;margin-top:24px;">'
+                f'© {year} {platform_name}</div>'
+                f'</div>'
+            ),
+            'text': (
+                f'欢迎加入 {platform_name}！\n'
+                f'您的后台管理员账号已创建成功。请验证邮箱：\n'
+                f'{context.get("verify_url", "")}\n© {year} {platform_name}'
+            ),
+        }
     code = context.get('code', '')
     return {
         'subject': 'Ziggner - Email Verification',
@@ -106,14 +132,17 @@ def _account_usage(account: dict) -> int:
     return _code_cache.get(_account_day_key(account.get('user', '')), 0)
 
 
-def _send_with_account(account: dict, recipient: str, code: str, template_type: str) -> None:
-    """用指定账号发送验证码邮件（SMTP 失败会抛异常，由调用方切换账号）"""
+def _send_template_with_account(account: dict, recipient: str, template_type: str, context: dict) -> None:
+    """用指定账号发送模板邮件（SMTP 失败会抛异常，由调用方切换账号）。
+
+    context 为模板占位符字典（如 {'code': '123456'} 或完整的欢迎邮件上下文）。
+    """
     from django.core.mail import EmailMultiAlternatives, get_connection
 
-    rendered = _render_template(template_type, {'code': code})
+    rendered = _render_template(template_type, context)
     msg = EmailMultiAlternatives(
         subject=rendered['subject'],
-        body=rendered['text'] or f'Your verification code is: {code}',
+        body=rendered['text'] or '',
         from_email=account.get('from_email') or account.get('user') or settings.DEFAULT_FROM_EMAIL,
         to=[recipient],
         connection=None,
@@ -134,6 +163,11 @@ def _send_with_account(account: dict, recipient: str, code: str, template_type: 
     msg.send(fail_silently=False)
 
 
+def _send_with_account(account: dict, recipient: str, code: str, template_type: str) -> None:
+    """用指定账号发送验证码邮件（兼容旧调用；委托通用模板发送）。"""
+    _send_template_with_account(account, recipient, template_type, {'code': code})
+
+
 # 国内邮箱域名集合（智能路由：国内收件人优先用国内账号发，国外用国外账号）
 _DOMESTIC_MAIL_DOMAINS = {
     '163.com', '126.com', 'yeah.net', 'qq.com', 'foxmail.com', '139.com',
@@ -149,14 +183,16 @@ def _is_domestic_email(email: str) -> bool:
     return domain in _DOMESTIC_MAIL_DOMAINS or domain.endswith(('.cn', '.com.cn'))
 
 
-def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verify_code') -> None:
-    """多发件账号池：智能路由 + 额度感知轮换发送。
+def _deliver_template_email(recipient: str, template_type: str, context: dict) -> None:
+    """多发件账号池：智能路由 + 额度感知轮换发送（通用模板发送）。
 
     - 路由：收件人国内邮箱 → 国内账号优先（163）；国外邮箱 → 国外账号优先（Gmail），
       各自走稳定通道（国内网络访问 Gmail 不稳定，反之亦然）
     - 跳过当日已达 daily_limit 的账号
     - 发送失败自动切换下一个账号（兜底保证送达）
     - 全部失败抛异常（调用方返回 500，不再假装成功）
+
+    context 为模板占位符字典（如 {'code': '123456'} 或完整欢迎邮件上下文）。
     """
     accounts = list(getattr(settings, 'EMAIL_ACCOUNTS', None) or [])
     if not accounts:
@@ -177,7 +213,7 @@ def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verif
             errors.append(f"{account.get('user')}: daily limit {usage} reached")
             continue
         try:
-            _send_with_account(account, recipient, code, template_type)
+            _send_template_with_account(account, recipient, template_type, context)
         except Exception as e:
             logger.warning(f'[EMAIL] account {account.get("user")} failed to send to {recipient}: {e}')
             errors.append(f"{account.get('user')}: {e}")
@@ -187,6 +223,11 @@ def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verif
         return
     msg = 'all email accounts failed: ' + ('; '.join(errors) if errors else 'no usable account')
     raise RuntimeError(msg)
+
+
+def _deliver_verify_email(recipient: str, code: str, template_type: str = 'verify_code') -> None:
+    """多发件账号池：发送验证码邮件（兼容旧调用；委托通用模板发送）。"""
+    _deliver_template_email(recipient, template_type, {'code': code})
 
 
 logger = logging.getLogger(__name__)
@@ -375,6 +416,93 @@ class EmailService:
             raise ValueError('Invalid token type.')
 
         return payload['email']
+
+    # ============================================================
+    # 管理员欢迎邮件 + 邮箱验证令牌（JWT 链接，非 Redis 验证码）
+    # ============================================================
+
+    @staticmethod
+    def issue_admin_email_verify_token(user) -> str:
+        """签发管理员邮箱验证 JWT 令牌（欢迎邮件链接用）。
+
+        Token payload:
+            account_no: 对外账户号
+            email:      用户邮箱（小写）
+            type:       'admin_email_verify'
+            exp:        默认 7 天
+        """
+        expire_minutes = _cfg.get('ADMIN_EMAIL_VERIFY_TOKEN_EXPIRE_MINUTES', 60 * 24 * 7)
+        now = datetime.now(dt_timezone.utc)
+        account_no = ''
+        try:
+            account_no = user.profile.account_no
+        except Exception:
+            account_no = ''
+        payload = {
+            'account_no': account_no,
+            'email': (user.email or '').lower(),
+            'type': 'admin_email_verify',
+            'iat': now,
+            'exp': now + timedelta(minutes=expire_minutes),
+        }
+        return jwt.encode(payload, settings.SECRET_KEY, algorithm='HS256')
+
+    @staticmethod
+    def decode_admin_email_verify_token(token: str) -> dict:
+        """解码并校验管理员邮箱验证令牌，返回 payload dict。
+
+        Raises:
+            ValueError: 令牌无效 / 已过期 / 类型不符
+        """
+        try:
+            payload = jwt.decode(
+                token,
+                settings.SECRET_KEY,
+                algorithms=['HS256'],
+                options={'require': ['exp', 'email', 'type']},
+            )
+        except jwt.ExpiredSignatureError:
+            raise ValueError('邮箱验证链接已过期，请重新获取')
+        except jwt.InvalidTokenError:
+            raise ValueError('无效的邮箱验证链接')
+
+        if payload.get('type') != 'admin_email_verify':
+            raise ValueError('令牌类型不正确')
+
+        return payload
+
+    @staticmethod
+    def send_admin_welcome_email(user, context: dict | None = None) -> None:
+        """渲染 admin_welcome 模板并通过多账号池发送欢迎邮件。
+
+        context 可携带 role / login_url / support_url 等；缺失时以 settings 默认值补全。
+        验证令牌注入 verify_url，供模板渲染「验证邮箱」按钮。
+        发送失败抛异常（由 Celery 任务 try/except 兜底，不影响建号）。
+        """
+        from django.utils import timezone as _tz
+
+        context = dict(context or {})
+        platform_name = getattr(settings, 'PLATFORM_NAME', 'Ziggner')
+        login_url = getattr(settings, 'FRONTEND_URL', 'https://admin.ziggner.com')
+        support_url = getattr(settings, 'SUPPORT_URL', 'https://ziggner.com/support')
+
+        base = {
+            'platform_name': platform_name,
+            'real_name': (f"{user.first_name} {user.last_name}".strip() or user.username),
+            'username': user.username,
+            'email': user.email,
+            'role': context.get('role', 'customer'),
+            'login_url': login_url,
+            'support_url': support_url,
+            'year': str(_tz.now().year),
+        }
+        base.update(context)
+
+        # 验证令牌链接（供新管理员一键验证邮箱）
+        token = EmailService.issue_admin_email_verify_token(user)
+        base['verify_url'] = f"{login_url.rstrip('/')}/verify-email?token={token}"
+
+        _deliver_template_email(user.email, 'admin_welcome', base)
 
 
 # ============================================================

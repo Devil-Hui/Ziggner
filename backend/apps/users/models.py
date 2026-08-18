@@ -97,6 +97,36 @@ class UserProfile(models.Model):
         unique=True,
         help_text='对外账户号（ZG- + Base32），替代暴露内部自增 id',
     )
+    # 部门（自由文本，P2 仅存储，不引入枚举管理页）
+    department = models.CharField(
+        max_length=50,
+        blank=True,
+        default='',
+        help_text='部门（可选）',
+    )
+    # 邮箱是否已通过验证链接验证（仅验证端点可置 true；创建时强制 false）
+    email_verified = models.BooleanField(
+        default=False,
+        help_text='邮箱是否已验证（仅欢迎邮件验证链接可置 true）',
+    )
+    # 备注（P2 仅存储）
+    note = models.TextField(
+        blank=True,
+        default='',
+        help_text='备注（可选）',
+    )
+    # 语言偏好（P2 仅存储，暂不影响后端逻辑）
+    locale = models.CharField(
+        max_length=10,
+        blank=True,
+        default='zh-CN',
+        help_text='语言偏好（如 zh-CN / en-US）',
+    )
+    # 下次登录是否强制改密（P2 仅落字段+默认值；登录强制改密拦截列为后续项，本期不实现）
+    must_reset_password = models.BooleanField(
+        default=True,
+        help_text='首次登录是否强制修改密码（本期仅存储）',
+    )
 
     class Meta:
         db_table = 'users_userprofile'
@@ -210,6 +240,7 @@ class EmailTemplate(models.Model):
         ('verify_code', '邮箱验证码'),
         ('order_notice', '订单通知'),
         ('reset_password', '密码重置'),
+        ('admin_welcome', '管理员欢迎邮件'),
     ]
     template_type = models.CharField(
         max_length=32, unique=True, choices=TEMPLATE_TYPES,

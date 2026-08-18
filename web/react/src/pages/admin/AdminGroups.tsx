@@ -200,6 +200,60 @@ const ROLE_OPTIONS: { value: 'ops' | 'superadmin'; key: string }[] = [
   { value: 'superadmin', key: 'admin.groups.roleSuperadmin' },
 ];
 
+// ── Toggle switch (is_active) ──
+const ToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+const ToggleSwitch = styled.label`
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+`;
+
+const ToggleInput = styled.input`
+  opacity: 0;
+  width: 0;
+  height: 0;
+
+  &:checked + span {
+    background: ${Color.primary};
+  }
+
+  &:checked + span::before {
+    transform: translateX(18px);
+  }
+`;
+
+const ToggleSlider = styled.span`
+  position: absolute;
+  inset: 0;
+  background: ${Color.border.dark};
+  border-radius: 22px;
+  cursor: pointer;
+  transition: ${Transition.normal};
+
+  &::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    left: 3px;
+    bottom: 3px;
+    background: ${Color.bg.card};
+    border-radius: 50%;
+    transition: transform 0.2s;
+  }
+`;
+
+const ToggleLabel = styled.span`
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.secondary};
+`;
+
 export default function AdminGroups() {
   const { t } = useTranslation();
   const { isSuperAdmin } = useAdminAuth();
@@ -221,10 +275,14 @@ export default function AdminGroups() {
   const [adminUsername, setAdminUsername] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [adminFirstName, setAdminFirstName] = useState('');
+  const [adminLastName, setAdminLastName] = useState('');
+  const [adminDepartment, setAdminDepartment] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [adminCountryCode, setAdminCountryCode] = useState('');
   const [adminRole, setAdminRole] = useState<'ops' | 'superadmin'>('ops');
-  const [adminErrors, setAdminErrors] = useState<{ username?: string; password?: string; email?: string }>({});
+  const [adminIsActive, setAdminIsActive] = useState(true);
+  const [adminErrors, setAdminErrors] = useState<{ username?: string; password?: string; email?: string; first_name?: string; last_name?: string }>({});
   const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [createdAccountNo, setCreatedAccountNo] = useState<string | null>(null);
 
@@ -279,9 +337,13 @@ export default function AdminGroups() {
     setAdminUsername('');
     setAdminPassword('');
     setAdminEmail('');
+    setAdminFirstName('');
+    setAdminLastName('');
+    setAdminDepartment('');
     setAdminPhone('');
     setAdminCountryCode('');
     setAdminRole('ops');
+    setAdminIsActive(true);
     setAdminErrors({});
     setCreatedAccountNo(null);
     setShowForm(true);
@@ -316,19 +378,28 @@ export default function AdminGroups() {
       setAdminUsername('');
       setAdminPassword('');
       setAdminEmail('');
+      setAdminFirstName('');
+      setAdminLastName('');
+      setAdminDepartment('');
       setAdminPhone('');
       setAdminCountryCode('');
       setAdminRole('ops');
+      setAdminIsActive(true);
       setAdminErrors({});
       return;
     }
     const username = adminUsername.trim();
     const password = adminPassword;
     const email = adminEmail.trim();
-    const errs: { username?: string; password?: string; email?: string } = {};
+    const firstName = adminFirstName.trim();
+    const lastName = adminLastName.trim();
+    const errs: { username?: string; password?: string; email?: string; first_name?: string; last_name?: string } = {};
     if (!username) errs.username = t('admin.groups.adminUsernameRequired');
     if (!password || password.length < 8) errs.password = t('admin.groups.adminPasswordHint');
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.groups.adminEmailInvalid');
+    if (!email) errs.email = t('admin.groups.adminEmailRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.groups.adminEmailInvalid');
+    if (!firstName) errs.first_name = t('admin.groups.adminFirstNameRequired');
+    if (!lastName) errs.last_name = t('admin.groups.adminLastNameRequired');
     setAdminErrors(errs);
     if (Object.keys(errs).some((k) => errs[k as keyof typeof errs])) return;
     try {
@@ -336,10 +407,14 @@ export default function AdminGroups() {
       const res = await adminAPI.createAdminUser({
         username,
         password,
-        email: email || undefined,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: adminRole,
+        department: adminDepartment.trim() || undefined,
         phone: adminPhone.trim() || undefined,
         country_code: adminCountryCode || undefined,
-        role: adminRole,
+        is_active: adminIsActive,
       });
       setCreatedAccountNo(res.account_no || (res.id != null ? String(res.id) : ''));
       showMsg('success', t('admin.groups.createAdminSuccess'));
@@ -690,7 +765,7 @@ export default function AdminGroups() {
               {adminErrors.password && <ErrorText>{adminErrors.password}</ErrorText>}
             </FormGroup>
             <FormGroup>
-              <Label>{t('admin.groups.adminEmailLabel')}</Label>
+              <Label>{t('admin.groups.adminEmailRequired')}</Label>
               <Input
                 value={adminEmail}
                 onChange={(e) => {
@@ -700,6 +775,38 @@ export default function AdminGroups() {
                 placeholder={t('admin.groups.adminEmailPlaceholder')}
               />
               {adminErrors.email && <ErrorText>{adminErrors.email}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminFirstNameLabel')}</Label>
+              <Input
+                value={adminFirstName}
+                onChange={(e) => {
+                  setAdminFirstName(e.target.value);
+                  if (adminErrors.first_name) setAdminErrors((p) => ({ ...p, first_name: undefined }));
+                }}
+                placeholder={t('admin.groups.adminFirstNameLabel')}
+              />
+              {adminErrors.first_name && <ErrorText>{adminErrors.first_name}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminLastNameLabel')}</Label>
+              <Input
+                value={adminLastName}
+                onChange={(e) => {
+                  setAdminLastName(e.target.value);
+                  if (adminErrors.last_name) setAdminErrors((p) => ({ ...p, last_name: undefined }));
+                }}
+                placeholder={t('admin.groups.adminLastNameLabel')}
+              />
+              {adminErrors.last_name && <ErrorText>{adminErrors.last_name}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminDepartmentLabel')}</Label>
+              <Input
+                value={adminDepartment}
+                onChange={(e) => setAdminDepartment(e.target.value)}
+                placeholder={t('admin.groups.adminDepartmentPlaceholder')}
+              />
             </FormGroup>
             <FormGroup>
               <Label>{t('admin.groups.adminPhoneLabel')}</Label>
@@ -726,6 +833,20 @@ export default function AdminGroups() {
                 ))}
               </Select>
               <Hint>{t('admin.groups.adminRoleHint')}</Hint>
+            </FormGroup>
+            <FormGroup>
+              <ToggleRow>
+                <ToggleSwitch>
+                  <ToggleInput
+                    type="checkbox"
+                    checked={adminIsActive}
+                    onChange={(e) => setAdminIsActive(e.target.checked)}
+                  />
+                  <ToggleSlider />
+                </ToggleSwitch>
+                <ToggleLabel>{t('admin.groups.adminIsActive')}</ToggleLabel>
+              </ToggleRow>
+              <Hint>{t('admin.groups.adminIsActiveHint')}</Hint>
             </FormGroup>
           </>
         )}

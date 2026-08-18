@@ -456,8 +456,22 @@ export const adminAPI = {
     del(`/admin/groups/${slug}/delete`),
 
   // 管理员账号（超管创建/开通，与普通用户自助注册分离）
-  createAdminUser: (data: { username: string; password: string; email?: string; country_code?: string; phone?: string; role?: 'superadmin' | 'ops' }) =>
-    post<{ account_no?: string; id?: number; username: string; email?: string; is_active: boolean; roles?: string[] }>('/admin/users/create/', data),
+  // email 必填；first_name / last_name / role 必填；其余可选。
+  createAdminUser: (data: {
+    username: string;
+    password: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    role: 'superadmin' | 'ops';
+    country_code?: string;
+    phone?: string;
+    department?: string;
+    is_active?: boolean;
+    note?: string;
+    locale?: string;
+  }) =>
+    post<{ account_no?: string; id?: number; username: string; email?: string; first_name?: string; last_name?: string; is_active: boolean; roles?: string[] }>('/admin/users/create/', data),
 
   // Application
   submitApplication: (data: Record<string, unknown>) =>

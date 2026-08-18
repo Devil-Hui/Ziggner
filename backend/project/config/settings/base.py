@@ -49,6 +49,11 @@ ENABLE_MOCK_PAYMENT = os.getenv(
 MOCK_PAYMENT_SECRET = os.getenv('MOCK_PAYMENT_SECRET', SECRET_KEY)
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_VERIFY_TIMEOUT = float(os.getenv('TURNSTILE_VERIFY_TIMEOUT', '3.0'))
+
+# 平台与前端相关配置（欢迎邮件 / 验证链接使用）
+PLATFORM_NAME = os.getenv('PLATFORM_NAME', 'Ziggner')
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://admin.ziggner.com')
+SUPPORT_URL = os.getenv('SUPPORT_URL', 'https://ziggner.com/support')
 # Application definition
 
 INSTALLED_APPS = [

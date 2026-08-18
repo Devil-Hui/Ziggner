@@ -673,3 +673,57 @@ class AvatarUploadView(BaseApiView):
             user.profile.save(update_fields=['avatar'])
         
         return Response({'avatar_url': full_url})
+
+
+class AdminEmailVerifyView(PublicApiView):
+    """公开邮箱验证端点（无需登录）。
+
+    POST /api/users/email/admin-verify/  {token}
+    解码欢迎邮件中的 JWT 令牌（type=admin_email_verify），将对应账号的
+    email_verified 置为 True，返回 200 {verified:true, email}。
+    令牌无效/过期 → 400 {detail, code:'TOKEN_INVALID'}。
+    """
+
+    def post(self, request):
+        token = (request.data.get('token') or '').strip()
+        if not token:
+            return Response(
+                {'detail': '缺少验证令牌', 'code': 'TOKEN_INVALID'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            payload = EmailService.decode_admin_email_verify_token(token)
+        except ValueError as e:
+            return Response(
+                {'detail': str(e), 'code': 'TOKEN_INVALID'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        email = (payload.get('email') or '').lower()
+        if not email:
+            return Response(
+                {'detail': '令牌缺少邮箱信息', 'code': 'TOKEN_INVALID'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from django.contrib.auth import get_user_model
+        from apps.users.models import UserProfile
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': '账号不存在', 'code': 'TOKEN_INVALID'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        profile, _ = UserProfile.objects.get_or_create(user=user)
+        # 幂等：已验证直接返回成功
+        if profile.email_verified:
+            return Response({'verified': True, 'email': user.email})
+
+        profile.email_verified = True
+        profile.save(update_fields=['email_verified'])
+        return Response({'verified': True, 'email': user.email})

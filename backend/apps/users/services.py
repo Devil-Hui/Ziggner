@@ -24,17 +24,41 @@ class UserService:
 
     @staticmethod
     @transaction.atomic
-    def create_user(username, password, email='', country_code=None, phone=None):
+    def create_user(
+        username,
+        password,
+        email='',
+        first_name='',
+        last_name='',
+        department='',
+        is_active=True,
+        country_code=None,
+        phone=None,
+        note='',
+        locale='zh-CN',
+        must_reset_password=True,
+        email_verified=False,
+    ):
         """
-        在事务中创建 User 和 UserProfile。
-        若用户名/邮箱/手机号已存在，抛出 ValueError。
+        在事务中创建 User 和 UserProfile（支持完整管理员字段）。
+
+        约定：
+          - email 统一小写归一化存储，唯一性用 email__iexact 大小写不敏感校验。
+          - username 大小写保持原样（DB 大小写敏感、登录精确匹配）。
+          - email_verified 由调用方控制（创建管理员时强制 False，仅验证端点可置 True）。
+          - locale / note / must_reset_password 本期仅落字段，不实现强制逻辑。
+
+        若用户名/邮箱/手机号已存在，抛出 ValueError('USERNAME_EXISTS' / 'EMAIL_EXISTS' / 'PHONE_EXISTS')。
         """
-        # 检查用户名唯一性
+        # 邮箱统一小写归一化（存储与唯一性比较均用小写）
+        email = (email or '').strip().lower()
+
+        # 检查用户名唯一性（大小写敏感，与登录一致）
         if User.objects.filter(username=username).exists():
             raise ValueError('USERNAME_EXISTS')
 
-        # 检查邮箱唯一性
-        if email and User.objects.filter(email=email).exists():
+        # 检查邮箱唯一性（大小写不敏感）
+        if email and User.objects.filter(email__iexact=email).exists():
             raise ValueError('EMAIL_EXISTS')
 
         # 检查手机号唯一性
@@ -48,13 +72,20 @@ class UserService:
             username=username,
             password=password,
             email=email,
-            is_active=True,
+            first_name=first_name or '',
+            last_name=last_name or '',
+            is_active=bool(is_active),
         )
 
         UserProfile.objects.create(
             user=user,
             country_code=country_code or '',
             phone=phone or '',
+            department=department or '',
+            note=note or '',
+            locale=locale or 'zh-CN',
+            must_reset_password=bool(must_reset_password),
+            email_verified=bool(email_verified),
         )
 
         return user

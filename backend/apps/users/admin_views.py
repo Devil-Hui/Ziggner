@@ -29,6 +29,8 @@ from apps.rbac.services import invalidate_user
 from apps.users.services import UserService
 from apps.users.account import ensure_account_no, resolve_user_by_account_no
 from apps.users.tokens import rotate_user_stamp
+from apps.users.serializers import AdminCreateSerializer
+from apps.users.tasks import send_admin_welcome_email
 
 
 def _bad_request(message: str, **extra):
@@ -38,33 +40,65 @@ def _bad_request(message: str, **extra):
     return Response(payload, status=status.HTTP_400_BAD_REQUEST)
 
 
+# 字段 → 错误码映射（AdminCreateSerializer 校验失败时统一映射）
+_FIELD_CODE_MAP = {
+    'username': 'USERNAME_INVALID',
+    'password': 'PASSWORD_WEAK',
+    'email': 'EMAIL_INVALID',
+    'first_name': 'NAME_REQUIRED',
+    'last_name': 'NAME_REQUIRED',
+    'role': 'ROLE_INVALID',
+    'country_code': 'PHONE_INVALID',
+    'phone': 'PHONE_INVALID',
+}
+
+
 class AdminUserCreateView(BaseApiView):
     """超管创建/开通管理员候选账号。
 
     与 /api/users/register/（普通用户自助注册）彻底分离：
     这里由超管主动开通账号并立即拿到 account_no，可直接「发给对方」再拉入管理组。
+
+    邮箱为必填且全局唯一（大小写不敏感）；创建时 email_verified 强制 false，
+    仅欢迎邮件验证链接端点可置 true。
     """
 
     permission_classes = [IsSuperAdmin]
 
     def post(self, request):
-        data = request.data
-        username = (data.get('username') or '').strip()
-        password = data.get('password') or ''
-        email = (data.get('email') or '').strip()
-        country_code = data.get('country_code') or None
-        phone = (data.get('phone') or '').strip() or None
+        serializer = AdminCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            errors = serializer.errors
+            for field, code in _FIELD_CODE_MAP.items():
+                if field in errors:
+                    msg = errors[field]
+                    if isinstance(msg, list):
+                        msg = msg[0]
+                    return _bad_request(msg, code=code)
+            # 兜底：首个错误字段
+            first_key = next(iter(errors), None)
+            fallback = errors.get(first_key) if first_key else '请求参数不合法'
+            if isinstance(fallback, list):
+                fallback = fallback[0]
+            return _bad_request(fallback, code='INVALID')
 
-        if not username or not password:
-            return _bad_request('username 与 password 必填')
+        data = serializer.validated_data
 
         try:
             user = UserService.create_user(
-                username=username,
-                password=password,
-                email=email,
-                country_code=country_code,
-                phone=phone,
+                username=data['username'],
+                password=data['password'],
+                email=data.get('email') or '',
+                first_name=data.get('first_name', ''),
+                last_name=data.get('last_name', ''),
+                department=data.get('department', ''),
+                is_active=data.get('is_active', True),
+                country_code=data.get('country_code') or None,
+                phone=(data.get('phone') or '').strip() or None,
+                note=data.get('note', ''),
+                locale=data.get('locale') or 'zh-CN',
+                must_reset_password=data.get('must_reset_password', True),
+                # email_verified 不在 data 中（创建时强制 false），不传入
             )
         except ValueError as e:
             key = str(e)
@@ -80,7 +114,7 @@ class AdminUserCreateView(BaseApiView):
 
         # 可选初始角色（superadmin / ops）。派生角色不可在创建时指派。
         roles: list = []
-        raw_role = (data.get('role') or '').strip()
+        raw_role = data.get('role') or ''
         if raw_role:
             if raw_role in DERIVED_ROLES:
                 return _bad_request('派生角色由管理组身份自动派生，创建时不可指派')
@@ -94,11 +128,19 @@ class AdminUserCreateView(BaseApiView):
             invalidate_user(user.id)
             roles = sorted(r.role for r in UserRole.objects.filter(user_id=user.id))
 
+        # 仅当事务成功提交后，异步派发欢迎邮件（失败不影响建号）。
+        # 邮件任务内部 try/except 仅记日志。
+        transaction.on_commit(
+            lambda: send_admin_welcome_email.delay(user.id)
+        )
+
         return Response(
             {
                 'account_no': account_no,
                 'username': user.username,
                 'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
                 'is_active': user.is_active,
                 'roles': roles or [DEFAULT_ROLE.value],
             },

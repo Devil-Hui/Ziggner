@@ -7,6 +7,7 @@ from apps.users.tokens import StampTokenObtainPairView
 from apps.users.views import (
     AdminLoginCodeView,
     AdminLoginView,
+    AdminEmailVerifyView,
     AvatarUploadView,
     ChangeUsernameView,
     ChangePasswordView,
@@ -64,6 +65,8 @@ urlpatterns = [
     # 邮箱验证码
     path('email/send/', SendEmailCodeView.as_view(), name='email-send'),
     path('email/verify/', VerifyEmailCodeView.as_view(), name='email-verify'),
+    # 管理员欢迎邮件「邮箱验证链接」公开端点（JWT 令牌，无需登录）
+    path('email/admin-verify/', AdminEmailVerifyView.as_view(), name='email-admin-verify'),
 
     # 邮箱验证码（独立流程）
     path('email/verify/send/', EmailVerifySendView.as_view(), name='email-verify-send'),
