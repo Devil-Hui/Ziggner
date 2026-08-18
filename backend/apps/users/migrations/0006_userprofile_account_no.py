@@ -28,7 +28,9 @@ def backfill_account_no(apps, schema_editor):
     existing_user_ids = list(UserProfile.objects.values_list('user_id', flat=True))
     missing = User.objects.exclude(id__in=existing_user_ids)
     for user in missing.iterator():
-        UserProfile.objects.create(user=user, account_no=_generate_unique_account_no())
+        # 用 user_id 赋值，规避历史模型态下 UserProfile.user FK 目标类
+        # 与 get_user_model() 返回类不一致导致的「must be a User instance」错误。
+        UserProfile.objects.create(user_id=user.pk, account_no=_generate_unique_account_no())
 
     # 2) 为所有 account_no 为空的 profile 补填
     empty = UserProfile.objects.filter(account_no='')

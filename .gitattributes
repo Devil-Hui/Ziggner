@@ -1,0 +1,4 @@
+# 强制 shell 脚本以 LF 换行：后端镜像在 Linux 构建/运行，Windows 检出的 CRLF 会让
+# 入口脚本 ./setup.sh 报 "no such file or directory" 而无限重启。仅约束 .sh 即可，
+# 不全局 text=auto，避免对仓库其它文本文件触发大规模换行重归一化。
+*.sh text eol=lf

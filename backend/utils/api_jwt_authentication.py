@@ -7,7 +7,6 @@ from rest_framework.authentication import get_authorization_header
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth import get_user_model
 
-from apps.users.tokens import STAMP_CLAIM, get_db_stamp
 from utils.exceptions import AuthException, ErrorCodes
 
 
@@ -25,6 +24,11 @@ class UsersJWTAuthentication(JWTAuthentication):
 
     def get_user(self, validated_token):
         """Override get_user to use users table"""
+        # 惰性导入，打破与 apps.users.tokens 的循环依赖：
+        # tokens 顶层导入 rest_framework_simplejwt.views 会触发 DRF 设置加载，
+        # 进而导入本模块；若此处也顶层导入 tokens 则形成环。
+        from apps.users.tokens import STAMP_CLAIM, get_db_stamp
+
         try:
             logger.debug(f'Validated token: {validated_token}')
             user_id = validated_token.get('user_id')

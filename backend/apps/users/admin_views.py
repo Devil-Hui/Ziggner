@@ -19,10 +19,10 @@ from utils.api_base_view import BaseApiView
 from apps.rbac.constants import (
     Role,
     DEFAULT_ROLE,
-    DERIVED_ROLES,
-    ASSIGNABLE_ROLES,
-    MAX_PAGE_SIZE,
 )
+# DERIVED_ROLES / ASSIGNABLE_ROLES / MAX_PAGE_SIZE 定义在 rbac.views（单一出处），
+# 不放在 constants，避免与「常量即真源」的约定冲突；此处从 views 引入。
+from apps.rbac.views import ASSIGNABLE_ROLES, DERIVED_ROLES, MAX_PAGE_SIZE
 from apps.rbac.models import UserRole
 from apps.rbac.permissions import HasPerm, IsSuperAdmin
 from apps.rbac.services import invalidate_user
