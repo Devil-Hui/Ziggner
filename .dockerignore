@@ -1,0 +1,10 @@
+# 构建上下文排除项（避免把 .git / node_modules / 密钥烤进镜像）
+.git
+**/node_modules
+**/__pycache__
+*.pyc
+.wrangler
+certs
+deploy/nginx-certs
+.env
+.env.*
