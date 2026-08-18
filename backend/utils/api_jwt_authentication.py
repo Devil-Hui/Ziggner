@@ -7,6 +7,9 @@ from rest_framework.authentication import get_authorization_header
 from rest_framework_simplejwt.settings import api_settings
 from django.contrib.auth import get_user_model
 
+from apps.users.tokens import STAMP_CLAIM, get_db_stamp
+from utils.exceptions import AuthException, ErrorCodes
+
 
 User = get_user_model()
 logger = getLogger(__name__)
@@ -17,6 +20,7 @@ class UsersJWTAuthentication(JWTAuthentication):
 
     - API请求使用users表进行JWT认证
     - Admin后台仍然使用auth_user表进行认证
+    - 安全戳校验：令牌签发时的 stamp 与 DB 当前 stamp 不一致 → 401 REAUTH_REQUIRED
     """
 
     def get_user(self, validated_token):
@@ -27,11 +31,25 @@ class UsersJWTAuthentication(JWTAuthentication):
             if not user_id:
                 raise InvalidToken('无效的token: 缺少user_id')
 
-            user = User.objects.filter(id=user_id, is_active=True).first()
+            # select_related('profile') 零额外成本（本就查 User），同时供安全戳比对复用
+            user = User.objects.select_related('profile').filter(id=user_id, is_active=True).first()
             if not user:
                 raise InvalidToken('用户不存在或已禁用')
 
+            # 安全戳校验（灰度兼容：仅当令牌携带 stamp claim 时才强制比对；
+            # 部署前签发的旧令牌无 stamp claim，保持原行为不强制失效）
+            token_stamp = validated_token.get(STAMP_CLAIM)
+            if token_stamp is not None:
+                db_stamp = get_db_stamp(user)
+                if db_stamp is None or db_stamp != token_stamp:
+                    logger.info(
+                        '[security_stamp] mismatch user_id=%s → REAUTH_REQUIRED', user_id
+                    )
+                    raise AuthException(ErrorCodes.REAUTH_REQUIRED)
+
             return user
+        except AuthException:
+            raise
         except Exception as e:
             logger.error(f'JWT authentication error: {str(e)}')
             raise InvalidToken('认证失败')

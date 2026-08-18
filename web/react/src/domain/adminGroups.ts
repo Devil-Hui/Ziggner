@@ -62,31 +62,33 @@ export function composeDeleteConfirmMessage(params: {
  */
 export interface AddMemberResult {
   ok: boolean;
-  userId?: number;
+  account_no?: string;
   role: 'leader' | 'member';
   errorKey?: string;
 }
 
+// 账户号格式：ZG- 前缀 + 16 位 Crockford Base32（无 I/L/O/U），与后端 apps/users/account.py 对齐
+export const ACCOUNT_NO_RE = /^ZG-[0-9A-HJ-NP-TV-Z]{16}$/;
+
 export function validateAddMemberInput(params: {
-  rawUserId: string;
+  rawAccountNo: string;
   isSuperAdmin: boolean;
   selectedRole: 'leader' | 'member';
 }): AddMemberResult {
-  const { rawUserId, isSuperAdmin, selectedRole } = params;
-  const trimmed = rawUserId.trim();
+  const { rawAccountNo, isSuperAdmin, selectedRole } = params;
+  const trimmed = rawAccountNo.trim();
 
   if (!trimmed) {
-    return { ok: false, role: 'member', errorKey: 'admin.groups.userIdRequired' };
+    return { ok: false, role: 'member', errorKey: 'admin.groups.accountNoRequired' };
   }
 
-  const userId = parseInt(trimmed, 10);
-  if (isNaN(userId) || userId <= 0) {
-    return { ok: false, role: 'member', errorKey: 'admin.groups.userIdInvalid' };
+  if (!ACCOUNT_NO_RE.test(trimmed)) {
+    return { ok: false, role: 'member', errorKey: 'admin.groups.accountNoInvalid' };
   }
 
   // 超管可选择角色；组长仅能添加本队普通成员
   const role: 'leader' | 'member' = isSuperAdmin ? selectedRole : 'member';
-  return { ok: true, userId, role };
+  return { ok: true, account_no: trimmed, role };
 }
 
 /**

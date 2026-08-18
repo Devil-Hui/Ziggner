@@ -12,7 +12,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from apps.users.tokens import StampRefreshToken
 
 from apps.users.social_auth import SocialAuthService
 from utils.api_base_view import PublicApiView, BaseApiView
@@ -54,8 +55,8 @@ class SocialLoginView(PublicApiView):
 
         user, is_new = SocialAuthService.get_or_create_user(provider, user_info)
 
-        # Generate JWT
-        refresh = RefreshToken.for_user(user)
+        # Generate JWT（携带安全戳，角色/密码变更后旧会话失效）
+        refresh = StampRefreshToken.for_user(user)
 
         result = {
             'access': str(refresh.access_token),
@@ -151,6 +152,10 @@ class SetPasswordView(BaseApiView):
 
         user.set_password(new_password)
         user.save(update_fields=['password'])
+
+        # 安全戳旋转：首次设置密码视为凭证变更，使旧会话失效
+        from apps.users.tokens import rotate_user_stamp
+        rotate_user_stamp(user.id)
 
         logger.info(f'Password set for user_id={user.id} after social login')
         return Response({'detail': '密码设置成功'}, status=status.HTTP_200_OK)

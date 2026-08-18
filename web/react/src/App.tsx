@@ -10,6 +10,7 @@ import { UserProvider } from './store/UserContext'
 import { CurrencyProvider } from './store/CurrencyContext'
 import { routes } from './router'
 import AppErrorBoundary from './components/common/AppErrorBoundary/AppErrorBoundary'
+import ReauthModal from './components/common/ReauthModal'
 import CustomerServiceFAB from './components/common/CustomerServiceFAB'
 
 function AppRoutes() {
@@ -29,6 +30,7 @@ function App() {
         <AdminAuthProvider>
         <BrowserRouter>
           <AppRoutes />
+          <ReauthModal />
           <CustomerServiceFAB />
           <MiniCartToast />
         </BrowserRouter>

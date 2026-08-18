@@ -27,6 +27,8 @@ export const AUTH_ERROR_CODES = [
   'AUTH_FAILED',
   'TOKEN_EXPIRED',
   'TOKEN_BLACKLISTED',
+  // 权限/登录状态变更：旧会话强制失效，前端弹出「请重新登录」
+  'REAUTH_REQUIRED',
 ]
 
 export type ToastType = 'error' | 'warning' | 'info' | 'success'

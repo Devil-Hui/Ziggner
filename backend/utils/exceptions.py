@@ -103,6 +103,9 @@ class ErrorCodes:
                                   '登录已失效，请重新登录', ErrorCategory.AUTH)
     PERMISSION_DENIED = ErrorCode('PERMISSION_DENIED', HTTP_403_FORBIDDEN,
                                   '权限不足，无法执行该操作', ErrorCategory.AUTH)
+    # 会话因权限/凭证变更而失效，必须重新登录（安全戳不匹配）
+    REAUTH_REQUIRED = ErrorCode('REAUTH_REQUIRED', HTTP_401_UNAUTHORIZED,
+                                '您的权限或登录状态已变更，请重新登录', ErrorCategory.AUTH)
 
     # ── 资源 ──
     NOT_FOUND = ErrorCode('NOT_FOUND', HTTP_404_NOT_FOUND,

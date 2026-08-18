@@ -1,4 +1,5 @@
 import re
+import secrets
 from datetime import timedelta
 
 from django.conf import settings
@@ -6,6 +7,18 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.crypto import get_random_string
+
+
+def generate_account_no() -> str:
+    """对外账户号：ZG- 前缀 + 16 位 Crockford Base32（剔除 I L O U，避免视觉混淆）。
+
+    - 熵 ≈ 80 bit，不可枚举，杜绝以自增主键遍历扒取账号（IDOR）。
+    - 可读、可口头/纸质传递，便于客服核对，对齐支付宝/微信「账号」观感。
+    - 唯一性由 DB unique 约束 + 生成时去重循环保证（见 migrate / ensure_account_no）。
+    """
+    alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'  # 32 字符，无 I/L/O/U
+    body = ''.join(secrets.choice(alphabet) for _ in range(16))
+    return f'ZG-{body}'
 
 
 def validate_country_code(value):
@@ -65,6 +78,25 @@ class UserProfile(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    # 安全戳：密码 / 角色等安全相关变更时旋转，使该用户所有旧会话（JWT）立即失效，
+    # 必须重新登录。空字符串表示尚未初始化（老用户首次登录时由 tokens.ensure_stamp 惰性生成）。
+    security_stamp = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        editable=False,
+        help_text='安全戳：角色/密码等安全变更时旋转，使旧会话失效',
+    )
+    # 对外账户号（不可枚举），替代暴露内部自增 id。内部 id 仅用于 DB join，绝不序列化对外。
+    account_no = models.CharField(
+        max_length=24,
+        blank=True,
+        default='',
+        editable=False,
+        db_index=True,
+        unique=True,
+        help_text='对外账户号（ZG- + Base32），替代暴露内部自增 id',
+    )
 
     class Meta:
         db_table = 'users_userprofile'

@@ -273,7 +273,7 @@ export default function AdminRbac() {
     try {
       setUsersLoading(true)
       setUsersError(null)
-      const data = await adminAPI.getRbacUsers({ page, size: 20, search: search || undefined })
+      const data = await adminAPI.getRbacUsers({ page, size: 20, account_no: search || undefined })
       if (data && Array.isArray(data.results)) {
         setUsers(data.results)
         setTotal(data.count || 0)
@@ -301,7 +301,7 @@ export default function AdminRbac() {
     if (!editingUser) return
     setSavingUser(true)
     try {
-      await adminAPI.updateUserRoles(editingUser.id, editRoles)
+      await adminAPI.updateUserRoles(editingUser.account_no, editRoles)
       showMsg('success', t('admin.rbac.userRoleSaveSuccess'))
       setEditingUser(null)
       fetchUsers()
@@ -316,9 +316,9 @@ export default function AdminRbac() {
 
   const userColumns: Column<RbacUser>[] = [
     {
-      key: 'id',
-      title: t('admin.rbac.columnId'),
-      width: '60px',
+      key: 'account_no',
+      title: t('admin.rbac.columnAccountNo'),
+      width: '170px',
     },
     {
       key: 'username',
@@ -448,7 +448,7 @@ export default function AdminRbac() {
             onRetry={fetchUsers}
             emptyTitle={t('admin.rbac.noData')}
             emptyIcon="👥"
-            rowKey="id"
+            rowKey="account_no"
           />
           <Pagination current={page} total={total} onChange={setPage} />
         </>

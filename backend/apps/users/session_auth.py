@@ -5,13 +5,24 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from django.contrib.auth import get_user_model
 
+from apps.users.tokens import (
+    STAMP_CLAIM,
+    StampRefreshToken,
+    StampTokenObtainPairSerializer,
+    get_db_stamp,
+)
 from apps.users.turnstile import TurnstileUnavailable, verify_turnstile
 from utils.api_jwt_authentication import UsersJWTAuthentication
-from utils.exceptions import ClientException, ErrorCodes, ServerException
+from utils.exceptions import (
+    AuthException,
+    ClientException,
+    ErrorCodes,
+    ServerException,
+)
 
 
 ACCESS_COOKIE = 'ziggner_access'
@@ -108,12 +119,12 @@ class BrowserLoginView(APIView):
             user = U.objects.filter(email__iexact=login_id).only('username').first()
             if user:
                 login_id = user.username
-        serializer = TokenObtainPairSerializer(data={
+        serializer = StampTokenObtainPairSerializer(data={
             'username': login_id,
             'password': password,
         })
         serializer.is_valid(raise_exception=True)
-        refresh = RefreshToken(serializer.validated_data['refresh'])
+        refresh = StampRefreshToken(serializer.validated_data['refresh'])
         response = Response({'authenticated': True})
         set_auth_cookies(response, refresh)
         return response
@@ -129,10 +140,19 @@ class BrowserRefreshView(APIView):
         if not raw_refresh:
             raise exceptions.AuthenticationFailed('Refresh cookie is missing.')
         try:
-            refresh = RefreshToken(raw_refresh)
+            refresh = StampRefreshToken(raw_refresh)
         except TokenError:
             # 无效/过期 refresh token 返回 401（前端引导重新登录），而非 500
             raise exceptions.AuthenticationFailed('Refresh token is invalid or expired.')
+        # 安全戳校验：角色/密码变更后旧 refresh 令牌的 stamp 与 DB 不一致 → 强制重新登录
+        token_stamp = refresh.payload.get(STAMP_CLAIM)
+        if token_stamp is not None:
+            uid = refresh.payload.get('user_id')
+            if uid:
+                User = get_user_model()
+                user = User.objects.filter(id=uid, is_active=True).select_related('profile').first()
+                if user is None or get_db_stamp(user) != token_stamp:
+                    raise AuthException(ErrorCodes.REAUTH_REQUIRED)
         response = Response({'authenticated': True})
         set_auth_cookies(response, refresh)
         return response

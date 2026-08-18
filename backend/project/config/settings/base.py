@@ -222,6 +222,20 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:8001",
 ]
 
+# django-cors-headers 默认允许头 + 退款幂等键头（Idempotency-Key）
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'idempotency-key',
+]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/

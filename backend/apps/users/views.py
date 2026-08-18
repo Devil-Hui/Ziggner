@@ -102,7 +102,7 @@ class AdminLoginView(PublicApiView):
 
         # 四项全部显式校验：用户名 / 密码 / 邮箱 / 验证码 缺一不可，逐项独立报错
         from django.contrib.auth import get_user_model
-        from rest_framework_simplejwt.tokens import RefreshToken
+        from apps.users.tokens import StampRefreshToken
 
         User = get_user_model()
         _logger.warning('[AdminLogin] email=%r username=%r pwd_len=%d', email, username, len(password))
@@ -137,7 +137,7 @@ class AdminLoginView(PublicApiView):
         # 全部校验通过 → 消费验证码（使其不可再用）
         EmailVerifyService.consume_code(verify_id)
 
-        refresh = RefreshToken.for_user(user)
+        refresh = StampRefreshToken.for_user(user)
         response = Response({'authenticated': True})
         set_auth_cookies(response, refresh)
         return response
@@ -452,6 +452,10 @@ class ChangePasswordView(BaseApiView):
                 )
             raise
 
+        # 安全戳旋转：密码变更使该用户所有旧会话立即失效，需重新登录
+        from apps.users.tokens import rotate_user_stamp
+        rotate_user_stamp(request.user.pk)
+
         return Response(
             {'detail': 'Password updated.'},
             status=status.HTTP_200_OK,
@@ -606,6 +610,7 @@ class UserMeView(BaseApiView):
         
         return Response({
             'id': user.id,
+            'account_no': profile.account_no if profile else '',
             'username': user.username,
             'email': user.email,
             'phone': user.phone if hasattr(user, 'phone') else None,
@@ -615,7 +620,7 @@ class UserMeView(BaseApiView):
             'is_group_leader': group_member.role == 'leader' if group_member else False,
             'is_group_member': group_member.role == 'member' if group_member else False,
             'group_name': group_member.group.name if group_member else None,
-            'group_id': group_member.group_id if group_member else None,
+            'group_slug': group_member.group.slug if group_member else None,
         })
 
     @extend_schema(

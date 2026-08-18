@@ -10,9 +10,10 @@ export type { GroupMember };
 export interface AdminGroupRepository {
   listGroups(): Promise<AdminGroupItem[]>;
   createGroup(data: { name: string; slug: string }): Promise<AdminGroupItem>;
-  listMembers(groupId: number): Promise<GroupMember[]>;
-  addMember(groupId: number, data: { user_id: number; role: string }): Promise<void>;
-  removeMember(groupId: number, userId: number): Promise<void>;
+  /** 以 slug 寻址分组、以 account_no 指认成员（不暴露内部 id、不以 PII 查询） */
+  listMembers(slug: string): Promise<GroupMember[]>;
+  addMember(slug: string, data: { account_no: string; role: string }): Promise<void>;
+  removeMember(slug: string, accountNo: string): Promise<void>;
   updateGroup(id: number, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem>;
   deleteGroup(id: number): Promise<void>;
 }
@@ -30,17 +31,17 @@ export class HttpAdminGroupRepository implements AdminGroupRepository {
     return adminAPI.createAdminGroup(data);
   }
 
-  async listMembers(groupId: number): Promise<GroupMember[]> {
-    const data = await adminAPI.getGroupMembers(groupId);
+  async listMembers(slug: string): Promise<GroupMember[]> {
+    const data = await adminAPI.getGroupMembers(slug);
     return (data?.members || []) as GroupMember[];
   }
 
-  async addMember(groupId: number, data: { user_id: number; role: string }): Promise<void> {
-    await adminAPI.addGroupMember(groupId, data);
+  async addMember(slug: string, data: { account_no: string; role: string }): Promise<void> {
+    await adminAPI.addGroupMember(slug, data);
   }
 
-  async removeMember(groupId: number, userId: number): Promise<void> {
-    await adminAPI.removeGroupMember(groupId, userId);
+  async removeMember(slug: string, accountNo: string): Promise<void> {
+    await adminAPI.removeGroupMember(slug, accountNo);
   }
 
   async updateGroup(id: number, data: { name?: string; slug?: string; description?: string }): Promise<AdminGroupItem> {

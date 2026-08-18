@@ -34,6 +34,18 @@ export interface SPUFormData {
   main_image?: string;
   description?: string;
   specs?: { name: string; values: string[] }[];
+  /** 显式 SKU 列表：创建时随请求提交，后端据此创建 SKU 并跳过 specs 自动生成 */
+  skus?: {
+    spec_values: Record<string, string>;
+    price: string | number;
+    stock: number;
+    discount_price?: string | number | null;
+    shelf_status?: string;
+    sku_code?: string;
+    barcode?: string;
+    weight?: string;
+    track_inventory?: boolean;
+  }[];
 }
 
 export interface SKUItem {
@@ -165,7 +177,7 @@ export interface GroupItem {
 }
 
 export interface GroupMember {
-  id: number;
+  account_no: string;
   username: string;
   role: 'leader' | 'member';
 }
@@ -425,21 +437,26 @@ export const adminAPI = {
       `/goods/media/spu/${spuId}/upload`, formData, onProgress,
     ),
 
-  // Admin Group
+  // Admin Group —— 普通用户自助面 /api/users/ 之外，管理面走 /api/admin/groups/，
+  // 分组以 slug 寻址、成员以 account_no 指认（不暴露内部 id、不以 PII 查询）。
   getAdminGroups: () =>
     get<GroupItem[]>('/goods/admin_group'),
   createAdminGroup: (data: { name: string; slug: string }) =>
     post<GroupItem>('/goods/admin_group/create', data),
-  getGroupMembers: (groupId: number) =>
-    get<{ members: GroupMember[] }>(`/goods/admin_group/${groupId}/members`),
-  addGroupMember: (groupId: number, data: { user_id: number; role: string }) =>
-    post(`/goods/admin_group/${groupId}/members`, data),
-  removeGroupMember: (groupId: number, userId: number) =>
-    del(`/goods/admin_group/${groupId}/members/${userId}`),
+  getGroupMembers: (slug: string) =>
+    get<{ slug: string; name: string; members: GroupMember[] }>(`/admin/groups/${slug}/members`),
+  addGroupMember: (slug: string, data: { account_no: string; role: string }) =>
+    post(`/admin/groups/${slug}/members`, data),
+  removeGroupMember: (slug: string, accountNo: string) =>
+    del(`/admin/groups/${slug}/members/${accountNo}`),
   updateGroup: (id: number, data: { name?: string; slug?: string; description?: string }) =>
     put<GroupItem>(`/goods/admin_group/${id}/update`, data),
   deleteGroup: (id: number) =>
     del(`/goods/admin_group/${id}/delete`),
+
+  // 管理员账号（超管创建/开通，与普通用户自助注册分离）
+  createAdminUser: (data: { username: string; password: string; email?: string; country_code?: string; phone?: string }) =>
+    post<{ account_no: string; username: string; email: string; is_active: boolean }>('/admin/users/create/', data),
 
   // Application
   submitApplication: (data: Record<string, unknown>) =>
@@ -547,17 +564,17 @@ export const adminAPI = {
   resetEmailTemplate: (templateType: string) =>
     post(`/users/email/templates/${templateType}/reset/`),
 
-  // RBAC — 角色 × 权限矩阵 + 用户角色
+  // RBAC — 角色 × 权限矩阵 + 用户角色（管理面 /api/admin/users/，按 account_no 指认）
   getRbacMatrix: () =>
     get<RbacMatrix>('/rbac/matrix'),
   updateRbacRole: (role: string, permCodes: string[]) =>
     put<{ role: string; perm_codes: string[] }>('/rbac/matrix', { role, perm_codes: permCodes }),
-  getRbacUsers: (params?: { role?: string; search?: string; page?: number; size?: number }) =>
-    get<PaginatedData<RbacUser>>('/rbac/users', params),
-  getUserRoles: (userId: number) =>
-    get<{ roles: string[] }>(`/rbac/users/${userId}/roles`),
-  updateUserRoles: (userId: number, roles: string[]) =>
-    put<{ roles: string[] }>(`/rbac/users/${userId}/roles`, { roles }),
+  getRbacUsers: (params?: { role?: string; account_no?: string; page?: number; size?: number }) =>
+    get<PaginatedData<RbacUser>>('/admin/users/', params),
+  getUserRoles: (accountNo: string) =>
+    get<{ roles: string[] }>(`/admin/users/${accountNo}/roles`),
+  updateUserRoles: (accountNo: string, roles: string[]) =>
+    put<{ roles: string[] }>(`/admin/users/${accountNo}/roles`, { roles }),
 };
 
 export interface EmailTemplateItem {
@@ -593,7 +610,7 @@ export interface RbacMatrix {
 }
 
 export interface RbacUser {
-  id: number;
+  account_no: string;
   username: string;
   email: string;
   is_active: boolean;

@@ -22,6 +22,7 @@ from apps.rbac.constants import (
 from apps.rbac.models import RolePermission, UserRole
 from apps.rbac.permissions import HasPerm
 from apps.rbac.services import get_role_perms, invalidate_all, invalidate_user
+from apps.users.tokens import rotate_user_stamp
 from utils.api_base_view import BaseApiView
 
 #: 由 AdminGroupMember 派生，不可手工指派 —— 否则两处数据会打架
@@ -153,7 +154,7 @@ class UserRoleListView(BaseApiView):
             'size': size,
             'results': [
                 {
-                    'id': u.id,
+                    'account_no': getattr(u.profile, 'account_no', '') or '',
                     'username': u.username,
                     'email': u.email,
                     'is_active': u.is_active,
@@ -211,6 +212,8 @@ class UserRoleDetailView(BaseApiView):
                 )
 
         invalidate_user(user_id)
+        # 旋转安全戳：角色变更使该用户所有旧会话立即失效，必须重新登录以获取新角色
+        rotate_user_stamp(user_id)
         roles_now = sorted(
             UserRole.objects.filter(user_id=user_id).values_list('role', flat=True)
         )

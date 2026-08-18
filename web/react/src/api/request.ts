@@ -137,6 +137,17 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig | undefined
     const isSessionEndpoint = originalRequest?.url?.includes('/users/session/')
     const isAuthEndpoint = isSessionEndpoint || originalRequest?.url?.includes('/users/login/') || originalRequest?.url?.includes('/users/register/')
+
+    // 权限/登录状态变更（后端旋转安全戳）：旧会话立即失效。
+    // 直接弹出「请重新登录」模态框，不尝试静默刷新（刷新也无法恢复）。
+    const errCode = (error.response?.data as { error_code?: string } | undefined)?.error_code
+    if (errCode === 'REAUTH_REQUIRED') {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:relogin-required'))
+      }
+      return Promise.reject(error)
+    }
+
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       if (await refreshBrowserSession()) return api(originalRequest)

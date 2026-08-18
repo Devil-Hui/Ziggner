@@ -1,88 +1,68 @@
-from django.db.models import Count, Q
+"""
+管理员分组管理端点（独立命名空间 /api/admin/groups/）。
+
+与 /api/goods/admin_group/... 的区别（大厂规范）：
+- 分组以业务可读的 slug 寻址（替代可枚举的 group_id）。
+- 成员以 account_no 指认（替代内部自增 user_id），既不暴露内部 id，也不以 PII 查询。
+- 列表/创建响应只返回 slug，不返回数字 id。
+
+复用 apps/goods/views/admin_group.py 的校验辅助函数，保证行为一致。
+"""
 from django.db import transaction, IntegrityError
 from rest_framework import status
 from rest_framework.response import Response
-from django.contrib.auth.models import User
-from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
+
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
-from ..models import AdminGroup, AdminGroupMember
 from apps.rbac.permissions import HasPerm
 from apps.rbac.services import has_role
 from apps.rbac.constants import Role
-from .admin_audit import create_audit_log
-
-import re
-
-# 系统默认收容组：删除其他分组时，活跃成员自动转移至此
-DEFAULT_PENDING_SLUG = 'pending'
-DEFAULT_PENDING_NAME = '待定组'
-_SLUG_RE = re.compile(r'^[a-z0-9][a-z0-9-]{0,99}$')
-_NAME_MAX = 100
-_SLUG_MAX = 100
-_DESC_MAX = 500
-
-
-def _sanitize(value: str) -> str:
-    """剥离控制字符与可用于存储型注入的尖括号，防御渲染层 XSS。"""
-    if not value:
-        return ''
-    cleaned = ''.join(
-        ch for ch in str(value)
-        if ch == ' ' or (ord(ch) >= 32 and ord(ch) != 127)
-    )
-    return cleaned.replace('<', '').replace('>', '')
+from apps.users.account import resolve_user_by_account_no, resolve_group_by_slug
+from apps.goods.models import AdminGroup, AdminGroupMember
+from apps.goods.views.admin_group import (
+    _sanitize,
+    _validate_name,
+    _validate_slug,
+    _resolve_pending_group,
+    DEFAULT_PENDING_SLUG,
+    DEFAULT_PENDING_NAME,
+)
+from apps.goods.views.admin_audit import create_audit_log
 
 
-def _validate_name(raw) -> tuple:
-    name = _sanitize(raw or '').strip()
-    if not name:
-        return None, Messages.ADMIN_GROUP_NAME_INVALID
-    if len(name) > _NAME_MAX:
-        return None, Messages.ADMIN_GROUP_NAME_INVALID
-    return name, None
-
-
-def _validate_slug(raw) -> tuple:
-    slug = (raw or '').strip()
-    if not slug:
-        return None, Messages.ADMIN_GROUP_SLUG_INVALID
-    if len(slug) > _SLUG_MAX:
-        return None, Messages.ADMIN_GROUP_SLUG_INVALID_LEN
-    if not _SLUG_RE.match(slug):
-        return None, Messages.ADMIN_GROUP_SLUG_INVALID
-    return slug, None
-
-
-def _resolve_pending_group() -> AdminGroup | None:
-    return AdminGroup.objects.filter(slug=DEFAULT_PENDING_SLUG, is_active=True).first()
+def _member_payload(m: AdminGroupMember) -> dict:
+    profile = getattr(m.user, 'profile', None)
+    account_no = getattr(profile, 'account_no', '') if profile else ''
+    return {
+        'account_no': account_no or '',
+        'username': m.user.username,
+        'role': m.role,
+        'status': m.status,
+    }
 
 
 class AdminGroupListView(BaseApiView):
     permission_classes = [HasPerm('goods.spu.read')]
 
-    @extend_schema(responses={200: OpenApiResponse(description='List of admin groups')})
     def get(self, request):
+        from django.db.models import Count, Q
         groups = AdminGroup.objects.filter(is_active=True).annotate(
             member_count=Count('members', filter=Q(members__status=1))
         )
-        items = []
-        for g in groups:
-            items.append({
-                'id': g.id, 'name': g.name, 'slug': g.slug,
+        return Response([
+            {
+                'slug': g.slug,
+                'name': g.name,
                 'member_count': g.member_count,
                 'created_at': g.created_at,
-            })
-        return Response(items)
+            }
+            for g in groups
+        ])
 
 
 class AdminGroupCreateView(BaseApiView):
     permission_classes = [HasPerm('goods.group.write')]
 
-    @extend_schema(
-        request=OpenApiTypes.OBJECT,
-        responses={201: OpenApiResponse(description='Admin group created')}
-    )
     def post(self, request):
         name, err = _validate_name(request.data.get('name', ''))
         if err:
@@ -90,7 +70,7 @@ class AdminGroupCreateView(BaseApiView):
         slug, err = _validate_slug(request.data.get('slug', ''))
         if err:
             return Response({'detail': err}, status=status.HTTP_400_BAD_REQUEST)
-        description = _sanitize(request.data.get('description', ''))[:_DESC_MAX]
+        description = _sanitize(request.data.get('description', ''))[:500]
 
         if AdminGroup.objects.filter(name=name).exists() or AdminGroup.objects.filter(slug=slug).exists():
             return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
@@ -98,36 +78,27 @@ class AdminGroupCreateView(BaseApiView):
         try:
             group = AdminGroup.objects.create(name=name, slug=slug, description=description, created_by=request.user)
         except IntegrityError:
-            # 并发下 .exists() 检查与写入之间存在竞态，唯一约束会抛出 IntegrityError，
-            # 兜底为 409，避免暴露 500
             return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
+
         create_audit_log(request.user, 'admin_group.create', 'admin_group', group.id,
                          changes={'name': name, 'slug': slug},
                          ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'id': group.id, 'name': group.name, 'slug': group.slug}, status=status.HTTP_201_CREATED)
+        return Response({'slug': group.slug, 'name': group.name}, status=status.HTTP_201_CREATED)
 
 
 class AdminGroupMembersView(BaseApiView):
     permission_classes = [HasPerm('goods.spu.read')]
 
-    @extend_schema(responses={200: OpenApiResponse(description='List of group members')})
-    def get(self, request, group_id):
-        members = AdminGroupMember.objects.filter(group_id=group_id).select_related('user')
-        items = []
-        for m in members:
-            profile = getattr(m.user, 'profile', None)
-            account_no = getattr(profile, 'account_no', '') if profile else ''
-            items.append({
-                'account_no': account_no or '', 'username': m.user.username,
-                'role': m.role, 'status': m.status,
-            })
-        return Response({'members': items})
+    def get(self, request, slug):
+        group = resolve_group_by_slug(slug)
+        members = AdminGroupMember.objects.filter(group=group).select_related('user', 'user__profile')
+        return Response({
+            'slug': group.slug,
+            'name': group.name,
+            'members': [_member_payload(m) for m in members],
+        })
 
-    @extend_schema(
-        request=OpenApiTypes.OBJECT,
-        responses={201: OpenApiResponse(description='Member added')}
-    )
-    def post(self, request, group_id):
+    def post(self, request, slug):
         user = request.user
         is_super = has_role(user, Role.SUPERADMIN.value)
         role = request.data.get('role', 'member')
@@ -142,29 +113,30 @@ class AdminGroupMembersView(BaseApiView):
                     status=AdminGroupMember.Status.ACTIVE,
                 ).values_list('group_id', flat=True)
             )
-            if group_id not in leader_groups:
+            if slug not in {
+                g.slug for g in AdminGroup.objects.filter(id__in=leader_groups, is_active=True)
+            }:
                 return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
 
-        user_id = request.data.get('user_id')
-        try:
-            target_user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
-        if AdminGroupMember.objects.filter(group_id=group_id, user=target_user).exists():
-            return Response({'detail': Messages.ADMIN_GROUP_MEMBER_EXISTS}, status=status.HTTP_409_CONFLICT)
-        member = AdminGroupMember.objects.create(group_id=group_id, user=target_user, role=role)
-        create_audit_log(request.user, 'admin_group.member_add', 'admin_group_member', member.id,
-                         changes={'group_id': group_id, 'user_id': target_user.id, 'role': role},
-                         ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'id': member.id, 'user_id': target_user.id, 'role': member.role}, status=status.HTTP_201_CREATED)
+        account_no = request.data.get('account_no')
+        target_user = resolve_user_by_account_no(account_no)
+        group = resolve_group_by_slug(slug)
 
-    @extend_schema(
-        request=None,
-        responses={200: OpenApiResponse(description='Member removed')}
-    )
-    def delete(self, request, group_id, user_id):
+        if AdminGroupMember.objects.filter(group=group, user=target_user).exists():
+            return Response({'detail': Messages.ADMIN_GROUP_MEMBER_EXISTS}, status=status.HTTP_409_CONFLICT)
+
+        member = AdminGroupMember.objects.create(group=group, user=target_user, role=role)
+        create_audit_log(request.user, 'admin_group.member_add', 'admin_group_member', member.id,
+                         changes={'slug': slug, 'account_no': account_no, 'role': role},
+                         ip_address=request.META.get('REMOTE_ADDR'))
+        return Response(_member_payload(member), status=status.HTTP_201_CREATED)
+
+    def delete(self, request, slug, account_no):
         user = request.user
         is_super = has_role(user, Role.SUPERADMIN.value)
+        group = resolve_group_by_slug(slug)
+        target_user = resolve_user_by_account_no(account_no)
+
         if not is_super:
             # 组长：仅可移除自己管理的组内的「普通成员」，不可移除组长
             leader_groups = set(
@@ -173,38 +145,30 @@ class AdminGroupMembersView(BaseApiView):
                     status=AdminGroupMember.Status.ACTIVE,
                 ).values_list('group_id', flat=True)
             )
-            if group_id not in leader_groups:
+            if group.id not in leader_groups:
                 return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
-            target = AdminGroupMember.objects.filter(group_id=group_id, user_id=user_id).first()
+            target = AdminGroupMember.objects.filter(group=group, user=target_user).first()
             if target and target.role == AdminGroupMember.Role.LEADER:
                 return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
-        AdminGroupMember.objects.filter(group_id=group_id, user_id=user_id).delete()
+
+        AdminGroupMember.objects.filter(group=group, user=target_user).delete()
         create_audit_log(request.user, 'admin_group.member_remove', 'admin_group_member', 0,
-                         changes={'group_id': group_id, 'user_id': user_id},
+                         changes={'slug': slug, 'account_no': account_no},
                          ip_address=request.META.get('REMOTE_ADDR'))
         return Response({'message': 'Member removed.'})
 
 
 class AdminGroupUpdateView(BaseApiView):
-    """更新管理组信息（name, slug, description）"""
-
     permission_classes = [HasPerm('goods.group.write')]
 
-    @extend_schema(
-        request=OpenApiTypes.OBJECT,
-        responses={200: OpenApiResponse(description='Admin group updated')}
-    )
-    def put(self, request, group_id):
+    def put(self, request, slug):
         try:
-            group = AdminGroup.objects.get(id=group_id, is_active=True)
+            group = AdminGroup.objects.get(slug=slug, is_active=True)
         except AdminGroup.DoesNotExist:
             return Response({'detail': Messages.ADMIN_GROUP_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
-        # 默认待定组不允许改名/改标识，避免破坏成员收容机制
         if group.slug == DEFAULT_PENDING_SLUG:
             if 'name' in request.data and _sanitize(request.data['name']).strip() != group.name:
-                return Response({'detail': Messages.ADMIN_GROUP_DEFAULT_PROTECTED}, status=status.HTTP_400_BAD_REQUEST)
-            if 'slug' in request.data and (request.data['slug'] or '').strip() != group.slug:
                 return Response({'detail': Messages.ADMIN_GROUP_DEFAULT_PROTECTED}, status=status.HTTP_400_BAD_REQUEST)
 
         fields = []
@@ -217,49 +181,30 @@ class AdminGroupUpdateView(BaseApiView):
             group.name = name
             fields.append('name')
 
-        if 'slug' in request.data:
-            slug, err = _validate_slug(request.data['slug'])
-            if err:
-                return Response({'detail': err}, status=status.HTTP_400_BAD_REQUEST)
-            if slug == DEFAULT_PENDING_SLUG and group.slug != DEFAULT_PENDING_SLUG:
-                return Response({'detail': Messages.ADMIN_GROUP_DEFAULT_PROTECTED}, status=status.HTTP_400_BAD_REQUEST)
-            if AdminGroup.objects.filter(slug=slug).exclude(id=group.id).exists():
-                return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
-            group.slug = slug
-            fields.append('slug')
-
         if 'description' in request.data:
-            group.description = _sanitize(request.data['description'])[:_DESC_MAX]
+            group.description = _sanitize(request.data['description'])[:500]
             fields.append('description')
 
         if fields:
-            try:
-                group.save(update_fields=fields)
-            except IntegrityError:
-                return Response({'detail': Messages.ADMIN_GROUP_EXISTS}, status=status.HTTP_409_CONFLICT)
+            group.save(update_fields=fields)
             create_audit_log(request.user, 'admin_group.update', 'admin_group', group.id,
                              changes={f: str(getattr(group, f)) for f in fields},
                              ip_address=request.META.get('REMOTE_ADDR'))
-        return Response({'id': group.id, 'name': group.name, 'slug': group.slug})
+        return Response({'slug': group.slug, 'name': group.name})
 
 
 class AdminGroupDeleteView(BaseApiView):
-    """软删除管理组；若存在活跃成员，原子地将其转移到目标组（默认待定组）后再删除。"""
-
     permission_classes = [HasPerm('goods.group.write')]
 
-    @extend_schema(responses={200: OpenApiResponse(description='Admin group deleted')})
-    def delete(self, request, group_id):
+    def delete(self, request, slug):
         try:
-            group = AdminGroup.objects.get(id=group_id, is_active=True)
+            group = AdminGroup.objects.get(slug=slug, is_active=True)
         except AdminGroup.DoesNotExist:
             return Response({'detail': Messages.ADMIN_GROUP_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
-        # 默认待定组是成员收容所，禁止删除
         if group.slug == DEFAULT_PENDING_SLUG:
             return Response({'detail': Messages.ADMIN_GROUP_DEFAULT_PROTECTED}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 解析转移目标组：显式 target_group_id 优先，否则用默认待定组
         target_group_id = request.data.get('target_group_id')
         target = None
         if target_group_id:
@@ -274,7 +219,6 @@ class AdminGroupDeleteView(BaseApiView):
 
         active_members = list(group.members.filter(status=AdminGroupMember.Status.ACTIVE).select_related('user'))
 
-        # 无目标组且无活跃成员：允许直接删除（兼容历史行为）
         if not target and not active_members:
             group.is_active = False
             group.save(update_fields=['is_active'])
@@ -283,16 +227,12 @@ class AdminGroupDeleteView(BaseApiView):
                              ip_address=request.META.get('REMOTE_ADDR'))
             return Response({'message': Messages.SUCCESS})
 
-        # 无目标组但有成员：保持原有拒绝语义
         if not target:
             return Response({'detail': Messages.ADMIN_GROUP_NOT_EMPTY}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 原子转移 + 删除
         with transaction.atomic():
             transferred = 0
-            moved_user_ids = []
             for m in active_members:
-                # 转移一律降为普通成员：避免原组长(leader)被无意复制进目标组而获得管理权
                 obj, created = AdminGroupMember.objects.get_or_create(
                     group=target, user=m.user,
                     defaults={'role': AdminGroupMember.Role.MEMBER, 'status': AdminGroupMember.Status.ACTIVE},
@@ -301,22 +241,17 @@ class AdminGroupDeleteView(BaseApiView):
                     obj.status = AdminGroupMember.Status.ACTIVE
                     obj.save(update_fields=['status'])
                 transferred += 1
-                moved_user_ids.append(m.user_id)
-            # 清理源组残留的活跃成员关系
             group.members.filter(status=AdminGroupMember.Status.ACTIVE).delete()
             group.is_active = False
             group.save(update_fields=['is_active'])
 
         create_audit_log(request.user, 'admin_group.delete', 'admin_group', group.id,
-                         changes={
-                             'name': group.name, 'slug': group.slug,
-                             'transferred': transferred, 'target_group_id': target.id,
-                             'moved_user_ids': moved_user_ids,
-                         },
+                         changes={'name': group.name, 'slug': group.slug,
+                                  'transferred': transferred, 'target_group_id': target.id},
                          ip_address=request.META.get('REMOTE_ADDR'))
         return Response({
             'message': Messages.SUCCESS,
             'transferred': transferred,
-            'target_group_id': target.id,
+            'target_group_slug': target.slug,
             'target_group_name': target.name,
         })

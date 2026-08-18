@@ -66,6 +66,13 @@ urlpatterns = [
 # 通过 VersionedAPIRouter 注册所有 API 路由
 urlpatterns += router.get_urlpatterns()
 
+# 管理员命名空间（与普通用户自助面 /api/users/ 分离）：
+# 仅超管/运维可达，且只用 account_no 指认用户、用 slug 寻址分组，绝不暴露内部自增 id。
+urlpatterns += [
+    path('api/admin/users/', include('apps.users.admin_urls')),
+    path('api/admin/groups/', include('apps.goods.admin_urls')),
+]
+
 if settings.DEBUG:
     urlpatterns += staticfiles_urlpatterns()
     if settings.FILE_STORAGE == 'local' and settings.MEDIA_URL.strip('/'):

@@ -180,20 +180,20 @@ export default function AdminGroups() {
   const [formSlug, setFormSlug] = useState('');
   const [formErrors, setFormErrors] = useState<{ name?: string; slug?: string }>({});
 
-  // Member expansion state
-  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null);
+  // Member expansion state（以 slug 寻址分组）
+  const [expandedGroupSlug, setExpandedGroupSlug] = useState<string | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState<string | null>(null);
 
-  // Add member state
-  const [addMemberUserId, setAddMemberUserId] = useState('');
+  // Add member state（以 account_no 指认成员，不暴露内部 id、不以 PII 查询）
+  const [addMemberAccountNo, setAddMemberAccountNo] = useState('');
   const [addMemberRole, setAddMemberRole] = useState<'leader' | 'member'>('member');
   const [addingMember, setAddingMember] = useState(false);
 
   // Remove member confirmation state
   const [removeMemberTarget, setRemoveMemberTarget] = useState<GroupMember | null>(null);
-  const [removeMemberGroupId, setRemoveMemberGroupId] = useState<number | null>(null);
+  const [removeMemberGroupSlug, setRemoveMemberGroupSlug] = useState<string | null>(null);
 
   // Delete group confirmation state
   const [deleteGroupTarget, setDeleteGroupTarget] = useState<AdminGroupItem | null>(null);
@@ -251,11 +251,11 @@ export default function AdminGroups() {
 
   /* ---- Members ---- */
 
-  const fetchMembers = async (groupId: number) => {
+  const fetchMembers = async (slug: string) => {
     try {
       setMembersLoading(true);
       setMembersError(null);
-      const list = await groupRepo.listMembers(groupId);
+      const list = await groupRepo.listMembers(slug);
       setMembers(list);
     } catch (err: any) {
       setMembersError(err.message || t('admin.groups.loadMembersFailed'));
@@ -265,22 +265,22 @@ export default function AdminGroups() {
     }
   };
 
-  const handleExpand = (groupId: number) => {
-    if (expandedGroupId === groupId) {
-      setExpandedGroupId(null);
+  const handleExpand = (slug: string) => {
+    if (expandedGroupSlug === slug) {
+      setExpandedGroupSlug(null);
       setMembers([]);
-      setAddMemberUserId('');
+      setAddMemberAccountNo('');
     } else {
-      setExpandedGroupId(groupId);
-      setAddMemberUserId('');
-      fetchMembers(groupId);
+      setExpandedGroupSlug(slug);
+      setAddMemberAccountNo('');
+      fetchMembers(slug);
     }
   };
 
   const handleAddMember = async () => {
-    if (!expandedGroupId) return;
+    if (!expandedGroupSlug) return;
     const res = validateAddMemberInput({
-      rawUserId: addMemberUserId,
+      rawAccountNo: addMemberAccountNo,
       isSuperAdmin,
       selectedRole: addMemberRole,
     });
@@ -290,10 +290,10 @@ export default function AdminGroups() {
     }
     try {
       setAddingMember(true);
-      await groupRepo.addMember(expandedGroupId, { user_id: res.userId!, role: res.role });
+      await groupRepo.addMember(expandedGroupSlug, { account_no: res.account_no!, role: res.role });
       showMsg('success', t('admin.groups.memberAdded'));
-      setAddMemberUserId('');
-      fetchMembers(expandedGroupId);
+      setAddMemberAccountNo('');
+      fetchMembers(expandedGroupSlug);
     } catch (err: any) {
       showMsg('error', err.message || t('admin.groups.addMemberFailed'));
     } finally {
@@ -302,17 +302,17 @@ export default function AdminGroups() {
   };
 
   const handleRemoveMember = async () => {
-    if (!removeMemberTarget || removeMemberGroupId === null) return;
+    if (!removeMemberTarget || removeMemberGroupSlug === null) return;
     try {
-      await groupRepo.removeMember(removeMemberGroupId, removeMemberTarget.id);
+      await groupRepo.removeMember(removeMemberGroupSlug, removeMemberTarget.account_no);
       showMsg('success', t('admin.groups.memberRemoved'));
       setRemoveMemberTarget(null);
-      setRemoveMemberGroupId(null);
-      fetchMembers(removeMemberGroupId);
+      setRemoveMemberGroupSlug(null);
+      fetchMembers(removeMemberGroupSlug);
     } catch (err: any) {
       showMsg('error', err.message || t('admin.groups.removeMemberFailed'));
       setRemoveMemberTarget(null);
-      setRemoveMemberGroupId(null);
+      setRemoveMemberGroupSlug(null);
     }
   };
 
@@ -324,8 +324,8 @@ export default function AdminGroups() {
       await groupRepo.deleteGroup(deleteGroupTarget.id);
       showMsg('success', t('admin.groups.groupDeleted'));
       setDeleteGroupTarget(null);
-      if (expandedGroupId === deleteGroupTarget.id) {
-        setExpandedGroupId(null);
+      if (expandedGroupSlug === deleteGroupTarget.slug) {
+        setExpandedGroupSlug(null);
         setMembers([]);
       }
       fetchGroups();
@@ -335,7 +335,7 @@ export default function AdminGroups() {
     }
   };
 
-  const expandedGroup = groups.find((group) => group.id === expandedGroupId);
+  const expandedGroup = groups.find((group) => group.slug === expandedGroupSlug);
 
   /* ---- Columns ---- */
 
@@ -358,8 +358,8 @@ export default function AdminGroups() {
       width: '240px',
       render: (_, record) => (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'nowrap' }}>
-          <ExpandBtn onClick={() => handleExpand(record.id)}>
-            {expandedGroupId === record.id ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
+          <ExpandBtn onClick={() => handleExpand(record.slug)}>
+            {expandedGroupSlug === record.slug ? t('admin.groups.hideMembers') : t('admin.groups.viewMembers')}
           </ExpandBtn>
           <DangerBtn onClick={() => {
             if (record.slug === 'pending') {
@@ -396,12 +396,12 @@ export default function AdminGroups() {
             onRetry={fetchGroups}
             emptyTitle={t('admin.groups.noGroups')}
             emptyIcon="groups"
-            rowKey="id"
+            rowKey="slug"
           />
         </div>
 
         {/* ====== Member Panel (right side) ====== */}
-        {expandedGroupId !== null && !loading && !error && (
+        {expandedGroupSlug !== null && !loading && !error && (
           <MemberPanel>
           <MemberPanelHeader>
             <MemberPanelTitle>
@@ -409,7 +409,7 @@ export default function AdminGroups() {
             </MemberPanelTitle>
             <MemberPanelClose
               onClick={() => {
-                setExpandedGroupId(null);
+                setExpandedGroupSlug(null);
                 setMembers([]);
               }}
             >
@@ -424,7 +424,7 @@ export default function AdminGroups() {
           {membersError && !membersLoading && (
             <MemberError>
               <span>{membersError}</span>
-              <DangerBtn style={{ marginTop: 8 }} onClick={() => fetchMembers(expandedGroupId)}>
+              <DangerBtn style={{ marginTop: 8 }} onClick={() => fetchMembers(expandedGroupSlug)}>
                 {t('admin.groups.retry')}
               </DangerBtn>
             </MemberError>
@@ -444,7 +444,7 @@ export default function AdminGroups() {
             <MemberTable>
               <MemberThead>
                 <tr>
-                  <MemberTh>{t('admin.groups.columnUserId')}</MemberTh>
+                  <MemberTh>{t('admin.groups.columnAccountNo')}</MemberTh>
                   <MemberTh>{t('admin.groups.columnUsername')}</MemberTh>
                   <MemberTh>{t('admin.groups.columnRole')}</MemberTh>
                   <MemberTh>{t('admin.groups.columnActions')}</MemberTh>
@@ -452,8 +452,8 @@ export default function AdminGroups() {
               </MemberThead>
               <tbody>
                 {members.map((m) => (
-                  <MemberTr key={m.id}>
-                    <MemberTd>{m.id}</MemberTd>
+                  <MemberTr key={m.account_no}>
+                    <MemberTd>{m.account_no}</MemberTd>
                     <MemberTd>{m.username || '-'}</MemberTd>
                     <MemberTd>
                       <RoleBadge $role={m.role}>
@@ -464,7 +464,7 @@ export default function AdminGroups() {
                       <DangerBtn
                         onClick={() => {
                           setRemoveMemberTarget(m);
-                          setRemoveMemberGroupId(expandedGroupId);
+                          setRemoveMemberGroupSlug(expandedGroupSlug);
                         }}
                       >
                         {t('admin.groups.remove')}
@@ -492,11 +492,11 @@ export default function AdminGroups() {
             )}
             <Input
               $compact
-              style={{ width: 160 }}
+              style={{ width: 200 }}
               type="text"
               placeholder={t('admin.groups.addMemberPlaceholder')}
-              value={addMemberUserId}
-              onChange={(e) => setAddMemberUserId(e.target.value)}
+              value={addMemberAccountNo}
+              onChange={(e) => setAddMemberAccountNo(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddMember();
               }}
@@ -550,12 +550,12 @@ export default function AdminGroups() {
       </FormDialog>
 
       {/* ====== Remove Member Confirmation ====== */}
-      {removeMemberTarget && removeMemberGroupId !== null && (
+      {removeMemberTarget && removeMemberGroupSlug !== null && (
         <ConfirmDialog
           title={t('admin.groups.removeMember')}
           message={composeRemoveMemberConfirmMessage({
             groupName: expandedGroup?.name || '',
-            username: removeMemberTarget.username || String(removeMemberTarget.id),
+            username: removeMemberTarget.username || removeMemberTarget.account_no,
             t,
           })}
           confirmLabel={t('admin.groups.confirmRemove')}
@@ -563,7 +563,7 @@ export default function AdminGroups() {
           onConfirm={handleRemoveMember}
           onCancel={() => {
             setRemoveMemberTarget(null);
-            setRemoveMemberGroupId(null);
+            setRemoveMemberGroupSlug(null);
           }}
         />
       )}

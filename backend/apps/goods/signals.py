@@ -7,6 +7,7 @@ from django.db import transaction
 from apps.rbac.constants import Role
 from apps.rbac.models import UserRole
 from apps.rbac.services import invalidate_user
+from apps.users.tokens import rotate_user_stamp
 
 from .models import AdminGroupMember, ProductMedia, SPU, SKU
 from .services import GoodsCacheService
@@ -99,6 +100,8 @@ def _resync_admin_roles(user_id: int) -> None:
         UserRole.objects.get_or_create(user_id=user_id, role=role)
 
     invalidate_user(user_id)
+    # 旋转安全戳：组员身份变更使该用户所有旧会话立即失效，必须重新登录以获取新角色
+    rotate_user_stamp(user_id)
 
 
 @receiver([post_save, post_delete], sender=AdminGroupMember)

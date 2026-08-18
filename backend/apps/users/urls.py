@@ -1,9 +1,9 @@
 from django.urls import path
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
 )
 
+from apps.users.tokens import StampTokenObtainPairView
 from apps.users.views import (
     AdminLoginCodeView,
     AdminLoginView,
@@ -44,7 +44,7 @@ urlpatterns = [
     path('session/login/', BrowserLoginView.as_view(), name='browser-login'),
     path('session/refresh/', BrowserRefreshView.as_view(), name='browser-refresh'),
     path('session/logout/', BrowserLogoutView.as_view(), name='browser-logout'),
-    path('token/', TokenObtainPairView.as_view(), name='bearer-token'),
+    path('token/', StampTokenObtainPairView.as_view(), name='bearer-token'),
     path('token/refresh/', TokenRefreshView.as_view(), name='bearer-token-refresh'),
     # 认证
     path('register/', RegisterView.as_view(), name='user-register'),
