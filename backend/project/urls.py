@@ -79,6 +79,11 @@ urlpatterns += [
     # 导致线上 /api/v1/admin/groups/<id> 返回 404。此处改用 urls_admin_group_slug 修复。
     path('api/admin/groups/', include(urls_admin_group_slug)),
     path('api/v1/admin/groups/', include(urls_admin_group_slug)),
+    # 用户管理：沿用既有 account_no 寻址实现（apps.users.admin_urls）。
+    # 注意：此命名空间为 /admin/rbac 页面的用户列表、创建管理员、角色指派提供后端，
+    # 与分组（goods id 版）是两个独立领域，f1264d0 曾误将其当作死代码删除，此处恢复。
+    path('api/admin/users/', include('apps.users.admin_urls')),
+    path('api/v1/admin/users/', include('apps.users.admin_urls')),
 ]
 
 if settings.DEBUG:
