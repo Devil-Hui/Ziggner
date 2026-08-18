@@ -349,7 +349,7 @@ export default function AdminRbac() {
     try {
       setCreating(true)
       const res = await adminAPI.createAdminUser({ username, password, email: email || undefined })
-      setCreatedAccountNo(res.account_no)
+      setCreatedAccountNo(res.account_no ?? null)
       setCreateForm({ username: '', password: '', email: '' })
       setCreateErrors({})
       fetchUsers()

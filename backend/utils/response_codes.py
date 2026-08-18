@@ -196,6 +196,8 @@ class Messages:
     ADMIN_NOT_STAFF = 'You do not have admin access.'
     ADMIN_GROUP_NOT_FOUND = 'Admin group not found.'
     ADMIN_GROUP_MEMBER_EXISTS = 'User is already a member of this group.'
+    ADMIN_GROUP_MEMBER_INVALID = 'account_no is required to add a member.'
+    ADMIN_GROUP_MEMBER_NOT_FOUND = 'No user found for the given account_no.'
     ADMIN_APPLICATION_NOT_FOUND = 'Application not found.'
     ADMIN_APPLICATION_ALREADY_REVIEWED = 'Application has already been reviewed.'
     ADMIN_SPU_NOT_IN_GROUP = 'SPU does not belong to your managed categories.'

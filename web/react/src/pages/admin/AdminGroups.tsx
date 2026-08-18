@@ -21,6 +21,7 @@ import {
   composeRemoveMemberConfirmMessage,
 } from '../../domain/adminGroups';
 import { PrimaryBtn, DangerBtn, OutlinePrimaryBtn, Input, Select, FormGroup, Label, Hint, ErrorText, RoleBadge, Toast } from '../../components/admin/common/ui';
+import { adminAPI } from '../../api/admin';
 
 /* ========== Member Panel ========== */
 
@@ -129,6 +130,22 @@ const MemberLoading = styled.div`
   font-size: ${FontSize.sm}px;
 `;
 
+const TabBtn = styled.button<{ $active?: boolean }>`
+  padding: 6px 16px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${({ $active }) => ($active ? Color.primary : Color.border.medium)};
+  background: ${({ $active }) => ($active ? Color.primary : Color.bg.card)};
+  color: ${({ $active }) => ($active ? Color.text.inverse : Color.text.secondary)};
+  border-radius: ${Radius.sm}px;
+  cursor: pointer;
+  transition: border-color ${Transition.fast}, color ${Transition.fast}, background ${Transition.fast};
+
+  &:hover {
+    border-color: ${Color.primary};
+    color: ${({ $active }) => ($active ? Color.text.inverse : Color.primary)};
+  }
+`;
+
 const MemberEmpty = styled.div`
   display: flex;
   flex-direction: column;
@@ -151,6 +168,38 @@ const MemberError = styled.div`
 
 /* ========== Main Component ========== */
 
+/* ========== Create-Admin form option data ========== */
+
+const COUNTRY_OPTIONS: { value: string; key: string }[] = [
+  { value: '', key: 'admin.groups.adminCountryCodeNone' },
+  { value: '+86', key: 'admin.groups.adminCountryCodeCN' },
+  { value: '+852', key: 'admin.groups.adminCountryCodeHK' },
+  { value: '+853', key: 'admin.groups.adminCountryCodeMO' },
+  { value: '+886', key: 'admin.groups.adminCountryCodeTW' },
+  { value: '+1', key: 'admin.groups.adminCountryCodeUS' },
+  { value: '+44', key: 'admin.groups.adminCountryCodeUK' },
+  { value: '+81', key: 'admin.groups.adminCountryCodeJP' },
+  { value: '+82', key: 'admin.groups.adminCountryCodeKR' },
+  { value: '+65', key: 'admin.groups.adminCountryCodeSG' },
+  { value: '+60', key: 'admin.groups.adminCountryCodeMY' },
+  { value: '+66', key: 'admin.groups.adminCountryCodeTH' },
+  { value: '+84', key: 'admin.groups.adminCountryCodeVN' },
+  { value: '+62', key: 'admin.groups.adminCountryCodeID' },
+  { value: '+91', key: 'admin.groups.adminCountryCodeIN' },
+  { value: '+49', key: 'admin.groups.adminCountryCodeDE' },
+  { value: '+33', key: 'admin.groups.adminCountryCodeFR' },
+  { value: '+39', key: 'admin.groups.adminCountryCodeIT' },
+  { value: '+7', key: 'admin.groups.adminCountryCodeRU' },
+  { value: '+61', key: 'admin.groups.adminCountryCodeAU' },
+  { value: '+971', key: 'admin.groups.adminCountryCodeAE' },
+  { value: '+966', key: 'admin.groups.adminCountryCodeSA' },
+];
+
+const ROLE_OPTIONS: { value: 'ops' | 'superadmin'; key: string }[] = [
+  { value: 'ops', key: 'admin.groups.roleOps' },
+  { value: 'superadmin', key: 'admin.groups.roleSuperadmin' },
+];
+
 export default function AdminGroups() {
   const { t } = useTranslation();
   const { isSuperAdmin } = useAdminAuth();
@@ -166,6 +215,18 @@ export default function AdminGroups() {
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
   const [formErrors, setFormErrors] = useState<{ name?: string; slug?: string }>({});
+
+  // Combined create dialog: active tab + admin-account form state
+  const [createTab, setCreateTab] = useState<'group' | 'admin'>('group');
+  const [adminUsername, setAdminUsername] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [adminCountryCode, setAdminCountryCode] = useState('');
+  const [adminRole, setAdminRole] = useState<'ops' | 'superadmin'>('ops');
+  const [adminErrors, setAdminErrors] = useState<{ username?: string; password?: string; email?: string }>({});
+  const [creatingAdmin, setCreatingAdmin] = useState(false);
+  const [createdAccountNo, setCreatedAccountNo] = useState<string | null>(null);
 
   // Member expansion state（以 slug 寻址分组）
   const [expandedGroupSlug, setExpandedGroupSlug] = useState<string | null>(null);
@@ -214,6 +275,15 @@ export default function AdminGroups() {
     setFormName('');
     setFormSlug('');
     setFormErrors({});
+    setCreateTab('group');
+    setAdminUsername('');
+    setAdminPassword('');
+    setAdminEmail('');
+    setAdminPhone('');
+    setAdminCountryCode('');
+    setAdminRole('ops');
+    setAdminErrors({});
+    setCreatedAccountNo(null);
     setShowForm(true);
   };
 
@@ -234,6 +304,49 @@ export default function AdminGroups() {
       fetchGroups();
     } catch (err: any) {
       showMsg('error', err.message || t('admin.groups.createFailed'));
+    }
+  };
+
+  /* ---- Create Admin Account ---- */
+
+  const handleCreateAdmin = async () => {
+    // 创建成功后，提交按钮变为「再创建一个」：重置回输入态
+    if (createdAccountNo) {
+      setCreatedAccountNo(null);
+      setAdminUsername('');
+      setAdminPassword('');
+      setAdminEmail('');
+      setAdminPhone('');
+      setAdminCountryCode('');
+      setAdminRole('ops');
+      setAdminErrors({});
+      return;
+    }
+    const username = adminUsername.trim();
+    const password = adminPassword;
+    const email = adminEmail.trim();
+    const errs: { username?: string; password?: string; email?: string } = {};
+    if (!username) errs.username = t('admin.groups.adminUsernameRequired');
+    if (!password || password.length < 8) errs.password = t('admin.groups.adminPasswordHint');
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.groups.adminEmailInvalid');
+    setAdminErrors(errs);
+    if (Object.keys(errs).some((k) => errs[k as keyof typeof errs])) return;
+    try {
+      setCreatingAdmin(true);
+      const res = await adminAPI.createAdminUser({
+        username,
+        password,
+        email: email || undefined,
+        phone: adminPhone.trim() || undefined,
+        country_code: adminCountryCode || undefined,
+        role: adminRole,
+      });
+      setCreatedAccountNo(res.account_no || (res.id != null ? String(res.id) : ''));
+      showMsg('success', t('admin.groups.createAdminSuccess'));
+    } catch (err: unknown) {
+      showMsg('error', err instanceof Error ? err.message : t('admin.groups.createAdminFailed'));
+    } finally {
+      setCreatingAdmin(false);
     }
   };
 
@@ -370,7 +483,7 @@ export default function AdminGroups() {
       <PageHeader
         title={t('admin.groups.title')}
         breadcrumb={[{ label: t('admin.groups.subtitle') }, { label: t('admin.groups.title') }]}
-        actions={<PrimaryBtn onClick={openCreate}>{t('admin.groups.createGroup')}</PrimaryBtn>}
+        actions={<PrimaryBtn onClick={openCreate}>{t('admin.groups.createMenu')}</PrimaryBtn>}
       />
 
       {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}
@@ -481,41 +594,141 @@ export default function AdminGroups() {
         )}
       </div>
 
-      {/* ====== Create Form Dialog (reuses common FormDialog) ====== */}
+      {/* ====== Combined Create Dialog: 管理员分组 + 管理员账号 ====== */}
       <FormDialog
         open={showForm}
-        title={t('admin.groups.newGroup')}
-        submitLabel={t('admin.groups.create')}
-        cancelLabel={t('common.cancel')}
+        title={t('admin.groups.createMenu')}
+        submitLabel={
+          createTab === 'group'
+            ? t('admin.groups.create')
+            : createdAccountNo
+              ? t('admin.groups.createAnother')
+              : creatingAdmin
+                ? t('admin.groups.creating')
+                : t('admin.groups.createAdmin')
+        }
+        submitDisabled={creatingAdmin}
         submitVariant="primary"
+        cancelLabel={t('common.cancel')}
         onClose={() => setShowForm(false)}
-        onSubmit={handleCreate}
+        onSubmit={createTab === 'group' ? handleCreate : handleCreateAdmin}
       >
-        <FormGroup>
-          <Label>{t('admin.groups.nameLabel')}</Label>
-          <Input
-            value={formName}
-            onChange={(e) => {
-              setFormName(e.target.value);
-              if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
-            }}
-            placeholder={t('admin.groups.namePlaceholder')}
-          />
-          {formErrors.name && <ErrorText>{formErrors.name}</ErrorText>}
-        </FormGroup>
-        <FormGroup>
-          <Label>{t('admin.groups.slugLabel')}</Label>
-          <Input
-            value={formSlug}
-            onChange={(e) => {
-              setFormSlug(e.target.value);
-              if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: undefined }));
-            }}
-            placeholder={t('admin.groups.slugPlaceholder')}
-          />
-          <Hint>{t('admin.groups.slugHint')}</Hint>
-          {formErrors.slug && <ErrorText>{formErrors.slug}</ErrorText>}
-        </FormGroup>
+        <div style={{ display: 'flex', gap: 8, marginBottom: Spacing.lg }}>
+          <TabBtn type="button" $active={createTab === 'group'} onClick={() => setCreateTab('group')}>
+            {t('admin.groups.tabGroup')}
+          </TabBtn>
+          <TabBtn type="button" $active={createTab === 'admin'} onClick={() => setCreateTab('admin')}>
+            {t('admin.groups.tabAdmin')}
+          </TabBtn>
+        </div>
+
+        {createTab === 'group' ? (
+          <>
+            <FormGroup>
+              <Label>{t('admin.groups.nameLabel')}</Label>
+              <Input
+                value={formName}
+                onChange={(e) => {
+                  setFormName(e.target.value);
+                  if (formErrors.name) setFormErrors((p) => ({ ...p, name: undefined }));
+                }}
+                placeholder={t('admin.groups.namePlaceholder')}
+              />
+              {formErrors.name && <ErrorText>{formErrors.name}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.slugLabel')}</Label>
+              <Input
+                value={formSlug}
+                onChange={(e) => {
+                  setFormSlug(e.target.value);
+                  if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: undefined }));
+                }}
+                placeholder={t('admin.groups.slugPlaceholder')}
+              />
+              <Hint>{t('admin.groups.slugHint')}</Hint>
+              {formErrors.slug && <ErrorText>{formErrors.slug}</ErrorText>}
+            </FormGroup>
+          </>
+        ) : createdAccountNo ? (
+          <div>
+            <div style={{ color: Color.status.success, fontWeight: 600, marginBottom: Spacing.md }}>
+              {t('admin.groups.createAdminSuccess')}
+            </div>
+            <div style={{ padding: Spacing.lg, background: Color.primaryLight, borderRadius: Radius.sm, marginBottom: Spacing.md }}>
+              <div style={{ fontSize: FontSize.xs, color: Color.text.muted, marginBottom: 4 }}>{t('admin.groups.adminAccountNoLabel')}</div>
+              <div style={{ fontSize: FontSize.lg, fontWeight: 600, color: Color.primaryHover, fontFamily: 'monospace', wordBreak: 'break-all' }}>{createdAccountNo}</div>
+            </div>
+            <Hint>{t('admin.groups.createAdminCopyHint')}</Hint>
+          </div>
+        ) : (
+          <>
+            <FormGroup>
+              <Label>{t('admin.groups.adminUsernameLabel')}</Label>
+              <Input
+                value={adminUsername}
+                onChange={(e) => {
+                  setAdminUsername(e.target.value);
+                  if (adminErrors.username) setAdminErrors((p) => ({ ...p, username: undefined }));
+                }}
+                placeholder={t('admin.groups.adminUsernamePlaceholder')}
+              />
+              {adminErrors.username && <ErrorText>{adminErrors.username}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminPasswordLabel')}</Label>
+              <Input
+                type="password"
+                value={adminPassword}
+                onChange={(e) => {
+                  setAdminPassword(e.target.value);
+                  if (adminErrors.password) setAdminErrors((p) => ({ ...p, password: undefined }));
+                }}
+                placeholder={t('admin.groups.adminPasswordPlaceholder')}
+              />
+              <Hint>{t('admin.groups.adminPasswordHint')}</Hint>
+              {adminErrors.password && <ErrorText>{adminErrors.password}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminEmailLabel')}</Label>
+              <Input
+                value={adminEmail}
+                onChange={(e) => {
+                  setAdminEmail(e.target.value);
+                  if (adminErrors.email) setAdminErrors((p) => ({ ...p, email: undefined }));
+                }}
+                placeholder={t('admin.groups.adminEmailPlaceholder')}
+              />
+              {adminErrors.email && <ErrorText>{adminErrors.email}</ErrorText>}
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminPhoneLabel')}</Label>
+              <Input
+                value={adminPhone}
+                onChange={(e) => setAdminPhone(e.target.value)}
+                placeholder={t('admin.groups.adminPhonePlaceholder')}
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminCountryCodeLabel')}</Label>
+              <Select value={adminCountryCode} onChange={(e) => setAdminCountryCode(e.target.value)}>
+                {COUNTRY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{t(o.key)}</option>
+                ))}
+              </Select>
+              <Hint>{t('admin.groups.adminCountryCodeHint')}</Hint>
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminRoleLabel')}</Label>
+              <Select value={adminRole} onChange={(e) => setAdminRole(e.target.value as 'ops' | 'superadmin')}>
+                {ROLE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{t(o.key)}</option>
+                ))}
+              </Select>
+              <Hint>{t('admin.groups.adminRoleHint')}</Hint>
+            </FormGroup>
+          </>
+        )}
       </FormDialog>
 
       {/* ====== Remove Member Confirmation ====== */}

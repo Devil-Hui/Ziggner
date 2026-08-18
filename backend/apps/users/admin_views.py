@@ -77,12 +77,30 @@ class AdminUserCreateView(BaseApiView):
             raise
 
         account_no = ensure_account_no(user)
+
+        # 可选初始角色（superadmin / ops）。派生角色不可在创建时指派。
+        roles: list = []
+        raw_role = (data.get('role') or '').strip()
+        if raw_role:
+            if raw_role in DERIVED_ROLES:
+                return _bad_request('派生角色由管理组身份自动派生，创建时不可指派')
+            if raw_role not in ASSIGNABLE_ROLES:
+                return _bad_request('不可指派的角色', code='ROLE_INVALID')
+            UserRole.objects.get_or_create(
+                user_id=user.id,
+                role=raw_role,
+                defaults={'granted_by': request.user},
+            )
+            invalidate_user(user.id)
+            roles = sorted(r.role for r in UserRole.objects.filter(user_id=user.id))
+
         return Response(
             {
                 'account_no': account_no,
                 'username': user.username,
                 'email': user.email,
                 'is_active': user.is_active,
+                'roles': roles or [DEFAULT_ROLE.value],
             },
             status=status.HTTP_201_CREATED,
         )
