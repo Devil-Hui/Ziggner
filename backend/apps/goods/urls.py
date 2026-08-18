@@ -103,12 +103,16 @@ urlpatterns = [
     path('brand/<int:brand_id>/delete', BrandAdminDeleteView.as_view(), name='admin-brand-delete'),
 
     # ==================== Admin Group ====================
+    # 注意：视图签名用 group_ref/user_ref（_resolve_group 兼容数字 id 与 slug），
+    # 路由 kwarg 必须同名，否则 DRF 缺参 TypeError → 500。历史 <int:group_id>/<int:user_id>
+    # 与视图不匹配导致 /goods/admin_group/{id}/members 等全部 500（前端走 slug 版
+    # /api/v1/admin/groups/ 未暴露，但 id 版为文档标准路径且旧调用方仍可能使用）。
     path('admin_group', AdminGroupListView.as_view(), name='admin-group-list'),
     path('admin_group/create', AdminGroupCreateView.as_view(), name='admin-group-create'),
-    path('admin_group/<int:group_id>/members', AdminGroupMembersView.as_view(), name='admin-group-members'),
-    path('admin_group/<int:group_id>/members/<int:user_id>', AdminGroupMembersView.as_view(), name='admin-group-member-delete'),
-    path('admin_group/<int:group_id>/update', AdminGroupUpdateView.as_view(), name='admin-group-update'),
-    path('admin_group/<int:group_id>/delete', AdminGroupDeleteView.as_view(), name='admin-group-delete'),
+    path('admin_group/<str:group_ref>/members', AdminGroupMembersView.as_view(), name='admin-group-members'),
+    path('admin_group/<str:group_ref>/members/<str:user_ref>', AdminGroupMembersView.as_view(), name='admin-group-member-delete'),
+    path('admin_group/<str:group_ref>/update', AdminGroupUpdateView.as_view(), name='admin-group-update'),
+    path('admin_group/<str:group_ref>/delete', AdminGroupDeleteView.as_view(), name='admin-group-delete'),
     # 前端兼容别名
     path('admin/admin-groups/', AdminGroupListView.as_view(), name='admin-group-list-alias'),
 
