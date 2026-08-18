@@ -68,9 +68,14 @@ urlpatterns += router.get_urlpatterns()
 
 # 管理员命名空间（与普通用户自助面 /api/users/ 分离）：
 # 仅超管/运维可达，且只用 account_no 指认用户、用 slug 寻址分组，绝不暴露内部自增 id。
+# 同时挂载 /api/admin/ 与 /api/v1/admin/：前端 request.ts 的 BASE_URL 为 /api/v1，
+# 其相对调用（如 /admin/groups/ → /api/v1/admin/groups/）必须能解析，故补齐 /v1/ 前缀，
+# 与 VersionedAPIRouter 为其余 app 自动生成的双前缀（/api/ 与 /api/v1/）保持一致。
 urlpatterns += [
     path('api/admin/users/', include('apps.users.admin_urls')),
     path('api/admin/groups/', include('apps.goods.admin_urls')),
+    path('api/v1/admin/users/', include('apps.users.admin_urls')),
+    path('api/v1/admin/groups/', include('apps.goods.admin_urls')),
 ]
 
 if settings.DEBUG:

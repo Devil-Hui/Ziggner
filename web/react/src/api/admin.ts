@@ -443,7 +443,7 @@ export const adminAPI = {
   getAdminGroups: () =>
     get<GroupItem[]>('/admin/groups/'),
   createAdminGroup: (data: { name: string; slug: string }) =>
-    post<GroupItem>('/admin/groups/create', data),
+    post<GroupItem>('/admin/groups/create/', data),
   getGroupMembers: (slug: string) =>
     get<{ slug: string; name: string; members: GroupMember[] }>(`/admin/groups/${slug}/members`),
   addGroupMember: (slug: string, data: { account_no: string; role: string }) =>
