@@ -103,6 +103,7 @@ MIDDLEWARE = [
     'utils.exception_middleware.CustomExceptionMiddleware',
     'middleware.api_version.APIVersionMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'utils.csp_middleware.CSPMiddleware',  # API JSON 响应强制严格 CSP（纵深防御 MIME 嗅探/点击劫持），HTML 响应不受影响
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'middleware.jwt_blacklist.JWTBlacklistMiddleware',

@@ -90,3 +90,20 @@ CSRF_TRUSTED_ORIGINS = [
     'https://ziggner.huigeli666.workers.dev',
 ]
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# ============================================================
+# 请求体 / 上传大小护栏（2C4G：防止超大请求体常驻单 gunicorn worker 内存）
+# ============================================================
+# 请求体超过此阈值即流式写入临时文件而非常驻内存；同时也是业务层大文件拒绝前的
+# 第一道内存闸门（与 prod 的 FILE_STORAGE_MAX_SIZE 业务上限互补）。
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv('DATA_UPLOAD_MAX_MEMORY_SIZE', str(2 * 1024 * 1024))
+)  # 2MB
+# 单个上传文件超过此值才落盘，其余在内存处理。
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(
+    os.getenv('FILE_UPLOAD_MAX_MEMORY_SIZE', str(2 * 1024 * 1024))
+)  # 2MB
+# 限制 GET/POST 参数字段总数，防御超大量表单/查询参数注入打满解析内存。
+DATA_UPLOAD_MAX_NUMBER_FIELDS = int(
+    os.getenv('DATA_UPLOAD_MAX_NUMBER_FIELDS', '1024')
+)
