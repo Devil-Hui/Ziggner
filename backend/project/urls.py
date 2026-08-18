@@ -73,9 +73,6 @@ urlpatterns += router.get_urlpatterns()
 # 其相对调用（如 /admin/groups/ → /api/v1/admin/groups/）必须能解析，故补齐 /v1/ 前缀，
 # 与 VersionedAPIRouter 为其余 app 自动生成的双前缀（/api/ 与 /api/v1/）保持一致。
 urlpatterns += [
-    # 用户管理：沿用既有 account_no 寻址实现（apps.users.admin_urls）
-    path('api/admin/users/', include('apps.users.admin_urls')),
-    path('api/v1/admin/users/', include('apps.users.admin_urls')),
     # 分组管理：复用已有的 id 版 AdminGroup* 视图（数字 group_id / user_id 寻址），
     # 与已部署前端（Cloudflare Pages 构建）的分组端点契约一致。此前此处挂载的是
     # slug 版 apps.goods.admin_urls（slug/account_no 寻址），与前端传的数字 id 不匹配，
