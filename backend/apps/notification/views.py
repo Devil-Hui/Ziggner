@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 
 from utils.api_base_view import BaseApiView
-from utils.api_base_pagination import parse_pagination
+from utils.api_base_pagination import parse_pagination, safe_int
 from utils.response_codes import Messages
 from apps.rbac.constants import Role
 from apps.rbac.permissions import HasPerm
@@ -105,8 +105,8 @@ class OperationLogListView(BaseApiView):
         responses={200: OpenApiResponse(description='Paginated operation log list')},
     )
     def get(self, request):
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = safe_int(request.query_params.get('page_size'), 20)
         start = (page - 1) * page_size
         end = start + page_size
 

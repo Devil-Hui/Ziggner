@@ -24,6 +24,7 @@ from apps.rbac.permissions import HasPerm
 from apps.rbac.services import get_role_perms, invalidate_all, invalidate_user
 from apps.users.tokens import rotate_user_stamp
 from utils.api_base_view import BaseApiView
+from utils.api_base_pagination import safe_int
 
 #: 由 AdminGroupMember 派生，不可手工指派 —— 否则两处数据会打架
 # admin_leader / admin_member 既可由管理组成员身份自动派生（见 apps.goods.signals），
@@ -151,8 +152,8 @@ class UserRoleListView(BaseApiView):
             )
 
         total = qs.count()
-        page = max(1, int(request.query_params.get('page') or 1))
-        size = min(MAX_PAGE_SIZE, max(1, int(request.query_params.get('size') or 20)))
+        page = max(1, safe_int(request.query_params.get('page'), 1))
+        size = min(MAX_PAGE_SIZE, max(1, safe_int(request.query_params.get('size'), 20)))
         rows = qs.prefetch_related('rbac_roles')[(page - 1) * size: page * size]
 
         return Response({

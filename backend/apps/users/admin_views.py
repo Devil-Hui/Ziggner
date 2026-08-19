@@ -16,6 +16,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from utils.api_base_view import BaseApiView
+from utils.api_base_pagination import safe_int
 from apps.rbac.constants import (
     Role,
     DEFAULT_ROLE,
@@ -210,8 +211,8 @@ class AdminUserListView(BaseApiView):
             qs = qs.distinct()
 
         total = qs.count()
-        page = max(1, int(request.query_params.get('page') or 1))
-        size = min(MAX_PAGE_SIZE, max(1, int(request.query_params.get('size') or 20)))
+        page = max(1, safe_int(request.query_params.get('page'), 1))
+        size = min(MAX_PAGE_SIZE, max(1, safe_int(request.query_params.get('size'), 20)))
         rows = qs.prefetch_related('rbac_roles', 'profile')[
             (page - 1) * size: page * size
         ]
