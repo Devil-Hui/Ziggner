@@ -1,5 +1,5 @@
 import time as _time
-import uuid
+# media_key 统一生成对象 key（见 utils.storage）
 import logging
 
 from django.conf import settings
@@ -10,7 +10,7 @@ from rest_framework import status
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 
 from utils.api_base_view import BaseApiView
-from utils.storage import get_storage
+from utils.storage import get_storage, media_key
 from utils.api_permission import ApiPermission
 from utils.upload_security import (
     UploadValidationError,
@@ -277,8 +277,8 @@ class UploadFileView(BaseApiView):
             else getattr(settings, 'CS_VIDEO_UPLOAD_FOLDER', 'chat/videos')
         )
 
-        # 生成唯一文件名
-        filename = f'{folder}/{uuid.uuid4().hex}{extension}'
+        # 生成唯一文件名（按大厂规范路径：{folder}/{yyyy}/{mm}/{dd}/{uuid}.{ext}）
+        filename = media_key(folder, extension)
 
         try:
             storage = get_storage()

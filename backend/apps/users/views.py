@@ -1,6 +1,6 @@
 import os
 import re
-import uuid
+from utils.storage import media_key
 
 from django.conf import settings
 from django.core.files.storage import default_storage
@@ -670,7 +670,7 @@ class AvatarUploadView(BaseApiView):
         except UploadValidationError:
             return Response({'detail': 'Unsupported file type'}, status=status.HTTP_400_BAD_REQUEST)
 
-        filename = f'avatars/{uuid.uuid4().hex}{ext}'
+        filename = media_key('avatars', ext)
         saved_path = default_storage.save(filename, strip_exif(file))
         stored_url = default_storage.url(saved_path)
         # R2（S3）存储返回完整 CDN URL（https://cdn.ziggner.com/...），直接用；

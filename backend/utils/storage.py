@@ -11,10 +11,31 @@ Usage:
 
 import logging
 import traceback
+import uuid as _uuid
 from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
+
+
+# ==================== 统一对象存储 key 规范 ====================
+
+def media_key(prefix: str, ext: str, *, now: "datetime | None" = None) -> str:
+    """生成大厂规范的对象存储 key：{prefix}/{YYYY}/{MM}/{DD}/{uuid}.{ext}。
+
+    按上传日期分区，便于生命周期管理、列举与灾备；不含顶层 media/ 段——
+    R2 模式 URL 由自定义域名直接拼 key（https://cdn.ziggner.com/<key>），
+    local 模式由 MEDIA_URL(/media/) 拼接，两种模式都正确，勿再手动加 media/。
+
+    prefix 例：'products' / 'uploads' / 'avatars' / 'support' /
+    'chat/images' / 'chat/videos'；允许带首尾斜杠，自动规整。
+    ext 可带或不带点，空则不加后缀。now 注入用于测试。
+    """
+    now = now or datetime.now(timezone.utc)
+    prefix = prefix.strip('/')
+    ext = ext if ext.startswith('.') else (f'.{ext}' if ext else '')
+    return f"{prefix}/{now:%Y}/{now:%m}/{now:%d}/{_uuid.uuid4().hex}{ext}"
 
 
 # ==================== 抽象基类 ====================

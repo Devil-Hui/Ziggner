@@ -203,6 +203,7 @@ class UploadMediaToCloudTask(CeleryTask):
         from .models import ProductMedia
         from .media_service import MediaService
         from utils.storage import get_storage
+        from datetime import datetime, timezone
         import base64
 
         storage = get_storage()
@@ -224,7 +225,7 @@ class UploadMediaToCloudTask(CeleryTask):
                     continue
 
                 spu_id = media.spu_id or 0
-                base_path = f'products/{spu_id}'
+                base_path = f'products/{spu_id}/{datetime.now(timezone.utc):%Y/%m/%d}'
 
                 if is_video:
                     video_b64 = data.get('video', '')

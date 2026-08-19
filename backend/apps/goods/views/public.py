@@ -1,6 +1,6 @@
 from decimal import Decimal
 import os
-import uuid
+from utils.storage import media_key
 
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse, OpenApiTypes
@@ -228,8 +228,7 @@ class AdminImageUploadView(BaseApiView):
                 {'detail': '不支持或损坏的图片文件'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        safe_name = f'{uuid.uuid4().hex}{ext}'
         from django.core.files.storage import default_storage
-        path = default_storage.save(f'uploads/{safe_name}', strip_exif(file))
+        path = default_storage.save(media_key('uploads', ext), strip_exif(file))
         # R2 启用时 default_storage.url() 返回绝对 CDN 地址；否则返回 /media/... 相对路径
         return Response({'url': default_storage.url(path)})

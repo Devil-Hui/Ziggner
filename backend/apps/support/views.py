@@ -190,11 +190,11 @@ class UploadAttachmentView(BaseApiView):
 
         file.content_type = content_type
 
-        # 保存到 media/support/
+        # 保存到 support/{yyyy}/{mm}/{dd}/（大厂路径规范，见 utils.storage.media_key）
         from django.core.files.storage import default_storage
-        import uuid
+        from utils.storage import media_key
 
-        filename = f'support/{uuid.uuid4().hex}{extension}'
+        filename = media_key('support', extension)
         # 图片剥离 EXIF；视频原样保存
         save_file = strip_exif(file) if content_type.startswith('image/') else file
         path = default_storage.save(filename, save_file)

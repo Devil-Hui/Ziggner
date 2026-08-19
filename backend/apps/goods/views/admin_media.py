@@ -1,7 +1,7 @@
 """媒体管理 API —— 列表 / 删除 / 排序 / 信息更新 / 编辑模式上传"""
 
 import os
-import uuid
+from utils.storage import media_key
 import logging
 from io import BytesIO
 from urllib.parse import urlparse
@@ -352,9 +352,8 @@ class MediaCreateView(BaseApiView):
                             raise ValueError(f'声明 WebP 但实际格式为 {probe.format}')
                     f.seek(0)
                     raw = f.read()
-                    safe_name = f'{uuid.uuid4().hex}.webp'
                     path = default_storage.save(
-                        f'product_media/{safe_name}',
+                        media_key('products', '.webp'),
                         ContentFile(raw),
                     )
                     return default_storage.url(path)
@@ -377,17 +376,15 @@ class MediaCreateView(BaseApiView):
                     # lossless=False + quality=WEBP_QUALITY：视觉近无损；method=4 平衡压缩率与上传耗时
                     img.save(buf, 'WEBP', lossless=False, quality=WEBP_QUALITY, method=4)
                 buf.seek(0)
-                safe_name = f'{uuid.uuid4().hex}.webp'
                 path = default_storage.save(
-                    f'product_media/{safe_name}',
+                    media_key('products', '.webp'),
                     ContentFile(buf.getvalue()),
                 )
                 return default_storage.url(path)
             except Exception as exc:  # noqa: BLE001 - 转码失败回退原格式，保证可用
                 _logger.warning('WebP 转码失败，回退原格式保存: %s', exc)
                 f.seek(0)
-                safe_name = f'{uuid.uuid4().hex}{ext}'
-                path = default_storage.save(f'product_media/{safe_name}', strip_exif(f))
+                path = default_storage.save(media_key('products', ext), strip_exif(f))
                 return default_storage.url(path)
 
         thumb_url = _save_file(thumb)
