@@ -631,7 +631,7 @@ export default function Home() {
                   return (
                     <Reveal key={category.id} delay={index * 90}>
                       <CatCard onClick={() => navigate(`/category?cat_id=${category.id}`)}>
-                        {img ? <img src={img} alt={category.name} /> : null}
+                        {img ? <img src={img} alt={category.name} loading="lazy" decoding="async" /> : null}
                         <CatName>{category.name}</CatName>
                       </CatCard>
                     </Reveal>

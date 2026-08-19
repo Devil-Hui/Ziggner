@@ -692,7 +692,7 @@ export default function Category() {
                 <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
                 <ProductImage>
                   {optionalMediaUrl(product.image) && (
-                    <img src={optionalMediaUrl(product.image)} alt={product.name} />
+                    <img src={optionalMediaUrl(product.image)} alt={product.name} loading="lazy" decoding="async" />
                   )}
                 </ProductImage>
                 <ProductInfo>
@@ -732,7 +732,7 @@ export default function Category() {
                 <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
                 <ProductImage style={{ width: 200, height: 200, flexShrink: 0 }}>
                   {optionalMediaUrl(product.image) && (
-                    <img src={optionalMediaUrl(product.image)} alt={product.name} />
+                    <img src={optionalMediaUrl(product.image)} alt={product.name} loading="lazy" decoding="async" />
                   )}
                 </ProductImage>
                 <ListItemInfo>

@@ -3,27 +3,27 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, type RouteObject } from 'react-router-dom'
 import Home from '../pages/Home/Home'
-import Category from '../pages/Category/Category'
-import ProductDetail from '../pages/ProductDetail/ProductDetail'
-import Cart from '../pages/Cart/Cart'
-import Checkout from '../pages/Checkout/Checkout'
-import PaymentReturn from '../pages/PaymentReturn/PaymentReturn'
-import MockPayment from '../pages/MockPayment/MockPayment'
-import Profile from '../pages/Profile/Profile'
-import AuthPage from '../pages/Auth/AuthPage'
-import SetPasswordPage from '../pages/Auth/SetPasswordPage'
-import Coupons from '../pages/Coupons/Coupons'
-import CouponCenter from '../pages/CouponCenter/CouponCenter'
-import CouponShare from '../pages/CouponShare/CouponShare'
-import History from '../pages/History/History'
-import TrackOrder from '../pages/TrackOrder/TrackOrder'
-import DownloadApp from '../pages/DownloadApp/DownloadApp'
-import AboutPage from '../pages/AboutPage/AboutPage'
-import Support from '../pages/Support/Support'
-import Chat from '../pages/Chat/Chat'
-import OrderDetail from '../pages/OrderDetail/OrderDetail'
-import Notifications from '../pages/Notifications/Notifications'
-import Favorites from '../pages/Favorites/Favorites'
+const Category = lazy(() => import('../pages/Category/Category'))
+const ProductDetail = lazy(() => import('../pages/ProductDetail/ProductDetail'))
+const Cart = lazy(() => import('../pages/Cart/Cart'))
+const Checkout = lazy(() => import('../pages/Checkout/Checkout'))
+const PaymentReturn = lazy(() => import('../pages/PaymentReturn/PaymentReturn'))
+const MockPayment = lazy(() => import('../pages/MockPayment/MockPayment'))
+const Profile = lazy(() => import('../pages/Profile/Profile'))
+const AuthPage = lazy(() => import('../pages/Auth/AuthPage'))
+const SetPasswordPage = lazy(() => import('../pages/Auth/SetPasswordPage'))
+const Coupons = lazy(() => import('../pages/Coupons/Coupons'))
+const CouponCenter = lazy(() => import('../pages/CouponCenter/CouponCenter'))
+const CouponShare = lazy(() => import('../pages/CouponShare/CouponShare'))
+const History = lazy(() => import('../pages/History/History'))
+const TrackOrder = lazy(() => import('../pages/TrackOrder/TrackOrder'))
+const DownloadApp = lazy(() => import('../pages/DownloadApp/DownloadApp'))
+const AboutPage = lazy(() => import('../pages/AboutPage/AboutPage'))
+const Support = lazy(() => import('../pages/Support/Support'))
+const Chat = lazy(() => import('../pages/Chat/Chat'))
+const OrderDetail = lazy(() => import('../pages/OrderDetail/OrderDetail'))
+const Notifications = lazy(() => import('../pages/Notifications/Notifications'))
+const Favorites = lazy(() => import('../pages/Favorites/Favorites'))
 import { RoleProtectedRoute } from '../components/admin/ProtectedRoute'
 
 // Admin pages — lazy loaded
@@ -70,30 +70,30 @@ export const routes: RouteObject[] = [
       ? <Navigate to="/admin/login" replace />
       : <Home />,
   },
-  { path: '/category', element: <Category /> },
-  { path: '/product/:id', element: <ProductDetail /> },
-  { path: '/cart', element: <Cart /> },
-  { path: '/checkout', element: <Checkout /> },
-  { path: '/payment/return', element: <PaymentReturn /> },
-  { path: '/mock-payment/:paymentNo', element: <MockPayment /> },
-  { path: '/profile', element: <Profile /> },
-  { path: '/auth/set-password', element: <SetPasswordPage /> },
-  { path: '/auth', element: <AuthPage /> },
+  { path: '/category', element: <Suspense fallback={<PageLoading />}><Category /></Suspense> },
+  { path: '/product/:id', element: <Suspense fallback={<PageLoading />}><ProductDetail /></Suspense> },
+  { path: '/cart', element: <Suspense fallback={<PageLoading />}><Cart /></Suspense> },
+  { path: '/checkout', element: <Suspense fallback={<PageLoading />}><Checkout /></Suspense> },
+  { path: '/payment/return', element: <Suspense fallback={<PageLoading />}><PaymentReturn /></Suspense> },
+  { path: '/mock-payment/:paymentNo', element: <Suspense fallback={<PageLoading />}><MockPayment /></Suspense> },
+  { path: '/profile', element: <Suspense fallback={<PageLoading />}><Profile /></Suspense> },
+  { path: '/auth/set-password', element: <Suspense fallback={<PageLoading />}><SetPasswordPage /></Suspense> },
+  { path: '/auth', element: <Suspense fallback={<PageLoading />}><AuthPage /></Suspense> },
   { path: '/login', element: <Navigate to="/auth?tab=login" replace /> },
   { path: '/register', element: <Navigate to="/auth?tab=register" replace /> },
-  { path: '/coupons', element: <Coupons /> },
-  { path: '/coupons/center', element: <CouponCenter /> },
-  { path: '/coupon/:code', element: <CouponShare /> },
+  { path: '/coupons', element: <Suspense fallback={<PageLoading />}><Coupons /></Suspense> },
+  { path: '/coupons/center', element: <Suspense fallback={<PageLoading />}><CouponCenter /></Suspense> },
+  { path: '/coupon/:code', element: <Suspense fallback={<PageLoading />}><CouponShare /></Suspense> },
   { path: '/coupon', element: <Navigate to="/coupons" replace /> },
-  { path: '/history', element: <History /> },
-  { path: '/about', element: <AboutPage /> },
-  { path: '/support', element: <Support /> },
-  { path: '/chat', element: <Chat /> },
-  { path: '/order/:order_no', element: <OrderDetail /> },
-  { path: '/notifications', element: <Notifications /> },
-  { path: '/favorites', element: <Favorites /> },
-  { path: '/track', element: <TrackOrder /> },
-  { path: '/download', element: <DownloadApp /> },
+  { path: '/history', element: <Suspense fallback={<PageLoading />}><History /></Suspense> },
+  { path: '/about', element: <Suspense fallback={<PageLoading />}><AboutPage /></Suspense> },
+  { path: '/support', element: <Suspense fallback={<PageLoading />}><Support /></Suspense> },
+  { path: '/chat', element: <Suspense fallback={<PageLoading />}><Chat /></Suspense> },
+  { path: '/order/:order_no', element: <Suspense fallback={<PageLoading />}><OrderDetail /></Suspense> },
+  { path: '/notifications', element: <Suspense fallback={<PageLoading />}><Notifications /></Suspense> },
+  { path: '/favorites', element: <Suspense fallback={<PageLoading />}><Favorites /></Suspense> },
+  { path: '/track', element: <Suspense fallback={<PageLoading />}><TrackOrder /></Suspense> },
+  { path: '/download', element: <Suspense fallback={<PageLoading />}><DownloadApp /></Suspense> },
 
   // ── Admin login (standalone, no layout) ──
   {
