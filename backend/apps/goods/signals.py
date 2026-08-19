@@ -26,6 +26,10 @@ def on_spu_saved(sender, instance, created, **kwargs):
     # 清除 SPU 详情缓存 & 列表缓存（确保下次请求拿到最新数据）
     transaction.on_commit(lambda: GoodsCacheService.invalidate_spu(instance.id))
     transaction.on_commit(lambda: GoodsCacheService.invalidate_spu_list())
+    # 热门商品缓存：商品任何状态变更（上架/下架/删除/驳回）都可能影响热榜，
+    # 统一失效避免「热榜展示已下架商品、点击 404」的缓存一致性问题
+    # （hot 重建成本低——单次查询，商品变更频率低，无条件失效保证绝对正确）
+    transaction.on_commit(GoodsCacheService.invalidate_hot_products)
 
 
 # ── SKU 信号：创建/更新时自动同步布隆过滤器 + 清除缓存 ──
