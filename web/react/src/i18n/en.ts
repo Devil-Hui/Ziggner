@@ -55,8 +55,6 @@ const en = {
       signIn: 'Sign In',
       submit: 'Submit',
       invalidCredentials: 'Invalid username or password, or no admin access',
-      captcha: 'Captcha',
-      captcha_placeholder: 'Enter captcha',
       signingIn: 'Signing in...',
       adminEmail: 'Admin Email',
       verifyCode: 'Email Verification Code',

@@ -314,24 +314,8 @@ class ChangePasswordSerializer(serializers.Serializer):
 # ============================================================
 
 class SendEmailCodeSerializer(serializers.Serializer):
-    """发送邮箱验证码 —— 需先通过图片验证码"""
+    """发送邮箱验证码（已移除图片验证码——旧版本残余，服务端现直接校验邮箱格式后发码）"""
     email = serializers.EmailField(help_text='Email address.')
-    captcha_id = serializers.CharField(
-        max_length=20,
-        help_text='Captcha ID from GET /api/users/captcha/.',
-    )
-    captcha_text = serializers.CharField(
-        max_length=6,
-        help_text='Captcha text from image.',
-    )
-
-    def validate(self, data):
-        from apps.users.captcha_service import CaptchaService
-        if not CaptchaService.verify(data['captcha_id'], data['captcha_text']):
-            raise serializers.ValidationError({
-                'captcha_text': 'Invalid or expired captcha.',
-            })
-        return data
 
 
 class VerifyEmailCodeSerializer(serializers.Serializer):
