@@ -44,13 +44,19 @@ class CustomExceptionMiddleware:
         request.request_id = request_id
         start_time = time.time()
 
+        # 注入日志上下文：同请求内所有结构化日志携带 request_id
+        from utils.json_logging import set_request_id, clear_request_id
+        set_request_id(request_id)
+
         if self.should_skip_middleware(request):
+            clear_request_id()
             return self.get_response(request)
 
         try:
             response = self.get_response(request)
 
             if not self.is_json_request(request):
+                clear_request_id()
                 return self._add_security_headers(response, request_id)
 
             if self.is_success_status(response.status_code):
@@ -64,6 +70,7 @@ class CustomExceptionMiddleware:
                 }, status_code=response.status_code, request_id=request_id)
                 result.cookies.update(response.cookies)
                 _clear_request_cache()
+                clear_request_id()
                 return result
 
             # 非 2xx 响应：补全统一错误信封
@@ -73,6 +80,7 @@ class CustomExceptionMiddleware:
             result = self._wrap_error_response(response, request_id)
             result.cookies.update(response.cookies)
             _clear_request_cache()
+            clear_request_id()
             return result
 
         except Exception as exc:
@@ -85,6 +93,7 @@ class CustomExceptionMiddleware:
                 logger.debug(f'Debug traceback:\n{traceback_format(exc)}')
             result = self.handle_exception(request, exc, request_id)
             _clear_request_cache()
+            clear_request_id()
             return result
 
     # ---------------------------------------------------------------

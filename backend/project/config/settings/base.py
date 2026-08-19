@@ -98,6 +98,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django_prometheus.middleware.PrometheusBeforeMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'utils.ip_whitelist_middleware.AdminIpWhitelistMiddleware',  # 管理后台 IP 白名单（ADMIN_IP_WHITELIST 配置，未配置则放行）
     'utils.cookie_domain_middleware.DynamicCookieDomainMiddleware',  # 按请求 Host 动态设定 Cookie Domain（localhost 去 Domain，否则 -.ziggner.com）
     'middleware.rate_limit.RateLimitMiddleware',
     'utils.exception_middleware.CustomExceptionMiddleware',
@@ -480,6 +481,7 @@ LOGGING = {
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
+            "formatter": "json",
         },
         "app_log": {
             "level": LOG_LEVEL,
@@ -524,10 +526,7 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "format": '{"timestamp": "%(asctime)s", "level": "%(levelname)s", '
-                      '"logger": "%(name)s", "module": "%(module)s", '
-                      '"message": "%(message)s"}',
-            "style": "%",
+            "()": "utils.json_logging.JsonFormatter",
         },
     },
     "loggers": {

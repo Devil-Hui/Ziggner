@@ -4,6 +4,7 @@ from rest_framework import exceptions, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -90,9 +91,15 @@ class CSRFCookieView(APIView):
         return Response({'csrf_ready': True}, status=status.HTTP_200_OK)
 
 
+class AdminLoginRateThrottle(AnonRateThrottle):
+    """后台/商城登录频控：防密码爆破。独立 scope（admin_login，5/min）。"""
+    scope = 'admin_login'
+
+
 class BrowserLoginView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
+    throttle_classes = [AdminLoginRateThrottle]
 
     def post(self, request):
         SessionAuthentication().enforce_csrf(request)

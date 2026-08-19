@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (lint + security + test)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: ziggner_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1" --health-interval 10s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements/base.txt
+
+      - name: Install dependencies
+        working-directory: backend
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements/base.txt -r requirements/prod.txt ruff pytest
+
+      - name: Lint (ruff)
+        working-directory: backend
+        run: ruff check . --exclude migrations
+
+      - name: Security scan (bandit)
+        working-directory: backend
+        run: |
+          pip install bandit
+          bandit -r apps utils --configfile pyproject.toml -q
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DJANGO_SETTINGS_MODULE: project.config.settings.dev
+          DB_ENGINE: django.db.backends.mysql
+          DB_NAME: ziggner_test
+          DB_USER: root
+          DB_PASSWORD: ""
+          DB_HOST: 127.0.0.1
+          DB_PORT: "3306"
+          REDIS_MASTER_URL: redis://127.0.0.1:6379/1
+          REDIS_SLAVE_URL: redis://127.0.0.1:6379/1
+          DJANGO_SECRET_KEY: ci-only-secret-key-not-for-production
+          ENABLE_MOCK_PAYMENT: "true"
+        run: python manage.py test apps --verbosity 1
+
+  frontend:
+    name: Frontend (lint + typecheck + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/react/package-lock.json
+
+      - name: Install dependencies
+        working-directory: web/react
+        run: npm ci
+
+      - name: Lint (eslint)
+        working-directory: web/react
+        run: npm run lint
+
+      - name: Type check (tsc)
+        working-directory: web/react
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Test (vitest)
+        working-directory: web/react
+        run: npm test -- --run

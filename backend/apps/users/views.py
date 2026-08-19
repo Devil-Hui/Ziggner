@@ -8,6 +8,7 @@ from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from apps.users.constants import Messages
@@ -35,8 +36,14 @@ _logger = logging.getLogger(__name__)
 # Admin 登录
 # ============================================================
 
+class AdminLoginRateThrottle(AnonRateThrottle):
+    """后台登录频控（5/min），防密码爆破。"""
+    scope = 'admin_login'
+
+
 class AdminLoginView(PublicApiView):
     """管理员登录（邮箱验证码）。"""
+    throttle_classes = [AdminLoginRateThrottle]
     """
     POST /api/admin/login/ —— 管理员登录（双因子）。
 
