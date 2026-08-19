@@ -50,7 +50,7 @@ jobs:
           pip install bandit
           bandit -r apps utils --configfile pyproject.toml -q
 
-      - name: Run tests
+      - name: Run tests (coverage gate)
         working-directory: backend
         env:
           DJANGO_SETTINGS_MODULE: project.config.settings.dev
@@ -64,7 +64,11 @@ jobs:
           REDIS_SLAVE_URL: redis://127.0.0.1:6379/1
           DJANGO_SECRET_KEY: ci-only-secret-key-not-for-production
           ENABLE_MOCK_PAYMENT: "true"
-        run: python manage.py test apps --verbosity 1
+        run: |
+          pip install coverage
+          # 覆盖率门禁：当前基线 30%（核心领域层逐步提高至 85%+）
+          coverage run --source=apps,rbac,utils manage.py test apps --verbosity 1
+          coverage report --fail-under=30
 
   frontend:
     name: Frontend (lint + typecheck + test)
@@ -90,6 +94,17 @@ jobs:
         working-directory: web/react
         run: npx tsc --noEmit -p tsconfig.json
 
-      - name: Test (vitest)
+      - name: Test (vitest + coverage gate)
         working-directory: web/react
-        run: npm test -- --run
+        run: npx vitest run --coverage
+
+      - name: E2E (Playwright, key user path)
+        working-directory: web/react
+        run: |
+          npm ci
+          npm install --save-dev @playwright/test
+          npx playwright install --with-deps chromium
+          npx playwright test --project=chromium
+        env:
+          E2E_BASE_URL: https://shop.ziggner.com
+          E2E_API_URL: https://api.ziggner.com/api/v1
