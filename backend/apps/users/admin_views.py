@@ -130,6 +130,19 @@ class AdminUserCreateView(BaseApiView):
             invalidate_user(user.id)
             roles = sorted(r.role for r in UserRole.objects.filter(user_id=user.id))
 
+            # 管理角色须可进后台（is_staff=True）；superadmin 同时授予 Django 超管位。
+            # 此前 create_user 不设 is_staff/is_superuser → 新开管理员（含超管）全部被
+            # Admin SPA 路由守卫挡在 /admin/login（实测 tc_ops is_staff=false）。
+            update_fields = []
+            if not user.is_staff:
+                user.is_staff = True
+                update_fields.append('is_staff')
+            if raw_role == Role.SUPERADMIN.value and not user.is_superuser:
+                user.is_superuser = True
+                update_fields.append('is_superuser')
+            if update_fields:
+                user.save(update_fields=update_fields)
+
         # 仅当事务成功提交后，异步派发欢迎邮件（失败不影响建号）。
         # 邮件任务内部 try/except 仅记日志。
         transaction.on_commit(
