@@ -11,6 +11,7 @@ from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes, 
 
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
+from utils.api_base_pagination import safe_int
 from ..models import SPU, SKU, ShelfStatus
 from apps.rbac.permissions import HasPerm, IsSuperAdmin
 from apps.rbac.services import has_role
@@ -226,7 +227,7 @@ class SKUSearchView(BaseApiView):
     def get(self, request):
         q = (request.query_params.get('q') or '').strip()
         try:
-            limit = min(int(request.query_params.get('limit', 20)), 50)
+            limit = min(safe_int(request.query_params.get('limit'), 20), 50)
         except (TypeError, ValueError):
             limit = 20
         if not q:

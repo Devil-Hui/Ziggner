@@ -3,6 +3,7 @@ from django.db import models
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
+from utils.api_base_pagination import safe_int
 from ..models_notification import AdminNotification
 from apps.rbac.permissions import HasPerm
 
@@ -12,8 +13,8 @@ class NotificationListView(BaseApiView):
 
     @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
     def get(self, request):
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', 20))
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = safe_int(request.query_params.get('page_size'), 20)
         start = (page - 1) * page_size
         end = start + page_size
 

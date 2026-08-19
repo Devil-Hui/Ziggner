@@ -69,19 +69,6 @@ api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config
 })
 
-// Compatibility exports for callers being migrated. Browser authentication is
-// exclusively cookie-based; these functions intentionally never retain tokens.
-export const setAccessToken = (_token: string | null) => undefined
-export const getAccessToken = (): null => null
-export const setRefreshToken = (_token: string | null) => undefined
-export const getRefreshToken = (): null => null
-export const clearAllTokens = () => undefined
-export const setUserAccessToken = (_token: string | null) => undefined
-export const getUserAccessToken = (): null => null
-export const setUserRefreshToken = (_token: string | null) => undefined
-export const getUserRefreshToken = (): null => null
-export const clearUserTokens = () => undefined
-
 export async function ensureCSRFCookie(): Promise<void> {
   await api.get('/users/session/csrf/')
 }

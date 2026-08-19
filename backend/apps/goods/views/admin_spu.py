@@ -13,6 +13,7 @@ from logging import getLogger
 
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
+from utils.api_base_pagination import safe_int
 from ..models import SPU, SPUStatus, Brand, Category, SKU
 from apps.rbac.permissions import HasPerm, IsSuperAdmin
 from apps.rbac.services import has_role
@@ -46,7 +47,7 @@ class SPUAdminListView(BaseApiView):
                 return Response({
                     'total': 0,
                     'page': 1,
-                    'page_size': int(request.query_params.get('page_size', getattr(settings, 'SPU_ADMIN_DEFAULT_PAGE_SIZE', 20))),
+                    'page_size': safe_int(request.query_params.get('page_size'), getattr(settings, 'SPU_ADMIN_DEFAULT_PAGE_SIZE', 20)),
                     'items': [],
                 })
 
@@ -70,8 +71,8 @@ class SPUAdminListView(BaseApiView):
                 Q(skus__barcode__icontains=q)
             ).distinct()
 
-        page = int(request.query_params.get('page', 1))
-        page_size = int(request.query_params.get('page_size', getattr(settings, 'SPU_ADMIN_DEFAULT_PAGE_SIZE', 20)))
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = safe_int(request.query_params.get('page_size'), getattr(settings, 'SPU_ADMIN_DEFAULT_PAGE_SIZE', 20))
         start = (page - 1) * page_size
         end = start + page_size
 

@@ -10,16 +10,20 @@ PER_PAGE_DEFAULT = 15
 PER_PAGE_MAX = 100
 
 
+def safe_int(value, default=0):
+    """安全整数解析：None/空/非法输入回退默认值，杜绝 query 参数注入 ValueError → 500。"""
+    try:
+        if value is None or value == '':
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def parse_pagination(request):
     """从请求中提取 page / per_page，统一默认值和上限。空值/非法值自动回退默认值。"""
-    def _int_or(v, default):
-        try:
-            return int(v) if v else default
-        except (ValueError, TypeError):
-            return default
-
-    page = max(1, _int_or(request.query_params.get('page'), PAGE_DEFAULT))
-    per_page = min(max(1, _int_or(request.query_params.get('per_page'), PER_PAGE_DEFAULT)), PER_PAGE_MAX)
+    page = max(1, safe_int(request.query_params.get('page'), PAGE_DEFAULT))
+    per_page = min(max(1, safe_int(request.query_params.get('per_page'), PER_PAGE_DEFAULT)), PER_PAGE_MAX)
     return page, per_page
 
 

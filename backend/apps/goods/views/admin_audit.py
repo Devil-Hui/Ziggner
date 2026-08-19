@@ -7,6 +7,7 @@ from django.db import models as dj_models
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from utils.api_base_view import BaseApiView
+from utils.api_base_pagination import safe_int
 from ..models import GoodsAuditLog, ProductOperationLog
 from apps.rbac.permissions import HasPerm
 
@@ -95,8 +96,8 @@ class AuditLogListView(BaseApiView):
             )
 
         # ── 分页 ──
-        page = int(request.query_params.get('page', 1))
-        page_size = min(int(request.query_params.get('page_size', 20)), 100)
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = min(safe_int(request.query_params.get('page_size'), 20), 100)
         start = (page - 1) * page_size
         total = qs.count()
         items = []
@@ -132,7 +133,7 @@ class AuditLogStatsView(BaseApiView):
         from django.db.models import Count
         from django.utils import timezone
 
-        days = int(request.query_params.get('days', 7))
+        days = safe_int(request.query_params.get('days'), 7)
         since = timezone.now() - timezone.timedelta(days=days)
 
         by_action = (
@@ -183,8 +184,8 @@ class SPUAuditLogView(BaseApiView):
         if action_filter:
             qs = qs.filter(action=action_filter)
 
-        page = int(request.query_params.get('page', 1))
-        page_size = min(int(request.query_params.get('page_size', 50)), 100)
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = min(safe_int(request.query_params.get('page_size'), 50), 100)
         start = (page - 1) * page_size
         total = qs.count()
 
@@ -241,8 +242,8 @@ class OperationLogListView(BaseApiView):
         if date_to:
             qs = qs.filter(created_at__lte=date_to)
 
-        page = int(request.query_params.get('page', 1))
-        page_size = min(int(request.query_params.get('page_size', 20)), 100)
+        page = safe_int(request.query_params.get('page'), 1)
+        page_size = min(safe_int(request.query_params.get('page_size'), 20), 100)
         start = (page - 1) * page_size
         total = qs.count()
 
