@@ -13,14 +13,14 @@ from django.http import JsonResponse
 
 logger = logging.getLogger('biz')
 
-# 跳过黑名单检查的路径前缀
+# 跳过黑名单检查的路径前缀（统一 v1：无前缀旧版 /api/* 已废弃下线）
 SKIP_PATHS = (
-    '/api/users/login/', '/api/users/register/',
-    '/api/users/refresh/', '/api/users/forgot-password/',
+    '/api/v1/users/login/', '/api/v1/users/register/',
+    '/api/v1/users/refresh/', '/api/v1/users/forgot-password/',
     '/admin/login', '/health/', '/metrics',
-    '/api/goods/tag',  # 公开列表
-    '/api/goods/spu', '/api/goods/sku', '/api/goods/category',
-    '/api/goods/brand', '/api/goods/hot', '/api/goods/search',
+    '/api/v1/goods/tag',  # 公开列表
+    '/api/v1/goods/spu', '/api/v1/goods/sku', '/api/v1/goods/category',
+    '/api/v1/goods/brand', '/api/v1/goods/hot', '/api/v1/goods/search',
 )
 
 

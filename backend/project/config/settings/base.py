@@ -638,17 +638,15 @@ RATE_LIMIT_BLOCK_TTL = 300
 # 各接口的限流阈值配置（次/窗口）
 # 键为 API 路径，值为每窗口内允许的最大请求次数
 # 可通过环境变量 RATE_LIMITS 覆写（JSON 格式），如：
-#   RATE_LIMITS='{"/api/users/login/": 30, "/api/users/register/": 20}'
+#   RATE_LIMITS='{"/api/v1/users/login/": 30, "/api/v1/users/register/": 20}'
+# 统一 v1：无前缀旧版 /api/* 已废弃下线，仅保留 /api/v1/ 配置。
 RATE_LIMITS = json.loads(os.getenv('RATE_LIMITS', json.dumps({
-    '/api/users/login/': 60,                 # 登录：60次/分钟/IP
+    '/api/v1/users/login/': 60,                 # 登录：60次/分钟/IP
     '/api/v1/users/session/login/': 20,
     '/api/v1/users/token/': 20,
-    '/api/users/register/': 30,              # 注册：30次/分钟/IP
-    '/api/v1/users/register/': 20,
-    '/api/users/send-verify-code/': 5,       # 发送验证码：5次/分钟/IP
-    '/api/v1/users/send-verify-code/': 5,
-    '/api/order/checkout/': 30,              # 下单：30次/分钟/IP
-    '/api/v1/order/checkout/': 20,
+    '/api/v1/users/register/': 30,              # 注册：30次/分钟/IP
+    '/api/v1/users/send-verify-code/': 5,       # 发送验证码：5次/分钟/IP
+    '/api/v1/order/checkout/': 30,              # 下单：30次/分钟/IP
     '/api/v1/promotion/*/claim/': 10,
     '/api/v1/payment/create/': 20,
     '/api/v1/payment/webhook/*/': 60,

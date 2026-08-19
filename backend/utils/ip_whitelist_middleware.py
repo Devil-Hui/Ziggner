@@ -13,7 +13,8 @@ import os
 
 from django.http import JsonResponse
 
-_PROTECTED_PREFIXES = ('/admin/', '/api/admin/')
+# 管理后台保护前缀（统一 v1：管理接口现为 /api/v1/admin/，旧 /api/admin/ 已下线）
+_PROTECTED_PREFIXES = ('/admin/', '/api/v1/admin/')
 _FORWARD_HEADER = 'HTTP_X_FORWARDED_FOR'
 
 
