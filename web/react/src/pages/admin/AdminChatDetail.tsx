@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso'
+// 消息列表采用原生滚动容器，需要支持滚动容器高度测量与切换会话后重新定位
+// 保留 ReactNode 类型以支持 renderMessageItem 返回任意 React 节点
+import type { ReactNode } from 'react'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { PrimaryBtn as SendBtn } from '../../components/admin/common/ui'
 import { StatusBadge } from '../../components/admin/common'
@@ -181,6 +183,19 @@ const OrdersPanel = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+
+  /* 窄窗口：面板脱离文档流，浮动覆盖在聊天区右侧，
+     避免与左侧会话列表(300px)合计挤压聊天区，导致消息列表塌缩成极窄列 */
+  @media (max-width: 1180px) {
+    position: fixed;
+    top: 56px;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    z-index: 60;
+    border-radius: 0;
+    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.12);
+  }
 `
 
 const OrdersHeader = styled.div`
@@ -532,6 +547,10 @@ const MessageListContainer = styled.div`
   flex-direction: column;
   overflow: hidden;
   position: relative;
+`
+
+const MessageItemWrapper = styled.div`
+  padding: 4px 0;
 `
 
 // ── Scroll-to-bottom FAB ──
@@ -888,8 +907,8 @@ export default function AdminChatDetail() {
   const [loadingOlder, setLoadingOlder] = useState(false)
   const [sendError, setSendError] = useState('')
 
-  // Virtual scroll
-  const virtuosoRef = useRef<VirtuosoHandle>(null)
+  // 原生滚动容器（替代 Virtuoso）
+  const scrollRef = useRef<HTMLDivElement>(null)
   const [showScrollFab, setShowScrollFab] = useState(false)
   const atBottomRef = useRef(true)
 
@@ -980,8 +999,11 @@ export default function AdminChatDetail() {
   useEffect(() => {
     if (!id) return
     const convId = parseInt(id)
-    const wsBase = import.meta.env.VITE_WS_URL ||
-      `${window.location.protocol === 'https:' ? 'wss' : 'ws'}://${window.location.host}`
+    // WS 必须走 API 域名：Cloudflare Pages 静态托管不代理 WebSocket（同源 /ws 返回 200 HTML）。
+    // 使用 VITE_WS_URL（=wss://api.ziggner.com，经 nginx /ws → daphne:8001），缺失时回退同源（本地 dev）。
+    const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
+    const configured = (import.meta.env.VITE_WS_URL || '').replace(/\/+$/, '')
+    const wsBase = configured || `${scheme}://${window.location.host}`
     let ws: WebSocket | null = null
     let closedByUs = false
     let retry = 0
@@ -1332,26 +1354,36 @@ export default function AdminChatDetail() {
   // 以服务端 can_reply 为准：买家/超管/未占用/本人/超时释放 → 可发；否则禁用
   const isInputDisabled = activeConv?.status === 'closed' || !activeConv?.can_reply
 
-  // ── Scrolling ──
+  // ── Scrolling（原生滚动容器）──
   const scrollToBottom = useCallback(() => {
-    if (filteredMessages.length > 0) {
-      virtuosoRef.current?.scrollToIndex({
-        index: filteredMessages.length - 1,
-        behavior: 'smooth',
-        align: 'end',
-      })
+    const el = scrollRef.current
+    if (el && filteredMessages.length > 0) {
+      el.scrollTop = el.scrollHeight
     }
   }, [filteredMessages.length])
 
-  const handleAtBottomStateChange = useCallback((atBottom: boolean) => {
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < CONFIG.AT_BOTTOM_THRESHOLD_PX
     atBottomRef.current = atBottom
     setShowScrollFab(!atBottom && filteredMessages.length > CONFIG.SCROLL_FAB_THRESHOLD)
   }, [filteredMessages.length])
 
-  const followOutput = useCallback(() => {
-    if (!atBottomRef.current) return 'smooth' as const
-    return 'auto' as const
-  }, [])
+  // ── 初始定位：会话及其消息加载完成后滚动到底部 ──
+  // lastScrolledConvIdRef 记录已定位的会话，避免重复滚动。
+  const lastScrolledConvIdRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!activeConv || !id) return
+    if (lastScrolledConvIdRef.current === activeConv.id) return
+    if (filteredMessages.length === 0) return
+    lastScrolledConvIdRef.current = activeConv.id
+    const t = setTimeout(() => {
+      const el = scrollRef.current
+      if (el) el.scrollTop = el.scrollHeight
+    }, 80)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeConv, id, filteredMessages.length])
 
   // ── Render Virtuoso item ──
   const renderMessageItem = useCallback((_index: number, item: ReturnType<typeof mapMessage>) => {
@@ -1528,45 +1560,39 @@ export default function AdminChatDetail() {
               </FilterTabs>
             </HorizontalScroll>
 
-            {/* Virtuoso message list */}
+            {/* 消息列表（原生滚动容器，替代 Virtuoso） */}
             <MessageListContainer>
-              <Virtuoso
-                ref={virtuosoRef}
-                data={filteredMessages}
-                itemContent={renderMessageItem}
-                followOutput={followOutput}
-                atBottomStateChange={handleAtBottomStateChange}
-                atBottomThreshold={CONFIG.AT_BOTTOM_THRESHOLD_PX}
-                style={{ flex: 1 }}
-                initialTopMostItemIndex={filteredMessages.length > 0 ? filteredMessages.length - 1 : 0}
-                components={{
-                  Header: () => (
-                    <>
-                      {convLoading ? (
-                        <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
-                      ) : (
-                        activeConv.has_more_older && activeConv.messages.length > 0 && (
-                          <LoadingMore>
-                            <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
-                              {loadingOlder ? t('store.chatDetail.loading') : '加载更早消息'}
-                            </LoadOlderBtn>
-                          </LoadingMore>
-                        )
-                      )}
-                    </>
-                  ),
-                  Footer: () => (
-                    <>
-                      {isTyping && (
-                        <TypingIndicator name={activeConv.user?.username ?? ''} />
-                      )}
-                      {activeConv.status === 'closed' && (
-                        <SystemBubbleMessage content={t('store.chatDetail.conversationClosed')} />
-                      )}
-                    </>
-                  ),
-                }}
-              />
+              <div
+                ref={scrollRef}
+                onScroll={handleScroll}
+                style={{ flex: 1, overflow: 'auto', padding: '0 16px' }}
+                data-testid="message-list-container"
+              >
+                {convLoading ? (
+                  <LoadingMore>{t('store.chatDetail.loading')}</LoadingMore>
+                ) : (
+                  <>
+                    {activeConv.has_more_older && activeConv.messages.length > 0 && (
+                      <LoadingMore>
+                        <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
+                          {loadingOlder ? t('store.chatDetail.loading') : '加载更早消息'}
+                        </LoadOlderBtn>
+                      </LoadingMore>
+                    )}
+                    {filteredMessages.map((item, index) => (
+                      <MessageItemWrapper key={item.id}>
+                        {renderMessageItem(index, item)}
+                      </MessageItemWrapper>
+                    ))}
+                    {isTyping && (
+                      <TypingIndicator name={activeConv.user?.username ?? ''} />
+                    )}
+                    {activeConv.status === 'closed' && (
+                      <SystemBubbleMessage content={t('store.chatDetail.conversationClosed')} />
+                    )}
+                  </>
+                )}
+              </div>
 
               <ScrollToBottomFab $visible={showScrollFab} onClick={scrollToBottom}>
                 <Icon name="chevron-down" />

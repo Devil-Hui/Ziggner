@@ -42,7 +42,12 @@ class GoodsSearchService:
         if query and len(query) < MIN_QUERY_LENGTH:
             return {'items': [], 'total': 0, 'page': page, 'per_page': per_page, 'facets': {}}
 
-        cache_key = f'srch:{query}:{filters.get("category_id",0)}:{filters.get("brand_id",0)}:{sort or "new"}:{page}'
+        # 缓存 key 必须包含全部筛选维度（价格/库存缺失会导致不同筛选命中同一缓存 → 筛选看似无效）
+        cache_key = (
+            f'srch:{query}:{filters.get("category_id",0)}:{filters.get("brand_id",0)}:'
+            f'p{filters.get("price_min") or ""}-{filters.get("price_max") or ""}:'
+            f'{"s" if filters.get("in_stock") else ""}:{sort or "new"}:{page}'
+        )
 
         # ── L1: 缓存（含空结果） ──
         cached = _cache.get_json(cache_key)

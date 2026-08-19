@@ -202,6 +202,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { addItem } = useCart()
   const isLoggedIn = isLoggedInProp ?? ctxLoggedIn
   const [tagVariant, setTagVariant] = useState(0) // 0=单标签, 1=双标签
+  // 图片加载失败回退占位（URL 存在但 404/网络错误时避免裂图）
+  const [imgFailed, setImgFailed] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
 
   const openModal = useQuickAddModal ?? !onAddToCart
@@ -297,8 +299,13 @@ const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <>
       <CardWrapper onClick={handleCardClick}>
-        {optionalMediaUrl(product.image) ? (
-          <ProductImage src={optionalMediaUrl(product.image)} alt={product.name} loading="lazy" />
+        {optionalMediaUrl(product.image) && !imgFailed ? (
+          <ProductImage
+            src={optionalMediaUrl(product.image)}
+            alt={product.name}
+            loading="lazy"
+            onError={() => setImgFailed(true)}
+          />
         ) : (
           <ProductImagePlaceholder aria-hidden="true" />
         )}

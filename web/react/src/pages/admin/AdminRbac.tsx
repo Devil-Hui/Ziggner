@@ -450,7 +450,14 @@ export default function AdminRbac() {
       role?: string
     } = {}
     if (!username) errs.username = t('admin.rbac.createAdminUsernameRequired')
-    if (!password || password.length < 8) errs.password = t('admin.rbac.createAdminPasswordHint')
+    // 与后端 utils validators.validate_password 保持一致：≥8 位且含大写+小写+(数字|特殊字符)
+    const weakPassword =
+      !password ||
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !(/\d/.test(password) || /[^A-Za-z0-9]/.test(password))
+    if (weakPassword) errs.password = t('admin.rbac.createAdminPasswordHint')
     if (!email) errs.email = t('admin.rbac.createAdminEmailRequired')
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.rbac.createAdminEmailInvalid')
     if (!firstName) errs.first_name = t('admin.rbac.createAdminFirstNameRequired')
@@ -637,7 +644,8 @@ export default function AdminRbac() {
       )}
 
       {editingUser && (
-        <ModalOverlay onClick={() => setEditingUser(null)}>
+        // 点击遮罩不关闭：防误触丢失已选角色（用弹窗内「保存/取消」关闭）
+        <ModalOverlay>
           <ModalCard onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               {t('admin.rbac.roleEdit')}: {editingUser.username}

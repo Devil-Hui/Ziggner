@@ -8,8 +8,8 @@ class CartItemSerializer(serializers.ModelSerializer):
     spu_name = serializers.CharField(source='sku.spu.name', read_only=True)
     price = serializers.DecimalField(source='sku.price', max_digits=10, decimal_places=2, read_only=True)
     stock = serializers.IntegerField(source='sku.stock', read_only=True)
-    # SKU 字段是 image_url（不是 image）
-    image = serializers.CharField(source='sku.image_url', read_only=True, default='')
+    # SKU 字段是 image_url；SKU 未单独配图时回退 SPU 主图（prefetch items__sku__spu，零额外查询）
+    image = serializers.SerializerMethodField()
     spec_values = serializers.SerializerMethodField()
 
     class Meta:
@@ -19,6 +19,12 @@ class CartItemSerializer(serializers.ModelSerializer):
             'stock', 'image', 'spec_values', 'quantity', 'selected',
             'created_at',
         ]
+
+    def get_image(self, obj):
+        if obj.sku.image_url:
+            return obj.sku.image_url
+        spu = obj.sku.spu
+        return (spu.main_image or '') if spu else ''
 
     def get_spec_values(self, obj):
         # 依赖 CartService.get_cart_with_items 的 prefetch；

@@ -672,13 +672,20 @@ class AvatarUploadView(BaseApiView):
 
         filename = f'avatars/{uuid.uuid4().hex}{ext}'
         saved_path = default_storage.save(filename, strip_exif(file))
-        full_url = request.build_absolute_uri(default_storage.url(saved_path))
-        
+        stored_url = default_storage.url(saved_path)
+        # R2（S3）存储返回完整 CDN URL（https://cdn.ziggner.com/...），直接用；
+        # 仅当返回相对路径（本地磁盘存储）时才补绝对 URL，避免 http(s):// 被二次包裹。
+        full_url = stored_url if stored_url.startswith('http') else request.build_absolute_uri(stored_url)
+
         user = request.user
         if hasattr(user, 'profile') and user.profile:
             user.profile.avatar = full_url
             user.profile.save(update_fields=['avatar'])
-        
+        elif hasattr(user, 'profile'):
+            # 惰性创建 profile（老用户可能没有）
+            from apps.users.models import UserProfile
+            UserProfile.objects.create(user=user, avatar=full_url)
+
         return Response({'avatar_url': full_url})
 
 

@@ -1,5 +1,5 @@
 // TypeScript strict mode enabled
-import { useState, useEffect, useCallback, type CSSProperties } from 'react';
+import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import styled from 'styled-components'
 import { QRCodeSVG } from 'qrcode.react';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
@@ -207,6 +207,67 @@ const SearchBar = styled.div`
 
 const PAGE_SIZE = 20;
 
+/**
+ * 数字输入框：内部保留用户正在编辑的原始字符串。
+ * 解决 React 受控 `<input type="number">` 的经典问题——value 绑定为纯数字时，
+ * 清空输入框会被 Number('')=0 立刻顶回 "0"，导致「0 删不掉 / 前导零无法清理」。
+ * 这里在编辑过程中保存 raw text，只有合法数字才回调 on change。
+ */
+function NumField({ value, onChange, min = 0, max, step = 1, placeholder }: {
+  value: number | null | undefined
+  onChange: (n: number | null) => void
+  min?: number
+  max?: number
+  step?: number
+  placeholder?: string
+}) {
+  const [text, setText] = useState<string>(value == null ? '' : String(value))
+  const editing = useRef(false)
+  // 外部值变化（打开表单/生成代码）时同步文本；用户编辑期间不覆盖
+  useEffect(() => {
+    if (!editing.current) setText(value == null ? '' : String(value))
+  }, [value])
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      min={min}
+      max={max}
+      step={step}
+      placeholder={placeholder}
+      value={text}
+      onFocus={() => { editing.current = true }}
+      onBlur={() => {
+        editing.current = false
+        // 边界：失焦时越界值回退（min/max）
+        const n = Number(text)
+        if (text !== '' && Number.isFinite(n)) {
+          let v = n
+          if (min !== undefined && v < min) v = min
+          if (max !== undefined && v > max) v = max
+          if (v !== n) { setText(String(v)); onChange(v) }
+        }
+      }}
+      onChange={(e) => {
+        const raw = e.target.value
+        // 数字/小数过滤（允许空串与首字符删除，避免"0 无法删掉"的 number input 怪癖）
+        if (raw === '' || raw === '-' || raw === '+' || raw === '.') {
+          setText(raw)
+          onChange(null)
+          return
+        }
+        // 仅保留合法数字字符（含一个小数点）
+        const cleaned = raw.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1')
+        if (cleaned !== raw) { setText(cleaned); return }
+        const n = Number(cleaned)
+        if (!Number.isFinite(n)) return
+        setText(cleaned)
+        onChange(n)
+      }}
+    />
+  )
+}
+
 const INITIAL_FORM: CouponFormData = {
   code: '',
   discount_type: 'fixed',
@@ -217,8 +278,12 @@ const INITIAL_FORM: CouponFormData = {
   is_active: true,
   start_time: '',
   end_time: '',
-  total_count: 0,
+  total_count: 1000,
+  per_user_limit: 1,
 };
+
+// 创建优惠券草稿：关闭弹窗保留已填内容（提交成功后清除）
+let couponDraft: CouponFormData | null = null;
 
 // ==================== Component ====================
 
@@ -404,7 +469,8 @@ export default function AdminCoupons() {
 
   const openCreate = () => {
     setEditingId(null);
-    setFormData({
+    // 保留上次未提交的草稿（关闭弹窗不丢失已填内容）；提交成功后清除
+    setFormData(couponDraft ?? {
       ...INITIAL_FORM,
       start_time: new Date().toISOString().slice(0, 16),
       end_time: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -427,6 +493,7 @@ export default function AdminCoupons() {
       start_time: coupon.start_time,
       end_time: coupon.end_time,
       total_count: coupon.total_count,
+      per_user_limit: coupon.per_user_limit || 1,
     });
     setShowForm(true);
   };
@@ -459,6 +526,7 @@ export default function AdminCoupons() {
         });
         showMsg('success', t('admin.coupons.createSuccess'));
       }
+      couponDraft = null; // 提交成功：清除草稿
       setShowForm(false);
       fetchCoupons();
     } catch (err: any) {
@@ -475,6 +543,9 @@ export default function AdminCoupons() {
     try {
       await adminAPI.deleteCoupon(deleteTarget.id);
       showMsg('success', t('admin.coupons.deleteSuccess'));
+      // 后端为软删除（is_active=False），若不清除本地记录，券会以「已停用」残留列表。
+      // 直接从列表移除，保证删除后立即消失。
+      setCoupons((prev) => prev.filter((c) => c.id !== deleteTarget.id));
       setDeleteTarget(null);
       fetchCoupons();
     } catch (err: any) {
@@ -526,7 +597,7 @@ export default function AdminCoupons() {
           max_discount: coupon.max_discount,
           stackable: coupon.stackable,
           total_count: coupon.total_count,
-          per_user_limit: coupon.total_count,
+          per_user_limit: coupon.per_user_limit || 1,
           start_time: coupon.start_time,
           end_time: coupon.end_time,
         });
@@ -745,7 +816,8 @@ export default function AdminCoupons() {
 
       {/* Create / Edit Form Dialog */}
       {showForm && (
-        <FormOverlay onClick={() => setShowForm(false)}>
+        // 点击遮罩不再关闭窗口：避免误触丢失已填表单项，用户须点「取消/保存」关闭
+        <FormOverlay>
           <FormDialog onClick={(e) => e.stopPropagation()}>
             <FormTitle>{editingId ? t('admin.coupons.editCoupon') : t('admin.coupons.newCoupon')}</FormTitle>
 
@@ -785,15 +857,13 @@ export default function AdminCoupons() {
                     ? t('admin.coupons.amountLabel')
                     : t('admin.coupons.percentLabel')}
                 </Label>
-                <Input
-                  type="number"
+                <NumField
+                  value={formData.amount}
+                  onChange={(n) => updateFormField('amount', n ?? 0)}
                   min={0}
+                  step={formData.discount_type === 'fixed' ? 0.01 : 1}
                   placeholder={
                     formData.discount_type === 'fixed' ? t('admin.coupons.amountPlaceholder') : t('admin.coupons.percentPlaceholder')
-                  }
-                  value={formData.amount}
-                  onChange={(e) =>
-                    updateFormField('amount', Number(e.target.value))
                   }
                 />
               </FormGroup>
@@ -802,32 +872,23 @@ export default function AdminCoupons() {
             <FormRow>
               <FormGroup>
                 <Label>{t('admin.coupons.minSpendLabel')}</Label>
-                <Input
-                  type="number"
+                <NumField
+                  value={formData.min_amount}
+                  onChange={(n) => updateFormField('min_amount', n ?? 0)}
                   min={0}
                   step={0.01}
                   placeholder={t('admin.coupons.minSpendPlaceholder')}
-                  value={formData.min_amount}
-                  onChange={(e) =>
-                    updateFormField('min_amount', Number(e.target.value))
-                  }
                 />
               </FormGroup>
 
               <FormGroup>
                 <Label>{t('admin.coupons.maxDiscountLabel')}</Label>
-                <Input
-                  type="number"
+                <NumField
+                  value={formData.max_discount}
+                  onChange={(n) => updateFormField('max_discount', n)}
                   min={0}
                   step={0.01}
                   placeholder={t('admin.coupons.maxDiscountHint')}
-                  value={formData.max_discount ?? ''}
-                  onChange={(e) =>
-                    updateFormField(
-                      'max_discount',
-                      e.target.value === '' ? null : Number(e.target.value),
-                    )
-                  }
                 />
               </FormGroup>
             </FormRow>
@@ -884,22 +945,31 @@ export default function AdminCoupons() {
               </FormGroup>
             </FormRow>
 
-            <FormGroup>
-              <Label>{t('admin.coupons.totalQuantity')}</Label>
-              <Input
-                type="number"
-                min={0}
-                step={1}
-                placeholder={t('admin.coupons.totalQuantityPlaceholder')}
-                value={formData.total_count}
-                onChange={(e) =>
-                  updateFormField('total_count', Number(e.target.value))
-                }
-              />
-            </FormGroup>
+            <FormRow>
+              <FormGroup>
+                <Label>{t('admin.coupons.totalQuantity')}</Label>
+                <NumField
+                  value={formData.total_count}
+                  onChange={(n) => updateFormField('total_count', n ?? 0)}
+                  min={0}
+                  step={1}
+                  placeholder={t('admin.coupons.totalQuantityPlaceholder')}
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label>{t('admin.coupons.perUserLimit')}</Label>
+                <NumField
+                  value={formData.per_user_limit}
+                  onChange={(n) => updateFormField('per_user_limit', n ?? 1)}
+                  min={1}
+                  step={1}
+                  placeholder={t('admin.coupons.perUserLimitPlaceholder')}
+                />
+              </FormGroup>
+            </FormRow>
 
             <ButtonGroup>
-              <SecondaryBtn onClick={() => setShowForm(false)}>
+              <SecondaryBtn onClick={() => { couponDraft = { ...formData }; setShowForm(false); }}>
                 {t('admin.coupons.cancel')}
               </SecondaryBtn>
               <PrimaryBtn onClick={debouncedSave} disabled={isSaving}>

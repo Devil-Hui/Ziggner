@@ -23,6 +23,22 @@ import {
 import { PrimaryBtn, DangerBtn, OutlinePrimaryBtn, Input, Select, FormGroup, Label, Hint, ErrorText, RoleBadge, Toast } from '../../components/admin/common/ui';
 import { adminAPI } from '../../api/admin';
 
+// 创建组/管理员草稿：关闭弹窗保留已填内容（提交成功后清除；密码/用户名不入草稿——安全）
+interface GroupFormDraft {
+  tab: 'group' | 'admin';
+  name: string;
+  slug: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  phone: string;
+  countryCode: string;
+  role: string;
+  isActive: boolean;
+}
+let groupDraft: GroupFormDraft | null = null;
+
 /* ========== Member Panel ========== */
 
 const MemberPanel = styled.div`
@@ -340,20 +356,22 @@ export default function AdminGroups() {
   /* ---- Create Group ---- */
 
   const openCreate = () => {
-    setFormName('');
-    setFormSlug('');
+    // 关闭后保留已填内容（草稿 groupDraft）；密码/用户名安全原因始终重置
+    const d = groupDraft
+    setFormName(d?.name ?? '');
+    setFormSlug(d?.slug ?? '');
     setFormErrors({});
-    setCreateTab('group');
+    setCreateTab(d?.tab ?? 'group');
     setAdminUsername('');
     setAdminPassword('');
-    setAdminEmail('');
-    setAdminFirstName('');
-    setAdminLastName('');
-    setAdminDepartment('');
-    setAdminPhone('');
-    setAdminCountryCode('');
-    setAdminRole('ops');
-    setAdminIsActive(true);
+    setAdminEmail(d?.email ?? '');
+    setAdminFirstName(d?.firstName ?? '');
+    setAdminLastName(d?.lastName ?? '');
+    setAdminDepartment(d?.department ?? '');
+    setAdminPhone(d?.phone ?? '');
+    setAdminCountryCode(d?.countryCode ?? '');
+    setAdminRole((d?.role ?? 'ops') as 'superadmin' | 'ops' | 'admin_leader' | 'admin_member');
+    setAdminIsActive(d?.isActive ?? true);
     setAdminErrors({});
     setCreatedAccountNo(null);
     setShowForm(true);
@@ -372,6 +390,7 @@ export default function AdminGroups() {
     try {
       await groupRepo.createGroup({ name, slug });
       showMsg('success', t('admin.groups.createSuccess'));
+      groupDraft = null; // 提交成功：清除草稿
       setShowForm(false);
       fetchGroups();
     } catch (err: any) {
@@ -408,7 +427,14 @@ export default function AdminGroups() {
     const lastName = adminLastName.trim();
     const errs: { username?: string; password?: string; email?: string; first_name?: string; last_name?: string } = {};
     if (!username) errs.username = t('admin.groups.adminUsernameRequired');
-    if (!password || password.length < 8) errs.password = t('admin.groups.adminPasswordHint');
+    // 与后端 utils validators.validate_password 保持一致：≥8 位且含大写+小写+(数字|特殊字符)
+    const weakPassword =
+      !password ||
+      password.length < 8 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password) ||
+      !(/\d/.test(password) || /[^A-Za-z0-9]/.test(password));
+    if (weakPassword) errs.password = t('admin.groups.adminPasswordHint');
     if (!email) errs.email = t('admin.groups.adminEmailRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errs.email = t('admin.groups.adminEmailInvalid');
     if (!firstName) errs.first_name = t('admin.groups.adminFirstNameRequired');
@@ -434,6 +460,7 @@ export default function AdminGroups() {
       });
       setCreatedAccountNo(res.account_no || (res.id != null ? String(res.id) : ''));
       showMsg('success', t('admin.groups.createAdminSuccess'));
+      groupDraft = null; // 提交成功：清除草稿
     } catch (err: unknown) {
       showMsg('error', err instanceof Error ? err.message : t('admin.groups.createAdminFailed'));
     } finally {
@@ -701,7 +728,23 @@ export default function AdminGroups() {
         submitDisabled={creatingAdmin}
         submitVariant="primary"
         cancelLabel={t('common.cancel')}
-        onClose={() => setShowForm(false)}
+        onClose={() => {
+          // 关闭时保留已填内容（密码/用户名不入草稿——安全）
+          groupDraft = {
+            tab: createTab,
+            name: formName,
+            slug: formSlug,
+            email: adminEmail,
+            firstName: adminFirstName,
+            lastName: adminLastName,
+            department: adminDepartment,
+            phone: adminPhone,
+            countryCode: adminCountryCode,
+            role: adminRole,
+            isActive: adminIsActive,
+          };
+          setShowForm(false);
+        }}
         onSubmit={createTab === 'group' ? handleCreate : handleCreateAdmin}
       >
         <div style={{ display: 'flex', gap: 8, marginBottom: Spacing.lg }}>

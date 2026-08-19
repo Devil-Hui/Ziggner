@@ -97,6 +97,8 @@ interface FormDialogProps {
   submitVariant?: 'primary' | 'danger';
   cancelLabel?: string;
   width?: string;
+  /** 点击遮罩（弹窗外区域）是否关闭。默认 false：防误触丢失已填内容（用户可用 X/取消按钮关闭） */
+  closeOnOverlayClick?: boolean;
   onClose: () => void;
   onSubmit: () => void;
   children: React.ReactNode;
@@ -110,6 +112,7 @@ export default function FormDialog({
   submitVariant = 'danger',
   cancelLabel = '取消',
   width,
+  closeOnOverlayClick = false,
   onClose,
   onSubmit,
   children,
@@ -117,7 +120,7 @@ export default function FormDialog({
   if (!open) return null;
 
   return (
-    <Overlay onClick={onClose}>
+    <Overlay onClick={closeOnOverlayClick ? onClose : undefined}>
       <Dialog onClick={(e) => e.stopPropagation()} style={width ? { maxWidth: width } : undefined}>
         <Header>
           <Title>{title}</Title>

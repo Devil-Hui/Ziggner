@@ -78,6 +78,13 @@ class UserProfile(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    avatar = models.CharField(
+        max_length=500,
+        blank=True,
+        default='',
+        verbose_name='头像 URL',
+        help_text='用户头像（R2/本地存储的完整 URL）',
+    )
     # 安全戳：密码 / 角色等安全相关变更时旋转，使该用户所有旧会话（JWT）立即失效，
     # 必须重新登录。空字符串表示尚未初始化（老用户首次登录时由 tokens.ensure_stamp 惰性生成）。
     security_stamp = models.CharField(

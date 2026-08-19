@@ -609,12 +609,12 @@ function useChatWebSocket(
 
     setWsStatus('connecting')
 
-    // WS 必须与页面同源（经 nginx / Cloudflare 代理到 daphne:8001）。
-    // 不能硬编码 localhost:8000 —— 那是 gunicorn 的 REST(WSGI) 端口，不支持 WebSocket，
-    // 否则经 docker nginx(localhost) 访问时 WS 会绕过 nginx 直连 gunicorn 而彻底失败，
-    // 表现为「消息打不回去」。生产环境用 VITE_WS_URL 覆盖（如 wss://api.ziggner.com）。
+    // WS 必须走 API 域名：Cloudflare Pages 静态托管不代理 WebSocket（同源 /ws 返回 200 HTML）。
+    // 使用 VITE_WS_URL（=wss://api.ziggner.com，经 nginx /ws → daphne:8001），
+    // 缺失时才回退同源（本地 dev 场景）。
     const scheme = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const wsBase = import.meta.env.VITE_WS_URL || `${scheme}://${window.location.host}`
+    const configured = (import.meta.env.VITE_WS_URL || '').replace(/\/+$/, '')
+    const wsBase = configured || `${scheme}://${window.location.host}`
     const wsUrl = `${wsBase}/ws/chat/${convId}/`
 
     try {
@@ -729,7 +729,7 @@ export default function Chat() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ── Auth check (guard with !isLoading to avoid racing ahead of getMe) ──
-  const { isLoading } = useUser()
+  const { user: currentUser, isLoading } = useUser()
   useEffect(() => {
     if (!isLoggedIn && !isLoading) {
       navigate('/auth?tab=login')
@@ -1028,7 +1028,11 @@ export default function Chat() {
 
   // ── Map backend message to ChatBubble props ──
   const mapMessage = (msg: ChatMessage) => {
-    const isMine: boolean = msg.sender_type === 'user'
+    // 归属判断：优先按消息发送者是否当前登录用户（覆盖"管理员在 C 端聊天"等场景，
+    // 此时后端 sender_type='admin' 但实际是自己发的）；无 sender 信息时回退 sender_type。
+    const isMine: boolean = msg.sender
+      ? Number(msg.sender) === currentUser?.id
+      : msg.sender_type === 'user'
     const type = (msg.msg_type || 'text') as 'text' | 'image' | 'video' | 'product_link' | 'product_card' | 'cart_share'
     const fileUrl: string | undefined = resolveMediaUrl(msg.file_url) || undefined
 

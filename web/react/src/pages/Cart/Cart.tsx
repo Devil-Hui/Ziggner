@@ -6,6 +6,17 @@ import { useCart } from '../../store/CartContext'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Layout } from '../../theme/tokens'
+import { resolveMediaUrl } from '../../api/chat'
+
+// 图片加载失败时的内联 SVG 占位图（data URI，不依赖静态资源）
+const PLACEHOLDER_IMG =
+  'data:image/svg+xml;utf8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">' +
+    '<rect width="100%" height="100%" fill="#f2f3f5"/>' +
+    '<text x="50%" y="50%" fill="#9aa0a6" font-size="15" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">暂无图片</text>' +
+    '</svg>',
+  )
 
 const CartContainer = styled.div`
   min-height: calc(100vh - ${Layout.headerHeight}px);
@@ -236,7 +247,19 @@ export default function Cart() {
                 {items.map(item => (
                   <CartItem key={item.id}>
                     <ItemImage>
-                      <img src={item.image} alt={item.spu_name} />
+                      <img
+                        src={resolveMediaUrl(item.image) || item.image}
+                        alt={item.spu_name}
+                        loading="lazy"
+                        onError={(e) => {
+                          // 加载失败回退内联占位图（避免空白裂图；仅替换一次防止死循环）
+                          const el = e.currentTarget
+                          if (!el.dataset.fallback) {
+                            el.dataset.fallback = '1'
+                            el.src = PLACEHOLDER_IMG
+                          }
+                        }}
+                      />
                     </ItemImage>
                     <ItemInfo>
                       <ItemName>{item.spu_name}</ItemName>
