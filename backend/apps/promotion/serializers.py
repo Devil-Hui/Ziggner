@@ -22,6 +22,11 @@ class CouponSerializer(serializers.ModelSerializer):
 
 
 class CouponAdminSerializer(serializers.ModelSerializer):
+    # 防御：total_count / per_user_limit 缺失或 <1 时直接校验拦截，
+    # 避免落入 CouponApplicationService._validate_payload 的 INVALID_QUANTITY。
+    total_count = serializers.IntegerField(min_value=1, required=False, default=1000)
+    per_user_limit = serializers.IntegerField(min_value=1, required=False, default=1)
+
     class Meta:
         model = Coupon
         fields = ['id', 'name', 'code', 'discount_type', 'amount', 'min_amount',

@@ -68,8 +68,11 @@ class CouponAdminDetailView(BaseApiView):
             coupon = Coupon.objects.get(pk=pk)
         except Coupon.DoesNotExist:
             return Response({'detail': 'Coupon not found.'}, status=status.HTTP_404_NOT_FOUND)
-        coupon.is_active = False
-        coupon.save()
+        # 硬删除：优惠券的 is_active 字段同时承担「启用/停用」开关语义，
+        # 若此处做软删除（is_active=False）会与「停用」彻底混淆，且列表接口
+        # 返回全量券，导致删除后券仍以「已停用」残留列表、用户误以为「删不掉」。
+        # 真正的「停用」由更新接口的 is_active 开关处理，删除即移除记录。
+        coupon.delete()
         return Response({'message': 'Coupon deleted.'})
 
 
