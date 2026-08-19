@@ -25,13 +25,80 @@ PRICE_KEYS = ('price', 'amount', 'max_discount')
 INTERNAL_PATH_MARKERS = ('/ops', '/metrics', '/health')
 
 TAG_CN = {
-    'users': '用户权限', 'rbac': '用户权限', 'social': '用户权限',
+    'users': '用户权限', 'rbac': '用户权限', 'social': '用户权限', 'groups': '用户权限',
     'goods': '商品运营', 'category': '商品运营',
     'order': '交易履约', 'payment': '交易履约', 'cart': '交易履约', 'logistics': '交易履约',
     'promotion': '促销营销', 'coupon': '促销营销',
     'review': '运营辅助', 'notification': '运营辅助', 'tracking': '运营辅助', 'lovegoods': '运营辅助',
     'address': '用户权限', 'support': '客户服务', 'chat': '客户服务', 'customer_service': '客户服务',
 }
+
+# 资源中文名（用于生成接口中文摘要 summary）
+RES_CN = {
+    'address': '收货地址', 'cart': '购物车', 'goods': '商品', 'category': '类目',
+    'brand': '品牌', 'tag': '标签', 'sku': 'SKU', 'spu': '商品', 'order': '订单',
+    'payment': '支付', 'review': '评价', 'notification': '通知', 'promotion': '优惠券',
+    'coupon': '优惠券', 'activity': '活动', 'lovegoods': '收藏', 'tracking': '浏览历史',
+    'logistics': '物流', 'support': '客服会话', 'chat': '客服', 'conversation': '会话',
+    'message': '消息', 'users': '用户', 'social': '社交账号', 'session': '会话',
+    'rbac': '权限', 'matrix': '权限矩阵', 'role': '角色', 'application': '申请',
+    'audit_log': '审计日志', 'recycle': '回收站', 'media': '媒体资源', 'group': '管理组',
+    'task': '任务', 'staff': '运营人员', 'groups': '管理组', 'aftersale': '售后',
+    'import': '导入', 'export': '导出', 'upload': '上传', 'favorite': '收藏',
+    'coupons': '优惠券', 'track': '物流', 'download': '下载', 'about': '关于',
+    'reviewable': '可评价', 'my': '我的', 'admin': '管理后台',
+}
+
+# 路径动作词 → 中文动作（用于生成 summary）
+ACTION_CN = [
+    ('create', '创建'), ('update', '更新'), ('delete', '删除'), ('remove', '移除'),
+    ('audit', '审核'), ('shelf', '上下架'), ('batch', '批量'), ('checkout', '结算'),
+    ('claim', '领取'), ('detail', '详情'), ('list', '列表'), ('login', '登录'),
+    ('register', '注册'), ('refresh', '刷新'), ('logout', '登出'), ('cancel', '取消'),
+    ('confirm', '确认收货'), ('submit', '提交'), ('review', '审核/评价'), ('ship', '发货'),
+    ('refund', '退款'), ('restore', '恢复'), ('duplicate', '复制'), ('schedule', '定时上架'),
+    ('migrate', '迁移'), ('assign', '分配'), ('set', '设置'), ('toggle', '切换'),
+    ('read_all', '全部已读'), ('unread_count', '未读数'), ('mark', '标记'),
+    ('search', '搜索'), ('suggest', '搜索建议'), ('stats', '统计'), ('tree', '树'),
+    ('subtree', '子树'), ('pending', '待审核'), ('my', '我的'), ('sync', '同步'),
+    ('verify', '验证'), ('send', '发送'), ('providers', '第三方登录源'),
+]
+
+METHOD_VERB = {'get': '获取', 'post': '提交', 'put': '更新', 'patch': '更新', 'delete': '删除'}
+
+
+def derive_tag(path: str) -> str:
+    """按路径推导中文子系统分组（/api/v1/{app}/... → 中文子系统）。"""
+    segs = [s for s in path.split('/') if s and s != 'api' and s != 'v1']
+    app = segs[0] if segs else 'other'
+    if app == 'admin':  # /api/v1/admin/groups|users → 用户权限（管理后台）
+        app = segs[1] if len(segs) > 1 else 'admin'
+    return TAG_CN.get(app, '其他')
+
+
+def derive_summary(path: str, method: str, op: dict) -> str:
+    """生成接口中文摘要：优先 description 首行（中文且非基类 docstring）；否则由路径动作词+资源名推导。"""
+    desc = (op.get('description') or '').strip()
+    if desc:
+        first = desc.split('\n')[0].strip().strip('。.')
+        is_cn = any('\u4e00' <= c <= '\u9fff' for c in first)
+        if (first and is_cn and len(first) <= 36
+                and '基类' not in first and '基础视图' not in first and '兼容接口' not in first):
+            return first
+    segs = [s for s in path.split('/') if s and s != 'api' and s != 'v1']
+    app = segs[0] if segs else ''
+    if app == 'admin':
+        app = segs[1] if len(segs) > 1 else 'admin'
+    action = None
+    for kw, cn in ACTION_CN:
+        if kw in path.lower():
+            action = cn
+            break
+    verb = METHOD_VERB.get(method, '操作')
+    res = RES_CN.get(app, app)
+    if action:
+        return f'{action}{res}'
+    return f'{verb}{res}'
 
 
 def mask_value(field: str, value):
@@ -129,9 +196,20 @@ def main():
         elif 'Cookie' in desc:
             sch['description'] = desc + ' CSRF Token 由登录后 Cookie 自动携带，无需手动配置。'
 
-    for t in doc.get('tags') or []:
-        name = t.get('name', '')
-        t['description'] = f'{TAG_CN.get(name, name)}子系统（Ziggner）'
+    # 接口分组与中文摘要：tags 按路径重映射为中文子系统；每个接口生成中文 summary
+    used_tags = set()
+    for path, item in doc['paths'].items():
+        for method, op in (item or {}).items():
+            if not isinstance(op, dict):
+                continue
+            tag = derive_tag(path)
+            op['tags'] = [tag]
+            used_tags.add(tag)
+            # 中文接口名（Apifox/Postman 显示 summary）
+            if not op.get('summary'):
+                op['summary'] = derive_summary(path, method, op)
+    # 顶层 tags 列表用中文子系统名
+    doc['tags'] = [{'name': t, 'description': f'{t}子系统（Ziggner）'} for t in sorted(used_tags)]
 
     with open(out_path, 'w', encoding='utf-8') as f:
         yaml.safe_dump(doc, f, allow_unicode=True, sort_keys=False, width=120)

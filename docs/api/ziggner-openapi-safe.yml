@@ -33,7 +33,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -80,11 +80,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户所有收货地址。首个地址自动设为默认
     post:
       operationId: post_api_v1_address
       description: 获取当前用户所有收货地址。首个地址自动设为默认。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -143,6 +144,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户所有收货地址。首个地址自动设为默认
   /api/v1/address/{address_id}/:
     get:
       operationId: get_api_v1_address_address_id
@@ -154,7 +156,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -201,6 +203,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取、修改或删除指定地址
     patch:
       operationId: patch_api_v1_address_address_id
       description: 获取、修改或删除指定地址。
@@ -211,7 +214,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -269,6 +272,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取、修改或删除指定地址
     delete:
       operationId: delete_api_v1_address_address_id
       description: 获取、修改或删除指定地址。
@@ -279,7 +283,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -322,6 +326,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取、修改或删除指定地址
   /api/v1/address/{address_id}/default/:
     post:
       operationId: post_api_v1_address_address_id_default
@@ -333,7 +338,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -392,12 +397,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 将指定地址设为默认
   /api/v1/address/default/:
     get:
       operationId: get_api_v1_address_default
       description: 获取当前用户的默认地址。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -444,12 +450,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户的默认地址
   /api/v1/admin/groups/:
     get:
       operationId: get_api_v1_admin_groups
       description: 管理组列表：超管看全部；组长/组员仅可见自己所在的管理组（无权限者看不到）。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -492,6 +499,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取管理组
   /api/v1/admin/groups/{group_ref}/delete:
     delete:
       operationId: delete_api_v1_admin_groups_group_ref_delete
@@ -503,7 +511,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -546,6 +554,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除管理组
   /api/v1/admin/groups/{group_ref}/members:
     get:
       operationId: get_api_v1_admin_groups_group_ref_members
@@ -569,7 +578,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -612,6 +621,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取管理组
     post:
       operationId: post_api_v1_admin_groups_group_ref_members
       description: '用户端基础视图基类。
@@ -634,7 +644,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -691,6 +701,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交管理组
     delete:
       operationId: delete_api_v1_admin_groups_group_ref_members
       description: '用户端基础视图基类。
@@ -713,7 +724,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -756,6 +767,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除管理组
   /api/v1/admin/groups/{group_ref}/members/{user_ref}:
     get:
       operationId: get_api_v1_admin_groups_group_ref_members_user_ref
@@ -784,7 +796,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -827,6 +839,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取管理组
     post:
       operationId: post_api_v1_admin_groups_group_ref_members_user_ref
       description: '用户端基础视图基类。
@@ -854,7 +867,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -911,6 +924,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交管理组
     delete:
       operationId: delete_api_v1_admin_groups_group_ref_members_user_ref
       description: '用户端基础视图基类。
@@ -938,7 +952,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -981,6 +995,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除管理组
   /api/v1/admin/groups/{group_ref}/update:
     put:
       operationId: put_api_v1_admin_groups_group_ref_update
@@ -992,7 +1007,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -1049,6 +1064,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新管理组信息（name, slug, description）
   /api/v1/admin/groups/create/:
     post:
       operationId: post_api_v1_admin_groups_create
@@ -1066,7 +1082,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -1123,12 +1139,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建管理组
   /api/v1/admin/users/:
     get:
       operationId: get_api_v1_admin_users
       description: 按 account_no / role 检索用户。仅超管/运维可见，返回 account_no 不返回内部 id。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1171,6 +1188,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取用户
   /api/v1/admin/users/{account_no}/roles:
     put:
       operationId: put_api_v1_admin_users_account_no_roles
@@ -1182,7 +1200,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1225,6 +1243,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新用户
   /api/v1/admin/users/create/:
     post:
       operationId: post_api_v1_admin_users_create
@@ -1240,7 +1259,7 @@ paths:
 
         仅欢迎邮件验证链接端点可置 true。'
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1283,6 +1302,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 超管创建/开通管理员候选账号
   /api/v1/cart/:
     get:
       operationId: get_api_v1_cart
@@ -1301,7 +1321,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1348,12 +1368,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户购物车（含商品SKU详情和规格值）
   /api/v1/cart/clear/:
     delete:
       operationId: delete_api_v1_cart_clear
       description: 清空当前用户购物车所有商品。
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1396,12 +1417,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 清空当前用户购物车所有商品
   /api/v1/cart/items/:
     post:
       operationId: post_api_v1_cart_items
       description: 添加商品到购物车。同SKU已存在则累加数量。
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -1456,6 +1478,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 添加商品到购物车。同SKU已存在则累加数量
   /api/v1/cart/items/{item_id}/:
     patch:
       operationId: patch_api_v1_cart_items_item_id
@@ -1467,7 +1490,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -1521,6 +1544,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 修改购物车项数量。设为0则删除
   /api/v1/cart/items/{item_id}/remove/:
     delete:
       operationId: delete_api_v1_cart_items_item_id_remove
@@ -1532,7 +1556,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1575,12 +1599,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除购物车中的指定项
   /api/v1/cart/items/select/:
     post:
       operationId: post_api_v1_cart_items_select
       description: 批量勾选/取消勾选购物车项，用于结算。
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -1635,6 +1660,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 批量勾选/取消勾选购物车项，用于结算
   /api/v1/chat/agents/:
     get:
       operationId: get_api_v1_chat_agents
@@ -1653,7 +1679,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1700,6 +1726,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 返回当前用户所在管理组的客服列表（含分配中会话数）
   /api/v1/chat/conversations/:
     get:
       operationId: get_api_v1_chat_conversations
@@ -1718,7 +1745,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1765,11 +1792,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取客服
     post:
       operationId: post_api_v1_chat_conversations
       description: 创建新会话（可选附带首条消息，支持 product_card 类型）。自动绑定用户所属管理组。
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -1827,6 +1855,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交客服
   /api/v1/chat/conversations/{conv_id}/:
     get:
       operationId: get_api_v1_chat_conversations_conv_id
@@ -1838,7 +1867,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -1885,6 +1914,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取会话详情（含消息列表），Admin 仅能查看本组会话
     patch:
       operationId: patch_api_v1_chat_conversations_conv_id
       description: 更新会话状态 / 分配客服（仅 Admin，且目标客服需在同一管理组）
@@ -1895,7 +1925,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -1953,6 +1983,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新会话状态 / 分配客服（仅 Admin，且目标客服需在同一管理组）
   /api/v1/chat/conversations/{conv_id}/close/:
     post:
       operationId: post_api_v1_chat_conversations_conv_id_close
@@ -1964,7 +1995,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2007,6 +2038,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 关闭对话（用户本人或客服均可关闭）
   /api/v1/chat/conversations/{conv_id}/messages/:
     get:
       operationId: get_api_v1_chat_conversations_conv_id_messages
@@ -2030,7 +2062,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2077,6 +2109,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取客服
     post:
       operationId: post_api_v1_chat_conversations_conv_id_messages
       description: 发送消息。Admin 回复时自动分配为当前会话的客服。支持 product_card 类型（card_data 仅存 spu_id+order_id 引用）。
@@ -2087,7 +2120,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -2145,6 +2178,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交客服
   /api/v1/chat/conversations/{conv_id}/read/:
     post:
       operationId: post_api_v1_chat_conversations_conv_id_read
@@ -2158,7 +2192,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2201,6 +2235,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交客服
   /api/v1/chat/conversations/{conv_id}/release/:
     post:
       operationId: post_api_v1_chat_conversations_conv_id_release
@@ -2212,7 +2247,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2255,6 +2290,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 释放对话（管理员主动释放），允许其他管理员接听
   /api/v1/chat/product/{spu_id}/detail/:
     get:
       operationId: get_api_v1_chat_product_spu_id_detail
@@ -2266,7 +2302,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2313,6 +2349,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 详情客服
   /api/v1/chat/products/search/:
     get:
       operationId: get_api_v1_chat_products_search
@@ -2338,7 +2375,7 @@ paths:
           maxLength: 200
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2385,12 +2422,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 搜索客服
   /api/v1/chat/upload/:
     post:
       operationId: post_api_v1_chat_upload
       description: 上传客服消息附件（图片 JPG/PNG/GIF ≤10MB，视频 MP4 ≤50MB）
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -2447,12 +2485,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交客服
   /api/v1/goods/admin/admin-groups/:
     get:
       operationId: get_api_v1_goods_admin_admin_groups
       description: 管理组列表：超管看全部；组长/组员仅可见自己所在的管理组（无权限者看不到）。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2495,12 +2534,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/admin/spus/:
     get:
       operationId: get_api_v1_goods_admin_spus
       description: 管理端 SPU 分页列表（含状态筛选、分类筛选、品牌筛选、关键词搜索）
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2543,12 +2583,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端 SPU 分页列表（含状态筛选、分类筛选、品牌筛选、关键词搜索）
   /api/v1/goods/admin_group:
     get:
       operationId: get_api_v1_goods_admin_group
       description: 管理组列表：超管看全部；组长/组员仅可见自己所在的管理组（无权限者看不到）。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2591,6 +2632,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/admin_group/{group_ref}/delete:
     delete:
       operationId: delete_api_v1_goods_admin_group_group_ref_delete
@@ -2602,7 +2644,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2645,6 +2687,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/admin_group/{group_ref}/members:
     get:
       operationId: get_api_v1_goods_admin_group_group_ref_members
@@ -2668,7 +2711,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2711,6 +2754,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
     post:
       operationId: post_api_v1_goods_admin_group_group_ref_members
       description: '用户端基础视图基类。
@@ -2733,7 +2777,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -2790,6 +2834,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交商品
     delete:
       operationId: delete_api_v1_goods_admin_group_group_ref_members
       description: '用户端基础视图基类。
@@ -2812,7 +2857,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2855,6 +2900,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/admin_group/{group_ref}/members/{user_ref}:
     get:
       operationId: get_api_v1_goods_admin_group_group_ref_members_user_ref
@@ -2883,7 +2929,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -2926,6 +2972,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
     post:
       operationId: post_api_v1_goods_admin_group_group_ref_members_user_ref
       description: '用户端基础视图基类。
@@ -2953,7 +3000,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3010,6 +3057,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交商品
     delete:
       operationId: delete_api_v1_goods_admin_group_group_ref_members_user_ref
       description: '用户端基础视图基类。
@@ -3037,7 +3085,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3080,6 +3128,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/admin_group/{group_ref}/update:
     put:
       operationId: put_api_v1_goods_admin_group_group_ref_update
@@ -3091,7 +3140,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3148,6 +3197,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新管理组信息（name, slug, description）
   /api/v1/goods/admin_group/create:
     post:
       operationId: post_api_v1_goods_admin_group_create
@@ -3165,7 +3215,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3222,12 +3272,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建商品
   /api/v1/goods/application:
     post:
       operationId: post_api_v1_goods_application
       description: 提交申请单
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3284,6 +3335,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交申请单
   /api/v1/goods/application/{app_id}/review:
     post:
       operationId: post_api_v1_goods_application_app_id_review
@@ -3295,7 +3347,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3352,12 +3404,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审核申请单
   /api/v1/goods/application/my:
     get:
       operationId: get_api_v1_goods_application_my
       description: 我的申请列表
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3400,12 +3453,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 我的申请列表
   /api/v1/goods/application/pending:
     get:
       operationId: get_api_v1_goods_application_pending
       description: 待审核列表（超管）
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3448,12 +3502,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 待审核列表（超管）
   /api/v1/goods/audit_log:
     get:
       operationId: get_api_v1_goods_audit_log
       description: 综合审计日志列表 — 支持分页、筛选、搜索。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3496,6 +3551,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 综合审计日志列表 — 支持分页、筛选、搜索
   /api/v1/goods/audit_log/{spu_id}:
     get:
       operationId: get_api_v1_goods_audit_log_spu_id
@@ -3507,7 +3563,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3550,12 +3606,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: SPU 操作日志 — 分页查看特定 SPU 的操作记录
   /api/v1/goods/audit_log/stats:
     get:
       operationId: get_api_v1_goods_audit_log_stats
       description: 审计日志统计 — 按操作类型聚合计数。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3598,12 +3655,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审计日志统计 — 按操作类型聚合计数
   /api/v1/goods/brand:
     get:
       operationId: get_api_v1_goods_brand
       description: 获取全部启用品牌列表（缓存），公开访问。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3646,6 +3704,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取全部启用品牌列表（缓存），公开访问
   /api/v1/goods/brand/{brand_id}/delete:
     delete:
       operationId: delete_api_v1_goods_brand_brand_id_delete
@@ -3669,7 +3728,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3712,6 +3771,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/brand/{brand_id}/update:
     put:
       operationId: put_api_v1_goods_brand_brand_id_update
@@ -3735,7 +3795,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3792,6 +3852,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新商品
   /api/v1/goods/brand/create:
     post:
       operationId: post_api_v1_goods_brand_create
@@ -3809,7 +3870,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -3866,12 +3927,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建商品
   /api/v1/goods/brands/:
     get:
       operationId: get_api_v1_goods_brands
       description: 获取全部启用品牌列表（缓存），公开访问。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3914,12 +3976,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取全部启用品牌列表（缓存），公开访问
   /api/v1/goods/categories/:
     get:
       operationId: get_api_v1_goods_categories
       description: 获取三级分类树（缓存），公开访问。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -3962,6 +4025,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取三级分类树（缓存），公开访问
   /api/v1/goods/category/{category_id}/audit:
     post:
       operationId: post_api_v1_goods_category_category_id_audit
@@ -3973,7 +4037,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4030,6 +4094,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审核分类（仅超管）—— approve / reject
   /api/v1/goods/category/{category_id}/delete:
     delete:
       operationId: delete_api_v1_goods_category_category_id_delete
@@ -4041,7 +4106,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4084,6 +4149,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除分类（超管 or 组管理员）
   /api/v1/goods/category/{category_id}/update:
     put:
       operationId: put_api_v1_goods_category_category_id_update
@@ -4095,7 +4161,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4152,12 +4218,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新分类（超管 or 组管理员）
   /api/v1/goods/category/create:
     post:
       operationId: post_api_v1_goods_category_create
       description: 创建分类（超管 or 组管理员在管辖范围内创建子分类）
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4214,12 +4281,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建分类（超管 or 组管理员在管辖范围内创建子分类）
   /api/v1/goods/category/migrate:
     post:
       operationId: post_api_v1_goods_category_migrate
       description: 二级→三级批量迁移 SPU
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4276,12 +4344,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 二级→三级批量迁移 SPU
   /api/v1/goods/category/pending:
     get:
       operationId: get_api_v1_goods_category_pending
       description: 待审核分类列表（仅超管可见）
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4324,12 +4393,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 待审核分类列表（仅超管可见）
   /api/v1/goods/category/subtree:
     get:
       operationId: get_api_v1_goods_category_subtree
       description: 本组分类子树（嵌套树）。无权限者看不到对应类目：非超管仅返回其管理组类目及祖先链。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4372,12 +4442,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 树商品
   /api/v1/goods/category/tree:
     get:
       operationId: get_api_v1_goods_category_tree
       description: 获取三级分类树（缓存），公开访问。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4420,6 +4491,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取三级分类树（缓存），公开访问
   /api/v1/goods/hot:
     get:
       operationId: get_api_v1_goods_hot
@@ -4431,7 +4503,7 @@ paths:
           type: integer
         description: 分类筛选
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4474,6 +4546,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 热销商品排行（Redis有序集合），公开访问
   /api/v1/goods/media/{media_id}/delete:
     delete:
       operationId: delete_api_v1_goods_media_media_id_delete
@@ -4488,7 +4561,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4531,6 +4604,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/media/{media_id}/update:
     patch:
       operationId: patch_api_v1_goods_media_media_id_update
@@ -4542,7 +4616,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4600,12 +4674,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新媒体信息（alt_text / sort_order）
   /api/v1/goods/media/reorder:
     post:
       operationId: post_api_v1_goods_media_reorder
       description: 调整媒体排序
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4660,6 +4735,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 调整媒体排序
   /api/v1/goods/media/spu/{spu_id}:
     get:
       operationId: get_api_v1_goods_media_spu_spu_id
@@ -4671,7 +4747,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4718,6 +4794,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取 SPU 的媒体列表（含审核状态、alt_text）
   /api/v1/goods/media/spu/{spu_id}/upload:
     post:
       operationId: post_api_v1_goods_media_spu_spu_id_upload
@@ -4736,7 +4813,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4797,6 +4874,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 编辑模式：向已有 SPU 上传图片
   /api/v1/goods/notification:
     get:
       operationId: get_api_v1_goods_notification
@@ -4814,7 +4892,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -4857,6 +4935,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/notification/{notification_id}/read:
     post:
       operationId: post_api_v1_goods_notification_notification_id_read
@@ -4880,7 +4959,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -4937,6 +5016,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交商品
   /api/v1/goods/notification/read_all:
     post:
       operationId: post_api_v1_goods_notification_read_all
@@ -4954,7 +5034,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -5011,6 +5091,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 全部已读商品
   /api/v1/goods/notification/unread_count:
     get:
       operationId: get_api_v1_goods_notification_unread_count
@@ -5028,7 +5109,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5071,12 +5152,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 未读数商品
   /api/v1/goods/operation_log:
     get:
       operationId: get_api_v1_goods_operation_log
       description: 全局操作日志 — 分页查看所有 SPU 操作记录（跨商品）。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5119,6 +5201,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 全局操作日志 — 分页查看所有 SPU 操作记录（跨商品）
   /api/v1/goods/recycle:
     get:
       operationId: get_api_v1_goods_recycle
@@ -5136,7 +5219,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5179,6 +5262,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/recycle/{spu_id}/permanent:
     delete:
       operationId: delete_api_v1_goods_recycle_spu_id_permanent
@@ -5202,7 +5286,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5245,6 +5329,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除商品
   /api/v1/goods/recycle/{spu_id}/restore:
     post:
       operationId: post_api_v1_goods_recycle_spu_id_restore
@@ -5268,7 +5353,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5311,6 +5396,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 恢复商品
   /api/v1/goods/search:
     get:
       operationId: get_api_v1_goods_search
@@ -5364,7 +5450,7 @@ paths:
           type: string
         description: 排序：price_asc/price_desc/sales_desc/newest/relevance
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5407,6 +5493,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 全文检索+分面筛选（Elasticsearch），60次/分钟限流
   /api/v1/goods/search/suggest:
     get:
       operationId: get_api_v1_goods_search_suggest
@@ -5419,7 +5506,7 @@ paths:
         description: 搜索前缀，最少2字符
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5462,6 +5549,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 搜索自动补全建议，60次/分钟限流
   /api/v1/goods/sku/{sku_id}:
     get:
       operationId: get_api_v1_goods_sku_sku_id
@@ -5473,7 +5561,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5516,6 +5604,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取SKU详情（含规格值和价格）
   /api/v1/goods/sku/{sku_id}/delete:
     delete:
       operationId: delete_api_v1_goods_sku_sku_id_delete
@@ -5527,7 +5616,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5570,6 +5659,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除 SKU
   /api/v1/goods/sku/{sku_id}/update:
     put:
       operationId: put_api_v1_goods_sku_sku_id_update
@@ -5581,7 +5671,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -5638,12 +5728,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新 SKU — 自动记录价格变更历史
   /api/v1/goods/sku/admin:
     get:
       operationId: get_api_v1_goods_sku_admin
       description: 管理端 SKU 列表
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5686,6 +5777,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端 SKU 列表
   /api/v1/goods/sku/batch:
     post:
       operationId: post_api_v1_goods_sku_batch
@@ -5695,7 +5787,7 @@ paths:
 
         格式B (skus):  {spu_id, skus: [{spec_values, price, stock, discount_price, shelf_status}]}'
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -5752,6 +5844,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: '批量创建 SKU — 支持两种格式:'
   /api/v1/goods/sku/search:
     get:
       operationId: get_api_v1_goods_sku_search
@@ -5768,7 +5861,7 @@ paths:
           type: string
         description: sku_code 或商品名关键词
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5811,12 +5904,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 搜索商品
   /api/v1/goods/spu:
     get:
       operationId: get_api_v1_goods_spu
       description: 公开SPU列表（仅已上架商品），分页+筛选。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5859,6 +5953,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 公开SPU列表（仅已上架商品），分页+筛选
   /api/v1/goods/spu/{spu_id}:
     get:
       operationId: get_api_v1_goods_spu_spu_id
@@ -5875,7 +5970,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5918,6 +6013,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取SPU详情（含品牌、分类、规格、属性、SKU列表）。支持优惠券参数
   /api/v1/goods/spu/{spu_id}/admin:
     get:
       operationId: get_api_v1_goods_spu_spu_id_admin
@@ -5929,7 +6025,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -5976,6 +6072,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/spu/{spu_id}/audit:
     post:
       operationId: post_api_v1_goods_spu_spu_id_audit
@@ -5987,7 +6084,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6044,6 +6141,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审核 SPU（approve/reject），仅组长。审核通过后自动上架
   /api/v1/goods/spu/{spu_id}/delete:
     delete:
       operationId: delete_api_v1_goods_spu_spu_id_delete
@@ -6055,7 +6153,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6098,6 +6196,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 软删除 SPU
   /api/v1/goods/spu/{spu_id}/duplicate:
     post:
       operationId: post_api_v1_goods_spu_spu_id_duplicate
@@ -6109,7 +6208,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6152,6 +6251,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 复制商品
   /api/v1/goods/spu/{spu_id}/schedule:
     post:
       operationId: post_api_v1_goods_spu_spu_id_schedule
@@ -6163,7 +6263,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6220,6 +6320,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 设置定时上下架时间
   /api/v1/goods/spu/{spu_id}/shelf:
     post:
       operationId: post_api_v1_goods_spu_spu_id_shelf
@@ -6231,7 +6332,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6288,6 +6389,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 上下架 / 挂起 / 恢复
   /api/v1/goods/spu/{spu_id}/submit:
     post:
       operationId: post_api_v1_goods_spu_spu_id_submit
@@ -6299,7 +6401,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6356,6 +6458,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交审核（draft/rejected → submitted）
   /api/v1/goods/spu/{spu_id}/update:
     put:
       operationId: put_api_v1_goods_spu_spu_id_update
@@ -6367,7 +6470,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6421,12 +6524,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新 SPU 基本信息
   /api/v1/goods/spu/admin:
     get:
       operationId: get_api_v1_goods_spu_admin
       description: 管理端 SPU 分页列表（含状态筛选、分类筛选、品牌筛选、关键词搜索）
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6469,12 +6573,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端 SPU 分页列表（含状态筛选、分类筛选、品牌筛选、关键词搜索）
   /api/v1/goods/spu/batch:
     post:
       operationId: post_api_v1_goods_spu_batch
       description: 批量操作入口
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6531,6 +6636,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 批量操作入口
   /api/v1/goods/spu/batch/task/{task_id}:
     get:
       operationId: get_api_v1_goods_spu_batch_task_task_id
@@ -6542,7 +6648,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6585,12 +6691,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 查询批量操作进度
   /api/v1/goods/spu/create:
     post:
       operationId: post_api_v1_goods_spu_create
       description: 创建 SPU（draft）
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6645,12 +6752,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建 SPU（draft）
   /api/v1/goods/spu/export:
     post:
       operationId: post_api_v1_goods_spu_export
       description: CSV 导出商品
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6707,12 +6815,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: CSV 导出商品
   /api/v1/goods/spu/import:
     post:
       operationId: post_api_v1_goods_spu_import
       description: CSV 导入商品 — 上传 → 预览 → 确认导入
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6769,12 +6878,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: CSV 导入商品 — 上传 → 预览 → 确认导入
   /api/v1/goods/spu_tag:
     post:
       operationId: post_api_v1_goods_spu_tag
       description: 批量设置 SPU 标签（替换式）
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -6831,12 +6941,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 批量设置 SPU 标签（替换式）
   /api/v1/goods/spu_tag/remove:
     delete:
       operationId: delete_api_v1_goods_spu_tag_remove
       description: 批量移除 SPU 标签
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6879,12 +6990,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 批量移除 SPU 标签
   /api/v1/goods/staff/list:
     get:
       operationId: get_api_v1_goods_staff_list
       description: 管理员/员工列表（供申请表单下拉选择）
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6927,12 +7039,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理员/员工列表（供申请表单下拉选择）
   /api/v1/goods/stats:
     get:
       operationId: get_api_v1_goods_stats
       description: 本组运营统计
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -6975,12 +7088,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 本组运营统计
   /api/v1/goods/tag:
     get:
       operationId: get_api_v1_goods_tag
       description: 公开标签列表（仅生效的，Redis缓存）。
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7023,6 +7137,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 公开标签列表（仅生效的，Redis缓存）
   /api/v1/goods/tag/{tag_id}/delete:
     delete:
       operationId: delete_api_v1_goods_tag_tag_id_delete
@@ -7034,7 +7149,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7077,6 +7192,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除标签（仅超管可用）
   /api/v1/goods/tag/{tag_id}/update:
     put:
       operationId: put_api_v1_goods_tag_tag_id_update
@@ -7088,7 +7204,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -7146,12 +7262,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新标签名称/颜色/状态（仅超管可用）
   /api/v1/goods/tag/create:
     post:
       operationId: post_api_v1_goods_tag_create
       description: 创建标签（仅超管可用）
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -7210,6 +7327,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建标签（仅超管可用）
   /api/v1/goods/task:
     get:
       operationId: get_api_v1_goods_task
@@ -7227,7 +7345,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7270,6 +7388,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/task/{task_id}:
     get:
       operationId: get_api_v1_goods_task_task_id
@@ -7293,7 +7412,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 商品运营
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7336,12 +7455,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取商品
   /api/v1/goods/upload/image:
     post:
       operationId: post_api_v1_goods_upload_image
       description: 管理员图片上传。
       tags:
-      - v1
+      - 商品运营
       requestBody:
         content:
           application/json:
@@ -7398,6 +7518,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理员图片上传
   /api/v1/logistics/carriers/:
     get:
       operationId: get_api_v1_logistics_carriers
@@ -7416,7 +7537,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7463,12 +7584,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取激活的承运商列表（公开）
   /api/v1/logistics/cost/:
     post:
       operationId: post_api_v1_logistics_cost
       description: 计算运费（下单前调用）
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -7526,6 +7648,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 计算运费（下单前调用）
   /api/v1/logistics/my/:
     get:
       operationId: get_api_v1_logistics_my
@@ -7542,7 +7665,7 @@ paths:
           type: integer
           default: 20
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7585,6 +7708,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 当前用户的物流记录
   /api/v1/logistics/track/:
     get:
       operationId: get_api_v1_logistics_track
@@ -7597,7 +7721,7 @@ paths:
         description: 运单号
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7644,6 +7768,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 物流追踪（公开查询）
   /api/v1/lovegoods/:
     get:
       operationId: get_api_v1_lovegoods
@@ -7660,7 +7785,7 @@ paths:
           type: integer
           default: 20
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7707,6 +7832,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户收藏列表
   /api/v1/lovegoods/{spu_id}/:
     post:
       operationId: post_api_v1_lovegoods_spu_id
@@ -7718,7 +7844,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7761,6 +7887,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 切换收藏状态。已收藏则取消，未收藏则添加
   /api/v1/notification/:
     get:
       operationId: get_api_v1_notification
@@ -7792,7 +7919,7 @@ paths:
           type: string
         description: 1=只看未读
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7835,6 +7962,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取通知列表。可按未读和过期状态筛选
   /api/v1/notification/{notification_id}/read/:
     post:
       operationId: post_api_v1_notification_notification_id_read
@@ -7846,7 +7974,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7889,6 +8017,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 标记指定通知为已读
   /api/v1/notification/logs/:
     get:
       operationId: get_api_v1_notification_logs
@@ -7910,7 +8039,7 @@ paths:
           type: integer
           default: 20
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -7953,12 +8082,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 操作日志列表（运维核查 / 超管）
   /api/v1/notification/logs/categories/:
     get:
       operationId: get_api_v1_notification_logs_categories
       description: 获取操作日志分类列表
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8001,12 +8131,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取操作日志分类列表
   /api/v1/notification/read-all/:
     post:
       operationId: post_api_v1_notification_read_all
       description: 全部标记为已读。
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8049,12 +8180,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 全部标记为已读
   /api/v1/notification/unread_count/:
     get:
       operationId: get_api_v1_notification_unread_count
       description: 未读通知数（管理后台小铃铛角标轮询用）。
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8097,6 +8229,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 未读通知数（管理后台小铃铛角标轮询用）
   /api/v1/order/:
     get:
       operationId: get_api_v1_order
@@ -8123,7 +8256,7 @@ paths:
           type: string
         description: 订单状态
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8170,6 +8303,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 当前用户订单列表，可按状态和支付状态筛选
   /api/v1/order/{order_no}/:
     get:
       operationId: get_api_v1_order_order_no
@@ -8181,7 +8315,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8228,6 +8362,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 订单详情（含订单项和售后记录）
   /api/v1/order/{order_no}/aftersale/:
     post:
       operationId: post_api_v1_order_order_no_aftersale
@@ -8239,7 +8374,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8294,6 +8429,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 申请售后（退款或退货退款）
   /api/v1/order/{order_no}/aftersale/detail/:
     get:
       operationId: get_api_v1_order_order_no_aftersale_detail
@@ -8305,7 +8441,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8352,6 +8488,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 查看售后申请进度
   /api/v1/order/{order_no}/cancel/:
     post:
       operationId: post_api_v1_order_order_no_cancel
@@ -8363,7 +8500,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8417,6 +8554,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 取消订单。已付款订单自动恢复库存
   /api/v1/order/{order_no}/confirm/:
     post:
       operationId: post_api_v1_order_order_no_confirm
@@ -8428,7 +8566,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8471,6 +8609,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 确认收货（已发货 → 已签收）
   /api/v1/order/admin/{order_no}/:
     get:
       operationId: get_api_v1_order_admin_order_no
@@ -8482,7 +8621,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8529,6 +8668,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端订单详情
   /api/v1/order/admin/{order_no}/cancel/:
     post:
       operationId: post_api_v1_order_admin_order_no_cancel
@@ -8540,7 +8680,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8594,6 +8734,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端取消订单（pending_payment / paid）
   /api/v1/order/admin/{order_no}/ship/:
     post:
       operationId: post_api_v1_order_admin_order_no_ship
@@ -8605,7 +8746,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8660,6 +8801,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端发货：paid → shipped
   /api/v1/order/admin/aftersale/:
     get:
       operationId: get_api_v1_order_admin_aftersale
@@ -8690,7 +8832,7 @@ paths:
         schema:
           type: string
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8737,6 +8879,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端售后列表
   /api/v1/order/admin/aftersale/{after_sale_no}/review/:
     post:
       operationId: post_api_v1_order_admin_aftersale_after_sale_no_review
@@ -8748,7 +8891,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8807,6 +8950,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审核/评价订单
   /api/v1/order/admin/list/:
     get:
       operationId: get_api_v1_order_admin_list
@@ -8840,7 +8984,7 @@ paths:
         schema:
           type: string
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -8887,12 +9031,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端订单列表：支持状态/支付状态/关键字搜索
   /api/v1/order/checkout/:
     post:
       operationId: post_api_v1_order_checkout
       description: 从购物车结算，创建订单并扣减库存。
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -8951,12 +9096,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 从购物车结算，创建订单并扣减库存
   /api/v1/payment/create/:
     post:
       operationId: post_api_v1_payment_create
       description: 发起支付，返回支付页 URL 或客户端密钥。
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -9011,6 +9157,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 发起支付，返回支付页 URL 或客户端密钥
   /api/v1/payment/mock/{payment_no}/complete/:
     post:
       operationId: post_api_v1_payment_mock_payment_no_complete
@@ -9022,7 +9169,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -9077,12 +9224,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交支付
   /api/v1/payment/refund/:
     post:
       operationId: post_api_v1_payment_refund
       description: 申请退款。
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -9137,6 +9285,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 申请退款
   /api/v1/payment/refund/{order_no}/:
     get:
       operationId: get_api_v1_payment_refund_order_no
@@ -9166,7 +9315,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9213,6 +9362,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 查询订单的退款状态
   /api/v1/payment/refunds/:
     get:
       operationId: get_api_v1_payment_refunds
@@ -9229,7 +9379,7 @@ paths:
           type: integer
           default: 20
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9272,6 +9422,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 当前用户的退款列表
   /api/v1/payment/status/{order_no}/:
     get:
       operationId: get_api_v1_payment_status_order_no
@@ -9283,7 +9434,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9330,6 +9481,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 查询订单支付状态
   /api/v1/payment/webhook/{gateway}/:
     post:
       operationId: post_api_v1_payment_webhook_gateway
@@ -9341,7 +9493,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 交易履约
       requestBody:
         content:
           application/json:
@@ -9398,6 +9550,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交支付
   /api/v1/promotion/:
     get:
       operationId: get_api_v1_promotion
@@ -9416,7 +9569,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9463,6 +9616,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 可领取的优惠券列表，公开访问
   /api/v1/promotion/{code}/:
     get:
       operationId: get_api_v1_promotion_code
@@ -9474,7 +9628,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9521,6 +9675,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 公开优惠券分享详情，游客可查看
   /api/v1/promotion/{code}/claim/:
     post:
       operationId: post_api_v1_promotion_code_claim
@@ -9532,7 +9687,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9575,6 +9730,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 通过券码领取优惠券
   /api/v1/promotion/activity:
     get:
       operationId: get_api_v1_promotion_activity
@@ -9593,7 +9749,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9640,11 +9796,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取优惠券
     post:
       operationId: post_api_v1_promotion_activity
       description: Admin activity list + create.
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -9703,6 +9860,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/activity/:
     get:
       operationId: get_api_v1_promotion_activity_trailing_slash
@@ -9721,7 +9879,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -9768,6 +9926,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 折扣活动列表（公开）
   /api/v1/promotion/activity/{id}/delete:
     put:
       operationId: put_api_v1_promotion_activity_id_delete
@@ -9779,7 +9938,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -9838,6 +9997,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除优惠券
     delete:
       operationId: delete_api_v1_promotion_activity_id_delete
       description: Admin activity update + delete.
@@ -9848,7 +10008,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -9891,6 +10051,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除优惠券
   /api/v1/promotion/activity/{id}/skus:
     post:
       operationId: post_api_v1_promotion_activity_id_skus
@@ -9902,7 +10063,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -9959,6 +10120,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/activity/{id}/update:
     put:
       operationId: put_api_v1_promotion_activity_id_update
@@ -9970,7 +10132,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10029,6 +10191,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新优惠券
     delete:
       operationId: delete_api_v1_promotion_activity_id_update
       description: Admin activity update + delete.
@@ -10039,7 +10202,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -10082,6 +10245,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新优惠券
   /api/v1/promotion/activity/create:
     get:
       operationId: get_api_v1_promotion_activity_create
@@ -10100,7 +10264,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -10147,11 +10311,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建优惠券
     post:
       operationId: post_api_v1_promotion_activity_create
       description: Admin activity list + create.
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10210,6 +10375,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建优惠券
   /api/v1/promotion/application/:
     post:
       operationId: post_api_v1_promotion_application
@@ -10227,7 +10393,7 @@ paths:
 
         所有 Admin 视图应使用 AdminApiView 或显式设置 IsAdminUser 类权限。'
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10286,6 +10452,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/application/{application_id}/:
     patch:
       operationId: patch_api_v1_promotion_application_application_id
@@ -10309,7 +10476,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10367,6 +10534,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新优惠券
   /api/v1/promotion/application/{application_id}/review/:
     post:
       operationId: post_api_v1_promotion_application_application_id_review
@@ -10390,7 +10558,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10449,6 +10617,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 审核/评价优惠券
   /api/v1/promotion/application/{application_id}/submit/:
     post:
       operationId: post_api_v1_promotion_application_application_id_submit
@@ -10472,7 +10641,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -10519,6 +10688,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/application/my/:
     get:
       operationId: get_api_v1_promotion_application_my
@@ -10549,7 +10719,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -10596,6 +10766,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 我的优惠券
   /api/v1/promotion/application/pending/:
     get:
       operationId: get_api_v1_promotion_application_pending
@@ -10626,7 +10797,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -10673,6 +10844,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 待审核优惠券
   /api/v1/promotion/coupon:
     get:
       operationId: get_api_v1_promotion_coupon
@@ -10691,7 +10863,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -10738,11 +10910,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取优惠券
     post:
       operationId: post_api_v1_promotion_coupon
       description: Admin coupon list + create.
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10801,6 +10974,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/coupon/{id}/delete:
     put:
       operationId: put_api_v1_promotion_coupon_id_delete
@@ -10812,7 +10986,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -10871,6 +11045,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除优惠券
     delete:
       operationId: delete_api_v1_promotion_coupon_id_delete
       description: Admin coupon update + delete.
@@ -10881,7 +11056,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -10924,6 +11099,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除优惠券
   /api/v1/promotion/coupon/{id}/promo-codes:
     get:
       operationId: get_api_v1_promotion_coupon_id_promo_codes
@@ -10947,7 +11123,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -10994,6 +11170,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端：某基础券下的推广码列表 / 批量创建
     post:
       operationId: post_api_v1_promotion_coupon_id_promo_codes
       description: 管理端：某基础券下的推广码列表 / 批量创建。
@@ -11016,7 +11193,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11074,6 +11251,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端：某基础券下的推广码列表 / 批量创建
   /api/v1/promotion/coupon/{id}/promo-dashboard:
     get:
       operationId: get_api_v1_promotion_coupon_id_promo_dashboard
@@ -11097,7 +11275,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -11144,6 +11322,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端：专属券引流看板（领取/独立用户/付款订单/GMV）
   /api/v1/promotion/coupon/{id}/scope:
     post:
       operationId: post_api_v1_promotion_coupon_id_scope
@@ -11155,7 +11334,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11212,6 +11391,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交优惠券
   /api/v1/promotion/coupon/{id}/update:
     put:
       operationId: put_api_v1_promotion_coupon_id_update
@@ -11223,7 +11403,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11282,6 +11462,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新优惠券
     delete:
       operationId: delete_api_v1_promotion_coupon_id_update
       description: Admin coupon update + delete.
@@ -11292,7 +11473,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -11335,6 +11516,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新优惠券
   /api/v1/promotion/coupon/create:
     get:
       operationId: get_api_v1_promotion_coupon_create
@@ -11353,7 +11535,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -11400,11 +11582,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建优惠券
     post:
       operationId: post_api_v1_promotion_coupon_create
       description: Admin coupon list + create.
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11463,6 +11646,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建优惠券
   /api/v1/promotion/coupon/promo/{id}/:
     patch:
       operationId: patch_api_v1_promotion_coupon_promo_id
@@ -11474,7 +11658,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11532,6 +11716,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端：单个推广码的启用/停用、改名改备注、删除
     delete:
       operationId: delete_api_v1_promotion_coupon_promo_id
       description: 管理端：单个推广码的启用/停用、改名改备注、删除。
@@ -11542,7 +11727,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - CookieJWT: []
       - BearerAuth: []
@@ -11585,12 +11770,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理端：单个推广码的启用/停用、改名改备注、删除
   /api/v1/promotion/generate/:
     post:
       operationId: post_api_v1_promotion_generate
       description: 生成优惠券并返回折扣信息（仅管理员可用）。
       tags:
-      - v1
+      - 促销营销
       requestBody:
         content:
           application/json:
@@ -11645,6 +11831,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 生成优惠券并返回折扣信息（仅管理员可用）
   /api/v1/promotion/my/:
     get:
       operationId: get_api_v1_promotion_my
@@ -11663,7 +11850,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -11710,6 +11897,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 当前用户已领取的优惠券
   /api/v1/promotion/promo/{code}/:
     get:
       operationId: get_api_v1_promotion_promo_code
@@ -11721,7 +11909,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -11764,6 +11952,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 公开：按推广码解析其指向的优惠券详情 + 推广码元信息（分享页用）
   /api/v1/promotion/promo/{code}/claim/:
     post:
       operationId: post_api_v1_promotion_promo_code_claim
@@ -11775,7 +11964,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 促销营销
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -11818,12 +12007,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 凭专属推广码领取优惠券（不同推广码指向同一张基础券）
   /api/v1/rbac/matrix:
     get:
       operationId: get_api_v1_rbac_matrix
       description: 角色 × 权限点矩阵。运维只读，超管可改。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -11871,11 +12061,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 角色 × 权限点矩阵。运维只读，超管可改
     put:
       operationId: put_api_v1_rbac_matrix
       description: 角色 × 权限点矩阵。运维只读，超管可改。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -11935,6 +12126,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 角色 × 权限点矩阵。运维只读，超管可改
   /api/v1/rbac/users:
     get:
       operationId: get_api_v1_rbac_users
@@ -11961,7 +12153,7 @@ paths:
           type: integer
         description: 每页数量，最大 100。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12009,6 +12201,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 用户及其角色。运维核查入口
   /api/v1/rbac/users/{user_id}/roles:
     put:
       operationId: put_api_v1_rbac_users_user_id_roles
@@ -12020,7 +12213,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -12080,6 +12273,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 调整某用户的可指派角色。派生角色不在此处维护
   /api/v1/review/:
     get:
       operationId: get_api_v1_review
@@ -12102,7 +12296,7 @@ paths:
         description: SPU ID
         required: true
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12145,6 +12339,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: SPU 评价查询（公开）
   /api/v1/review/{review_id}/:
     patch:
       operationId: patch_api_v1_review_review_id
@@ -12156,7 +12351,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 运营辅助
       requestBody:
         content:
           application/json:
@@ -12214,6 +12409,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 修改评价（仅一次）
   /api/v1/review/{review_id}/delete/:
     delete:
       operationId: delete_api_v1_review_review_id_delete
@@ -12225,7 +12421,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12268,6 +12464,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 删除评价（软删除，仅作者可删）
   /api/v1/review/{review_id}/reply/:
     post:
       operationId: post_api_v1_review_review_id_reply
@@ -12279,7 +12476,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 运营辅助
       requestBody:
         content:
           application/json:
@@ -12338,12 +12535,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 回复评价（商家或用户）
   /api/v1/review/create/:
     post:
       operationId: post_api_v1_review_create
       description: 创建评价（需登录）
       tags:
-      - v1
+      - 运营辅助
       requestBody:
         content:
           application/json:
@@ -12402,6 +12600,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 创建评价（需登录）
   /api/v1/review/my/:
     get:
       operationId: get_api_v1_review_my
@@ -12418,7 +12617,7 @@ paths:
           type: integer
           default: 20
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12461,6 +12660,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 当前用户的评价列表
   /api/v1/review/reviewable/:
     get:
       operationId: get_api_v1_review_reviewable
@@ -12473,7 +12673,7 @@ paths:
         description: SPU ID
         required: true
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12516,6 +12716,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取用户可评价的订单项（已签收/已完成且未评价）
   /api/v1/support/:
     get:
       operationId: get_api_v1_support
@@ -12534,7 +12735,7 @@ paths:
         schema:
           type: integer
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12581,11 +12782,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户的对话列表，或创建新对话
     post:
       operationId: post_api_v1_support
       description: 获取当前用户的对话列表，或创建新对话
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -12643,6 +12845,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户的对话列表，或创建新对话
   /api/v1/support/{conv_id}/:
     get:
       operationId: get_api_v1_support_conv_id
@@ -12654,7 +12857,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12701,6 +12904,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取对话详情（含消息列表），或发送新消息
     post:
       operationId: post_api_v1_support_conv_id
       description: 获取对话详情（含消息列表），或发送新消息
@@ -12711,7 +12915,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -12769,6 +12973,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取对话详情（含消息列表），或发送新消息
   /api/v1/support/{conv_id}/close/:
     post:
       operationId: post_api_v1_support_conv_id_close
@@ -12780,7 +12985,7 @@ paths:
           type: integer
         required: true
       tags:
-      - v1
+      - 客户服务
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12823,12 +13028,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 关闭对话
   /api/v1/support/upload/:
     post:
       operationId: post_api_v1_support_upload
       description: 上传附件（图片/视频）
       tags:
-      - v1
+      - 客户服务
       requestBody:
         content:
           application/json:
@@ -12885,12 +13091,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 上传附件（图片/视频）
   /api/v1/tracking/history/:
     get:
       operationId: get_api_v1_tracking_history
       description: 分页获取当前用户的浏览历史（含商品信息）。
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -12933,11 +13140,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 分页获取当前用户的浏览历史（含商品信息）
     post:
       operationId: post_api_v1_tracking_history
       description: 记录/更新一次商品浏览（upsert：重复浏览同一商品只更新时间）。
       tags:
-      - v1
+      - 运营辅助
       requestBody:
         content:
           application/json:
@@ -12992,11 +13200,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 记录/更新一次商品浏览（upsert：重复浏览同一商品只更新时间）
     delete:
       operationId: delete_api_v1_tracking_history
       description: 清空当前用户全部浏览历史。
       tags:
-      - v1
+      - 运营辅助
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13039,12 +13248,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 清空当前用户全部浏览历史
   /api/v1/users/deactivate/:
     post:
       operationId: post_api_v1_users_deactivate
       description: 注销当前账号（软删除）。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13087,6 +13297,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 注销当前账号（软删除）
   /api/v1/users/email/admin-verify/:
     post:
       operationId: post_api_v1_users_email_admin_verify
@@ -13101,7 +13312,7 @@ paths:
 
         令牌无效/过期 → 400 {detail, code:''TOKEN_INVALID''}。'
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13144,12 +13355,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 公开邮箱验证端点（无需登录）
   /api/v1/users/email/send/:
     post:
       operationId: post_api_v1_users_email_send
       description: 发送邮箱验证码（需图片验证码）。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13200,12 +13412,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 发送邮箱验证码（需图片验证码）
   /api/v1/users/email/templates/:
     get:
       operationId: get_api_v1_users_email_templates
       description: 邮件模板列表
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13248,6 +13461,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 邮件模板列表
   /api/v1/users/email/templates/{template_type}/:
     post:
       operationId: post_api_v1_users_email_templates_template_type
@@ -13259,7 +13473,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13302,6 +13516,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 更新邮件模板（不存在则创建）
   /api/v1/users/email/templates/{template_type}/reset/:
     post:
       operationId: post_api_v1_users_email_templates_template_type_reset
@@ -13313,7 +13528,7 @@ paths:
           type: string
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13356,12 +13571,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 恢复默认模板（删除数据库记录，回退内置默认）
   /api/v1/users/email/verify/:
     post:
       operationId: post_api_v1_users_email_verify
       description: 校验邮箱验证码，返回临时令牌。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13412,12 +13628,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 校验邮箱验证码，返回临时令牌
   /api/v1/users/email/verify/check/:
     post:
       operationId: post_api_v1_users_email_verify_check
       description: POST /api/users/email/verify/check/ — 校验邮箱验证码
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13456,12 +13673,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 验证用户
   /api/v1/users/email/verify/send/:
     post:
       operationId: post_api_v1_users_email_verify_send
       description: POST /api/users/email/verify/send/ — 发送邮箱验证码
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13496,12 +13714,13 @@ paths:
               schema:
                 type: integer
                 minimum: 1
+      summary: 验证用户
   /api/v1/users/login/:
     post:
       operationId: post_api_v1_users_login
       description: 管理员登录（邮箱验证码）。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13536,12 +13755,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 管理员登录（邮箱验证码）
   /api/v1/users/login/code/send/:
     post:
       operationId: post_api_v1_users_login_code_send
       description: 发送管理员登录邮箱验证码。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13576,12 +13796,13 @@ paths:
               schema:
                 type: integer
                 minimum: 1
+      summary: 发送管理员登录邮箱验证码
   /api/v1/users/logout/:
     post:
       operationId: post_api_v1_users_logout
       description: 登出，将refresh token加入黑名单。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13636,12 +13857,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 登出，将refresh token加入黑名单
   /api/v1/users/me/:
     get:
       operationId: get_api_v1_users_me
       description: GET /api/users/me/ —— 返回当前用户的基本信息（用于 Admin 认证）
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13689,11 +13911,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取用户
     patch:
       operationId: patch_api_v1_users_me
       description: PATCH /api/users/me/ —— 更新昵称等基本信息
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13752,12 +13975,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: PATCH /api/users/me/ —— 更新昵称等基本信息
   /api/v1/users/password/:
     post:
       operationId: post_api_v1_users_password
       description: 修改密码 —— 校验旧密码后设置新密码
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13808,12 +14032,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 修改密码 —— 校验旧密码后设置新密码
   /api/v1/users/profile/:
     get:
       operationId: get_api_v1_users_profile
       description: 获取或更新当前用户扩展信息。
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -13860,11 +14085,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取或更新当前用户扩展信息
     patch:
       operationId: patch_api_v1_users_profile
       description: 获取或更新当前用户扩展信息。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13922,6 +14148,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取或更新当前用户扩展信息
   /api/v1/users/refresh/:
     post:
       operationId: post_api_v1_users_refresh
@@ -13929,7 +14156,7 @@ paths:
 
         token if the refresh token is valid.'
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -13986,12 +14213,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+      summary: 刷新用户
   /api/v1/users/register/:
     post:
       operationId: post_api_v1_users_register
       description: 用户注册（邮箱验证）。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14052,11 +14280,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 用户注册（邮箱验证）
   /api/v1/users/session/csrf/:
     get:
       operationId: get_api_v1_users_session_csrf
       tags:
-      - v1
+      - 用户权限
       security: []
       responses:
         '204':
@@ -14097,6 +14326,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取用户
   /api/v1/users/session/login/:
     post:
       operationId: post_api_v1_users_session_login
@@ -14108,7 +14338,7 @@ paths:
         description: 先获取 csrftoken Cookie，再将其值写入此请求头。
         required: true
       tags:
-      - v1
+      - 用户权限
       requestBody:
         required: true
         content:
@@ -14156,6 +14386,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       description: 浏览器会话登录。令牌仅写入 HttpOnly Cookie，不会出现在响应 JSON 中。
+      summary: 登录用户
   /api/v1/users/session/logout/:
     post:
       operationId: post_api_v1_users_session_logout
@@ -14167,7 +14398,7 @@ paths:
         description: 先获取 csrftoken Cookie，再将其值写入此请求头。
         required: true
       tags:
-      - v1
+      - 用户权限
       security:
       - CookieJWT: []
       responses:
@@ -14209,6 +14440,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 登出用户
   /api/v1/users/session/refresh/:
     post:
       operationId: post_api_v1_users_session_refresh
@@ -14220,7 +14452,7 @@ paths:
         description: 先获取 csrftoken Cookie，再将其值写入此请求头。
         required: true
       tags:
-      - v1
+      - 用户权限
       security: []
       responses:
         '200':
@@ -14261,12 +14493,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 刷新用户
   /api/v1/users/social/accounts/:
     get:
       operationId: get_api_v1_users_social_accounts
       description: 获取当前用户已绑定的社交账号列表
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -14309,12 +14542,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 获取当前用户已绑定的社交账号列表
   /api/v1/users/social/login/:
     post:
       operationId: post_api_v1_users_social_login
       description: 第三方登录 — 验证access_token后返回JWT
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14371,12 +14605,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 第三方登录 — 验证access_token后返回JWT
   /api/v1/users/social/providers/:
     get:
       operationId: get_api_v1_users_social_providers
       description: 返回已配置的社交登录提供商列表
       tags:
-      - v1
+      - 用户权限
       security:
       - BearerAuth: []
       - CookieJWT: []
@@ -14419,12 +14654,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 返回已配置的社交登录提供商列表
   /api/v1/users/social/set-password/:
     post:
       operationId: post_api_v1_users_social_set_password
       description: 首次登录设置密码（仅允许 password 为空的用户）
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14481,12 +14717,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 首次登录设置密码（仅允许 password 为空的用户）
   /api/v1/users/social/unlink/:
     post:
       operationId: post_api_v1_users_social_unlink
       description: 解绑社交账号
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14543,12 +14780,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 解绑社交账号
   /api/v1/users/token/:
     post:
       operationId: post_api_v1_users_token
       description: bearer token 端点（/api/users/token/）使用 stamp 感知签发。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14601,6 +14839,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+      summary: 提交用户
   /api/v1/users/token/refresh/:
     post:
       operationId: post_api_v1_users_token_refresh
@@ -14608,7 +14847,7 @@ paths:
 
         token if the refresh token is valid.'
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14665,12 +14904,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
       security: []
+      summary: 刷新用户
   /api/v1/users/upload-avatar/:
     post:
       operationId: post_api_v1_users_upload_avatar
       description: POST /api/users/upload-avatar/ —— 上传用户头像
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14725,12 +14965,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 提交用户
   /api/v1/users/username/:
     patch:
       operationId: patch_api_v1_users_username
       description: 修改用户名（带30天冷却期）。
       tags:
-      - v1
+      - 用户权限
       requestBody:
         content:
           application/json:
@@ -14782,6 +15023,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+      summary: 修改用户名（带30天冷却期）
 components:
   schemas:
     Activity:
@@ -18674,3 +18916,16 @@ components:
 servers:
 - url: '{{base_url}}'
   description: 由导入方配置（本地/开发/预发布），禁止使用生产域名直连
+tags:
+- name: 交易履约
+  description: 交易履约子系统（Ziggner）
+- name: 促销营销
+  description: 促销营销子系统（Ziggner）
+- name: 商品运营
+  description: 商品运营子系统（Ziggner）
+- name: 客户服务
+  description: 客户服务子系统（Ziggner）
+- name: 用户权限
+  description: 用户权限子系统（Ziggner）
+- name: 运营辅助
+  description: 运营辅助子系统（Ziggner）
