@@ -284,6 +284,10 @@ export default function AdminGroups() {
   const [adminCountryCode, setAdminCountryCode] = useState('');
   const [adminRole, setAdminRole] = useState<'ops' | 'superadmin' | 'admin_leader' | 'admin_member'>('ops');
   const [adminIsActive, setAdminIsActive] = useState(true);
+  const [adminNote, setAdminNote] = useState('');
+  const [adminGroupSlug, setAdminGroupSlug] = useState('');
+  const [adminGroupRole, setAdminGroupRole] = useState<'leader' | 'member'>('member');
+  const [adminGroups, setAdminGroups] = useState<{ slug: string; name: string }[]>([]);
   const [adminErrors, setAdminErrors] = useState<{ username?: string; password?: string; email?: string; first_name?: string; last_name?: string }>({});
   const [creatingAdmin, setCreatingAdmin] = useState(false);
   const [createdAccountNo, setCreatedAccountNo] = useState<string | null>(null);
@@ -323,6 +327,10 @@ export default function AdminGroups() {
   useEffect(() => {
     fetchGroups();
   }, [fetchGroups]);
+
+  useEffect(() => {
+    adminAPI.getAdminGroups().then((g) => setAdminGroups(g || [])).catch(() => setAdminGroups([]));
+  }, []);
 
   const showMsg = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
@@ -387,6 +395,9 @@ export default function AdminGroups() {
       setAdminCountryCode('');
       setAdminRole('ops');
       setAdminIsActive(true);
+      setAdminNote('');
+      setAdminGroupSlug('');
+      setAdminGroupRole('member');
       setAdminErrors({});
       return;
     }
@@ -417,6 +428,9 @@ export default function AdminGroups() {
         phone: adminPhone.trim() || undefined,
         country_code: adminCountryCode || undefined,
         is_active: adminIsActive,
+        note: adminNote.trim() || undefined,
+        group_slug: adminGroupSlug || undefined,
+        group_role: adminGroupSlug ? adminGroupRole : undefined,
       });
       setCreatedAccountNo(res.account_no || (res.id != null ? String(res.id) : ''));
       showMsg('success', t('admin.groups.createAdminSuccess'));
@@ -849,6 +863,39 @@ export default function AdminGroups() {
                 <ToggleLabel>{t('admin.groups.adminIsActive')}</ToggleLabel>
               </ToggleRow>
               <Hint>{t('admin.groups.adminIsActiveHint')}</Hint>
+            </FormGroup>
+            <FormGroup>
+              <Label>{t('admin.groups.adminGroup')}</Label>
+              <Select
+                value={adminGroupSlug}
+                onChange={(e) => setAdminGroupSlug(e.target.value)}
+              >
+                <option value="">{t('admin.groups.adminGroupNone')}</option>
+                {adminGroups.map((g) => (
+                  <option key={g.slug} value={g.slug}>{g.name}</option>
+                ))}
+              </Select>
+              <Hint>{t('admin.groups.adminGroupHint')}</Hint>
+            </FormGroup>
+            {adminGroupSlug && (
+              <FormGroup>
+                <Label>{t('admin.groups.adminGroupRole')}</Label>
+                <Select
+                  value={adminGroupRole}
+                  onChange={(e) => setAdminGroupRole(e.target.value as 'leader' | 'member')}
+                >
+                  <option value="member">{t('admin.groups.adminGroupRoleMember')}</option>
+                  <option value="leader">{t('admin.groups.adminGroupRoleLeader')}</option>
+                </Select>
+              </FormGroup>
+            )}
+            <FormGroup>
+              <Label>{t('admin.groups.adminNote')}</Label>
+              <Input
+                value={adminNote}
+                onChange={(e) => setAdminNote(e.target.value)}
+                placeholder={t('admin.groups.adminNotePlaceholder')}
+              />
             </FormGroup>
           </>
         )}

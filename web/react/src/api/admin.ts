@@ -470,6 +470,8 @@ export const adminAPI = {
     is_active?: boolean;
     note?: string;
     locale?: string;
+    group_slug?: string;
+    group_role?: 'leader' | 'member';
   }) =>
     post<{ account_no?: string; id?: number; username: string; email?: string; first_name?: string; last_name?: string; is_active: boolean; roles?: string[] }>('/admin/users/create/', data),
 

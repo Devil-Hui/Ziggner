@@ -281,6 +281,9 @@ export default function AdminRbac() {
     country_code: '',
     phone: '',
     is_active: true,
+    group_slug: '',
+    group_role: 'member' as 'leader' | 'member',
+    note: '',
   })
   const [createErrors, setCreateErrors] = useState<{
     username?: string
@@ -292,6 +295,8 @@ export default function AdminRbac() {
   }>({})
   const [creating, setCreating] = useState(false)
   const [createdAccountNo, setCreatedAccountNo] = useState<string | null>(null)
+  /** 可选：初始管理组绑定（建号+授权一步到位） */
+  const [adminGroups, setAdminGroups] = useState<{ slug: string; name: string }[]>([])
 
   /** 创建表单初始值（用于"再创建一个"重置） */
   const emptyCreateForm = () => ({
@@ -305,7 +310,14 @@ export default function AdminRbac() {
     country_code: '',
     phone: '',
     is_active: true,
+    group_slug: '',
+    group_role: 'member' as 'leader' | 'member',
+    note: '',
   })
+
+  useEffect(() => {
+    adminAPI.getAdminGroups().then((g) => setAdminGroups(g || [])).catch(() => setAdminGroups([]))
+  }, [])
 
   const showMsg = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg })
@@ -459,6 +471,9 @@ export default function AdminRbac() {
         country_code: createForm.country_code || undefined,
         phone: createForm.phone.trim() || undefined,
         is_active: createForm.is_active,
+        note: createForm.note.trim() || undefined,
+        group_slug: createForm.group_slug || undefined,
+        group_role: createForm.group_slug ? createForm.group_role : undefined,
       })
       setCreatedAccountNo(res.account_no ?? null)
       setCreateForm(emptyCreateForm())
@@ -790,6 +805,39 @@ export default function AdminRbac() {
                   <ToggleLabel>{t('admin.rbac.createAdminIsActive')}</ToggleLabel>
                 </ToggleRow>
                 <Hint>{t('admin.rbac.createAdminIsActiveHint')}</Hint>
+              </FormGroup>
+              <FormGroup>
+                <Label>{t('admin.rbac.createAdminGroup')}</Label>
+                <Select
+                  value={createForm.group_slug}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, group_slug: e.target.value }))}
+                >
+                  <option value="">{t('admin.rbac.createAdminGroupNone')}</option>
+                  {adminGroups.map((g) => (
+                    <option key={g.slug} value={g.slug}>{g.name}</option>
+                  ))}
+                </Select>
+                <Hint>{t('admin.rbac.createAdminGroupHint')}</Hint>
+              </FormGroup>
+              {createForm.group_slug && (
+                <FormGroup>
+                  <Label>{t('admin.rbac.createAdminGroupRole')}</Label>
+                  <Select
+                    value={createForm.group_role}
+                    onChange={(e) => setCreateForm((p) => ({ ...p, group_role: e.target.value as 'leader' | 'member' }))}
+                  >
+                    <option value="member">{t('admin.rbac.createAdminGroupRoleMember')}</option>
+                    <option value="leader">{t('admin.rbac.createAdminGroupRoleLeader')}</option>
+                  </Select>
+                </FormGroup>
+              )}
+              <FormGroup>
+                <Label>{t('admin.rbac.createAdminNote')}</Label>
+                <SearchInput
+                  value={createForm.note}
+                  onChange={(e) => setCreateForm((p) => ({ ...p, note: e.target.value }))}
+                  placeholder={t('admin.rbac.createAdminNotePlaceholder')}
+                />
               </FormGroup>
             </>
           )}

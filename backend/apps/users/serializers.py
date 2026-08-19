@@ -187,6 +187,17 @@ class AdminCreateSerializer(serializers.Serializer):
         allow_blank=True,
         help_text='Note (optional, stored only).',
     )
+    group_slug = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=100,
+        help_text='Optional: bind the new admin into an admin group on creation (slug).',
+    )
+    group_role = serializers.ChoiceField(
+        required=False,
+        choices=[('leader', '组内组长'), ('member', '组内组员')],
+        help_text='Role within the admin group (required when group_slug is set).',
+    )
     locale = serializers.CharField(
         required=False,
         allow_blank=True,

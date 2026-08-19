@@ -143,6 +143,30 @@ class AdminUserCreateView(BaseApiView):
             if update_fields:
                 user.save(update_fields=update_fields)
 
+        # 可选：初始管理组绑定（建号+授权一步到位）。
+        # 仅超管可执行本端点；组绑定走与 Add Member 相同的 AdminGroupMember 模型，
+        # 由 goods 信号自动派生 admin_leader / admin_member 角色并旋转安全戳。
+        group_slug = (data.get('group_slug') or '').strip()
+        group_role = (data.get('group_role') or '').strip()
+        if group_slug:
+            from apps.goods.models import AdminGroup, AdminGroupMember
+            group = AdminGroup.objects.filter(slug=group_slug, is_active=True).first()
+            if group is None:
+                return _bad_request('指定的管理组不存在', code='GROUP_NOT_FOUND')
+            if group_role not in (AdminGroupMember.Role.LEADER, AdminGroupMember.Role.MEMBER):
+                return _bad_request('组内角色不合法（leader / member）', code='GROUP_ROLE_INVALID')
+            _member, created = AdminGroupMember.objects.get_or_create(
+                group=group,
+                user=user,
+                defaults={'role': group_role},
+            )
+            if not created and _member.status != AdminGroupMember.Status.ACTIVE:
+                _member.status = AdminGroupMember.Status.ACTIVE
+                _member.role = group_role
+                _member.save(update_fields=['status', 'role'])
+            # 同步派生角色到返回（信号为 post_save 异步重算，这里读库确认）
+            roles = sorted(r.role for r in UserRole.objects.filter(user_id=user.id))
+
         # 仅当事务成功提交后，异步派发欢迎邮件（失败不影响建号）。
         # 邮件任务内部 try/except 仅记日志。
         transaction.on_commit(
