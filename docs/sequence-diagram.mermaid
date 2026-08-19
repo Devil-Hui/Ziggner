@@ -1,0 +1,51 @@
+sequenceDiagram
+    autonumber
+    participant SA as 超管(浏览器)
+    participant V as AdminUserCreateView
+    participant S as AdminCreateSerializer
+    participant Svc as UserService.create_user
+    participant UR as UserRole
+    participant Cel as Celery Worker
+    participant ES as EmailService
+    participant Tpl as EmailTemplate(admin_welcome)
+    participant SMTP as 多账号池 SMTP
+
+    %% ===== 主流程：创建管理员 =====
+    SA->>V: POST /api/admin/users/create/ {username,password,email,first_name,last_name,role,...}
+    V->>S: is_valid(data)
+    alt 字段校验失败
+        S-->>V: 400 {detail, code: USERNAME_INVALID/EMAIL_INVALID/PASSWORD_WEAK/NAME_REQUIRED/ROLE_INVALID/PHONE_INVALID}
+        V-->>SA: 400
+    else 校验通过
+        V->>Svc: create_user(...)
+        alt 唯一性冲突
+            Svc-->>V: ValueError(USERNAME_EXISTS/EMAIL_EXISTS/PHONE_EXISTS)
+            V-->>SA: 400 {code}
+        else 落库成功
+            Svc->>User: INSERT (username,email,first_name,last_name,is_active)
+            Svc->>UserProfile: INSERT (country_code,phone,department,note,locale,must_reset_password,email_verified)
+            Svc-->>V: user
+            V->>UR: get_or_create(user_id, role)
+            V->>V: transaction.on_commit(send_admin_welcome_email.delay, user.id)
+            V-->>SA: 201 {account_no,username,email,first_name,last_name,is_active,roles}
+        end
+    end
+
+    %% ===== 异步：欢迎邮件（失败不影响建号）=====
+    Cel->>ES: send_admin_welcome_email(user_id)
+    ES->>Tpl: render(admin_welcome, context)
+    Tpl-->>ES: subject/html/text
+    ES->>SMTP: 账号池路由发送
+    alt 发送失败
+        SMTP-->>ES: exception
+        ES-->>Cel: try/except 记录日志(建号已成功)
+    end
+
+    %% ===== 轻量邮箱验证端点（公开）=====
+    participant Link as 欢迎邮件链接(浏览器)
+    participant VE as AdminEmailVerifyView
+    Link->>VE: POST /api/users/email/admin-verify/ {token}
+    VE->>ES: decode_admin_email_verify_token(token)
+    ES-->>VE: account_no / email
+    VE->>UserProfile: email_verified = True (save)
+    VE-->>Link: 200 {verified:true, email}
