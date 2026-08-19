@@ -76,11 +76,15 @@ def _resolve_group(group_ref) -> tuple:
 
 
 class AdminGroupListView(BaseApiView):
+    """管理组列表：超管看全部；组长/组员仅可见自己所在的管理组（无权限者看不到）。"""
     permission_classes = [HasPerm('goods.spu.read')]
 
-    @extend_schema(responses={200: OpenApiResponse(description='List of admin groups')})
+    @extend_schema(responses={200: OpenApiResponse(description='List of admin groups (scoped)')})
     def get(self, request):
-        groups = AdminGroup.objects.filter(is_active=True).annotate(
+        groups = AdminGroup.objects.filter(is_active=True)
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            groups = groups.filter(members__user=request.user, members__status=AdminGroupMember.Status.ACTIVE)
+        groups = groups.distinct().annotate(
             member_count=Count('members', filter=Q(members__status=1))
         )
         items = []

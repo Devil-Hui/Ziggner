@@ -138,28 +138,36 @@ class CategoryAdminDeleteView(BaseApiView):
 
 
 class CategoryAdminSubtreeView(BaseApiView):
-    """本组分类子树"""
+    """本组分类子树（嵌套树）。无权限者看不到对应类目：非超管仅返回其管理组类目及祖先链。"""
     permission_classes = [HasPerm('goods.spu.read')]
 
-    @extend_schema(responses={200: OpenApiResponse(description='List or retrieve')})
+    @extend_schema(responses={200: OpenApiResponse(description='Nested category tree of managed groups')})
     def get(self, request):
+        if has_role(request.user, Role.SUPERADMIN.value):
+            cats = list(Category.objects.filter(is_active=True).select_related('parent'))
+            return Response(GoodsCacheService._build_category_tree(cats))
+
         category_ids = get_group_managed_category_ids(request.user)
-        if not category_ids and not has_role(request.user, Role.SUPERADMIN.value):
+        if not category_ids:
             return Response([])
 
-        if has_role(request.user, Role.SUPERADMIN.value):
-            categories = Category.objects.filter(is_active=True).order_by('level', 'id')
-        else:
-            categories = Category.objects.filter(id__in=category_ids, is_active=True).order_by('level', 'id')
+        cats = list(Category.objects.filter(id__in=category_ids, is_active=True).select_related('parent'))
+        if not cats:
+            return Response([])
 
-        items = []
-        for cat in categories:
-            items.append({
-                'id': cat.id, 'name': cat.name,
-                'parent_id': cat.parent_id, 'level': cat.level,
-                'admin_group_id': cat.admin_group_id,
-            })
-        return Response(items)
+        # 补祖先链（managed_ids 只向下收集后代，树的父节点必须保留才能完整渲染层级）
+        by_id = {c.id: c for c in Category.objects.filter(is_active=True)}
+        ancestors: set[int] = set()
+        for c in cats:
+            p = c.parent_id
+            while p is not None and p not in ancestors:
+                ancestors.add(p)
+                parent = by_id.get(p)
+                p = parent.parent_id if parent else None
+        if ancestors:
+            cats.extend(Category.objects.filter(id__in=ancestors, is_active=True))
+
+        return Response(GoodsCacheService._build_category_tree(cats))
 
 
 class CategoryAdminMigrateView(BaseApiView):

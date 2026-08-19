@@ -13,7 +13,9 @@ from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
 from ..models import SPU, SKU, ShelfStatus
 from apps.rbac.permissions import HasPerm, IsSuperAdmin
-from ..admin_permissions import can_operate_spu
+from apps.rbac.services import has_role
+from apps.rbac.constants import Role
+from ..admin_permissions import can_operate_spu, get_group_managed_category_ids
 
 
 class SKUAdminListView(BaseApiView):
@@ -25,6 +27,14 @@ class SKUAdminListView(BaseApiView):
         spu_id = request.query_params.get('spu_id')
         if not spu_id:
             return Response({'detail': 'spu_id is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            spu = SPU.objects.get(id=spu_id, deleted_at__isnull=True)
+        except SPU.DoesNotExist:
+            return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            managed_ids = get_group_managed_category_ids(request.user)
+            if spu.category_id not in managed_ids:
+                return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
         skus = SKU.objects.filter(spu_id=spu_id).order_by('id')
         items = []
         for sku in skus:
@@ -227,6 +237,12 @@ class SKUSearchView(BaseApiView):
             .select_related('spu')
             .order_by('-id')[:limit]
         )
+        # 组隔离：非超管的全局 SKU 搜索仅限本组类目下的商品
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            managed_ids = get_group_managed_category_ids(request.user)
+            if not managed_ids:
+                return Response({'items': []})
+            skus = skus.filter(spu__category_id__in=managed_ids)
         items = [{
             'id': s.id,
             'sku_code': s.sku_code,

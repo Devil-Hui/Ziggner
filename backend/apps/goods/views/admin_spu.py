@@ -301,7 +301,7 @@ class SPUAdminDeleteView(BaseApiView):
 
 
 class SPUAdminDetailView(BaseApiView):
-    """管理端 SPU 详情（含审批信息、完整 SKU）"""
+    """管理端 SPU 详情（含审批信息、完整 SKU）。无权限者看不到：非超管校验类目归属，跨组返回 404（与列表不可见一致，避免泄露存在性）。"""
     permission_classes = [HasPerm('goods.spu.read')]
 
     @extend_schema(responses={200: SPUAdminDetailSerializer})
@@ -314,6 +314,11 @@ class SPUAdminDetailView(BaseApiView):
             )
         except SPU.DoesNotExist:
             return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
+
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            managed_ids = get_group_managed_category_ids(request.user)
+            if spu.category_id not in managed_ids:
+                return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
         skus = []
         for sku in spu.skus.all():

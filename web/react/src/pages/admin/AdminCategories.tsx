@@ -184,7 +184,8 @@ export default function AdminCategories() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getCategoryTree();
+      // 组范围子树：无权限的类目（其他管理组）后端直接不返回
+      const data = await adminAPI.getCategorySubtree();
       setTree(data as unknown as CategoryNode[]);
     } catch (err: any) {
       setError(err.message || t('admin.categories.loadFailed'));
