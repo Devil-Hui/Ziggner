@@ -193,6 +193,7 @@ export interface CouponItem {
   start_time: string;
   end_time: string;
   total_count: number;
+  per_user_limit: number;
   claimed_count: number;
   used_count: number;
   created_at: string;
@@ -237,6 +238,7 @@ export interface CouponFormData {
   stackable: boolean;
   is_active?: boolean;
   total_count: number;
+  per_user_limit: number;
   start_time: string;
   end_time: string;
 }

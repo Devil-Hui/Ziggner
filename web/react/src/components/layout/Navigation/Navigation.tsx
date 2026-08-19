@@ -583,9 +583,10 @@ export default function Navigation() {
     const formData = new FormData()
     formData.append('avatar', file)
     try {
-      await apiPost('/users/upload-avatar/', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      // 不要手动覆盖 Content-Type：axios/browser 会为 FormData 自动带上
+      // multipart/form-data; boundary=xxx。若写死 multipart/form-data，
+      // boundary 丢失 → 后端 request.FILES 解析为空 → 400 上传失败。
+      await apiPost('/users/upload-avatar/', formData)
       await refreshUser()
     } catch {
       // silently fail — user keeps current avatar

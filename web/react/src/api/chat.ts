@@ -387,9 +387,8 @@ export const chatAPI = {
     const formData = new FormData()
     formData.append('file', file)
     const { default: api } = await import('./request')
-    const response = await api.post('/chat/upload/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    // 不要手动覆盖 Content-Type：浏览器会为 FormData 自动带 boundary，写死会导致后端解析为空（上传失败）
+    const response = await api.post('/chat/upload/', formData)
     const body = response.data
     if (body && typeof body === 'object' && 'code' in body && 'data' in body) {
       return (body as { data: { url: string; filename: string } }).data
@@ -448,9 +447,8 @@ export const adminChatAPI = {
     const formData = new FormData()
     formData.append('file', file)
     const { default: api } = await import('./request')
-    const response = await api.post('/chat/upload/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    // 不要手动覆盖 Content-Type：浏览器会为 FormData 自动带 boundary，写死会导致后端解析为空（上传失败）
+    const response = await api.post('/chat/upload/', formData)
     const body = response.data
     if (body && typeof body === 'object' && 'code' in body && 'data' in body) {
       return (body as { data: { url: string; filename: string } }).data

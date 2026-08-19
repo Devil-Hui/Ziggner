@@ -532,13 +532,17 @@ export default function Category() {
   const catId = searchParams.get('cat_id')
   const numericCatId = catId ? Number(catId) : undefined
   const searchQuery = searchParams.get('q')?.trim() || ''
-  const { products, total } = useProducts(1, 20, numericCatId, searchQuery)
+  const priceMinStr = searchParams.get('price_min')?.trim()
+  const priceMaxStr = searchParams.get('price_max')?.trim()
+  const priceMin = priceMinStr && Number.isFinite(Number(priceMinStr)) ? Number(priceMinStr) : undefined
+  const priceMax = priceMaxStr && Number.isFinite(Number(priceMaxStr)) ? Number(priceMaxStr) : undefined
+  const { products, total } = useProducts(1, 20, numericCatId, searchQuery, priceMin, priceMax)
   const { categories } = useFlatCategories()
   const { categories: categoryTree } = useCategories()
   const { t } = useTranslation()
   const [view, setView] = useState<'grid' | 'list'>('grid')
-  const [minPrice, setMinPrice] = useState(0)
-  const [maxPrice, setMaxPrice] = useState(500)
+  const [minPrice, setMinPrice] = useState(priceMin ?? 0)
+  const [maxPrice, setMaxPrice] = useState(priceMax ?? 500)
   const [activeFilters, setActiveFilters] = useState<{ [key: string]: string[] }>({})
   const [favorites, setFavorites] = useState<number[]>([])
   const [favBusyId, setFavBusyId] = useState<number | null>(null)
@@ -641,8 +645,13 @@ export default function Category() {
           <SidebarSection>
             <SidebarTitle>{t('store.category.priceRange')}</SidebarTitle>
             <FilterButton onClick={() => {
-              // Apply price filter: navigate or refetch
-              navigate(`/category${catId ? `?cat_id=${catId}` : ''}`)
+              const lo = Math.min(minPrice, maxPrice)
+              const hi = Math.max(minPrice, maxPrice)
+              const params = new URLSearchParams()
+              if (catId) params.set('cat_id', catId)
+              params.set('price_min', String(lo))
+              params.set('price_max', String(hi))
+              navigate(`/category?${params.toString()}`)
             }}>{t('store.category.filter')}</FilterButton>
             <PriceTrack>
               <PriceRange type="range" min="0" max="500" value={minPrice} onChange={(e) => setMinPrice(Number(e.target.value))} />

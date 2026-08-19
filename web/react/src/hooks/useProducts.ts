@@ -50,12 +50,14 @@ function mapSPUToProduct(spu: PublicSPU): Product {
 
 // ── Hook: 商品列表 ────────────────────────────────────────────
 
-export function useProducts(page = 1, per_page = 20, categoryId?: number, query = '') {
+export function useProducts(page = 1, per_page = 20, categoryId?: number, query = '', priceMin?: number, priceMax?: number) {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef(false);
+
+  const hasPriceFilter = (priceMin ?? null) !== null || (priceMax ?? null) !== null;
 
   const fetchProducts = useCallback(async () => {
     abortRef.current = false;
@@ -64,10 +66,12 @@ export function useProducts(page = 1, per_page = 20, categoryId?: number, query 
     try {
       const params: Record<string, unknown> = { page, per_page };
       if (categoryId) params.category_id = categoryId;
-      const response = query
+      const response = query || hasPriceFilter
         ? await publicAPI.search({
             q: query || undefined,
             category_id: categoryId,
+            price_min: priceMin ?? undefined,
+            price_max: priceMax ?? undefined,
             page,
             per_page,
           })
@@ -81,7 +85,7 @@ export function useProducts(page = 1, per_page = 20, categoryId?: number, query 
     } finally {
       if (!abortRef.current) setLoading(false);
     }
-  }, [page, per_page, categoryId, query]);
+  }, [page, per_page, categoryId, query, priceMin, priceMax, hasPriceFilter]);
 
   useEffect(() => {
     fetchProducts();

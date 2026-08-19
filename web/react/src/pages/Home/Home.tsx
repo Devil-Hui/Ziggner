@@ -728,8 +728,8 @@ export default function Home() {
                     return (
                       <VFeedRow key={sku.id} onClick={() => spuId && navigate(`/product/${spuId}`)}>
                         <VFeedThumb>
-                          {sku.image_url ? (
-                            <img src={sku.image_url} alt={sku.name} loading="lazy" />
+                          {optionalMediaUrl(sku.image_url) ? (
+                            <img src={optionalMediaUrl(sku.image_url)} alt={sku.name} loading="lazy" />
                           ) : null}
                         </VFeedThumb>
                         <VFeedInfo>
