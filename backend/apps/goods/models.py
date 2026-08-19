@@ -373,8 +373,15 @@ class SPU(models.Model):
                 f'Cannot submit for review from status "{self.get_status_display()}". '
                 f'Only Draft or Rejected SPUs can be submitted.'
             )
-        # D2 修复：实体商品提交审核前必须至少上传一张图片，杜绝审核页「无图片」
-        if (self.product_type or 'physical') != 'virtual':
+        # D2 修复：实体商品提交审核前必须至少上传一张图片，杜绝审核页「无图片」。
+        # 虚拟判定兼容 product_kind（UI「Type」下拉唯一写入字段）与 product_type（自由文本，
+        # 历史调用方/种子数据可能仅设置 product_type='virtual'）。此前只看 product_type，
+        # 导致 UI 选 Type=Virtual 创建的商品提交审核必然被拒（product_kind=virtual 但 product_type 为空）。
+        is_virtual = (
+            (self.product_kind or '') == 'virtual'
+            or (self.product_type or '').strip().lower() == 'virtual'
+        )
+        if not is_virtual:
             has_image = self.media.filter(
                 media_type=ProductMedia.MediaType.IMAGE,
                 status__in=[ProductMedia.MediaStatus.PENDING, ProductMedia.MediaStatus.ACTIVE],
