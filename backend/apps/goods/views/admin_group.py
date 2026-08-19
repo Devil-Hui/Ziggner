@@ -136,7 +136,7 @@ class AdminGroupMembersView(BaseApiView):
         group, err = _resolve_group(group_ref)
         if group is None:
             return Response({'detail': err}, status=status.HTTP_404_NOT_FOUND)
-        members = AdminGroupMember.objects.filter(group_id=group.id).select_related('user')
+        members = AdminGroupMember.objects.filter(group_id=group.id).select_related('user__profile')
         items = []
         for m in members:
             profile = getattr(m.user, 'profile', None)

@@ -340,7 +340,8 @@ class ProductSearchView(BaseApiView):
 
         results = []
         for spu in spus:
-            skus = spu.skus.filter(shelf_status='on')
+            # 用 prefetch_related 预载的 skus（避免 .filter() 触发 N+1 查询）
+            skus = [s for s in spu.skus.all() if s.shelf_status == 'on']
             # 价格范围
             sku_prices = [s.price for s in skus if s.price is not None]
             price = min(sku_prices) if sku_prices else 0
