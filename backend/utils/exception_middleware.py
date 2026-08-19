@@ -67,6 +67,9 @@ class CustomExceptionMiddleware:
                 return result
 
             # 非 2xx 响应：补全统一错误信封
+            # 鉴权失败（401/403）记录安全审计（节流防刷屏），满足可追溯要求
+            if response.status_code in (401, 403):
+                self._record_security_event(request, response.status_code, request_id)
             result = self._wrap_error_response(response, request_id)
             result.cookies.update(response.cookies)
             _clear_request_cache()
@@ -83,6 +86,46 @@ class CustomExceptionMiddleware:
             result = self.handle_exception(request, exc, request_id)
             _clear_request_cache()
             return result
+
+    # ---------------------------------------------------------------
+    # 安全事件审计（鉴权失败 / 权限拒绝）
+    # ---------------------------------------------------------------
+    def _record_security_event(self, request, status_code: int, request_id: str) -> None:
+        """记录鉴权失败/越权审计日志。同 IP+路径 60s 窗口去重，防接口探测刷屏。"""
+        try:
+            from utils.cache import Cache
+            _sec = Cache('sec')
+            ip = self._client_ip(request)
+            key = f'auth:{status_code}:{ip}:{request.path}'
+            if _sec.get(key):
+                return
+            _sec.set(key, 1, 60)
+
+            user = getattr(request, 'user', None)
+            from apps.goods.views.admin_audit import create_audit_log
+            create_audit_log(
+                user if user and getattr(user, 'is_authenticated', False) else None,
+                'auth_failed' if status_code == 401 else 'permission_denied',
+                'security', 0,
+                extra_data={
+                    'request_id': request_id,
+                    'method': request.method,
+                    'path': request.path,
+                    'user_agent': (request.META.get('HTTP_USER_AGENT') or '')[:200],
+                    'authenticated': bool(user and getattr(user, 'is_authenticated', False)),
+                },
+                ip_address=ip,
+            )
+        except Exception:
+            logger.debug('security event audit skipped (non-fatal)', exc_info=True)
+
+    @staticmethod
+    def _client_ip(request) -> str | None:
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        if xff:
+            return xff.split(',')[0].strip()
+        return request.META.get('REMOTE_ADDR')
+
 
     # ---------------------------------------------------------------
     # 错误响应用统一起居包

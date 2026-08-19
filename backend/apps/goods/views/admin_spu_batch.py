@@ -137,6 +137,14 @@ class SPUAdminBatchView(BaseApiView):
         if action not in ('put_on_sale', 'put_off_sale', 'update_price', 'update_stock', 'change_category', 'change_brand', 'batch_audit'):
             return Response({'detail': Messages.BAD_REQUEST}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 敏感操作审计：批量操作（改价/改库存/改类目/批量审核/上下架）必须留痕
+        from .admin_audit import create_audit_log
+        create_audit_log(
+            request.user, f'batch_{action}', 'spu_batch', 0,
+            changes={'spu_ids': spu_ids, 'params': params},
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
+
         # 🔥 大批量 → 异步（Celery 任务）
         if len(spu_ids) > BATCH_SYNC_LIMIT:
             from ..tasks import execute_batch_task

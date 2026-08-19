@@ -15,7 +15,11 @@ from apps.rbac.constants import Role, is_valid_perm
 
 
 class UserRole(models.Model):
-    """用户的全局角色。一个用户可有多个角色，权限取并集。"""
+    """用户的全局角色。一个用户可有多个角色，权限取并集。
+
+    ABAC 扩展：expires_at 支持临时角色（到点自动失效）；conditions 预留
+    时间/地点/风险等动态授权条件（当前版本由超管维护，判定器预留接口）。
+    """
 
     user = models.ForeignKey(
         'auth.User',
@@ -35,6 +39,16 @@ class UserRole(models.Model):
         related_name='rbac_granted_roles',
         verbose_name='授予人',
     )
+    expires_at = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name='角色到期时间（空=永久）',
+        help_text='ABAC 扩展：到达该时间后角色自动失效，支持临时授权。',
+    )
+    conditions = models.JSONField(
+        default=dict, blank=True,
+        verbose_name='授权条件',
+        help_text='ABAC 扩展：预留的动态授权条件，如 {"time": {...}, "risk": {...}, "geo": {...}}。',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='授予时间')
 
     class Meta:
@@ -53,7 +67,11 @@ class UserRole(models.Model):
 
 
 class RolePermission(models.Model):
-    """角色被授予的权限点。perm_code 必须存在于 constants.PERMISSIONS。"""
+    """角色被授予的权限点。perm_code 必须存在于 constants.PERMISSIONS。
+
+    ABAC 扩展：conditions 预留基于时间/地点/风险条件的动态授权（如"仅工作日 9-18 点有效"），
+    判定器（services.has_perm）当前按 RBAC 判定，条件评估为后续演进保留。
+    """
 
     role = models.CharField(
         max_length=32,
@@ -67,6 +85,11 @@ class RolePermission(models.Model):
         on_delete=models.SET_NULL,
         related_name='rbac_granted_perms',
         verbose_name='授予人',
+    )
+    conditions = models.JSONField(
+        default=dict, blank=True,
+        verbose_name='授权条件',
+        help_text='ABAC 扩展：预留的动态授权条件（时间/地点/风险等），空字典表示无条件。',
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='授予时间')
 

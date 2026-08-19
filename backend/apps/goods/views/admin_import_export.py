@@ -8,6 +8,9 @@ from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
 from ..models import SPU, SPUStatus, SKU, Brand, Category
 from apps.rbac.permissions import HasPerm
+from apps.rbac.services import has_role
+from apps.rbac.constants import Role
+from ..admin_permissions import get_group_managed_category_ids
 from utils.upload_security import UploadValidationError, escape_csv_cell, parse_csv_upload
 
 
@@ -136,6 +139,18 @@ class ExportProductsView(BaseApiView):
     )
     def post(self, request):
         spus = SPU.objects.filter(deleted_at__isnull=True).select_related('brand', 'category').prefetch_related('skus')
+        # 数据权限：非超管仅能导出本组类目下的商品（行级过滤）
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            managed_ids = get_group_managed_category_ids(request.user)
+            spus = spus.filter(category_id__in=managed_ids) if managed_ids else spus.none()
+
+        # 敏感操作审计：导出必须留痕（含行级范围）
+        from .admin_audit import create_audit_log
+        create_audit_log(
+            request.user, 'export_products', 'spu', 0,
+            changes={'count': spus.count(), 'scope': 'managed' if not has_role(request.user, Role.SUPERADMIN.value) else 'all'},
+            ip_address=request.META.get('REMOTE_ADDR'),
+        )
 
         output = io.StringIO()
         writer = csv.writer(output)

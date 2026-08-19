@@ -1,21 +1,16 @@
 """
 RBAC 判定与缓存 —— 全站权限判断的唯一入口。
 
-为什么用进程内缓存而不是 Django cache：
-  生产缓存后端是 DatabaseCache（MySQL），走 Django cache 等于每请求一次 DB 查询，
-  正好是 2C4G 上要避免的。这里的数据极小（5 角色 × ~35 权限点、约 35 个用户），
-  放进程内 dict 内存可忽略，稳态每请求 0 次查询。
-
-一致性窗口：
-  权限变更时本进程立即失效；其它进程靠 TTL 兜底（角色权限 ≤60s，用户角色 ≤30s）。
-  生产 Gunicorn 默认 1 worker，实际只有一个进程。若将来提到多 worker，
-  "改权限"这类低频操作存在 ≤60s 的最终一致窗口 —— 需写进运维文档。
+缓存策略（Redis + 版本号，满足多 worker 实时失效）：
+  - 角色权限矩阵   `rbac:role_perms:v{N}`  随版本号失效（TTL 300s 兜底）
+  - 用户角色       `rbac:user_roles:{uid}`  变更时显式删除（TTL 300s 兜底）
+  - 版本号         `rbac:version`           权限矩阵变更时 INCR，所有进程读新版本即 miss 重载，
+                                            消除多 worker 场景下的最终一致窗口。
+  - 判定结果仍挂在 user 实例（_rbac_perms）做请求级缓存，同一请求内零额外 IO。
 """
 from __future__ import annotations
 
 import logging
-import threading
-import time
 
 from apps.rbac.constants import (
     ALL_PERM_CODES,
@@ -23,45 +18,32 @@ from apps.rbac.constants import (
     DEFAULT_ROLE_PERMS,
     Role,
 )
+from utils.cache import Cache
 
 logger = logging.getLogger(__name__)
 
-ROLE_PERM_TTL = 60.0
-USER_ROLE_TTL = 30.0
+ROLE_PERM_TTL = 300
+USER_ROLE_TTL = 300
 
-_lock = threading.RLock()
-
-#: 角色 → 权限点集合；None 表示未加载
-_role_perms: dict[str, frozenset[str]] | None = None
-_role_perms_expire: float = 0.0
-
-#: user_id → (角色集合, 过期时刻, 账号创建指纹)
-_user_roles: dict[int, tuple[frozenset[str], float, str | None]] = {}
+_cache = Cache('rbac')
+_VERSION_KEY = 'version'
 
 
 # ==================== 缓存失效 ====================
 
 def invalidate_role_perms() -> None:
-    """角色权限矩阵变更后调用。"""
-    global _role_perms, _role_perms_expire
-    with _lock:
-        _role_perms = None
-        _role_perms_expire = 0.0
+    """角色权限矩阵变更后调用：递增版本号，全进程即时失效。"""
+    _cache.incr(_VERSION_KEY)
 
 
 def invalidate_user(user_id: int) -> None:
-    """某用户角色变更后调用。"""
-    with _lock:
-        _user_roles.pop(user_id, None)
+    """某用户角色变更后调用：删除该用户角色缓存。"""
+    _cache.delete(f'user_roles:{user_id}')
 
 
 def invalidate_all() -> None:
     """清空全部缓存。测试与管理命令使用。"""
-    global _role_perms, _role_perms_expire
-    with _lock:
-        _role_perms = None
-        _role_perms_expire = 0.0
-        _user_roles.clear()
+    _cache.incr(_VERSION_KEY)
 
 
 # ==================== 加载 ====================
@@ -87,21 +69,27 @@ def _load_role_perms() -> dict[str, frozenset[str]]:
 
 
 def get_role_perms() -> dict[str, frozenset[str]]:
-    """角色 → 权限点集合，带 TTL 的进程内缓存。"""
-    global _role_perms, _role_perms_expire
+    """角色 → 权限点集合。Redis 缓存 + 版本号：矩阵变更 INCR 版本号即全进程即时失效。"""
+    version = _get_version()
+    key = f'role_perms:v{version}'
+    cached = _cache.get_json(key)
+    if cached is not None:
+        return {role: frozenset(codes) for role, codes in cached.items()}
 
-    now = time.monotonic()
-    cached = _role_perms
-    if cached is not None and now < _role_perms_expire:
-        return cached
+    data = _load_role_perms()
+    _cache.set_json(key, {role: sorted(codes) for role, codes in data.items()}, ROLE_PERM_TTL)
+    return data
 
-    with _lock:
-        # 双检：可能已被其它线程刷新
-        if _role_perms is not None and time.monotonic() < _role_perms_expire:
-            return _role_perms
-        _role_perms = _load_role_perms()
-        _role_perms_expire = time.monotonic() + ROLE_PERM_TTL
-        return _role_perms
+
+def _get_version() -> int:
+    v = _cache.get(_VERSION_KEY)
+    if v is None:
+        v = 1
+        try:
+            _cache.set(_VERSION_KEY, v)
+        except Exception:
+            pass
+    return int(v)
 
 
 def _user_identity(user_or_id) -> tuple[int, str | None]:
@@ -113,22 +101,78 @@ def _user_identity(user_or_id) -> tuple[int, str | None]:
 
 
 def get_user_roles(user_or_id) -> frozenset[str]:
-    """用户的角色集合，带 TTL 的进程内缓存。无记录时返回默认角色。"""
-    user_id, identity = _user_identity(user_or_id)
-    now = time.monotonic()
-    hit = _user_roles.get(user_id)
-    if hit is not None and now < hit[1] and (identity is None or hit[2] == identity):
-        return hit[0]
+    """用户的角色集合。Redis 缓存；角色变更时 invalidate_user 删除该 key 即时失效。
 
+    ABAC：expires_at 到期的临时角色自动剔除；conditions 中的 time 条件不满足同样剔除。
+    """
+    user_id, identity = _user_identity(user_or_id)
+    key = f'user_roles:{user_id}'
+    hit = _cache.get_json(key)
+    if hit is not None:
+        if identity is None or hit.get('stamp') == identity:
+            return frozenset(hit['roles'])
+
+    from django.utils import timezone
     from apps.rbac.models import UserRole
 
-    roles = frozenset(
-        UserRole.objects.filter(user_id=user_id).values_list('role', flat=True)
-    ) or frozenset({DEFAULT_ROLE.value})
+    now = timezone.now()
+    active = [
+        ur.role
+        for ur in UserRole.objects.filter(user_id=user_id)
+        if (ur.expires_at is None or ur.expires_at > now)
+        and conditions_met(ur.conditions or {})
+    ]
+    roles = frozenset(active) or frozenset({DEFAULT_ROLE.value})
 
-    with _lock:
-        _user_roles[user_id] = (roles, time.monotonic() + USER_ROLE_TTL, identity)
+    _cache.set_json(key, {'roles': sorted(roles), 'stamp': identity}, USER_ROLE_TTL)
     return roles
+
+
+# ==================== ABAC 条件评估 ====================
+
+def conditions_met(conditions: dict, now=None) -> bool:
+    """ABAC 动态授权条件评估（预留接口，向后兼容）。
+
+    空条件 → 放行（现有授权不受影响）。
+    支持的字段：
+      {"time": {"after": "09:00", "before": "18:00", "weekdays": [1,2,3,4,5]}}
+      —— 当前本地时间需落在区间内且为指定星期（1=周一 … 7=周日）。
+    未支持的字段（risk / geo 等）按最小权限原则默认拒绝，待后续实现。
+    """
+    if not conditions:
+        return True
+    now = now or _local_now()
+    time_cfg = conditions.get('time')
+    if time_cfg:
+        if not _time_condition_met(time_cfg, now):
+            return False
+    # 未来扩展：risk / geo / device 等条件在此追加；未识别键默认拒绝
+    supported = {'time'}
+    if any(k for k in conditions if k not in supported):
+        return False
+    return True
+
+
+def _local_now():
+    from django.utils import timezone
+    return timezone.localtime(timezone.now())
+
+
+def _time_condition_met(cfg: dict, now) -> bool:
+    try:
+        hhmm = now.strftime('%H:%M')
+        if cfg.get('after') and hhmm < str(cfg['after']):
+            return False
+        if cfg.get('before') and hhmm > str(cfg['before']):
+            return False
+        weekdays = cfg.get('weekdays')
+        if weekdays:
+            # ISO weekday: 1=Mon … 7=Sun
+            if now.isoweekday() not in [int(w) for w in weekdays]:
+                return False
+    except (TypeError, ValueError):
+        return False
+    return True
 
 
 # ==================== 判定 ====================
