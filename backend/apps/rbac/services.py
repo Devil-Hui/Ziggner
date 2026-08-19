@@ -31,9 +31,17 @@ _VERSION_KEY = 'version'
 
 # ==================== 缓存失效 ====================
 
+def _bump_version() -> None:
+    """递增缓存版本号。django_redis 的 incr 对不存在的 key 抛 ValueError（首次启动/新环境），
+    需先初始化 key 再递增，否则启动期 rbac_bootstrap 等管理命令会中断容器启动。"""
+    if _cache.get(_VERSION_KEY) is None:
+        _cache.set(_VERSION_KEY, 1)
+    _cache.incr(_VERSION_KEY)
+
+
 def invalidate_role_perms() -> None:
     """角色权限矩阵变更后调用：递增版本号，全进程即时失效。"""
-    _cache.incr(_VERSION_KEY)
+    _bump_version()
 
 
 def invalidate_user(user_id: int) -> None:
@@ -43,7 +51,7 @@ def invalidate_user(user_id: int) -> None:
 
 def invalidate_all() -> None:
     """清空全部缓存。测试与管理命令使用。"""
-    _cache.incr(_VERSION_KEY)
+    _bump_version()
 
 
 # ==================== 加载 ====================
