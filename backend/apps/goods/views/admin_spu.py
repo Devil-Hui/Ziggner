@@ -185,6 +185,14 @@ class SPUAdminCreateView(BaseApiView):
         except Category.DoesNotExist:
             return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
+        # 组隔离：非超管只能在本组管理的类目下创建（与编辑/审核/上架一致）。
+        # 此前缺此校验 → 组员/组长可跨组创建商品，后续管理却 403（能建不能管的孤儿商品）。
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            managed_ids = get_group_managed_category_ids(request.user)
+            if category_id not in managed_ids:
+                return Response({'detail': Messages.ADMIN_SPU_NOT_IN_GROUP},
+                                status=status.HTTP_403_FORBIDDEN)
+
         spu = SPU.objects.create(
             name=name, brand=brand, category=category,
             description=description, main_image=main_image,
