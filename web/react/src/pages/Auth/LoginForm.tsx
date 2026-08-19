@@ -143,8 +143,8 @@ export default function LoginForm() {
     setError('')
 
     try {
-      // Fetch provider config to get client_id
-      const res: any = await fetch('/api/users/social/providers/')
+      // Fetch provider config to get client_id（统一 v1 路径）
+      const res: any = await fetch('/api/v1/users/social/providers/')
       const data = await res.json()
       const prov = data?.providers?.find((p: any) => p.provider === provider)
 

@@ -74,12 +74,14 @@ class VersionedAPIRouter:
         return urls
 
     def get_urlpatterns(self) -> list:
-        """生成所有版本的 URL pattern 列表"""
+        """生成所有版本的 URL pattern 列表。
+
+        仅挂载带版本前缀的 /api/v1/* —— 无前缀旧版 /api/* 已于 v1.0 全面废弃
+        （前端 request.ts BASE_URL=/api/v1、.env.production 显式 /api/v1），
+        删除旧挂载避免新旧双路径并存导致的路由/文档/权限歧义。
+        """
         urlpatterns = []
-        # 无版本前缀的 /api/* 路由（所有共享路由）
-        for app_name, url_conf in self._shared.items():
-            urlpatterns.append(path(f"api/{app_name}/", include(url_conf)))
-        # v1 版本路由
+        # v1 版本路由（唯一对外路径）
         urlpatterns.extend(self._get_urls_for_version("api/v1", "v1"))
         return urlpatterns
 

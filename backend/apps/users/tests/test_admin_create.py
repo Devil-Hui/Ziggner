@@ -28,7 +28,7 @@ from apps.users.tasks import send_admin_welcome_email
 User = get_user_model()
 
 # /api/admin/users/create/ 由 apps.users.admin_urls 挂载
-CREATE_URL = '/api/admin/users/create/'
+CREATE_URL = '/api/v1/admin/users/create/'
 
 
 class AdminCreateTests(TestCase):

@@ -67,22 +67,16 @@ urlpatterns = [
 # 通过 VersionedAPIRouter 注册所有 API 路由
 urlpatterns += router.get_urlpatterns()
 
-# 管理员命名空间（与普通用户自助面 /api/users/ 分离）：
+# 管理员命名空间（与普通用户自助面 /api/v1/users/ 分离）：
 # 仅超管/运维可达，且只用 account_no 指认用户、用 slug 寻址分组，绝不暴露内部自增 id。
-# 同时挂载 /api/admin/ 与 /api/v1/admin/：前端 request.ts 的 BASE_URL 为 /api/v1，
-# 其相对调用（如 /admin/groups/ → /api/v1/admin/groups/）必须能解析，故补齐 /v1/ 前缀，
-# 与 VersionedAPIRouter 为其余 app 自动生成的双前缀（/api/ 与 /api/v1/）保持一致。
+# 仅挂载 /api/v1/admin/（无前缀旧版 /api/admin/ 已废弃，见 utils/versioned_router）。
 urlpatterns += [
     # 分组管理：复用已有的 id 版 AdminGroup* 视图（数字 group_id / user_id 寻址），
-    # 与已部署前端（Cloudflare Pages 构建）的分组端点契约一致。此前此处挂载的是
-    # slug 版 apps.goods.admin_urls（slug/account_no 寻址），与前端传的数字 id 不匹配，
-    # 导致线上 /api/v1/admin/groups/<id> 返回 404。此处改用 urls_admin_group_slug 修复。
-    path('api/admin/groups/', include(urls_admin_group_slug)),
+    # 与已部署前端（Cloudflare Pages 构建）的分组端点契约一致。
     path('api/v1/admin/groups/', include(urls_admin_group_slug)),
     # 用户管理：沿用既有 account_no 寻址实现（apps.users.admin_urls）。
-    # 注意：此命名空间为 /admin/rbac 页面的用户列表、创建管理员、角色指派提供后端，
-    # 与分组（goods id 版）是两个独立领域，f1264d0 曾误将其当作死代码删除，此处恢复。
-    path('api/admin/users/', include('apps.users.admin_urls')),
+    # 此命名空间为 /admin/rbac 页面的用户列表、创建管理员、角色指派提供后端，
+    # 与分组（goods id 版）是两个独立领域。
     path('api/v1/admin/users/', include('apps.users.admin_urls')),
 ]
 
