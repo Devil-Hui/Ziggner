@@ -13,6 +13,7 @@ Ziggner OpenAPI 安全导出后处理脚本。
   4. 排除 /metrics /health /ops 等内部运维路径；
   5. tags 映射中文子系统分组。
 """
+import os
 import sys
 import yaml
 
@@ -156,7 +157,7 @@ def main():
                        'description': '由导入方配置（本地/开发/预发布），禁止使用生产域名直连'}]
 
     info = doc.get('info', {})
-    info['version'] = 'v1.0.0'
+    info['version'] = os.environ.get('APP_VERSION', 'v1.0.0')
     info['description'] = (info.get('description') or '') + (
         '\n\n## 安全导出声明\n'
         '- 本文件为脱敏导出：所有示例数据均为虚构，禁止用于生产联调。\n'
