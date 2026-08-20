@@ -56,12 +56,13 @@ _API_APPS = [
     "apps.support.urls",
     "apps.customer_service.urls",
     "apps.rbac.urls",
+    "apps.wechat_mp.urls",
 ]
 
 _APP_NAMES = [
     "users", "goods", "cart", "order", "address", "payment",
     "review", "notification", "promotion", "lovegoods",
-    "tracking", "logistics", "support", "chat", "rbac",
+    "tracking", "logistics", "support", "chat", "rbac", "wechat_mp",
 ]
 
 for name, url_conf in zip(_APP_NAMES, _API_APPS):
