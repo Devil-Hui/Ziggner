@@ -291,7 +291,9 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ),
-    # 限流速率可被环境变量 THROTTLE_RATES 覆写（JSON，如测试/压测放开限流时设 {}）
+    # 限流速率可被环境变量 THROTTLE_RATES 覆写（JSON，测试/压测放开限流时设大值）。
+    # 注意：不要设为 {} 空对象——AnonRateThrottle/UserRateThrottle 取不到 scope 速率
+    # 会抛 ImproperlyConfigured("No default throttle rate set ...")，导致所有请求 500。
     'DEFAULT_THROTTLE_RATES': json.loads(os.getenv('THROTTLE_RATES', json.dumps({
         'anon': '100/hour',
         'user': '5000/hour',

@@ -32,6 +32,7 @@ docker run -d --name "$WEB_CONTAINER" --network ziggner-test-net \
   -e DB_NAME=ziggner_test -e DB_USER=ziggner_test -e DB_PASSWORD=ziggner_test \
   -e REDIS_URL="redis://$TEST_REDIS:6379/1" -e REDIS_SLAVE_URL="redis://$TEST_REDIS:6379/1" \
   -e DJANGO_SECRET_KEY=test-only-secret-key-not-for-production \
+  -e THROTTLE_RATES='{"anon":"100000/hour","user":"100000/hour"}' -e RATE_LIMITS='{}' \
   -e ENABLE_MOCK_PAYMENT=true -e FILE_STORAGE=local \
   --entrypoint python ziggner-django:v1.0.2 manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
 
