@@ -120,7 +120,8 @@ _ADMIN_LEADER_PERMS = _ADMIN_MEMBER_PERMS | {
     'goods.category.write',
     'goods.brand.write',
     'goods.tag.write',
-    'goods.group.write',  # 管理审核组（admin_group 增删改视图均要求此权限）
+    # 注意：goods.group.write（创建/改名/删除审核组）为全局组织架构操作，
+    # 仅超管拥有（组长仅在组内自治：组员增删走 AdminGroupMembersView，内置组长级校验）。
     'goods.import.execute',
     'goods.recycle.restore',
     'goods.application.review',

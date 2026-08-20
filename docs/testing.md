@@ -48,7 +48,7 @@ cd backend && python scripts/update_contract_baseline.py   # 刷新 openapi.base
 
 | 子系统 | 测试文件 | 关键断言 |
 |---|---|---|
-| 用户与权限 | `apps/rbac/tests/`、`apps/order/tests/test_row_level_isolation.py`、`apps/users/tests/` | 5 角色 × 权限点矩阵（超管短路/ops 只读/组长 20 项/组员 9 项/客户拒绝）；组长不可见跨组订单、组员无组 → none()；防自提权；匿名拒绝；管理员创建错误码映射；改密旧密码/强度/同密码校验 |
+| 用户与权限 | `apps/rbac/tests/`、`apps/order/tests/test_row_level_isolation.py`、`apps/users/tests/`、`apps/goods/tests/test_admin_group_perms.py` | 5 角色 × 权限点矩阵（超管短路/ops 只读/组长 19 项/组员 9 项/客户拒绝）；组长不可见跨组订单、组员无组 → none()；防自提权；匿名拒绝；管理员创建错误码映射；改密旧密码/强度/同密码校验；**审核组权限边界**：组增删改（全局）仅超管 403/201，组员管理组长自治（本组可加普通成员 201、不可提组长/跨组/移除组长 403） |
 | 商品运营 | `apps/goods/tests/test_spu_state_machine.py`、`test_admin_permissions.py`、`test_cache_service.py` | SPU 全跃迁 + 非法跃迁 ValueError；D1（SUBMITTED 必须 submitted_by）；D2（实体无图拒提交）；类目门禁 can_operate/audit（含子类目继承、非 active 组失效）；缓存失效（spu/sku/category-tree/hot/clear_by_prefix）与 L1+L2 两级读 |
 | 交易履约 | `apps/order/tests/test_checkout_integrity.py`、`test_order_state_machine.py` | 库存精确扣减；不足回滚（库存/购物车不变）；边界（恰好相等可买/超卖拒/0 库存拒）；4 并发 10 库存仅 3 单成功（防超卖）；满减券下单扣减与回滚；幂等键去重；订单状态机全跃迁 + 取消回滚库存 |
 | 促销营销 | `apps/promotion/tests/test_coupon_math.py` | calc_discount：满减门槛/封顶/百分比/max_discount 触顶/0 元订单返回 0；_validate_payload：INVALID_QUANTITY、PER_USER_LIMIT_EXCEEDED、INVALID_TIME_RANGE、INVALID_DISCOUNT、INVALID_PERCENT、合法放行；券可用性 remaining/is_available |
@@ -75,7 +75,7 @@ cd backend && python scripts/update_contract_baseline.py   # 刷新 openapi.base
 
 | 缺陷 | 现象 | 修复 |
 |---|---|---|
-| leader 缺 `goods.group.write` | 组长调用审核组增删改 → 403（与 v3 矩阵矛盾） | `apps/rbac/constants.py` 组长权限补该项 |
+| 审核组权限边界确认 | v3 矩阵曾标组长拥有 `goods.group.write`，但组增删改为**全局组织架构操作**，产品决策：全局一律超管审批 → 组长不含该权限；组内自治靠 `AdminGroupMembersView` 内置组长级校验（本组可加普通成员/不可提组长/不可跨组/不可移除组长） | `apps/rbac/constants.py` 注释 + `test_admin_group_perms.py` 固化 |
 | `change_password` 引用 `updated_at` | 改密成功路径必 500（字段不存在） | `apps/users/services.py` update_fields 移除 |
 | 日志脱敏顺序错误 | `Authorization: Bearer <JWT>` 的 JWT 泄漏进日志 | `utils/json_logging.py` token-space 先于 key-value |
 | 错误中间件剥离语义码 | 视图的 EMAIL_INVALID 等被统一换成 BAD_REQUEST | `utils/exception_middleware.py` 优先保留 body.code/error_code |
@@ -94,4 +94,5 @@ cd backend && python scripts/update_contract_baseline.py   # 刷新 openapi.base
 - pytest-xdist 并行（`-n`）与 `--reuse-db` 在多 worker 并发建库时会冲突产生假失败，默认串行；加速需手动 `make test-all XDIST=-n 2`
 - 契约基线由 `update_contract_baseline.py` 显式刷新，**必须与 API 变更同提交**，否则 CI 契约 job 失败
 - 测试中间产物（压测结果、Allure 原始 JSON、coverage json 等）一律放仓库外 `change/test/workbuddyt/`，不入库
-- 生产 `RolePermission` 表若已播种且缺少 `goods.group.write`（leader），需跑 `rbac_bootstrap` 重新播种或手动补授权，组长管理审核组才生效
+- 审核组权限模型：组长仅组内自治（组员管理），组的创建/改名/删除为全局操作仅超管（`goods.group.write`）。
+  生产 `RolePermission` 种子从未包含该权限（仅回退常量引用），无需生产迁移；如曾手动授过需撤销。
