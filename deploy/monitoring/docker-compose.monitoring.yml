@@ -43,11 +43,28 @@ services:
     command: --config.file=/etc/alertmanager/alertmanager.yml
     volumes:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./templates:/etc/alertmanager/templates:ro
       - ./smtp_password:/etc/alertmanager/smtp_password:ro
     ports: ["9093:9093"]
     # egress：发 SMTP 邮件需要公网出口（internal 网络 DNS 无法解析公网域名）
     networks: [ziggner_internal, ziggner_egress]
     mem_limit: 128m
+
+  # 告警渠道中继：Alertmanager webhook → 企业微信 / QQ（多渠道并行）
+  # 复用本地 ziggner-django 镜像（含 python3.12），避免拉取 Docker Hub
+  webhook-relay:
+    image: ziggner-django:v1.0.2
+    container_name: ziggner-webhook-relay
+    restart: unless-stopped
+    entrypoint: ["python"]
+    command: ["/relay/relay.py"]
+    volumes:
+      - ./relay.py:/relay/relay.py:ro
+    env_file: [.env.monitoring]
+    environment:
+      RELAY_PORT: "8081"
+    networks: [ziggner_internal, ziggner_egress]
+    mem_limit: 96m
 
   dingtalk-hook:
     image: timonwong/prometheus-webhook-dingtalk:v2.1.0

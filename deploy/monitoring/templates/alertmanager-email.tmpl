@@ -1,0 +1,111 @@
+{{/* Ziggner 告警邮件模板（大厂规范）——结构化字段 + 层级排版 */}}
+{{ define "email.ziggner.html" }}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ziggner 告警通知</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: #f4f5f7; margin: 0; padding: 24px; color: #172b4d; }
+  .wrap { max-width: 720px; margin: 0 auto; background: #fff; border-radius: 10px;
+          overflow: hidden; box-shadow: 0 2px 12px rgba(9,30,66,.12); }
+  .hd { padding: 18px 28px; background: #172b4d; color: #fff; display: flex;
+        justify-content: space-between; align-items: center; }
+  .hd .sys { font-size: 18px; font-weight: 700; letter-spacing: .5px; }
+  .hd .ver { font-size: 12px; opacity: .75; }
+  .badge { padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #fff; }
+  .badge-firing { background: #e5484d; }
+  .badge-resolved { background: #30a46c; }
+  .banner { padding: 16px 28px; font-size: 15px; border-bottom: 1px solid #eceef1; }
+  .banner .t { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  .badge-warning { background: #f76b15; }
+  .badge-critical { background: #e5484d; }
+  .info { background: #e9f2ff; color: #0065ff; border-radius: 6px; padding: 8px 12px; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; width: 110px; padding: 10px 28px; background: #fafbfc;
+       font-size: 13px; color: #6b778c; border-bottom: 1px solid #eceef1; }
+  td { padding: 10px 28px; font-size: 14px; border-bottom: 1px solid #eceef1; word-break: break-all; }
+  tr:last-child th, tr:last-child td { border-bottom: none; }
+  .tags span { display: inline-block; background: #e9f2ff; color: #0065ff; border-radius: 4px;
+               padding: 2px 8px; margin: 2px 4px 2px 0; font-size: 12px; }
+  .suggest { background: #fff8e6; border-left: 4px solid #f7b955; padding: 12px 28px;
+             font-size: 14px; color: #7a5b00; }
+  .links a { color: #0065ff; text-decoration: none; margin-right: 16px; font-size: 13px; }
+  .ft { padding: 14px 28px; font-size: 12px; color: #97a0af; text-align: center; border-top: 1px solid #eceef1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hd">
+    <span class="sys">🔔 Ziggner 告警中心</span>
+    <span class="ver">Alertmanager · 生产环境</span>
+  </div>
+  {{ range .Alerts }}
+  <div class="banner">
+    <span class="badge {{ if eq .Status "firing" }}badge-firing{{ else }}badge-resolved{{ end }}">
+      {{ if eq .Status "firing" }}● FIRING{{ else }}✓ RESOLVED{{ end }}
+    </span>
+    <div class="t">{{ .Labels.alertname }}</div>
+    <div class="info">{{ .Annotations.summary }}</div>
+  </div>
+  <table>
+    <tr><th>告警级别</th><td><span class="badge {{ if eq .Labels.severity "critical" }}badge-critical{{ else }}badge-warning{{ end }}">{{ .Labels.severity | title }}</span></td></tr>
+    <tr><th>当前状态</th><td>{{ .Status | title }}（{{ if eq .Status "firing" }}触发{{ else }}已恢复{{ end }}）</td></tr>
+    <tr><th>触发时间</th><td>{{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}</td></tr>
+    {{ if eq .Status "resolved" }}<tr><th>恢复时间</th><td>{{ .EndsAt.Format "2006-01-02 15:04:05 MST" }}</td></tr>{{ end }}
+    <tr>
+      <th>标签 Labels</th>
+      <td><div class="tags">{{ range $k, $v := .Labels }}<span>{{ $k }}={{ $v }}</span>{{ end }}</div></td>
+    </tr>
+    <tr>
+      <th>注解 Annotations</th>
+      <td>
+        概要：{{ .Annotations.summary }}<br>
+        详情：{{ .Annotations.description }}
+      </td>
+    </tr>
+    <tr>
+      <th>来源链接</th>
+      <td class="links">
+        <a href="{{ $.ExternalURL }}/#/alerts?receiver={{ .Receiver | urlquery }}">Alertmanager 告警面板</a>
+        {{ if .GeneratorURL }}<a href="{{ .GeneratorURL }}">Prometheus 表达式</a>{{ end }}
+        <a href="http://ziggner-grafana:3000/d/ziggner-overview">Grafana 生产概览</a>
+      </td>
+    </tr>
+    <tr>
+      <th>处理建议</th>
+      <td class="suggest">{{ template "ziggner.suggestion" . }}</td>
+    </tr>
+  </table>
+  {{ end }}
+  <div class="ft">Ziggner 监控系统自动发送 · Alertmanager</div>
+</div>
+</body>
+</html>
+{{ end }}
+
+{{ define "ziggner.suggestion" }}
+{{- if eq .Labels.alertname "HostLoadHigh" -}}
+1. 登录宿主机执行 `top` / `htop` 定位高负载进程（CPU 或 IO 等待）<br>
+2. 检查 docker stats 各容器 CPU 占用，定位异常容器<br>
+3. 若为业务高峰，评估扩容或降低非核心任务并发；持续 >3.0 需值班介入
+{{- else if eq .Labels.alertname "ContainerMemoryHigh" -}}
+1. 执行 `docker stats` 查看该容器内存占用与限额（2C4G 配额）<br>
+2. 检查应用日志有无内存泄漏/大对象（日志文件、缓存膨胀）<br>
+3. 必要时重启容器释放，并评估上调 mem_limit 或拆分任务
+{{- else if eq .Labels.alertname "RedisMemoryHigh" -}}
+1. `redis-cli -h <redis> info memory` 查看 used_memory 构成<br>
+2. 用 `redis-cli --bigkeys` 定位大键，清理过期/膨胀缓存<br>
+3. 确认 maxmemory-policy（当前 allkeys-lru），必要时扩充容量
+{{- else if eq .Labels.alertname "DjangoDown" -}}
+1. 检查 django-app 容器状态：`docker ps` / `docker logs ziggner-django-app-1`<br>
+2. 确认 DB/Redis 依赖健康，必要时重启容器<br>
+3. 恢复后验证 /health 与首页可访问，并关注告警是否自动 RESOLVED
+{{- else -}}
+1. 查看 Prometheus 表达式与容器日志定位根因<br>
+2. 按严重级别响应：critical 立即处理，warning 4 小时内处理<br>
+3. 处理完成后确认告警自动恢复（或手动 resolve）
+{{- end -}}
+{{ end }}
