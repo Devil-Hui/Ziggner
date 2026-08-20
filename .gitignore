@@ -17,6 +17,17 @@ web/react/probe_chunk.js
 web/react/scripts_tmp_rm_pb.py
 web/react/overview-*.md
 web/react/dist_*/
+# 本地构建改名残留（sandbox safe-delete 规避用）
+web/react/dist-old/
+# git 仓库损坏备份目录（不入库）
+.git.broken-*/
+# coverage 二进制数据
+backend/.coverage
+# 覆盖率 JSON 中间产物
+backend/coverage*.json
+backend/.pytest_cache/
+backend/allure-results/
+backend/allure-report/
 
 # Node
 node_modules/

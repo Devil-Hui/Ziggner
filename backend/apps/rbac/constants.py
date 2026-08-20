@@ -120,6 +120,7 @@ _ADMIN_LEADER_PERMS = _ADMIN_MEMBER_PERMS | {
     'goods.category.write',
     'goods.brand.write',
     'goods.tag.write',
+    'goods.group.write',  # 管理审核组（admin_group 增删改视图均要求此权限）
     'goods.import.execute',
     'goods.recycle.restore',
     'goods.application.review',

@@ -1,0 +1,30 @@
+# =============================================================================
+# 集成层覆盖率门禁配置（make test-integration / test-all）
+#
+# 大厂规范：集成层整体 ≥ 80%（fail-under=80，见 Makefile）
+# 范围覆盖 Repository/ORM 查询、缓存策略、R2 预签名、第三方 API mock。
+# =============================================================================
+[run]
+source = apps, utils
+branch = true
+context = integration
+omit =
+    */migrations/*
+    */admin.py
+    */apps.py
+    */asgi.py
+    */wsgi.py
+    */management/commands/*
+    manage.py
+    */__init__.py
+
+[report]
+precision = 2
+show_missing = true
+skip_empty = true
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == "__main__":
+    if TYPE_CHECKING:

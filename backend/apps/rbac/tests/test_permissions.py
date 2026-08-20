@@ -13,6 +13,10 @@ from apps.rbac.constants import ALL_PERM_CODES, DEFAULT_ROLE, Role
 from apps.rbac.models import UserRole
 from apps.rbac.services import get_user_perms, get_user_roles, has_perm, has_role
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 class PermissionJudgmentTest(TestCase):
     def setUp(self):

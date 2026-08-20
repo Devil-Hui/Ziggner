@@ -9,3 +9,49 @@ select = ["E9", "F63", "F7", "F82"]
 [tool.bandit]
 exclude_dirs = ["tests", "migrations", ".venv"]
 skips = ["B101"]
+
+# ── pytest / pytest-django ──────────────────────────────────────────────
+[tool.pytest]
+# 通过 `pytest` 直接运行（等价于 manage.py test 的 pytest 版）
+# 关键：DJANGO_SETTINGS_MODULE 指向 dev（CI 同环境）
+DJANGO_SETTINGS_MODULE = "project.config.settings.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+python_classes = ["Test*", "*Tests"]
+python_functions = ["test_*"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+    "-q",
+]
+markers = [
+    "unit: 单元测试（领域层纯逻辑，无 DB/外部依赖）",
+    "integration: 集成测试（DB / Redis / R2 / 第三方 mock）",
+    "contract: 契约测试（API Schema 对齐）",
+    "chaos: 混沌工程（并发 / 异常 / 数据一致性）",
+    "e2e: 端到端测试（Playwright 公网全链路）",
+    "slow: 慢用例（压测/混沌，默认 -m 'not slow' 跳过）",
+]
+
+[tool.coverage.run]
+source = ["apps", "utils"]
+branch = true
+omit = [
+    "*/migrations/*",
+    "*/admin.py",
+    "*/apps.py",
+    "manage.py",
+    "*/management/commands/*",
+]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_empty = true
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.",
+    "if TYPE_CHECKING:",
+]

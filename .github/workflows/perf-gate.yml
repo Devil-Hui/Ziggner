@@ -1,0 +1,62 @@
+# =============================================================================
+# 性能门禁（大厂规范 - 性能未达基线 → WARNING + 强制人工 Review）
+#
+# 触发：手动（workflow_dispatch）/ 每日一次（schedule，随 nightly 后）
+# 目标：预发布环境（shop.ziggner.com 公网）压测，P95>500ms 或 TPS<设定值80% 时：
+#   - 打印 [PERF-WARNING]，job 标红但不阻断正常 CI
+#   - 自动在对应 PR / 仓库 Issue 上留评论，强制人工 Review
+#
+# 用法：
+#   1. 在 Actions 手动触发：Workflow → Perf Gate → Run workflow
+#   2. 或等待每日 schedule 自动跑
+# =============================================================================
+name: Perf Gate
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 20 * * *'   # 每晚 20:30 UTC（北京 04:30）
+
+jobs:
+  perf-gate:
+    name: Perf · p95<500ms & TPS≥80%
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install k6
+        run: |
+          # k6 官方安装（压测脚本在仓库 test 目录或 backend/scripts/loadtest）
+          curl -sL https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-amd64.tar.gz | tar xz
+          sudo mv k6-*/k6 /usr/local/bin/
+          k6 version
+      - name: Run load test (public shop)
+        continue-on-error: true
+        env:
+          E2E_BASE_URL: https://shop.ziggner.com
+        run: |
+          k6 run --summary-export=k6-summary.json backend/scripts/loadtest/loadtest.js 2>&1 | tail -40 || true
+      - name: Enforce perf baseline (WARNING → human review)
+        id: perf
+        env:
+          PERF_P95_MS: "500"
+          PERF_MIN_TPS: "100"
+        run: |
+          python backend/scripts/perf_gate.py --k6-json k6-summary.json --p95-ms 500 --min-tps 100 || {
+            echo "PERF_FAILED=1" >> "$GITHUB_ENV"
+            exit 0   # 不阻断 CI；改由评论强制人工 Review
+          }
+      - name: Notify (WARNING → 人工 Review)
+        if: env.PERF_FAILED == '1'
+        run: |
+          # 评论到仓库 Issue（需 GH_TOKEN 权限；未配置则降级为日志告警）
+          python backend/scripts/notify_dingtalk.py \
+            "[PERF-WARNING] Ziggner 性能未达基线" \
+            "P95>500ms 或 TPS<设定值80%。请相关模块 Owner 立即人工 Review。\n详情：$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            || true
+          gh issue create --title "[PERF-WARNING] 性能基线未达标" \
+            --body "性能门禁检测到 P95>500ms 或 TPS<设定值 80%，详见：$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID。需人工 Review 确认。\$PERF_REPORT" \
+            || echo "未配置 gh/GH_TOKEN，跳过 Issue 创建（请人工查看 Actions 日志）"
+          echo "::warning title=PERF-WARNING::性能未达基线，需人工 Review"

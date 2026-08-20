@@ -3,7 +3,7 @@ import io
 from rest_framework import status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
-from django.http import HttpResponse
+from django.http import StreamingHttpResponse
 from utils.api_base_view import BaseApiView
 from utils.response_codes import Messages
 from ..models import SPU, SPUStatus, SKU, Brand, Category
@@ -141,41 +141,74 @@ class ExportProductsView(BaseApiView):
         qs = (
             SPU.objects.filter(deleted_at__isnull=True)
             .select_related('brand', 'category')
-            .prefetch_related('skus')
         )
         # 数据权限：非超管仅能导出本组类目下的商品（DB 层行级过滤）
         if not has_role(request.user, Role.SUPERADMIN.value):
             managed_ids = get_group_managed_category_ids(request.user)
             qs = qs.filter(category_id__in=managed_ids) if managed_ids else qs.none()
-        spus = list(qs)
 
         # 敏感操作审计：导出必须留痕（含行级范围）
+        is_admin = has_role(request.user, Role.SUPERADMIN.value)
         from .admin_audit import create_audit_log
         create_audit_log(
             request.user, 'export_products', 'spu', 0,
-            changes={'count': len(spus), 'scope': 'managed' if not has_role(request.user, Role.SUPERADMIN.value) else 'all'},
+            changes={'count': qs.count(), 'scope': 'managed' if not is_admin else 'all'},
             ip_address=request.META.get('REMOTE_ADDR'),
         )
 
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(['Name', 'Brand', 'Category', 'Price', 'Stock', 'Status', 'Description', 'Main Image', 'Created At'])
+        # 大数据量导出必须流式（StreamingHttpResponse + 分块迭代）：
+        # 仅保留一个 chunk（默认 500 行）在内存，10 万条记录也不会 OOM，
+        # 且 chunked Transfer-Encoding 交付，第一块数据即可开始传输。
+        response = StreamingHttpResponse(
+            self._stream_rows(qs), content_type='text/csv; charset=utf-8'
+        )
+        response['Content-Disposition'] = 'attachment; filename="products_export.csv"'
+        return response
 
-        for spu in spus:
-            sku = spu.skus.first()
+    # 每块最多物化多少条 SPU 到内存（内存上界 = chunk * 单行开销）
+    EXPORT_CHUNK_SIZE = 500
+
+    @classmethod
+    def _csv_line(cls, row: list) -> str:
+        """将一行 render 为合法 CSV 文本（含换行）。"""
+        buf = io.StringIO()
+        csv.writer(buf).writerow(row)
+        return buf.getvalue()
+
+    @classmethod
+    def _stream_rows(cls, spu_qs):
+        """惰性生成 CSV 文本，按块加载 SPD 及其 SKU，内存恒定。"""
+        yield cls._csv_line(['Name', 'Brand', 'Category', 'Price', 'Stock', 'Status', 'Description', 'Main Image', 'Created At'])
+
+        iterator = spu_qs.iterator(chunk_size=cls.EXPORT_CHUNK_SIZE)
+        chunk = []
+        for spu in iterator:
+            chunk.append(spu)
+            if len(chunk) >= cls.EXPORT_CHUNK_SIZE:
+                yield from cls._render_chunk(chunk)
+                chunk = []
+        if chunk:
+            yield from cls._render_chunk(chunk)
+
+    @classmethod
+    def _render_chunk(cls, chunk):
+        """渲染一个 chunk：批量取 SKU（避免逐条 N+1），逐行输出。"""
+        id_list = [s.id for s in chunk]
+        sku_map = {
+            sku.spu_id: sku
+            for sku in SKU.objects.filter(spu_id__in=id_list)
+        }
+        for spu in chunk:
+            sku = sku_map.get(spu.id)
             price = str(sku.price) if sku else ''
             stock = str(sku.stock) if sku else ''
-            category_path = self._get_category_path(spu.category)
-            writer.writerow([
+            category_path = cls._get_category_path(spu.category)
+            yield cls._csv_line([
                 escape_csv_cell(spu.name), escape_csv_cell(spu.brand.name), escape_csv_cell(category_path),
                 price, stock, spu.status,
                 escape_csv_cell(spu.description), escape_csv_cell(spu.main_image or ''),
                 spu.created_at.strftime('%Y-%m-%d %H:%M:%S') if spu.created_at else '',
             ])
-
-        response = HttpResponse(output.getvalue(), content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename="products_export.csv"'
-        return response
 
     @staticmethod
     def _get_category_path(category):

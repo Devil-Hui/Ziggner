@@ -457,6 +457,11 @@ class ChangePasswordView(BaseApiView):
                     {'detail': 'Old password is incorrect.'},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+            if str(e) == 'SAME_PASSWORD':
+                return Response(
+                    {'detail': 'New password must differ from the old one.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             raise
 
         # 安全戳旋转：密码变更使该用户所有旧会话立即失效，需重新登录

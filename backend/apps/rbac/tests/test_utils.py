@@ -8,6 +8,10 @@ from django.test import SimpleTestCase
 from utils.api_base_pagination import safe_int
 from utils.json_logging import mask_sensitive
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 class SafeIntTest(SimpleTestCase):
     def test_valid_int(self):

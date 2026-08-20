@@ -23,6 +23,10 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 from apps.users.tasks import send_admin_welcome_email
 
 User = get_user_model()
@@ -59,7 +63,12 @@ class AdminCreateTests(TestCase):
         return data
 
     def _code(self, response) -> str | None:
+        # 错误信封：{code: <语义码>, status: 'error', message, ...}
         return response.json().get('code')
+
+    def _data(self, response) -> dict:
+        # 成功信封：{code: <http status>, data: <业务体>, status: 'success', ...}
+        return response.json().get('data')
 
     # ── 失败路径：错误码映射 ──
 
@@ -80,9 +89,10 @@ class AdminCreateTests(TestCase):
         # 第一次创建（成功；不捕获 on_commit，避免触发真实 broker）
         first = self.client.post(CREATE_URL, self._payload(), format='json')
         self.assertEqual(first.status_code, 201, first.content)
-        # 第二次使用相同邮箱（大小写不同，应被 iexact 唯一性拦下）
+        # 第二次使用相同邮箱（大小写不同，应被 iexact 唯一性拦下）；
+        # 用户名必须不同，否则先命中 USERNAME_EXISTS
         resp = self.client.post(
-            CREATE_URL, self._payload(email='NEW.ADMIN@example.com'), format='json'
+            CREATE_URL, self._payload(username='new_admin2', email='NEW.ADMIN@example.com'), format='json'
         )
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(self._code(resp), 'EMAIL_EXISTS')
@@ -124,7 +134,7 @@ class AdminCreateTests(TestCase):
                 resp = self.client.post(CREATE_URL, payload, format='json')
 
         self.assertEqual(resp.status_code, 201, resp.content)
-        body = resp.json()
+        body = self._data(resp)
 
         # 1) 邮箱归一化为小写存储并返回
         self.assertEqual(body['email'], 'mixedcase@example.com')
@@ -152,4 +162,4 @@ class AdminCreateTests(TestCase):
         self.assertEqual(resp.status_code, 201, resp.content)
         created = User.objects.get(username='new_admin')
         self.assertFalse(created.is_active)
-        self.assertFalse(resp.json()['is_active'])
+        self.assertFalse(self._data(resp)['is_active'])

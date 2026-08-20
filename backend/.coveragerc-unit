@@ -1,0 +1,47 @@
+# =============================================================================
+# 单元层覆盖率门禁配置（make test-unit）
+#
+# 大厂规范：
+#   整体 ≥ 85%（fail-under=85，见 Makefile）
+#   核心模块（库存扣减、价格计算、状态机流转）≥ 95%（下面 per-module 指定）
+#
+# 范围：仅统计「纯领域逻辑」，排除 migrations/admin/manage.py 等样板。
+# CSV 输出供 CI 解析每模块命中率，执行 95% 子门禁。
+# =============================================================================
+[run]
+source = apps, utils
+branch = true
+context = unit
+omit =
+    */migrations/*
+    */admin.py
+    */apps.py
+    */management/commands/*
+    */serializers.py
+    */urls.py
+    */apps.py
+    manage.py
+    */__init__.py
+
+[report]
+precision = 2
+show_missing = true
+skip_empty = true
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == "__main__":
+    if TYPE_CHECKING:
+    # 契约/集成专属，单元层不需覆盖
+    if settings.ASYNC_UPLOAD_ENABLED
+
+# ── 核心模块 95% 子门禁：库存扣减 / 价格计算 / 状态机流转 ───────────────────
+# 由 scripts/check_core_coverage.py 读取此处路径，对每份结果做 ≥95% 校验。
+[core]
+modules =
+    apps/order/services.py           # 下单事务 / select_for_update 防超卖 / 库存扣减
+    apps/goods/models.py             # SPU/SKU 状态机 + locked 库存
+    apps/promotion/services.py       # 优惠券 calc_discount / 满减 / 使用锁断言
+    apps/cart/views.py
+core_fail_under = 95.0

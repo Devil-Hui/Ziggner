@@ -147,6 +147,13 @@ class CustomExceptionMiddleware:
 
         message = self._extract_message(body)
         error_code, category = self._status_to_code(response.status_code)
+        # 保留视图自定义的语义错误码（如 EMAIL_INVALID / INSUFFICIENT_STOCK）：
+        # 视图已在 payload 里显式设置 code/error_code 时以它为准，
+        # 否则回退到状态码映射，避免前端拿到千篇一律的 BAD_REQUEST。
+        if isinstance(body, dict):
+            view_code = body.get('error_code') or body.get('code')
+            if isinstance(view_code, str) and view_code:
+                error_code = view_code
         # 路由级 404 等场景下响应体为空或没有可读消息时，回退到该状态码对应的标准消息
         if not message or message == '请求失败':
             message = ErrorCodes.get(error_code).default_message

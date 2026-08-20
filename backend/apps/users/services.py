@@ -162,8 +162,12 @@ class UserService:
         """修改密码 —— 校验旧密码后设置新密码"""
         if not user.check_password(old_password):
             raise ValueError('OLD_PASSWORD_INCORRECT')
+        if new_password == old_password:
+            raise ValueError('SAME_PASSWORD')
         user.set_password(new_password)
-        user.save(update_fields=['password', 'updated_at'])
+        # 注意：User 为 Django 默认 AbstractUser，无 updated_at 字段，
+        # 不能出现在 update_fields 中（否则 500: field does not exist）。
+        user.save(update_fields=['password'])
         return user
 
     # ============================================================

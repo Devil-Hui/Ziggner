@@ -45,8 +45,10 @@ def mask_sensitive(text: str) -> str:
     if not text:
         return text
     masked = _JSON_VALUE.sub(r'\1***\2', text)
-    masked = _KEY_VALUE.sub('***', masked)
+    # 先处理 "Bearer xxx" / "token xxx"（值含空格），再处理 key=value 形式；
+    # 否则 _KEY_VALUE 会先吞掉 "Bearer" 把真正的 JWT 留在日志里。
     masked = _TOKEN_SPACE.sub(r'\1 ***', masked)
+    masked = _KEY_VALUE.sub('***', masked)
     masked = _PHONE.sub(r'\1****\2', masked)
     return masked
 
