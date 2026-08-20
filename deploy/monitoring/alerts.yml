@@ -1,7 +1,18 @@
-# Ziggner 生产告警规则（负载 >2.0 / 内存 >75% / Redis >512MB）
+# Ziggner 生产告警规则（CPU >80% / 内存 >75% / Redis >512MB）
 groups:
   - name: ziggner-infra
     rules:
+      # 宿主 CPU 使用率 >80% 持续 5 分钟（2C4G：80% ≈ 1.6 vCPU，为峰值预留 20% 余量）
+      - alert: HostCPUHigh
+        expr: (1 - avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: '宿主 CPU >80% ({{ $labels.instance }})'
+          description: 'CPU 使用率 {{ $value | humanizePercentage }} 持续 5 分钟，可能逼近 2C4G 算力上限。'
+
       # 宿主负载（load1）超过 2.0 持续 5 分钟
       - alert: HostLoadHigh
         expr: node_load1 > 2
