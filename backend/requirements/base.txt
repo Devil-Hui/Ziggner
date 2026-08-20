@@ -31,6 +31,7 @@ PySocks>=1.7.1
 # ── 2C4G 资源约束：协程模型 + 连接池 ──
 # gevent：Gunicorn 协程 worker，2 核下用协程而非线程承载高并发 I/O
 gevent==24.11.1
-# dj-db-conn-pool：MySQL 连接池（MAX_CONNS 上限），防止连接泄漏/打满；
-# 配合 DJANGO_DB_DRIVER=pymysql 使用纯 Python 驱动以兼容 gevent 协程调度
-dj-db-conn-pool==2.3.0
+# 注：MySQL 连接池（2C4G 资源优化）原计划钉死 dj-db-conn-pool==2.3.0，但该包在 PyPI /
+# 阿里云镜像均不存在（正确包名为 django-db-connection-pool，最新 1.2.6，且需验证与
+# Django 5.2 + gevent 的兼容性）。当前生产镜像（v1.0.2）亦未启用连接池，运行稳定，
+# 故暂不钉死该依赖；待选型并测试兼容后再单独加回，避免引入未经验证的 DB 驱动变更。

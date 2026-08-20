@@ -7,7 +7,8 @@ from django.db import transaction
 from django.db.utils import IntegrityError
 from django.utils import timezone
 
-from apps.users.models import UserProfile
+from apps.users.account import ensure_account_no
+from apps.users.models import UserProfile, generate_account_no
 
 _logger = getLogger('biz')
 
@@ -77,16 +78,31 @@ class UserService:
             is_active=bool(is_active),
         )
 
-        UserProfile.objects.create(
-            user=user,
-            country_code=country_code or '',
-            phone=phone or '',
-            department=department or '',
-            note=note or '',
-            locale=locale or 'zh-CN',
-            must_reset_password=bool(must_reset_password),
-            email_verified=bool(email_verified),
-        )
+        # 生成对外账户号（account_no）：唯一约束。必须在 UserProfile.objects.create
+        # 时即赋值，不能事后补——否则默认空串会与已有空值冲突导致注册 500
+        # （IntegrityError 1062，且会留下 account_no='' 的孤儿行阻塞后续注册）。
+        # 极小概率生成碰撞时重试（16 位 Crockford Base32，碰撞概率可忽略）。
+        for _attempt in range(5):
+            try:
+                UserProfile.objects.create(
+                    user=user,
+                    account_no=generate_account_no(),
+                    country_code=country_code or '',
+                    phone=phone or '',
+                    department=department or '',
+                    note=note or '',
+                    locale=locale or 'zh-CN',
+                    must_reset_password=bool(must_reset_password),
+                    email_verified=bool(email_verified),
+                )
+                break
+            except IntegrityError:
+                continue
+        else:
+            raise ValueError('ACCOUNT_NO_GENERATION_FAILED')
+
+        # 幂等兜底：若 account_no 因异常仍为空（理论上不会），再补一次
+        ensure_account_no(user)
 
         return user
 
@@ -96,9 +112,9 @@ class UserService:
 
     @staticmethod
     def get_or_create_profile(user):
-        """获取用户的 Profile，不存在则自动创建"""
-        profile, _ = UserProfile.objects.get_or_create(user=user)
-        return profile
+        """获取用户的 Profile，不存在则自动创建（并确保 account_no 已生成）"""
+        ensure_account_no(user)
+        return UserProfile.objects.get(user=user)
 
     @staticmethod
     def update_profile(user, **data):

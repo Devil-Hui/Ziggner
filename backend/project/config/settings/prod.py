@@ -107,3 +107,27 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = int(
 DATA_UPLOAD_MAX_NUMBER_FIELDS = int(
     os.getenv('DATA_UPLOAD_MAX_NUMBER_FIELDS', '1024')
 )
+
+# ============================================================
+# gevent 协程下数据库连接隔离（修复「DatabaseWrapper ... was created in thread ...
+# this is thread」500 + 跨协程连接污染）
+# ============================================================
+# 背景：gunicorn 使用 gevent worker 时，单个 worker 进程内所有协程（greenlet）
+# 共享同一个 OS 线程；而 Django 的数据库连接是按「线程」隔离的（threading.local）。
+# 这带来两个问题：
+#   1) 不同协程共享同一个连接对象，存在并发污染风险；
+#   2) 连接在协程 A 创建、在协程 B 关闭时，Django 的 validate_thread_sharing()
+#      误报线程不一致，导致所有写操作（register / checkout / 订单等）500。
+# 修复：将连接隔离单元从「线程」改为「协程（greenlet）」，使每个协程独占一条连接。
+# 这样既消除误报，又避免连接被多协程共享。gevent 未启用时退化为 threading.local，
+# 无任何副作用；且不引入新依赖、不改变 gevent worker 架构与 2C4G 内存预算。
+try:
+    from gevent.local import local as _ConnectionIsolationLocal
+except Exception:  # pragma: no cover - 无 gevent 时退化为线程隔离
+    from threading import local as _ConnectionIsolationLocal
+
+from django.db import connections as _db_connections
+
+if getattr(_db_connections, '_connections', None) is not None:
+    # 用 greenlet-local 替换线程级连接容器，确保每条协程拥有独立连接。
+    _db_connections._connections = _ConnectionIsolationLocal()
