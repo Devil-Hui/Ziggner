@@ -349,7 +349,9 @@ def _redis_cache(location, *, timeout=300):
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             'SOCKET_CONNECT_TIMEOUT': 2,
             'SOCKET_TIMEOUT': 2,
-            'IGNORE_EXCEPTIONS': False,
+            # 缓存降级：Redis 宕机时缓存读异常被吞（get→None→DB 兜底），
+            # 避免整站 500；锁走 raw redis 连接（utils.cache 互斥锁），异常照抛保持 fail-loud。
+            'IGNORE_EXCEPTIONS': True,
             # 2C4G：每个 Redis 缓存别名连接池上限 ≤10，防止 Redis 连接数失控
             'CONNECTION_POOL_KWARGS': {'max_connections': 10},
         },

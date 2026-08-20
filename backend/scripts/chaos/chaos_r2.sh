@@ -38,11 +38,11 @@ docker run -d --name "$WEB_CONTAINER" --network ziggner-test-net \
   -e R2_BUCKET=ziggner-r2 \
   -e R2_ACCESS_KEY_ID=chaos-fake \
   -e R2_SECRET_ACCESS_KEY=chaos-fake \
-  ziggner-django:v1.0.2 python manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
+  --entrypoint python ziggner-django:v1.0.2 manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
 
 echo "  等待启动（最多 25s）…"
 for i in $(seq 1 25); do
-  docker exec "$WEB_CONTAINER" python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/goods/', timeout=3)" >/dev/null 2>&1 && break
+  docker exec "$WEB_CONTAINER" python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/v1/goods/spu', timeout=3)" >/dev/null 2>&1 && break
   sleep 1
 done
 

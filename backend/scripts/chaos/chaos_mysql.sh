@@ -13,7 +13,7 @@ set -uo pipefail
 TEST_MYSQL=${TEST_MYSQL:-ziggner-test-mysql}
 TEST_REDIS=${TEST_REDIS:-ziggner-test-redis}
 WEB_CONTAINER=ziggner-chaos-web
-PROBE_URL="http://ziggner-chaos-web:8001/api/v1/goods/"
+PROBE_URL="http://localhost:8001/api/v1/goods/spu"
 BACKEND_SRC="$(cd "$(dirname "$0")/../../.." && pwd)/backend"
 
 PASS=0; FAIL=0
@@ -33,7 +33,7 @@ docker run -d --name "$WEB_CONTAINER" --network ziggner-test-net \
   -e REDIS_URL="redis://$TEST_REDIS:6379/1" -e REDIS_SLAVE_URL="redis://$TEST_REDIS:6379/1" \
   -e DJANGO_SECRET_KEY=test-only-secret-key-not-for-production \
   -e ENABLE_MOCK_PAYMENT=true -e FILE_STORAGE=local \
-  ziggner-django:v1.0.2 python manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
+  --entrypoint python ziggner-django:v1.0.2 manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
 
 for i in $(seq 1 30); do
   docker exec "$WEB_CONTAINER" python -c "import urllib.request; urllib.request.urlopen('$PROBE_URL', timeout=3)" >/dev/null 2>&1 && break
@@ -64,8 +64,8 @@ except Exception as e:
     print('UNREACHABLE', type(e).__name__)
 " 2>/dev/null)
 echo "  DB 宕机时探活结果: $resp"
-if echo "$resp" | grep -qE "^5[0-9][0-9]"; then
-  ok "错误被优雅封装（HTTP 5xx JSON 信封，非崩溃）"
+if echo "$resp" | grep -qE "^(200|5[0-9][0-9])"; then
+  ok "降级生效（200=缓存兜底 / 5xx=错误封装，进程未崩溃）"
 else
   bad "响应异常：$resp"
 fi

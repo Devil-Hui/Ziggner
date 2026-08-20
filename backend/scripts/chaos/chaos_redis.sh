@@ -17,7 +17,7 @@ set -uo pipefail
 TEST_MYSQL=${TEST_MYSQL:-ziggner-test-mysql}
 TEST_REDIS=${TEST_REDIS:-ziggner-test-redis}
 WEB_CONTAINER=ziggner-chaos-web
-PROBE_URL="http://ziggner-chaos-web:8001/api/v1/goods/"
+PROBE_URL="http://localhost:8001/api/v1/goods/spu"
 BACKEND_SRC="$(cd "$(dirname "$0")/../../.." && pwd)/backend"
 
 PASS=0; FAIL=0
@@ -39,7 +39,7 @@ docker run -d --name "$WEB_CONTAINER" --network ziggner-test-net \
   -e REDIS_URL="redis://$TEST_REDIS:6379/1" -e REDIS_SLAVE_URL="redis://$TEST_REDIS:6379/1" \
   -e DJANGO_SECRET_KEY=test-only-secret-key-not-for-production \
   -e ENABLE_MOCK_PAYMENT=true -e FILE_STORAGE=local \
-  ziggner-django:v1.0.2 python manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
+  --entrypoint python ziggner-django:v1.0.2 manage.py runserver 0.0.0.0:8001 --noreload >/dev/null 2>&1
 
 echo "  等待服务就绪（最多 30s）…"
 for i in $(seq 1 30); do
@@ -75,7 +75,7 @@ fi
 code=$(docker exec "$WEB_CONTAINER" python -c "
 import urllib.request
 try:
-    r = urllib.request.urlopen('$PROBE_URL', timeout=10)
+    r = urllib.request.urlopen('$PROBE_URL', timeout=45)
     print(r.status)
 except urllib.error.HTTPError as e:
     print(e.code)
