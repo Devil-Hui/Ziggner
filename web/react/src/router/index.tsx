@@ -48,6 +48,7 @@ const AdminChatList = lazy(() => import('../pages/admin/AdminChatList'))
 const AdminChatDetail = lazy(() => import('../pages/admin/AdminChatDetail'))
 const AdminEmailTemplates = lazy(() => import('../pages/admin/AdminEmailTemplates'))
 const AdminRbac = lazy(() => import('../pages/admin/AdminRbac'))
+const AdminImport = lazy(() => import('../pages/admin/AdminImport'))
 
 const PageLoading = () => (
   <div style={{
@@ -121,6 +122,7 @@ export const routes: RouteObject[] = [
       { path: 'products/create', element: <Suspense fallback={<PageLoading />}><AdminProductForm /></Suspense> },
       { path: 'products/:id', element: <Suspense fallback={<PageLoading />}><AdminProductForm /></Suspense> },
       { path: 'products/:id/audit', element: <Suspense fallback={<PageLoading />}><AdminProductAudit /></Suspense> },
+      { path: 'import', element: <Suspense fallback={<PageLoading />}><AdminImport /></Suspense> },
       { path: 'categories', element: <Suspense fallback={<PageLoading />}><AdminCategories /></Suspense> },
       { path: 'brands', element: <Suspense fallback={<PageLoading />}><AdminBrands /></Suspense> },
       { path: 'tags', element: <Suspense fallback={<PageLoading />}><AdminTags /></Suspense> },

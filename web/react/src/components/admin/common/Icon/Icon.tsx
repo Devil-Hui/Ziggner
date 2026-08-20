@@ -17,6 +17,7 @@ export type IconName =
   | 'chevron-down' | 'chevron-up' | 'chevron-left' | 'chevron-right'
   | 'star' | 'more-h' | 'bell' | 'message-circle' | 'external-link'
   | 'send' | 'cart' | 'lock' | 'box' | 'file' | 'users' | 'shield' | 'mail' | 'trending' | 'card'
+  | 'menu'
 
 interface IconProps {
   name: IconName
@@ -58,6 +59,7 @@ const icons: Partial<Record<IconName, React.ReactNode>> = {
   'chevron-right': <><polyline points="9 18 15 12 9 6"/></>,
   'star': <><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></>,
   'more-h': <><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></>,
+  'menu': <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>,
   'bell': <><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></>,
   'message-circle': <><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></>,
   'external-link': <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></>,

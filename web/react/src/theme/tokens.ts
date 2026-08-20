@@ -74,15 +74,19 @@ export const Radius = {
   lg: 12,
   xl: 16,
   full: 9999,
+  /** 输入框 */
+  input: 6,
+  /** 搜索框（胶囊） */
+  search: 20,
 } as const
 
-// ── 阴影 ────────────────────────────────────────────
+// ── 阴影（统一三级，其余禁止）────────────────────────
 export const Shadow = {
-  card: '0 2px 5px rgba(0, 0, 0, 0.05)',
-  md: '0 4px 12px rgba(0, 0, 0, 0.1)',
-  lg: '0 8px 24px rgba(0, 0, 0, 0.15)',
-  dropdown: '0 4px 12px rgba(0, 0, 0, 0.1)',
-  modal: '0 8px 24px rgba(0, 0, 0, 0.15)',
+  card: '0 1px 3px rgba(0, 0, 0, 0.06)',
+  md: '0 4px 12px rgba(0, 0, 0, 0.08)',
+  lg: '0 8px 32px rgba(0, 0, 0, 0.12)',
+  dropdown: '0 4px 12px rgba(0, 0, 0, 0.08)',
+  modal: '0 8px 32px rgba(0, 0, 0, 0.12)',
   none: 'none',
   focus: '0 0 0 3px rgba(26, 86, 219, 0.25)',  // focus ring shadow
 } as const
@@ -135,6 +139,41 @@ export const Transition = {
 export const FocusRing = {
   style: `0 0 0 3px rgba(26, 86, 219, 0.25)`,
   offset: '2px',
+} as const
+
+// ── 相对单位（响应式弹性计算）─────────────────────────
+// clamp(min, preferred, max)：preferred 随视口宽度线性缩放，保证任何屏幕平滑过渡。
+export const FontClamp = {
+  /** 正文：14px → 18px（视口 1.2% 动态） */
+  body: 'clamp(14px, 1.2vw, 18px)',
+  /** 标题：20px → 32px（视口 2.5% 动态） */
+  heading: 'clamp(20px, 2.5vw, 32px)',
+  /** 卡片文字：12px → 14px */
+  card: 'clamp(12px, 1vw, 14px)',
+  /** 价格数字：16px → 24px */
+  price: 'clamp(16px, 1.5vw, 24px)',
+  /** 辅助小字：12px → 13px */
+  caption: 'clamp(12px, 0.9vw, 13px)',
+} as const
+
+/** 统一弹性间距：gap / padding 用 clamp(8px, 1vw, 16px) 系 */
+export const FluidSpace = {
+  gap: 'clamp(8px, 1vw, 16px)',
+  pad: 'clamp(16px, 3vw, 32px)',
+} as const
+
+// ── 断点查询（与 Breakpoint 配套，突变式适配）─────────
+export const MediaQuery = {
+  /** 平板横屏及以上 */
+  mdUp: `@media (min-width: 1024px)`,
+  /** 平板竖屏及以上 */
+  smUp: `@media (min-width: 768px)`,
+  /** 手机（<480px） */
+  xsDown: `@media (max-width: 479.98px)`,
+  /** 手机 + 小平板（<768px，移动优先模板区隔） */
+  mobileDown: `@media (max-width: 767.98px)`,
+  /** 平板竖屏（768–1023） */
+  mdDown: `@media (min-width: 768px) and (max-width: 1023.98px)`,
 } as const
 
 // ── 聚合导出 ───────────────────────────────────────────
