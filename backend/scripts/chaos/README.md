@@ -38,3 +38,19 @@ bash scripts/chaos/chaos_r2.sh
 演练期间 Prometheus 应产生对应告警（`DjangoDown` / `RedisMemoryHigh` 等），
 可在 Alertmanager 面板确认告警被正确路由到邮件（deaven-hui@ziggner.com）与钉钉，
 作为「故障可观测」的旁证。
+
+## 已知覆盖边界：MySQL 主从切换 / 只读模式
+
+**当前生产为单实例 MySQL（命名卷 `mysql_data`，无副本拓扑）**，因此：
+
+- ❌ 「主从切换」真实演练**不可执行**——不存在 standby/read-replica 可切换。
+  若需该能力，前置条件是先构建副本拓扑（如 MySQL binlog 复制或 Group Replication）
+  并在应用层实现「故障时切只读库 / 只读模式（GET 直连副本、写请求排队或拒绝）」
+  后再增加 `chaos_failover.sh`（stop 主库 → 验证读流量切副本 → 写被拒/降级 → 回切）。
+- ✅ 单实例设计下**最强等价演练**即 `chaos_mysql.sh`：整库宕机 → 进程存活、
+  请求降级为缓存兜底（200）或业务 5xx JSON 信封（非进程崩溃）→ 恢复自愈。
+- ⚠️ 在 2C4G 资源预算内，副本常驻内存（~640MB/实例）会挤压应用配额；
+  建议在预算扩容后再引入副本拓扑，并将「只读降级」纳入应用层设计（当前未实现）。
+
+> 结论：降级策略（Redis 缓存 fail-silent、DB 宕机兜底）已由三脚本在测试拓扑实测全绿；
+> 主从切换属「待具备副本拓扑后补充」的演练项，已在监控告警与本文档中明确边界。
