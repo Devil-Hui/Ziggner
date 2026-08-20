@@ -7,7 +7,7 @@ import factory
 from django.utils import timezone
 from factory.django import DjangoModelFactory
 
-from apps.promotion.models import Coupon, CouponScope, DiscountType, UserCoupon
+from apps.promotion.models import Coupon, CouponScope, DiscountType, PromoCode, UserCoupon
 from apps.users.tests.factories import UserFactory
 
 
@@ -70,3 +70,16 @@ class CouponScopeFactory(DjangoModelFactory):
     coupon = factory.SubFactory(CouponFactory)
     scope_type = CouponScope.ScopeType.SPU
     target_id = factory.Sequence(lambda n: n + 1)
+
+
+class PromoCodeFactory(DjangoModelFactory):
+    """专属推广码（代言人/渠道）：挂在一张基础券下，按码追踪引流。"""
+
+    class Meta:
+        model = PromoCode
+
+    coupon = factory.SubFactory(CouponFactory)
+    code = factory.Sequence(lambda n: "AMB%06d" % n)
+    name = factory.Sequence(lambda n: "代言人_%03d" % n)
+    note = ""
+    is_active = True
