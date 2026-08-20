@@ -71,7 +71,7 @@ class PermissionMatrixTest(TestCase):
 
     def test_leader_management_perms(self):
         leader_has = ("goods.spu.write", "goods.spu.audit", "goods.sku.write",
-                      "goods.category.write", "goods.brand.write", "goods.tag.write",
+                      "goods.category.write",
                       "goods.media.write", "goods.import.execute", "goods.recycle.restore",
                       "goods.application.review",
                       "order.ship", "order.cancel", "order.aftersale.review",
@@ -80,8 +80,10 @@ class PermissionMatrixTest(TestCase):
                       "support.ticket.write", "notification.broadcast")
         for code in leader_has:
             self.assertTrue(has_perm(self.leader, code), f"leader 应拥有 {code}")
-        # 全局权限一律超管审批：组长无矩阵写 / 角色分配 / 审核组管理（组的增删改）
-        for code in ("rbac.matrix.write", "rbac.user.assign", "goods.group.write"):
+        # 全局共享资源/操作一律超管审批：组长无品牌/标签/审核组写权限、
+        # 无矩阵写、无角色分配（品牌/标签/组均为全局实体，无组归属）
+        for code in ("goods.brand.write", "goods.tag.write", "goods.group.write",
+                     "rbac.matrix.write", "rbac.user.assign"):
             self.assertFalse(has_perm(self.leader, code), f"leader 不应拥有全局权限 {code}")
 
     # ── member：9 项写，无 audit/管理 ──

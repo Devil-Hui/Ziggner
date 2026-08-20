@@ -179,6 +179,10 @@ class CategoryAdminMigrateView(BaseApiView):
         responses={200: OpenApiResponse(description='Categories migrated')}
     )
     def post(self, request):
+        # 批量迁移 = 跨分类/跨组全局数据操作，仅超管
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+
         from_category_id = request.data.get('from_category_id')
         to_category_id = request.data.get('to_category_id')
 
@@ -201,6 +205,10 @@ class CategoryAdminAuditView(BaseApiView):
         responses={200: OpenApiResponse(description='Category audited')}
     )
     def post(self, request, category_id):
+        # 审批动作 = 全局操作，仅超管（防止组长自审自己提交的分类）
+        if not has_role(request.user, Role.SUPERADMIN.value):
+            return Response({'detail': Messages.PERMISSION_DENIED}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             category = Category.objects.get(id=category_id)
         except Category.DoesNotExist:

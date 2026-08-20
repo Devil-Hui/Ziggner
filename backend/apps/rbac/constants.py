@@ -117,11 +117,10 @@ _ADMIN_MEMBER_PERMS = frozenset({
 
 _ADMIN_LEADER_PERMS = _ADMIN_MEMBER_PERMS | {
     'goods.spu.audit',
+    # 分类保留给组长：创建/更新/删除有管辖范围校验 + 非超管建分类走 PENDING 超管审核闭环
     'goods.category.write',
-    'goods.brand.write',
-    'goods.tag.write',
-    # 注意：goods.group.write（创建/改名/删除审核组）为全局组织架构操作，
-    # 仅超管拥有（组长仅在组内自治：组员增删走 AdminGroupMembersView，内置组长级校验）。
+    # 品牌/标签为全局共享资源（无组归属、无审核流），组长创建即全局生效 → 仅超管。
+    # 审核组同理：goods.group.write 仅超管（组内自治走 AdminGroupMembersView）。
     'goods.import.execute',
     'goods.recycle.restore',
     'goods.application.review',
