@@ -78,3 +78,7 @@ backend/static/
 # Python caches (in case backend/.gitignore misses)
 *.pyc
 __pycache__/
+
+# 监控凭据（SMTP/钉钉 webhook，绝不入库）
+deploy/monitoring/.env.monitoring
+deploy/monitoring/smtp_password

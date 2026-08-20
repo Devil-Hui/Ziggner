@@ -1,0 +1,136 @@
+# =============================================================================
+# Ziggner 生产监控栈（Prometheus + Grafana + Alertmanager + exporters）
+#
+# 用法：
+#   cp .env.monitoring.example .env.monitoring   # 填 SMTP / 钉钉凭据（gitignored）
+#   docker compose -f docker-compose.monitoring.yml up -d
+#
+# 说明：
+#   - 网络：加入生产 ziggner_internal（可解析 django-app/redis/db/nginx）
+#   - django 指标经 nginx /metrics 白名单转发抓取（allow 内网，见 nginx default.conf）
+#   - 告警 → 邮件 deaven-hui@ziggner.com（SMTP 凭据来自 .env.monitoring，不入库）
+#   - 告警 → 钉钉机器人（可选：配好 DINGTALK_WEBHOOK 后生效）
+# =============================================================================
+name: ziggner-monitoring
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: ziggner-prometheus
+    restart: unless-stopped
+    # Docker Desktop 内嵌 DNS 对公网域名转发不稳，显式指定上游（抓 api.ziggner.com 用）
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    ports: ["9090:9090"]
+    # internal：访问监控 exporter 与告警；egress：访问公网 api.ziggner.com/metrics
+    #（internal 网络无公网出口，DNS 会 server misbehaving）
+    networks: [ziggner_internal, ziggner_egress]
+    mem_limit: 512m
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: ziggner-alertmanager
+    restart: unless-stopped
+    command: --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./smtp_password:/etc/alertmanager/smtp_password:ro
+    ports: ["9093:9093"]
+    # egress：发 SMTP 邮件需要公网出口（internal 网络 DNS 无法解析公网域名）
+    networks: [ziggner_internal, ziggner_egress]
+    mem_limit: 128m
+
+  dingtalk-hook:
+    image: timonwong/prometheus-webhook-dingtalk:v2.1.0
+    container_name: ziggner-dingtalk-hook
+    restart: unless-stopped
+    env_file: [.env.monitoring]
+    command:
+      - --ding.profile=ziggner=${DINGTALK_WEBHOOK}
+    ports: ["8060:8060"]
+    networks: [ziggner_internal]
+    mem_limit: 96m
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: ziggner-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-ziggner-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SECURITY_DISABLE_GRAVATAR: "true"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ["3000:3000"]
+    networks: [ziggner_internal]
+    mem_limit: 256m
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    container_name: ziggner-node-exporter
+    restart: unless-stopped
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    ports: ["9100:9100"]
+    networks: [ziggner_internal]
+    mem_limit: 96m
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: ziggner-cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports: ["8080:8080"]
+    networks: [ziggner_internal]
+    mem_limit: 128m
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0
+    container_name: ziggner-redis-exporter
+    restart: unless-stopped
+    environment:
+      REDIS_ADDR: redis://ziggner-redis-1:6379
+    ports: ["9121:9121"]
+    networks: [ziggner_internal]
+    mem_limit: 96m
+
+  # 内网 metrics 代理：解决 Prometheus 无法覆盖 Host 头（Go 客户端限制）的问题
+  metrics-proxy:
+    image: nginx:alpine
+    container_name: ziggner-metrics-proxy
+    restart: unless-stopped
+    volumes:
+      - ./metrics-proxy.conf:/etc/nginx/conf.d/default.conf:ro
+    networks: [ziggner_internal]
+    mem_limit: 64m
+
+networks:
+  ziggner_internal:
+    external: true
+  ziggner_egress:
+    external: true
+
+volumes:
+  prometheus-data: {}
+  grafana-data: {}

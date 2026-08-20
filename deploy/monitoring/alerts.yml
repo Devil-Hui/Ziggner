@@ -1,0 +1,52 @@
+# Ziggner 生产告警规则（负载 >2.0 / 内存 >75% / Redis >512MB）
+groups:
+  - name: ziggner-infra
+    rules:
+      # 宿主负载（load1）超过 2.0 持续 5 分钟
+      - alert: HostLoadHigh
+        expr: node_load1 > 2
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: '宿主负载过高 (load1={{ $value | humanize }})'
+          description: 'load1 持续 >2.0 已 5 分钟，可能影响响应延迟。'
+
+      # 容器内存使用率 >75%（按容器）
+      - alert: ContainerMemoryHigh
+        expr: |
+          sum by (name) (
+            container_memory_usage_bytes{name!=""}
+          ) / sum by (name) (
+            container_spec_memory_limit_bytes{name!=""}
+          ) > 0.75
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: '容器内存 >75% ({{ $labels.name }})'
+          description: '{{ $labels.name }} 内存使用率 {{ $value | humanizePercentage }}，接近 2C4G 配额上限。'
+
+      # Redis 内存超过 512MB
+      - alert: RedisMemoryHigh
+        expr: redis_memory_used_bytes > 536870912
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: 'Redis 内存 >512MB'
+          description: 'Redis used_memory = {{ $value | humanize1024 }}B，超过 512MB 阈值，缓存键可能膨胀。'
+
+      # 服务探活：Django /health 连续 3 次抓取失败
+      - alert: DjangoDown
+        expr: up{job="django"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          team: infra
+        annotations:
+          summary: 'Django 指标抓取失败'
+          description: 'nginx /metrics 连续 3 分钟抓取不到，django-app 可能不可用。'

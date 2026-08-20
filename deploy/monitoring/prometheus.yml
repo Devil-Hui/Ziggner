@@ -1,0 +1,43 @@
+# Ziggner 生产监控抓取配置
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    site: ziggner-prod
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # Django 应用指标：走公网域名 api.ziggner.com/metrics。
+  # Cloudflare tunnel 回源 IP 在内网白名单内（nginx allow），Host 头自动正确，
+  # 边缘证书有效；回源 http + X-Forwarded-Proto https 过 django SECURE_SSL_REDIRECT。
+  - job_name: django
+    metrics_path: /metrics
+    scheme: https
+    static_configs:
+      - targets: ['api.ziggner.com:443']
+        labels:
+          app: ziggner-django
+
+  # 宿主负载 / 内存 / 磁盘（node_exporter）
+  - job_name: node
+    static_configs:
+      - targets: ['ziggner-node-exporter:9100']
+        labels:
+          app: ziggner-host
+
+  # 容器级 CPU / 内存（cadvisor）
+  - job_name: cadvisor
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['ziggner-cadvisor:8080']
+        labels:
+          app: ziggner-containers
+
+  # Redis 内存 / 命中率（redis_exporter）
+  - job_name: redis
+    static_configs:
+      - targets: ['ziggner-redis-exporter:9121']
+        labels:
+          app: ziggner-redis
