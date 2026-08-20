@@ -19,7 +19,7 @@ x-app-security: &app-security
 # =============================================================================
 # 资源预算（2 vCPU / 4GB RAM 主机）
 # 设计目标：任意负载下 CPU 硬上限之和 = 1.40 vCPU = 70% of 2.0，保证峰值 ≤70%。
-# 内存硬上限之和 ≈ 1.86GB（< 70% of 4GB = 2.8GB）。gunicorn 单 worker×4 线程为内存安全取向。
+# 内存硬上限之和 ≈ 1.86GB（< 70% of 4GB = 2.8GB）。gunicorn 2×gevent 协程 worker 为内存安全取向。
 # 注意：cpus 为 Docker 硬上限（--cpus），即使满载也不会突破该比例；真实利用率取决于流量。
 # =============================================================================
 services:
@@ -86,13 +86,16 @@ services:
       CHANNEL_REDIS_URL: "redis://redis:6379/4"
       CELERY_BROKER_URL: redis://redis:6379/2
       CELERY_RESULT_BACKEND: redis://redis:6379/3
-      GUNICORN_WORKERS: "1"
-      GUNICORN_THREADS: "4"
-      GUNICORN_WORKER_CLASS: gthread
-      GUNICORN_MAX_REQUESTS: "5000"
-      GUNICORN_MAX_REQUESTS_JITTER: "500"
+      # 2C4G：固定 2 个 gevent 协程 worker，max-requests=1000 防内存泄漏
+      GUNICORN_WORKERS: "2"
+      GUNICORN_THREADS: "1"
+      GUNICORN_WORKER_CLASS: gevent
+      GUNICORN_MAX_REQUESTS: "1000"
+      GUNICORN_MAX_REQUESTS_JITTER: "100"
       GUNICORN_TIMEOUT: "45"
       GUNICORN_GRACEFUL_TIMEOUT: "20"
+      # gevent 协程需纯 Python DB 驱动（mysqlclient 为 C 扩展，gevent 无法协作式调度其 socket）
+      DJANGO_DB_DRIVER: "pymysql"
     env_file: [.env.production]
     volumes:
       - media_data:/app/media
@@ -131,7 +134,11 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/2
       CELERY_RESULT_BACKEND: redis://redis:6379/3
+      # gevent 协程需纯 Python DB 驱动
+      DJANGO_DB_DRIVER: "pymysql"
       CELERY_CONCURRENCY: "1"
+      # 2C4G：单一 worker（concurrency=1）承载高优队列；image_process 跑 R2 上传（受全局信号量 ≤3 并发）。
+      # batch_import/ranking 为周期性缓存预热任务，essential 保留在同一 worker，避免在 2C4G 上再起第二个 worker 抢内存。
       CELERY_QUEUE: default,image_process,batch_import,ranking
       CELERY_MAX_TASKS_PER_CHILD: "40"
       CELERY_MAX_MEMORY_PER_CHILD: "160000"
@@ -170,6 +177,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/2
       CELERY_RESULT_BACKEND: redis://redis:6379/3
+      DJANGO_DB_DRIVER: "pymysql"
     env_file: [.env.production]
     volumes:
       - beat_logs:/app/logs
@@ -196,7 +204,7 @@ services:
     restart: unless-stopped
     logging: *default-logging
     command: >-
-      redis-server --port 6379 --maxmemory 96mb
+      redis-server --port 6379 --maxmemory 128mb
       --maxmemory-policy allkeys-lru --save "" --appendonly no
       --tcp-backlog 128 --timeout 60
     expose: ["6379"]
@@ -245,9 +253,14 @@ services:
       - no-new-privileges:true
     command:
       - --innodb-buffer-pool-size=384M
-      - --max-connections=40
+      # 连接数上限：2 个 gunicorn worker(各池≤15) + celery(≤15) + daphne/beat 留余量
+      - --max-connections=60
       - --performance-schema=OFF
       - --local-infile=OFF
+      # 慢查询阈值 500ms（2C4G：实时联表聚合/未命中索引的查询会被记录，便于定位）
+      - --slow-query-log=ON
+      - --long-query-time=0.5
+      - --log-queries-not-using-indexes=OFF
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
       interval: 15s

@@ -63,9 +63,8 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/3
       STATIC_ROOT: /backend/static
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
-      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
-      DJANGO_SUPERUSER_EMAIL: ${DJANGO_SUPERUSER_EMAIL:-admin@ziggner.com}
-      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:-change-me-in-prod-123}
+      # 不注入 DJANGO_SUPERUSER_*：确保容器创建不自动生成超级管理员。
+      # 需要超管时手动执行：docker compose exec web python manage.py createsuperuser
     env_file: [../.env]
     ports: ["8000:8000", "8001:8001"]
     volumes:

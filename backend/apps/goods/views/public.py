@@ -228,6 +228,16 @@ class AdminImageUploadView(BaseApiView):
                 {'detail': '不支持或损坏的图片文件'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        # 2C4G：R2 上传异步化 —— 主线程立即返回 202，前端轮询 /api/v1/media/status/{id}/
+        from utils.upload_async import async_upload_enabled, enqueue_media_upload
+
+        if async_upload_enabled():
+            uid = enqueue_media_upload(file, 'uploads', file.content_type or '')
+            return Response(
+                {"upload_id": uid, "status": "accepted",
+                 "status_url": f"/api/v1/media/status/{uid}/"},
+                status=status.HTTP_202_ACCEPTED,
+            )
         from django.core.files.storage import default_storage
         path = default_storage.save(media_key('uploads', ext), strip_exif(file))
         # R2 启用时 default_storage.url() 返回绝对 CDN 地址；否则返回 /media/... 相对路径

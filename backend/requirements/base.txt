@@ -28,3 +28,9 @@ channels[daphne]==4.2.0
 channels_redis==4.2.0
 SQLAlchemy>=2.0,<3
 PySocks>=1.7.1
+# ── 2C4G 资源约束：协程模型 + 连接池 ──
+# gevent：Gunicorn 协程 worker，2 核下用协程而非线程承载高并发 I/O
+gevent==24.11.1
+# dj-db-conn-pool：MySQL 连接池（MAX_CONNS 上限），防止连接泄漏/打满；
+# 配合 DJANGO_DB_DRIVER=pymysql 使用纯 Python 驱动以兼容 gevent 协程调度
+dj-db-conn-pool==2.3.0

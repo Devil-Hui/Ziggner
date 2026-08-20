@@ -1,6 +1,7 @@
 """媒体管理 API —— 列表 / 删除 / 排序 / 信息更新 / 编辑模式上传"""
 
 import os
+import uuid as _uuid
 from utils.storage import media_key
 import logging
 from io import BytesIO
@@ -104,6 +105,39 @@ def _delete_storage_file(url: str) -> None:
             _logger.warning('删除本地文件失败 path=%s error=%s', local_path, e)
 
 
+# ── 媒体操作分布式锁（Redis SET NX + Lua 释放）──────────────────────────────
+# 防并发「删除/修改/排序」竞态（如两个请求同时删、删除与改排序交错）。
+# Redis 不可用时退化为无锁（保持可用性，不阻塞上传/查询）。
+
+def _acquire_media_lock(key: str, ttl: int = 15):
+    """尝试获取分布式锁；成功返回释放令牌，失败返回 None（其他操作正持有）。"""
+    try:
+        from django_redis import get_redis_connection
+        conn = get_redis_connection('default')
+        token = _uuid.uuid4().hex
+        if conn.set(key, token, nx=True, ex=ttl):
+            return token
+    except Exception:
+        pass
+    return None
+
+
+def _release_media_lock(key: str, token: str) -> None:
+    """仅释放自己持有的锁（Lua 原子：值匹配才 DEL，避免误删他人锁）。"""
+    if not token:
+        return
+    try:
+        from django_redis import get_redis_connection
+        conn = get_redis_connection('default')
+        conn.eval(
+            "if redis.call('get', KEYS[1]) == ARGV[1] then "
+            "return redis.call('del', KEYS[1]) else return 0 end",
+            1, key, token,
+        )
+    except Exception:
+        pass
+
+
 class MediaListBySPUView(BaseApiView):
     """获取 SPU 的媒体列表（含审核状态、alt_text）"""
     permission_classes = [HasPerm('goods.media.write')]
@@ -133,44 +167,55 @@ class MediaDeleteView(BaseApiView):
         responses={200: OpenApiResponse(description='Media deleted')}
     )
     def delete(self, request, media_id):
-        try:
-            media = ProductMedia.objects.get(id=media_id)
-        except ProductMedia.DoesNotExist:
-            return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
-
-        spu_id = media.spu_id
-        if spu_id:
-            try:
-                spu = SPU.objects.get(id=spu_id)
-            except SPU.DoesNotExist:
-                return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
-            if not can_operate_spu(request.user, spu):
-                return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
-
-        # 清理存储文件（thumb/list/large/original 或视频；支持 local/R2）
-        if media.media_type == 'image':
-            for url in (media.thumb_url, media.list_url, media.large_url, media.original_url):
-                _delete_storage_file(url)
-        else:
-            for url in (media.video_url, media.video_thumb_url, media.video_list_url, media.video_large_url):
-                _delete_storage_file(url)
-
-        # 清理 Redis 暂存（创建模式遗留）
-        if media.redis_key:
-            MediaService.delete_media_from_redis(
-                media.redis_key,
-                is_video=(media.media_type == 'video'),
+        lock_key = f'media:op:{media_id}'
+        lock_token = _acquire_media_lock(lock_key)
+        if not lock_token:
+            return Response(
+                {'detail': '该媒体正在被其他操作处理，请稍后重试'},
+                status=status.HTTP_409_CONFLICT,
             )
-        media.delete()
+        try:
+            try:
+                media = ProductMedia.objects.get(id=media_id)
+            except ProductMedia.DoesNotExist:
+                return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-        # 失效媒体列表缓存
-        if spu_id:
-            GoodsCacheService.invalidate_media_list(spu_id)
-            GoodsCacheService.invalidate_spu(spu_id)
-            GoodsCacheService.invalidate_spu_list()
-            # 同步 main_image
-            MediaService.sync_main_image(spu_id)
-        return Response({'detail': '已删除'})
+            spu_id = media.spu_id
+            if spu_id:
+                try:
+                    spu = SPU.objects.get(id=spu_id)
+                except SPU.DoesNotExist:
+                    return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+                if not can_operate_spu(request.user, spu):
+                    return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+            # 清理存储文件（thumb/list/large/original 或视频；支持 local/R2）
+            if media.media_type == 'image':
+                for url in (media.thumb_url, media.list_url, media.large_url, media.original_url):
+                    _delete_storage_file(url)
+            else:
+                for url in (media.video_url, media.video_thumb_url, media.video_list_url, media.video_large_url):
+                    _delete_storage_file(url)
+
+            # 清理 Redis 暂存（创建模式遗留）
+            if media.redis_key:
+                MediaService.delete_media_from_redis(
+                    media.redis_key,
+                    is_video=(media.media_type == 'video'),
+                )
+            # 二次读取并删除：锁内保证无并发删除/修改交错
+            ProductMedia.objects.filter(id=media_id).delete()
+
+            # 失效媒体列表缓存
+            if spu_id:
+                GoodsCacheService.invalidate_media_list(spu_id)
+                GoodsCacheService.invalidate_spu(spu_id)
+                GoodsCacheService.invalidate_spu_list()
+                # 同步 main_image
+                MediaService.sync_main_image(spu_id)
+            return Response({'detail': '已删除'})
+        finally:
+            _release_media_lock(lock_key, lock_token)
 
 
 class MediaReorderView(BaseApiView):
@@ -188,31 +233,45 @@ class MediaReorderView(BaseApiView):
 
         # 组隔离：验证所有媒体项所属 SPU 是否可操作
         media_map = {}  # media_id → ProductMedia（预取，后续排序时复用）
+        lock_spu = None
         for mid in media_ids:
             try:
                 media = ProductMedia.objects.select_related('spu').get(id=mid)
                 if not can_operate_spu(request.user, media.spu):
                     return Response({'detail': f'媒体 {mid} 所属 SPU 不在您的管理范围内'}, status=status.HTTP_403_FORBIDDEN)
                 media_map[mid] = media
+                if lock_spu is None and media.spu_id:
+                    lock_spu = media.spu_id
             except ProductMedia.DoesNotExist:
                 return Response({'detail': f'媒体 {mid} 不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-        spu_ids = set()
-        for idx, media_id in enumerate(media_ids):
-            updated = ProductMedia.objects.filter(id=media_id).update(sort_order=idx)
-            if updated:
-                # 从已查询的 media 对象中获取 spu_id，避免重复查询
-                for mid, m in media_map.items():
-                    if mid == media_id:
-                        spu_ids.add(m.spu_id)
-                        break
-        # 失效涉及的 SPU 媒体缓存
-        for sid in spu_ids:
-            if sid:
-                GoodsCacheService.invalidate_media_list(sid)
-                GoodsCacheService.invalidate_spu(sid)
-                GoodsCacheService.invalidate_spu_list()
-        return Response({'detail': '排序已更新', 'count': len(media_ids)})
+        lock_key = f'media:op:spu:{lock_spu}' if lock_spu else None
+        lock_token = _acquire_media_lock(lock_key) if lock_key else None
+        if lock_key and not lock_token:
+            return Response(
+                {'detail': '该 SPU 的媒体正在被其他操作处理，请稍后重试'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        try:
+            spu_ids = set()
+            for idx, media_id in enumerate(media_ids):
+                updated = ProductMedia.objects.filter(id=media_id).update(sort_order=idx)
+                if updated:
+                    # 从已查询的 media 对象中获取 spu_id，避免重复查询
+                    for mid, m in media_map.items():
+                        if mid == media_id:
+                            spu_ids.add(m.spu_id)
+                            break
+            # 失效涉及的 SPU 媒体缓存
+            for sid in spu_ids:
+                if sid:
+                    GoodsCacheService.invalidate_media_list(sid)
+                    GoodsCacheService.invalidate_spu(sid)
+                    GoodsCacheService.invalidate_spu_list()
+            return Response({'detail': '排序已更新', 'count': len(media_ids)})
+        finally:
+            if lock_key:
+                _release_media_lock(lock_key, lock_token)
 
 
 class MediaUpdateView(BaseApiView):
@@ -224,50 +283,60 @@ class MediaUpdateView(BaseApiView):
         responses={200: MediaUpdateResponseSerializer}
     )
     def patch(self, request, media_id):
+        lock_key = f'media:op:{media_id}'
+        lock_token = _acquire_media_lock(lock_key)
+        if not lock_token:
+            return Response(
+                {'detail': '该媒体正在被其他操作处理，请稍后重试'},
+                status=status.HTTP_409_CONFLICT,
+            )
         try:
-            media = ProductMedia.objects.get(id=media_id)
-        except ProductMedia.DoesNotExist:
-            return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
-
-        if media.spu_id:
             try:
-                spu = SPU.objects.get(id=media.spu_id)
-            except SPU.DoesNotExist:
-                return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
-            if not can_operate_spu(request.user, spu):
-                return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+                media = ProductMedia.objects.get(id=media_id)
+            except ProductMedia.DoesNotExist:
+                return Response({'detail': '媒体不存在'}, status=status.HTTP_404_NOT_FOUND)
 
-        update_fields = []
-        if 'alt_text' in request.data:
-            alt_text = str(request.data['alt_text'] or '')
-            if len(alt_text) > 200:
-                return Response({'detail': 'alt_text 长度不能超过 200'}, status=status.HTTP_400_BAD_REQUEST)
-            media.alt_text = alt_text
-            update_fields.append('alt_text')
-        if 'sort_order' in request.data:
-            try:
-                sort_order = int(request.data['sort_order'])
-            except (TypeError, ValueError):
-                return Response({'detail': 'sort_order 必须为整数'}, status=status.HTTP_400_BAD_REQUEST)
-            if sort_order < 0:
-                return Response({'detail': 'sort_order 不能为负数'}, status=status.HTTP_400_BAD_REQUEST)
-            media.sort_order = sort_order
-            update_fields.append('sort_order')
-
-        if update_fields:
-            media.save(update_fields=update_fields)
-            # 失效媒体列表缓存
             if media.spu_id:
-                GoodsCacheService.invalidate_media_list(media.spu_id)
-                GoodsCacheService.invalidate_spu(media.spu_id)
-                GoodsCacheService.invalidate_spu_list()
+                try:
+                    spu = SPU.objects.get(id=media.spu_id)
+                except SPU.DoesNotExist:
+                    return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+                if not can_operate_spu(request.user, spu):
+                    return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 
-        return Response({
-            'id': media.id,
-            'alt_text': media.alt_text,
-            'sort_order': media.sort_order,
-            'message': '更新成功',
-        })
+            update_fields = []
+            if 'alt_text' in request.data:
+                alt_text = str(request.data['alt_text'] or '')
+                if len(alt_text) > 200:
+                    return Response({'detail': 'alt_text 长度不能超过 200'}, status=status.HTTP_400_BAD_REQUEST)
+                media.alt_text = alt_text
+                update_fields.append('alt_text')
+            if 'sort_order' in request.data:
+                try:
+                    sort_order = int(request.data['sort_order'])
+                except (TypeError, ValueError):
+                    return Response({'detail': 'sort_order 必须为整数'}, status=status.HTTP_400_BAD_REQUEST)
+                if sort_order < 0:
+                    return Response({'detail': 'sort_order 不能为负数'}, status=status.HTTP_400_BAD_REQUEST)
+                media.sort_order = sort_order
+                update_fields.append('sort_order')
+
+            if update_fields:
+                media.save(update_fields=update_fields)
+                # 失效媒体列表缓存
+                if media.spu_id:
+                    GoodsCacheService.invalidate_media_list(media.spu_id)
+                    GoodsCacheService.invalidate_spu(media.spu_id)
+                    GoodsCacheService.invalidate_spu_list()
+
+            return Response({
+                'id': media.id,
+                'alt_text': media.alt_text,
+                'sort_order': media.sort_order,
+                'message': '更新成功',
+            })
+        finally:
+            _release_media_lock(lock_key, lock_token)
 
 
 class MediaCreateView(BaseApiView):

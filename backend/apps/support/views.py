@@ -188,6 +188,17 @@ class UploadAttachmentView(BaseApiView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # 2C4G：R2 上传异步化 —— 主线程立即返回 202，前端轮询 /api/v1/media/status/{id}/
+        from utils.upload_async import async_upload_enabled, enqueue_media_upload
+
+        if async_upload_enabled():
+            uid = enqueue_media_upload(file, 'support', content_type)
+            return Response(
+                {"upload_id": uid, "status": "accepted",
+                 "status_url": f"/api/v1/media/status/{uid}/"},
+                status=status.HTTP_202_ACCEPTED,
+            )
+
         file.content_type = content_type
 
         # 保存到 support/{yyyy}/{mm}/{dd}/（大厂路径规范，见 utils.storage.media_key）

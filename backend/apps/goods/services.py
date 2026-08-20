@@ -25,7 +25,7 @@ class GoodsCacheService:
         from apps.goods.models import Category
         cats = list(Category.objects.filter(is_active=True).select_related('parent'))
         data = GoodsCacheService._build_category_tree(cats)
-        _goods_cache.set('category:tree:active', data, _ttl['CATEGORY_TREE'])
+        _goods_cache.two_level_set('category:tree:active', data, _ttl['CATEGORY_TREE'])
 
     @staticmethod
     def warm_brand_list():
@@ -203,19 +203,20 @@ class GoodsQueryService:
 
     @staticmethod
     def get_category_tree():
-        cached = _goods_cache.get('category:tree:active')
+        # 二级缓存（L1 LocMem → L2 Redis）：分类树读多写少，近缓存命中省 Redis 往返
+        cached = _goods_cache.two_level_get('category:tree:active')
         if cached:
             return cached
         GoodsCacheService.warm_category_tree()
-        return _goods_cache.get('category:tree:active', [])
+        return _goods_cache.two_level_get('category:tree:active', [])
 
     @staticmethod
     def get_brand_list():
-        cached = _goods_cache.get('brand:list')
+        cached = _goods_cache.two_level_get('brand:list')
         if cached:
             return cached
         GoodsCacheService.warm_brand_list()
-        return _goods_cache.get('brand:list', [])
+        return _goods_cache.two_level_get('brand:list', [])
 
     @staticmethod
     def get_spu_detail(spu_id: int):
@@ -225,7 +226,7 @@ class GoodsQueryService:
         # 布隆过滤器前置拦截：不存在的 ID 直接返回 None
         if not GoodsCacheService.spu_exists_in_bloom(spu_id):
             return None
-        cached = _goods_cache.get(f'spu:{spu_id}')
+        cached = _goods_cache.two_level_get(f'spu:{spu_id}')
         if cached is not None:
             spu = SPU.objects.filter(id=spu_id).only('id', 'category_id', 'brand_id').first()
             if spu:
@@ -276,7 +277,7 @@ class GoodsQueryService:
             {'id': rel.tag_id, 'name': rel.tag.name}
             for rel in spu.tag_relations.select_related('tag').filter(tag__is_active=True)
         ]
-        _goods_cache.set(f'spu:{spu_id}', data, _ttl['SPU_DETAIL'])
+        _goods_cache.two_level_set(f'spu:{spu_id}', data, _ttl['SPU_DETAIL'])
         data['promo_tags'] = GoodsQueryService.compute_promo_tags(
             [{'id': spu.id, 'category_id': spu.category_id, 'brand_id': spu.brand_id}]
         ).get(spu_id, [])
@@ -289,7 +290,7 @@ class GoodsQueryService:
         # 布隆过滤器前置拦截
         if not GoodsCacheService.sku_exists_in_bloom(sku_id):
             return None
-        cached = _goods_cache.get(f'sku:{sku_id}')
+        cached = _goods_cache.two_level_get(f'sku:{sku_id}')
         if cached is not None:
             return cached
         from apps.goods.models import SKU, SPUStatus as _SPUStatus
@@ -301,7 +302,7 @@ class GoodsQueryService:
             return None
         from apps.goods.serializers import SKUSimpleSerializer
         data = SKUSimpleSerializer(sku).data
-        _goods_cache.set(f'sku:{sku_id}', data, _ttl['SKU_DETAIL'])
+        _goods_cache.two_level_set(f'sku:{sku_id}', data, _ttl['SKU_DETAIL'])
         return data
 
     @staticmethod

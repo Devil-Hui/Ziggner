@@ -9,15 +9,17 @@ _port = os.getenv("PORT", "8000")
 bind = f"0.0.0.0:{_port}"
 backlog = int(os.getenv("GUNICORN_BACKLOG", "512"))
 
-# One process keeps Django's shared imports within the 2C4G memory envelope;
-# four bounded threads cover the storefront/admin concurrency target.
-workers = int(os.getenv("GUNICORN_WORKERS", "1"))
-threads = int(os.getenv("GUNICORN_THREADS", "4"))
-worker_class = os.getenv("GUNICORN_WORKER_CLASS", "gthread")
+# 2C4G 约束：固定 2 个 gevent 协程 worker（协程而非线程承载高并发 I/O），
+# 配合 DJANGO_DB_DRIVER=pymysql 纯 Python 驱动以兼容 gevent 协作式调度。
+# 单进程内存预算见 docker-compose.prod.yml（mem_limit 544m）。
+workers = int(os.getenv("GUNICORN_WORKERS", "2"))
+threads = int(os.getenv("GUNICORN_THREADS", "1"))
+worker_class = os.getenv("GUNICORN_WORKER_CLASS", "gevent")
 
 preload_app = True
-max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "800"))
-max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "40"))
+# 每个 worker 处理 1000 请求后平滑重启，防止内存泄漏累积
+max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
+max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100"))
 
 timeout = int(os.getenv("GUNICORN_TIMEOUT", "60"))
 graceful_timeout = int(os.getenv("GUNICORN_GRACEFUL_TIMEOUT", "20"))

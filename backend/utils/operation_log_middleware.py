@@ -88,7 +88,9 @@ class OperationLogMiddleware:
                 f'status={response.status_code}'
             )
 
-            if method in ('POST', 'DELETE'):
+            # 敏感操作（删除/新增/修改）均入审计：POST、DELETE 之外，PATCH 属「修改」
+            # （如媒体 alt_text/sort_order 更新），同样记录以便事后溯源。
+            if method in ('POST', 'DELETE', 'PATCH'):
                 audit_path = _get_audit_path()
                 self._write_log(audit_path,
                     f'user_id={user_id} username={username} '

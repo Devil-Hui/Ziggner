@@ -101,6 +101,7 @@ MIDDLEWARE = [
     'utils.ip_whitelist_middleware.AdminIpWhitelistMiddleware',  # 管理后台 IP 白名单（ADMIN_IP_WHITELIST 配置，未配置则放行）
     'utils.cookie_domain_middleware.DynamicCookieDomainMiddleware',  # 按请求 Host 动态设定 Cookie Domain（localhost 去 Domain，否则 -.ziggner.com）
     'middleware.rate_limit.RateLimitMiddleware',
+    'middleware.memory_watchdog.MemoryWatchdogMiddleware',  # 2C4G：RSS>85% 自保护（清 L1 缓存 + 回收空闲连接）
     'utils.exception_middleware.CustomExceptionMiddleware',
     'middleware.api_version.APIVersionMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -162,7 +163,9 @@ CHANNEL_LAYERS = {
 
 DATABASES = {
     'default': {
-        'ENGINE': os.getenv('DB_ENGINE', 'django_prometheus.db.backends.mysql'),
+        # 2C4G：dj-db-conn-pool 提供 MySQL 连接池（MAX_CONNS 上限），防止连接泄漏/打满；
+        # 配合 DJANGO_DB_DRIVER=pymysql（纯 Python 驱动）兼容 gevent 协程调度。
+        'ENGINE': os.getenv('DB_ENGINE', 'dj_db_conn_pool.backends.mysql'),
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
@@ -171,7 +174,7 @@ DATABASES = {
         'CONN_MAX_AGE': 300,  # 5 分钟连接复用
         'CONN_HEALTH_CHECKS': True,  # 每次使用前检查连接健康
         'POOL_OPTIONS': {
-            'MAX_CONNS': 8,  # 限制最大连接数，防止连接泄漏耗内存
+            'MAX_CONNS': 15,  # 2C4G：单进程连接池上限 ≤15，防连接泄漏耗内存
             'RECYCLE_SEC': 300,  # 5 分钟回收空闲连接
         },
         'OPTIONS': {
@@ -296,8 +299,9 @@ REST_FRAMEWORK = {
         'admin_batch': '10/minute',
     },
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",  # 分页
-    "PAGE_SIZE": 10,  # 每页 10 条数据
+    # 2C4G：默认 20 条/页，最大 100 条/页（上限防一次拉爆单 worker 内存）
+    "DEFAULT_PAGINATION_CLASS": "utils.pagination.CappedPageNumberPagination",
+    "PAGE_SIZE": 20,  # 每页 20 条数据
     "EXCEPTION_HANDLER": "utils.api_exception.custom_exception_handler",
 }
 
@@ -346,6 +350,8 @@ def _redis_cache(location, *, timeout=300):
             'SOCKET_CONNECT_TIMEOUT': 2,
             'SOCKET_TIMEOUT': 2,
             'IGNORE_EXCEPTIONS': False,
+            # 2C4G：每个 Redis 缓存别名连接池上限 ≤10，防止 Redis 连接数失控
+            'CONNECTION_POOL_KWARGS': {'max_connections': 10},
         },
         'KEY_PREFIX': f"ziggner:{os.getenv('DJANGO_ENV', 'dev')}",
     }
@@ -357,6 +363,13 @@ CACHES = {
     'rw_default_slave': _redis_cache(REDIS_SLAVE_URL),
     'session': _redis_cache(REDIS_MASTER_URL, timeout=86400),
     'verification_code': _redis_cache(REDIS_MASTER_URL, timeout=600),
+    # 2C4G 二级缓存 L1：进程内 LocMem 近缓存（商品详情/分类树等读多写少数据），
+    # 命中即省一次 Redis 网络往返；TTL 较短（见 utils/cache.py 两级读取）。
+    'local': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'ziggner-local',
+        'TIMEOUT': 600,
+    },
 }
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -635,22 +648,33 @@ AVATAR_ALLOWED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.gif', '.webp')
 RATE_LIMIT_WINDOW = 60
 # 触发限流后的封禁时长（秒），封禁期间该 IP 所有请求返回 429
 RATE_LIMIT_BLOCK_TTL = 300
-# 各接口的限流阈值配置（次/窗口）
-# 键为 API 路径，值为每窗口内允许的最大请求次数
-# 可通过环境变量 RATE_LIMITS 覆写（JSON 格式），如：
-#   RATE_LIMITS='{"/api/v1/users/login/": 30, "/api/v1/users/register/": 20}'
+# 各接口的限流阈值配置（单位：请求/秒/IP）
+# 键为 API 路径（支持 fnmatch 通配），值为令牌桶容量= refill 速率（req/s）
+# 通过 Redis+Lua 原子令牌桶实现（见 utils/token_bucket.py），触发即返回 429。
+# 可通过环境变量 RATE_LIMITS 覆写（JSON 格式）。
 # 统一 v1：无前缀旧版 /api/* 已废弃下线，仅保留 /api/v1/ 配置。
 RATE_LIMITS = json.loads(os.getenv('RATE_LIMITS', json.dumps({
-    '/api/v1/users/login/': 60,                 # 登录：60次/分钟/IP
-    '/api/v1/users/session/login/': 20,
-    '/api/v1/users/token/': 20,
-    '/api/v1/users/register/': 30,              # 注册：30次/分钟/IP
-    '/api/v1/users/send-verify-code/': 5,       # 发送验证码：5次/分钟/IP
-    '/api/v1/order/checkout/': 30,              # 下单：30次/分钟/IP
-    '/api/v1/promotion/*/claim/': 10,
-    '/api/v1/payment/create/': 20,
-    '/api/v1/payment/webhook/*/': 60,
+    '/api/v1/users/login/': 2.0,                # 登录：2 req/s/IP
+    '/api/v1/users/session/login/': 2.0,
+    '/api/v1/users/token/': 2.0,
+    '/api/v1/users/register/': 1.0,             # 注册：1 req/s/IP
+    '/api/v1/users/send-verify-code/': 0.2,     # 验证码：0.2 req/s/IP（约 5s/次）
+    '/api/v1/order/checkout/': 5.0,             # 购买：5 req/s/IP
+    '/api/v1/payment/create/': 5.0,             # 支付下单：5 req/s/IP
+    '/api/v1/promotion/*/claim/': 2.0,
+    '/api/v1/payment/webhook/*/': 60.0,         # 支付回调：高吞吐（白名单类）
 })))
+
+# 管理后台 API 限流：10 req/s per user（按登录用户计数，非 IP）
+ADMIN_API_RATE_LIMIT = float(os.getenv('ADMIN_API_RATE_LIMIT', '10'))
+ADMIN_API_RATE_LIMIT_PREFIX = '/api/v1/admin/'
+
+# 单容器内存硬上限（MB），供内存看门狗计算 85% 阈值；与 docker-compose.prod.yml mem_limit 对齐
+MEM_LIMIT_MB = int(os.getenv('MEM_LIMIT_MB', '544'))
+
+# R2 上传异步化开关：开启后上传走 Celery（主线程返回 202 + 轮询地址），
+# 关闭时保持原同步落盘（返回 200 + url）。默认关闭，待前端对接轮询后再翻 True。
+ASYNC_UPLOAD_ENABLED = os.getenv('ASYNC_UPLOAD_ENABLED', 'false').lower() == 'true'
 
 TRUSTED_PROXY_CIDRS = tuple(
     item.strip()

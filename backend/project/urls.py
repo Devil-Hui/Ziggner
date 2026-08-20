@@ -22,7 +22,20 @@ from django.conf import settings
 from django.conf.urls.static import static
 from utils.health_check import HealthCheckView
 from utils.versioned_router import router
+from utils.upload_async import get_upload_status, async_upload_enabled
 from apps.goods import urls_admin_group_slug
+
+
+def media_upload_status(request, upload_id):
+    """轮询异步上传结果（R2 上传完全异步化后的回调地址）。"""
+    res = get_upload_status(upload_id)
+    if not res:
+        return JsonResponse({"status": "pending"}, status=202)
+    if res.get("status") == "done":
+        return JsonResponse(
+            {"status": "done", "url": res.get("url"), "key": res.get("key")}, status=200
+        )
+    return JsonResponse({"status": "error", "message": "上传失败，请重试"}, status=409)
 
 # ── API 路由注册表（通过 VersionedAPIRouter） ──
 # 新 app 只需在此添加一行，自动注册到 /api/ 和 /api/v1/
@@ -62,6 +75,8 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # R2 异步上传结果轮询
+    path('api/v1/media/status/<str:upload_id>/', media_upload_status, name='media-upload-status'),
 ]
 
 # 通过 VersionedAPIRouter 注册所有 API 路由

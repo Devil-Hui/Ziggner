@@ -1,0 +1,112 @@
+# =============================================================================
+# Ziggner 测试环境拓扑（docker-compose.test.yml）
+#
+# 目标：为「四层测试」提供与生产同规格（2C4G）且可独立拉起的对外依赖，
+#       避免污染 dev/prod 的 MySQL/Redis，也方便 CI 直接复用。
+#
+#   层        依赖               说明
+#   单元测试   无外部依赖         纯 Domain/Service 逻辑，pytest 直跑
+#   集成测试   db + redis        本文件 db/redis 服务 + TestDatabase
+#   契约测试   db                依赖 DRF 的 API schema 断言
+#   端到端测试 db + redis + r2    反向代理到 web:8000（SERVICE_TYPE=django）
+#
+# 用法：
+#   docker compose -f docker-compose.test.yml up -d          # 拉起依赖
+#   docker compose -f docker-compose.test.yml run --rm test  # 跑测试
+#
+# 说明：
+#   - 资源配额与 prod 对齐（db 320m/0.4c、redis 96m/0.1c），镜像同版本。
+#   - R2 提供 s3rver 本地 S3 模拟（profile=r2），便于离线验证预签名/存读；
+#     线上可用真实 R2（.env 的 R2_* 变量直接注入）。
+#   - 特意不构建 web 的默认镜像，也不注入任何 DJANGO_SUPERUSER_*：测试环境
+#     不允许自动创建超管，超管/角色由测试 fixture 显式构造。
+# =============================================================================
+
+services:
+  db:
+    image: mysql:8.0
+    restart: "no"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ziggner_test
+      MYSQL_USER: ziggner_test
+      MYSQL_PASSWORD: ziggner_test
+    command:
+      - --max_connections=100
+      - --innodb_buffer_pool_size=96M
+      - --slow-query-log=1
+      - --long_query_time=0.5
+    expose: ["3306"]
+    mem_limit: 320m
+    memswap_limit: 320m
+    cpus: 0.4
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: "no"
+    # 关闭持久化，仅缓存/限流/分布式锁（与 prod redis 行为一致）
+    command: ["redis-server", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru", "--save", "", "--appendonly", "no"]
+    expose: ["6379"]
+    mem_limit: 96m
+    memswap_limit: 96m
+    cpus: 0.1
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 本地 S3 兼容模拟，用于 R2 相关集成/契约测试（离线自包含）。
+  # 需真实 R2 时：注释本服务并在此 compose 或 .env 注入 R2_ACCESS_KEY_ID 等。
+  r2:
+    image: scitotec/s3rver:latest
+    restart: "no"
+    ports:
+      - "4569:4569"
+    profiles: ["r2"]
+    cpus: 0.1
+
+  # 运行测试的可复用容器：绑代码卷，可多次 run（非常驻服务）
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["pytest", "--maxfail=1", "-q"]
+    restart: "no"
+    volumes:
+      - .:/backend
+    environment:
+      DJANGO_SETTINGS_MODULE: project.config.settings.dev
+      DJANGO_ENV: test
+      DB_ENGINE: django.db.backends.mysql
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: ziggner_test
+      DB_USER: ziggner_test
+      DB_PASSWORD: ziggner_test
+      REDIS_MASTER_URL: redis://redis:6379/1
+      REDIS_SLAVE_URL: redis://redis:6379/1
+      CELERY_BROKER_URL: redis://redis:6379/2
+      DJANGO_SECRET_KEY: test-only-secret-key-not-for-production
+      ENABLE_MOCK_PAYMENT: "true"
+      FILE_STORAGE: ${FILE_STORAGE:-local}
+      # R2 本地模拟（可选）
+      R2_ENDPOINT: ${R2_ENDPOINT:-http://r2:4569}
+      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-http://localhost:4569}
+      # 明确不注入 DJANGO_SUPERUSER_*：测试环境禁止自建超管
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    mem_limit: 448m
+    memswap_limit: 448m
+    cpus: 0.5
+
+# 仅测试用卷，不复用生产卷
+volumes: {}

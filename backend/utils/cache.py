@@ -92,6 +92,11 @@ class Cache:
     def __init__(self, prefix: str = ''):
         self.prefix = prefix
         self._master, self._slave = _get_master_slave()
+        # L1 近缓存：进程内 LocMem（2C4G 二级缓存），命中省一次 Redis 往返
+        try:
+            self._local = caches['local']
+        except Exception:
+            self._local = None
 
     def _get_key(self, key: str) -> str:
         return f"{self.prefix}:{key}" if self.prefix else key
@@ -128,6 +133,46 @@ class Cache:
     def set_json(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
         """写入缓存，自动将 datetime 转为 ISO 字符串（Master）"""
         self._master.set(self._get_key(key), _serialize(value), timeout)
+
+    # ─── 二级缓存（L1 LocMem → L2 Redis）───
+
+    LOCAL_TTL_CAP = 300  # L1 近缓存最长存活（秒），短于 Redis 以保证最终一致
+
+    def two_level_get(self, key: str, default: Any = None) -> Any:
+        """先查 L1（LocMem），未命中再查 L2（Redis）；命中 L2 时回填 L1。"""
+        if self._local is None:
+            return self.get(key, default)
+        lkey = self._get_key(key)
+        val = self._local.get(lkey, None)
+        if val is not None:
+            return val
+        val = self.get(key, default)
+        if val is not None:
+            try:
+                self._local.set(lkey, val, self.LOCAL_TTL_CAP)
+            except Exception:
+                pass
+        return val
+
+    def two_level_set(self, key: str, value: Any, timeout: Optional[int] = None) -> None:
+        """写 L2（Redis）并回填 L1（LocMem）；失效时两级一起清。"""
+        self.set(key, value, timeout)
+        if self._local is not None:
+            try:
+                self._local.set(
+                    self._get_key(key), value,
+                    min(timeout or self.LOCAL_TTL_CAP, self.LOCAL_TTL_CAP),
+                )
+            except Exception:
+                pass
+
+    def two_level_delete(self, key: str) -> None:
+        self.delete(key)
+        if self._local is not None:
+            try:
+                self._local.delete(self._get_key(key))
+            except Exception:
+                pass
 
     def delete(self, key: str) -> None:
         self._master.delete(self._get_key(key))
