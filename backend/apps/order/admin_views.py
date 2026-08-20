@@ -2,12 +2,13 @@
 订单管理后台 API — 替代 Django Admin 中的订单列表/发货/售后审核。
 对齐 promotion/admin_views.py 与 goods Admin 权限体系。
 """
-from django.db.models import Count, Q
+from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 
+from apps.promotion.models import UserCoupon
 from apps.rbac.permissions import HasPerm
 from utils.api_base_view import BaseApiView
 from utils.exceptions import ErrorCodes, api_error_response
@@ -23,6 +24,22 @@ from .serializers import (
 )
 
 
+# ── 订单渠道归因（代言人推广码 / 商城） ─────────────────────────────────────
+# 渠道 = 该订单核销的优惠券是否带专属推广码（PromoCode）：
+#   UserCoupon.used_order_no == Order.order_no 且 promo_code 非空 → 代言人渠道
+#   否则 → 商城（自然流量 / 普通券 / 无券）
+_PROMO_CODE_SUB = Subquery(
+    UserCoupon.objects.filter(
+        used_order_no=OuterRef('order_no'), promo_code__isnull=False,
+    ).values('promo_code__code')[:1]
+)
+_PROMO_NAME_SUB = Subquery(
+    UserCoupon.objects.filter(
+        used_order_no=OuterRef('order_no'), promo_code__isnull=False,
+    ).values('promo_code__name')[:1]
+)
+
+
 class StandardPagination(PageNumberPagination):
     page_size = 20
     page_size_query_param = 'size'
@@ -30,7 +47,11 @@ class StandardPagination(PageNumberPagination):
 
 
 class OrderAdminListView(BaseApiView):
-    """管理端订单列表：支持状态/支付状态/关键字搜索。"""
+    """管理端订单列表：支持状态/支付状态/关键字/渠道来源筛选。
+
+    channel 取值：all（默认，全部）/ mall（商城：无代言人归因）/ 具体推广码（如 AMB000001）。
+    每行附带 channel_code / channel_name（'mall' 表示商城自然流量）。
+    """
     permission_classes = [HasPerm('order.read')]
 
     @extend_schema(
@@ -38,6 +59,7 @@ class OrderAdminListView(BaseApiView):
             OpenApiParameter(name='status', type=str, required=False),
             OpenApiParameter(name='payment_status', type=str, required=False),
             OpenApiParameter(name='search', type=str, required=False, description='order_no/shipping_name/phone'),
+            OpenApiParameter(name='channel', type=str, required=False, description='all|mall|<promo_code>'),
             OpenApiParameter(name='page', type=int, required=False),
             OpenApiParameter(name='size', type=int, required=False),
         ],
@@ -45,7 +67,9 @@ class OrderAdminListView(BaseApiView):
     )
     def get(self, request):
         qs = Order.objects.select_related('user').annotate(
-            _item_count=Count('items')
+            _item_count=Count('items'),
+            _channel_code=_PROMO_CODE_SUB,
+            _channel_name=_PROMO_NAME_SUB,
         ).all().order_by('-created_at')
         qs = OrderAdminAccessPolicy.scope_orders(qs, request.user)
 
@@ -59,17 +83,70 @@ class OrderAdminListView(BaseApiView):
 
         search = request.query_params.get('search')
         if search:
-            from django.db.models import Q
             qs = qs.filter(
                 Q(order_no__icontains=search)
                 | Q(shipping_name__icontains=search)
                 | Q(shipping_phone__icontains=search)
             )
 
+        channel = request.query_params.get('channel') or 'all'
+        if channel == 'mall':
+            qs = qs.filter(_channel_code__isnull=True)
+        elif channel != 'all':
+            qs = qs.filter(_channel_code=channel)
+
         paginator = StandardPagination()
         page = paginator.paginate_queryset(qs, request)
         serializer = OrderListSerializer(page, many=True)
-        return paginator.get_paginated_response(serializer.data)
+        data = serializer.data
+        # 注入渠道字段（列表每行显示来源：代言人码 / 商城）
+        for row, obj in zip(data, page):
+            row['channel_code'] = getattr(obj, '_channel_code', None) or 'mall'
+            row['channel_name'] = getattr(obj, '_channel_name', None) or '商城'
+        return paginator.get_paginated_response(data)
+
+
+class OrderAdminChannelStatsView(BaseApiView):
+    """订单渠道来源统计（供筛选下拉框带数量）：全部/商城/各代言人。
+
+    按代言人推广码聚合订单数与 GMV，其余归「商城」；
+    仅统计当前用户行级隔离（scope_orders）范围内可见的订单。
+    """
+    permission_classes = [HasPerm('order.read')]
+
+    @extend_schema(
+        responses={200: OpenApiResponse(description='Channel stats')},
+    )
+    def get(self, request):
+        qs = Order.objects.annotate(
+            _channel_code=_PROMO_CODE_SUB,
+            _channel_name=_PROMO_NAME_SUB,
+        ).all()
+        qs = OrderAdminAccessPolicy.scope_orders(qs, request.user)
+
+        rows = (
+            qs.values('_channel_code', '_channel_name')
+            .annotate(order_count=Count('id'), gmv=Sum('actual_amount'))
+            .order_by('-order_count')
+        )
+        items = []
+        total_orders = 0
+        total_gmv = 0
+        for r in rows:
+            gmv = r['gmv'] or 0
+            total_orders += r['order_count']
+            total_gmv += gmv
+            items.append({
+                'channel': r['_channel_code'] or 'mall',
+                'name': r['_channel_name'] or '商城',
+                'order_count': r['order_count'],
+                'gmv': str(gmv),
+            })
+        return Response({
+            'items': items,
+            'total_orders': total_orders,
+            'total_gmv': str(total_gmv),
+        })
 
 
 class OrderAdminDetailView(BaseApiView):

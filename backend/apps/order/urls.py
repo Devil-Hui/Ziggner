@@ -7,12 +7,15 @@ from .views import (
 from .admin_views import (
     OrderAdminListView, OrderAdminDetailView,
     OrderAdminShipView, OrderAdminCancelView,
+    OrderAdminChannelStatsView,
     AfterSaleAdminListView, AfterSaleAdminReviewView,
 )
 
 urlpatterns = [
     # Admin first (avoid capture by <str:order_no>)
     path('admin/list/', OrderAdminListView.as_view(), name='order-admin-list'),
+    # 渠道来源统计（须在 <str:order_no> 捕获之前）
+    path('admin/channel-stats/', OrderAdminChannelStatsView.as_view(), name='order-admin-channel-stats'),
     path('admin/aftersale/', AfterSaleAdminListView.as_view(), name='order-admin-aftersale-list'),
     path('admin/aftersale/<str:after_sale_no>/review/', AfterSaleAdminReviewView.as_view(), name='order-admin-aftersale-review'),
     path('admin/<str:order_no>/ship/', OrderAdminShipView.as_view(), name='order-admin-ship'),

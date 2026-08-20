@@ -6,7 +6,7 @@ import { Select, Input as SearchInput } from '../../components/admin/common/ui'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 import PromptDialog from '../../components/admin/common/PromptDialog'
 import { useTranslation } from '../../i18n'
-import { orderAPI, type OrderSummary } from '../../api/order'
+import { orderAPI, type OrderSummary, type ChannelStatsItem } from '../../api/order'
 
 type TabKey = 'orders' | 'aftersales'
 
@@ -267,6 +267,8 @@ export default function AdminOrders() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [paymentStatus, setPaymentStatus] = useState('')
+  const [channel, setChannel] = useState('')
+  const [channelStats, setChannelStats] = useState<ChannelStatsItem[]>([])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, any> | null>(null)
 
@@ -298,6 +300,7 @@ export default function AdminOrders() {
         status: status || undefined,
         payment_status: paymentStatus || undefined,
         search: search || undefined,
+        channel: channel || undefined,
         page,
         size: 20,
       })
@@ -309,7 +312,16 @@ export default function AdminOrders() {
     } finally {
       setLoading(false)
     }
-  }, [status, paymentStatus, search, page, t])
+  }, [status, paymentStatus, search, channel, page, t])
+
+  const loadChannelStats = useCallback(async () => {
+    try {
+      const data = await orderAPI.adminChannelStats()
+      setChannelStats(data?.items || [])
+    } catch {
+      // 统计加载失败不影响主列表
+    }
+  }, [])
 
   const loadAfterSales = useCallback(async () => {
     setLoading(true)
@@ -332,9 +344,11 @@ export default function AdminOrders() {
   }, [asStatus, asType, asSearch, asPage, t])
 
   useEffect(() => {
-    if (tab === 'orders') loadOrders()
-    else loadAfterSales()
-  }, [tab, loadOrders, loadAfterSales])
+    if (tab === 'orders') {
+      loadOrders()
+      loadChannelStats()
+    } else loadAfterSales()
+  }, [tab, loadOrders, loadAfterSales, loadChannelStats])
 
   const openDetail = async (orderNo: string) => {
     try {
@@ -448,6 +462,19 @@ export default function AdminOrders() {
               <option value="refunding">{t('admin.orders.paymentRefunding')}</option>
               <option value="refunded">{t('admin.orders.paymentRefunded')}</option>
             </Select>
+            <Select value={channel} onChange={e => { setPage(1); setChannel(e.target.value) }}>
+              <option value="">
+                {t('admin.orders.allChannel')} ({channelStats.reduce((s, c) => s + (c.order_count || 0), 0)})
+              </option>
+              <option value="mall">
+                {t('admin.orders.channelMall')} ({channelStats.find(c => c.channel === 'mall')?.order_count ?? 0})
+              </option>
+              {channelStats.filter(c => c.channel !== 'mall').map(c => (
+                <option key={c.channel} value={c.channel}>
+                  {c.name} ({c.order_count})
+                </option>
+              ))}
+            </Select>
             <SearchInput
               placeholder={t('admin.orders.searchPlaceholder')}
               value={search}
@@ -471,6 +498,7 @@ export default function AdminOrders() {
               <thead>
                 <tr>
                   <Th>{t('admin.orders.colOrderNo')}</Th>
+                  <Th>{t('admin.orders.colChannel')}</Th>
                   <Th>{t('admin.orders.colStatus')}</Th>
                   <Th>{t('admin.orders.colPayment')}</Th>
                   <Th>{t('admin.orders.colAmount')}</Th>
@@ -483,6 +511,7 @@ export default function AdminOrders() {
                 {items.map(item => (
                   <tr key={item.order_no}>
                     <Td>{item.order_no}</Td>
+                    <Td>{item.channel_name || t('admin.orders.channelMall')}</Td>
                     <Td>
                       <StatusBadge $tone={STATUS_TONE[item.status] || '#eee'}>
                         {item.status}

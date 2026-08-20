@@ -22,6 +22,9 @@ export interface OrderSummary {
   payment_status: string
   item_count: number
   created_at: string
+  /** 渠道归因（管理端列表）：代言人推广码 or 'mall' */
+  channel_code?: string
+  channel_name?: string
 }
 
 export interface OrderListResult {
@@ -44,8 +47,23 @@ export interface AdminOrderListParams {
   status?: string
   payment_status?: string
   search?: string
+  channel?: string
   page?: number
   size?: number
+}
+
+/** 订单渠道来源统计（下拉框带数量）：全部 / 商城 / 各代言人推广码 */
+export interface ChannelStatsItem {
+  channel: string
+  name: string
+  order_count: number
+  gmv: string
+}
+
+export interface ChannelStatsResult {
+  items: ChannelStatsItem[]
+  total_orders: number
+  total_gmv: string
 }
 
 export interface AfterSaleReviewPayload {
@@ -70,6 +88,10 @@ export const orderAPI = {
   // ── Admin ──
   adminList: (params: AdminOrderListParams = {}) =>
     get('/order/admin/list/', params as Record<string, unknown>),
+
+  /** 订单渠道来源统计（下拉框带数量） */
+  adminChannelStats: () =>
+    get<ChannelStatsResult>('/order/admin/channel-stats/'),
 
   adminDetail: (orderNo: string) =>
     get(`/order/admin/${orderNo}/`),
