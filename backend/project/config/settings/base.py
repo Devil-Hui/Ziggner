@@ -291,13 +291,14 @@ REST_FRAMEWORK = {
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.UserRateThrottle',
     ),
-    'DEFAULT_THROTTLE_RATES': {
+    # 限流速率可被环境变量 THROTTLE_RATES 覆写（JSON，如测试/压测放开限流时设 {}）
+    'DEFAULT_THROTTLE_RATES': json.loads(os.getenv('THROTTLE_RATES', json.dumps({
         'anon': '100/hour',
         'user': '5000/hour',
         'admin_login': '5/minute',
         'admin_write': '60/minute',
         'admin_batch': '10/minute',
-    },
+    }))),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # 2C4G：默认 20 条/页，最大 100 条/页（上限防一次拉爆单 worker 内存）
     "DEFAULT_PAGINATION_CLASS": "utils.pagination.CappedPageNumberPagination",

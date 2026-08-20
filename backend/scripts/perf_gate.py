@@ -41,7 +41,12 @@ def _p95_locust(csv_path: Path) -> tuple[float, float]:
             if name.startswith("Aggregated"):
                 p95 = float(row.get("95%") or 0)
                 rps = float(row.get("Requests/s") or 0)
-                break
+                return p95, rps
+    # 无 Aggregated 行（--only-summary 或分端 csv）：取最大 p95、汇总 rps
+    with open(csv_path, "r", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            p95 = max(p95, float(row.get("95%") or 0))
+            rps += float(row.get("Requests/s") or 0)
     return p95, rps
 
 
