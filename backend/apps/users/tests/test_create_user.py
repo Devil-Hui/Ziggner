@@ -35,3 +35,19 @@ class CreateUserAccountNoTest(TestCase):
         u = UserService.create_user(username="reg_d", password="Str0ng!Pass123", email="reg_d@example.com")
         p = UserService.get_or_create_profile(u)
         self.assertTrue(p.account_no.startswith("ZG-"))
+
+    def test_profile_save_auto_generates_account_no_when_empty(self):
+        """UserProfile.save() 兜底：account_no 为空时自动生成唯一值（杜绝未来再次出现空值）"""
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        u = User.objects.create_user(username="reg_e", password="Str0ng!Pass123", email="reg_e@example.com")
+        p = UserProfile(user=u, account_no="")
+        p.save()
+
+        self.assertTrue(p.account_no.startswith("ZG-"), p.account_no)
+        # 幂等：再次保存不应改变已生成的 account_no
+        saved = p.account_no
+        p.phone = "13800000000"
+        p.save()
+        self.assertEqual(p.account_no, saved)
