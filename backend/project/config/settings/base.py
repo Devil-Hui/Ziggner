@@ -77,7 +77,6 @@ INSTALLED_APPS = [
     'apps.lovegoods.apps.LovegoodsConfig',
     'apps.tracking.apps.TrackingConfig',
     'apps.logistics.apps.LogisticsConfig',
-    'apps.wechat_mp.apps.WechatMpConfig',  # 微信小程序后端占位（接口待实现）
     'apps.health',
     'channels',
     'drf_spectacular',

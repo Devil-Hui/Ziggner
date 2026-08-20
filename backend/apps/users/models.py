@@ -164,6 +164,23 @@ class UserProfile(models.Model):
                 'phone': '填写区号时必须同时填写手机号',
             })
 
+    def save(self, *args, **kwargs):
+        # 兜底：account_no 为空时自动生成唯一值。
+        # 历史遗留（如 gevent 故障期产生的 account_no='' 行）与遗漏写入均会被这里治愈；
+        # 预查碰撞（排除自身）后落库，不依赖捕获 IntegrityError，避免掩盖 phone 等其他唯一约束错误。
+        if not self.account_no:
+            for _ in range(10):
+                candidate = generate_account_no()
+                collision = UserProfile.objects.filter(
+                    account_no=candidate,
+                ).exclude(pk=self.pk).exists()
+                if not collision:
+                    self.account_no = candidate
+                    break
+            if not self.account_no:
+                raise ValueError('ACCOUNT_NO_GENERATION_FAILED')
+        super().save(*args, **kwargs)
+
 
 class ExpiringToken(models.Model):
     """

@@ -72,6 +72,8 @@ logs/
 # Media (user uploaded files)
 web/react/dist/
 web/react/dist_verify/
+# Vite 构建前的临时重命名产物（dist-archive-* / dist-old-* 等）一律忽略
+web/react/dist-*/
 backend/media/
 backend/static/
 
