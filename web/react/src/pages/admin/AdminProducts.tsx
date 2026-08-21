@@ -2,8 +2,9 @@
 import { useState, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
-import { Select, Input as SearchInput, SecondaryBtn } from '../../components/admin/common/ui'
+import { Color, Radius, Spacing, FontSize, FontWeight, Transition } from '../../theme/tokens'
+import { Select, Input as SearchInput } from '../../components/admin/common/ui'
+import { Skeleton, Empty, ErrorState } from '../../components/admin/common'
 import { adminAPI } from '../../api/admin'
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation } from '../../i18n'
@@ -11,13 +12,14 @@ import ChatLink from '../../components/admin/ChatLink'
 import ChatFloatWidget from '../../components/admin/common/ChatFloatWidget'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 
-// ── Styled Components ──
-
+/* ── 布局 ── */
 const PageHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  gap: 12px;
+  flex-wrap: wrap;
 `
 
 const Title = styled.h2`
@@ -29,6 +31,7 @@ const Title = styled.h2`
 const Actions = styled.div`
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 `
 
 const FilterBar = styled.div`
@@ -36,85 +39,185 @@ const FilterBar = styled.div`
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  align-items: center;
 `
 
-const Table = styled.table`
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+/* ── 卡片行（商品列表：非表格） ── */
+const CardList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`
+
+const Card = styled.div<{ $selected: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
   background: #fff;
-  border: 1px solid rgba(26, 23, 18, 0.10);
-  border-radius: 14px;
+  border: 1px solid ${({ $selected }) => ($selected ? Color.primary : 'rgba(26,23,18,0.08)')};
+  border-radius: ${Radius.md}px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  @media (max-width: 767.98px) {
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+`
+
+/* 缩略图：100px，1:1 等比，hover 放大 1.05 + 阴影 */
+const Thumb = styled.div`
+  width: 100px;
+  height: 100px;
+  border-radius: ${Radius.md}px;
+  background: #fff;
+  border: 1px solid ${Color.border.light};
   overflow: hidden;
-  box-shadow: 0 2px 14px rgba(26, 23, 18, 0.06);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: 1 / 1;
+  }
+
+  .ph {
+    color: ${Color.text.muted};
+    font-size: 24px;
+  }
+
+  @media (max-width: 767.98px) {
+    width: 72px;
+    height: 72px;
+  }
 `
 
-const Th = styled.th`
-  padding: 14px 18px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  color: #8a8175;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
-  background: rgba(26, 23, 18, 0.03);
+const CardMain = styled.div`
+  flex: 1;
+  min-width: 0;
 `
 
-const Td = styled.td`
-  padding: 14px 18px;
-  font-size: 0.875rem;
-  color: #1a1712;
-  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
+const CardName = styled.div`
+  font-size: 16px;
+  font-weight: ${FontWeight.semibold};
+  color: ${Color.text.heading};
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 `
 
-const StatusBadge = styled.span<{ $status: string }>`
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: 500;
+const CardMeta = styled.div`
+  font-size: 12px;
+  color: ${Color.text.muted};
+  margin-top: 4px;
+`
+
+const CardBadges = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  flex-wrap: wrap;
+`
+
+/* 状态徽章：圆角 12px、高 22px、字 12px */
+const StatusPill = styled.span<{ $status: string }>`
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: ${Radius.lg}px;
+  font-size: 12px;
+  font-weight: ${FontWeight.medium};
   background: ${({ $status }) => {
     switch ($status) {
-      case 'on_sale': return '#e8f5e9'
-      case 'draft': return '#f5f5f5'
-      case 'submitted': return '#fff3e0'
-      case 'approved': return '#e3f2fd'
-      case 'rejected': return '#ffebee'
-      case 'suspended': return '#fce4ec'
-      case 'off_sale': return '#f5f5f5'
-      default: return '#f5f5f5'
+      case 'on_sale': return '#ecfdf5'
+      case 'submitted': return '#fffbeb'
+      case 'approved': return '#eff6ff'
+      case 'rejected': return '#fef2f2'
+      case 'suspended': return '#fdf2f8'
+      default: return '#f3f4f6'
     }
   }};
   color: ${({ $status }) => {
     switch ($status) {
-      case 'on_sale': return '#2e7d32'
-      case 'draft': return '#999'
-      case 'submitted': return '#e65100'
-      case 'approved': return '#1565c0'
-      case 'rejected': return '#c62828'
-      case 'suspended': return '#c2185b'
-      case 'off_sale': return '#999'
-      default: return '#999'
+      case 'on_sale': return '#047857'
+      case 'submitted': return '#b45309'
+      case 'approved': return '#1e40af'
+      case 'rejected': return '#b91c1c'
+      case 'suspended': return '#be185d'
+      default: return '#4b5563'
     }
   }};
 `
 
+const CardRight = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+
+  @media (max-width: 767.98px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+`
+
+const CardPrice = styled.div`
+  font-size: 16px;
+  font-weight: ${FontWeight.semibold};
+  color: ${Color.status.error};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`
+
 const ActionBtn = styled.button<{ $danger?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 10px;
-  border: 1px solid ${({ $danger }) => ($danger ? '#e74c3c' : '#ddd')};
+  border: 1px solid ${({ $danger }) => ($danger ? Color.status.error : Color.border.medium)};
   background: ${Color.bg.card};
-  color: ${({ $danger }) => ($danger ? '#e74c3c' : '#333')};
+  color: ${({ $danger }) => ($danger ? Color.status.error : Color.text.secondary)};
   border-radius: ${Radius.sm}px;
   font-size: 0.75rem;
   cursor: pointer;
-  margin-right: 4px;
   transition: ${Transition.fast};
 
   &:hover {
-    background: ${({ $danger }) => ($danger ? '#e74c3c' : '#f5f5f5')};
-    color: ${({ $danger }) => ($danger ? '#fff' : '#333')};
+    background: ${({ $danger }) => ($danger ? Color.status.error : Color.primary)};
+    color: #fff;
+    border-color: ${({ $danger }) => ($danger ? Color.status.error : Color.primary)};
   }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`
+
+const Checkbox = styled.input.attrs({ type: 'checkbox' })`
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: ${Color.primary};
+  cursor: pointer;
+  flex-shrink: 0;
 `
 
 const Pagination = styled.div`
@@ -127,29 +230,21 @@ const Pagination = styled.div`
 
 const PageBtn = styled.button<{ $active?: boolean }>`
   padding: 6px 12px;
-  border: 1px solid ${({ $active }) => ($active ? '#e74c3c' : '#ddd')};
-  background: ${({ $active }) => ($active ? '#e74c3c' : '#fff')};
-  color: ${({ $active }) => ($active ? '#fff' : '#333')};
+  border: 1px solid ${({ $active }) => ($active ? Color.primary : Color.border.medium)};
+  background: ${({ $active }) => ($active ? Color.primary : '#fff')};
+  color: ${({ $active }) => ($active ? '#fff' : Color.text.secondary)};
   border-radius: ${Radius.sm}px;
   font-size: 0.813rem;
   cursor: pointer;
+  transition: all ${Transition.fast};
+
+  &:hover { border-color: ${Color.primary}; color: ${({ $active }) => ($active ? '#fff' : Color.primary)}; }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 `
 
-const Checkbox = styled.input.attrs({ type: 'checkbox' })`
-  margin: 0;
-`
-
-const EmptyState = styled.div`
-  text-align: center;
-  padding: 48px;
-  color: ${Color.text.muted};
-  font-size: 0.875rem;
-`
-
-const LoadingState = styled.div`
-  text-align: center;
-  padding: 48px;
-  color: ${Color.text.muted};
+const ErrorLine = styled.div`
+  color: ${Color.status.error};
+  margin-bottom: 12px;
   font-size: 0.875rem;
 `
 
@@ -164,6 +259,7 @@ interface SPUItem {
   price_range: { min: string; max: string } | null
   category_path: string
   sku_count: number
+  main_image?: string
   created_at: string
 }
 
@@ -178,7 +274,6 @@ export default function AdminProducts() {
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
-  // 用 Set 存储选中项：membership 查询 O(1)（原数组 includes 为 O(n)），切换单选不再触发全表重算
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
@@ -202,7 +297,6 @@ export default function AdminProducts() {
     setLoading(false)
   }, [page, status, search, t])
 
-  // 在 fetchProducts 之后声明，避免 useCallback 依赖数组的 TDZ
   const doShelfAction = useCallback(async (id: number, action: string) => {
     setShelfingIds(prev => new Set(prev).add(id))
     setShelfError('')
@@ -236,14 +330,13 @@ export default function AdminProducts() {
     )
   }, [items])
 
-  // 行级回调保持稳定引用，配合 memo 行组件避免选中切换时全表重渲染
   const onEdit = useCallback((id: number) => navigate(`/admin/products/${id}`), [navigate])
   const onReview = useCallback((id: number) => navigate(`/admin/products/${id}/audit`), [navigate])
   const onChat = useCallback((id: number) => navigate(`/admin/chat?product_id=${id}`), [navigate])
   const onDelete = useCallback((id: number) => setDeleteTarget(id), [])
   const onSubmitAudit = useCallback((id: number) => {
     adminAPI.submitAudit(id).then(fetchProducts).catch(() => setError(t('admin.products.submitFailed')))
-  }, [fetchProducts, setError])
+  }, [fetchProducts, t])
 
   const handleBatchAction = async (action: string) => {
     if (selected.size === 0) return
@@ -266,14 +359,16 @@ export default function AdminProducts() {
   }
 
   const totalPages = Math.ceil(total / 20)
+  const allChecked = items.length > 0 && selected.size === items.length
 
   return (
     <div>
       <PageHeader>
         <Title>{t('admin.products.title')} ({total})</Title>
         <Actions>
-          <SecondaryBtn onClick={() => navigate('/admin/products/create')}>{t('admin.products.createProduct')}</SecondaryBtn>
-          <SecondaryBtn onClick={() => navigate('/admin/chat')}>{t('admin.layout.menu.chat')}</SecondaryBtn>
+          <ActionBtn style={{ padding: '7px 16px', fontWeight: 500, background: Color.primary, borderColor: Color.primary, color: '#fff' }} onClick={() => navigate('/admin/products/create')}>
+            {t('admin.products.createProduct')}
+          </ActionBtn>
         </Actions>
       </PageHeader>
 
@@ -294,57 +389,52 @@ export default function AdminProducts() {
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && fetchProducts()}
         />
-
+        <Checkbox checked={allChecked} onChange={toggleAll} title="全选本页" />
         {selected.size > 0 && (
           <Actions>
-            <SecondaryBtn onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')}</SecondaryBtn>
-            <SecondaryBtn onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</SecondaryBtn>
-            <SecondaryBtn onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</SecondaryBtn>
+            <ActionBtn onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')} ({selected.size})</ActionBtn>
+            <ActionBtn onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</ActionBtn>
+            <ActionBtn onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</ActionBtn>
           </Actions>
         )}
       </FilterBar>
 
-      {error && <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: '0.875rem' }}>{error}</div>}
-      {shelfError && <div style={{ color: '#e74c3c', marginBottom: 12, fontSize: '0.875rem' }}>{shelfError}</div>}
+      {error && <ErrorLine>{error}</ErrorLine>}
+      {shelfError && <ErrorLine>{shelfError}</ErrorLine>}
 
       {loading ? (
-        <LoadingState>{t('common.loading')}</LoadingState>
+        <CardList><Skeleton type="card" rows={5} /></CardList>
       ) : items.length === 0 ? (
-        <EmptyState>{t('admin.products.emptyState')}<SecondaryBtn onClick={() => navigate('/admin/products/create')}>{t('admin.products.createOne')}</SecondaryBtn></EmptyState>
+        <Empty
+          title={t('admin.products.emptyState')}
+          children={
+            <ActionBtn style={{ padding: '7px 16px', background: Color.primary, borderColor: Color.primary, color: '#fff' }} onClick={() => navigate('/admin/products/create')}>
+              {t('admin.products.createOne')}
+            </ActionBtn>
+          }
+        />
       ) : (
         <>
-          <Table>
-            <thead>
-              <tr>
-                <Th style={{ width: 40 }}><Checkbox checked={selected.size === items.length && items.length > 0} onChange={toggleAll} /></Th>
-                <Th>{t('admin.products.columnProduct')}</Th>
-                <Th>{t('admin.products.columnPrice')}</Th>
-                <Th>{t('admin.products.columnStatus')}</Th>
-                <Th>{t('admin.products.columnCategory')}</Th>
-                <Th>{t('admin.products.columnActions')}</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((item) => (
-                <ProductRow
-                  key={item.id}
-                  item={item}
-                  isSelected={selected.has(item.id)}
-                  isShelfing={shelfingIds.has(item.id)}
-                  canSubmit={canSubmit}
-                  canAudit={canAudit}
-                  isSuperAdmin={isSuperAdmin}
-                  onToggleSelect={toggleSelect}
-                  onEdit={onEdit}
-                  onShelf={doShelfAction}
-                  onSubmitAudit={onSubmitAudit}
-                  onReview={onReview}
-                  onDelete={onDelete}
-                  onChat={onChat}
-                />
-              ))}
-            </tbody>
-          </Table>
+          <CardList>
+            {items.map((item) => (
+              <ProductCard
+                key={item.id}
+                item={item}
+                isSelected={selected.has(item.id)}
+                isShelfing={shelfingIds.has(item.id)}
+                canSubmit={canSubmit}
+                canAudit={canAudit}
+                isSuperAdmin={isSuperAdmin}
+                onToggleSelect={toggleSelect}
+                onEdit={onEdit}
+                onShelf={doShelfAction}
+                onSubmitAudit={onSubmitAudit}
+                onReview={onReview}
+                onDelete={onDelete}
+                onChat={onChat}
+              />
+            ))}
+          </CardList>
 
           {totalPages > 1 && (
             <Pagination>
@@ -378,8 +468,8 @@ export default function AdminProducts() {
   )
 }
 
-// ── 记忆化行组件：选中切换时仅重渲染变化的行，避免全表 reconcile ──
-interface ProductRowProps {
+// ── 记忆化卡片组件：选中切换时仅重渲染变化的卡片 ──
+interface ProductCardProps {
   item: SPUItem
   isSelected: boolean
   isShelfing: boolean
@@ -395,7 +485,7 @@ interface ProductRowProps {
   onChat: (id: number) => void
 }
 
-const ProductRow = memo(function ProductRow({
+const ProductCard = memo(function ProductCard({
   item,
   isSelected,
   isShelfing,
@@ -409,51 +499,55 @@ const ProductRow = memo(function ProductRow({
   onReview,
   onDelete,
   onChat,
-}: ProductRowProps) {
+}: ProductCardProps) {
   const { t } = useTranslation()
   return (
-    <tr>
-      <Td><Checkbox checked={isSelected} onChange={() => onToggleSelect(item.id)} /></Td>
-      <Td>
-        <div style={{ fontWeight: 500 }}>{item.name}</div>
-        <div style={{ fontSize: '0.75rem', color: '#999' }}>{item.brand_name} · {item.sku_count} SKUs</div>
-      </Td>
-      <Td>{item.price_range ? `$${item.price_range.min} - $${item.price_range.max}` : '-'}</Td>
-      <Td><StatusBadge $status={item.status}>{item.status_display}</StatusBadge></Td>
-      <Td style={{ fontSize: '0.75rem', color: '#999' }}>{item.category_path}</Td>
-      <Td>
-        <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
-        {item.status === 'draft' && (
-          <>
+    <Card $selected={isSelected}>
+      <Checkbox checked={isSelected} onChange={() => onToggleSelect(item.id)} />
+      <Thumb>
+        {item.main_image ? <img src={item.main_image} alt={item.name} loading="lazy" /> : <span className="ph">📦</span>}
+      </Thumb>
+      <CardMain>
+        <CardName>{item.name}</CardName>
+        <CardMeta>{item.brand_name} · {item.sku_count} SKUs · {item.category_path}</CardMeta>
+        <CardBadges>
+          <StatusPill $status={item.status}>{item.status_display}</StatusPill>
+        </CardBadges>
+      </CardMain>
+      <CardRight>
+        <CardPrice>{item.price_range ? `$${item.price_range.min} – $${item.price_range.max}` : '-'}</CardPrice>
+        <Actions>
+          <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
+          {item.status === 'draft' && (
+            <>
+              <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+              {canSubmit && <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>}
+            </>
+          )}
+          {item.status === 'submitted' && canAudit && (
+            <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
+          )}
+          {item.status === 'approved' && (
             <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-            {canSubmit && (
-              <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>
-            )}
-          </>
-        )}
-        {item.status === 'submitted' && canAudit && (
-          <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
-        )}
-        {item.status === 'approved' && (
-          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-        )}
-        {item.status === 'on_sale' && (
-          <>
-            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
-            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
-          </>
-        )}
-        {item.status === 'suspended' && (
-          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
-        )}
-        {item.status === 'off_sale' && (
-          <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
-        )}
-        {isSuperAdmin && (
-          <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
-        )}
-        <ChatLink onClick={() => onChat(item.id)} />
-      </Td>
-    </tr>
+          )}
+          {item.status === 'on_sale' && (
+            <>
+              <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
+              <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
+            </>
+          )}
+          {item.status === 'suspended' && (
+            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
+          )}
+          {item.status === 'off_sale' && (
+            <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+          )}
+          {isSuperAdmin && (
+            <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
+          )}
+          <ChatLink onClick={() => onChat(item.id)} />
+        </Actions>
+      </CardRight>
+    </Card>
   )
 })

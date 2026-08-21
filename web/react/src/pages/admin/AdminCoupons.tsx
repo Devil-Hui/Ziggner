@@ -144,6 +144,169 @@ const Toast = styled.div<{ $type: 'success' | 'error' }>`
   color: ${({ $type }) => ($type === 'success' ? '#2e7d32' : '#c62828')};
 `;
 
+// ==================== 券卡片行（营销系统重构） ====================
+
+const CouponList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const CouponCard = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid rgba(26, 23, 18, 0.08);
+  border-radius: ${Radius.md}px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+
+  @media (max-width: 767.98px) {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+`;
+
+/* 左侧：面额大号数字 + 币种符号 + 券码等宽 */
+const CouponFace = styled.div`
+  width: 130px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .amount {
+    font-size: 24px;
+    font-weight: 700;
+    color: ${Color.status.error};
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .code {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    color: ${Color.text.muted};
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+`;
+
+/* 中部：使用条件 + 有效期 */
+const CouponInfo = styled.div`
+  flex: 1;
+  min-width: 0;
+
+  .cond {
+    font-size: 14px;
+    color: ${Color.text.body};
+    margin-bottom: 4px;
+  }
+
+  .meta {
+    font-size: 12px;
+    color: ${Color.text.muted};
+  }
+`;
+
+/* 右侧：进度 + 徽章 + 操作 */
+const CouponRight = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @media (max-width: 767.98px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+`;
+
+const UsageBarWrap = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const UsageTrack = styled.div`
+  width: 120px;
+  height: 6px;
+  border-radius: 4px;
+  background: ${Color.border.light};
+  overflow: hidden;
+`;
+
+const UsageFill = styled.div<{ $percent: number }>`
+  height: 100%;
+  width: ${({ $percent }) => Math.min(100, Math.max(0, $percent))}%;
+  background: ${Color.status.error};
+  border-radius: 4px;
+  transition: width 0.6s ease;
+`;
+
+const UsageText = styled.span`
+  font-size: 12px;
+  color: ${Color.text.muted};
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+`;
+
+const CouponStatusBadge = styled.span<{ $active: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: ${Radius.lg}px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${({ $active }) => ($active ? '#ecfdf5' : '#f3f4f6')};
+  color: ${({ $active }) => ($active ? '#047857' : '#6b7280')};
+`;
+
+const ReviewPill = styled.span<{ $status: string }>`
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: ${Radius.lg}px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${({ $status }) => ($status === 'APPROVED' || $status === 'ACTIVE' || $status === 'SCHEDULED' ? '#eff6ff' : $status === 'REJECTED' ? '#fef2f2' : '#fffbeb')};
+  color: ${({ $status }) => ($status === 'APPROVED' || $status === 'ACTIVE' || $status === 'SCHEDULED' ? '#1e40af' : $status === 'REJECTED' ? '#b91c1c' : '#b45309')};
+`;
+
+const CardActionBtn = styled.button<{ $tone?: 'default' | 'blue' | 'orange' | 'danger' }>`
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid
+    ${({ $tone }) =>
+      $tone === 'blue' ? '#2d8cf0' : $tone === 'orange' ? '#e65100' : $tone === 'danger' ? Color.status.error : Color.border.medium};
+  background: #fff;
+  color: ${({ $tone }) =>
+    $tone === 'blue' ? '#2d8cf0' : $tone === 'orange' ? '#e65100' : $tone === 'danger' ? Color.status.error : '#666'};
+  border-radius: ${Radius.sm}px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: ${({ $tone }) =>
+      $tone === 'blue' ? '#2d8cf0' : $tone === 'orange' ? '#e65100' : $tone === 'danger' ? Color.status.error : Color.text.secondary};
+    color: #fff;
+  }
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+`;
+
 const Badge = styled.span<{ $variant: 'fixed' | 'percent' }>`
   display: inline-block;
   padding: 2px 8px;
@@ -796,16 +959,74 @@ export default function AdminCoupons() {
         />
       </SearchBar>
 
-      <DataTable
-        columns={columns}
-        data={coupons}
-        loading={loading}
-        error={error}
-        onRetry={fetchCoupons}
-        emptyTitle={t('admin.coupons.noCoupons')}
-        emptyIcon="coupons"
-        rowKey="id"
-      />
+      {loading ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} style={{ height: 96, borderRadius: 8, background: 'linear-gradient(90deg,#e5e7eb 25%,#f3f4f6 37%,#e5e7eb 63%)', backgroundSize: '400% 100%', animation: 'shimmer 1.4s ease infinite' }} />
+          ))}
+        </div>
+      ) : coupons.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48, color: Color.text.muted }}>{t('admin.coupons.noCoupons')}</div>
+      ) : (
+        <CouponList>
+          {coupons.map(record => {
+            const s = getCouponStatus(record)
+            const app = appMap[record.id]
+            const canSubmit = !app || app.status === 'DRAFT' || app.status === 'REJECTED'
+            const busy = reviewingId === record.id
+            const submitLabel = !app
+              ? '提交审核'
+              : app.status === 'REJECTED'
+                ? '重新提交'
+                : app.status === 'PENDING'
+                  ? '审核中'
+                  : app.status === 'APPROVED'
+                    ? '已通过'
+                    : app.status === 'SCHEDULED'
+                      ? '待生效'
+                      : app.status === 'ACTIVE'
+                        ? '生效中'
+                        : '提交审核'
+            const usagePercent = record.total_count > 0 ? ((record.used_count ?? 0) / record.total_count) * 100 : 0
+            const discountText = record.discount_type === 'fixed'
+              ? t('admin.coupons.discountFormat').replace('{amount}', String(record.amount))
+              : `-${record.amount}%`
+            return (
+              <CouponCard key={record.id}>
+                <CouponFace>
+                  <span className="amount">
+                    {record.discount_type === 'fixed' ? `¥${record.amount}` : `${record.amount}%`}
+                  </span>
+                  <span className="code">{record.code}</span>
+                </CouponFace>
+                <CouponInfo>
+                  <div className="cond">{discountText} · {t('admin.coupons.columnMinSpend')} ¥{record.min_amount}</div>
+                  <div className="meta">
+                    {new Date(record.start_time).toLocaleDateString('zh-CN')} ~ {new Date(record.end_time).toLocaleDateString('zh-CN')}
+                    {' · '}{t('admin.coupons.usedCountFormat').replace('{used}', String(record.used_count ?? 0)).replace('{total}', String(record.total_count))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                    <CouponStatusBadge $active={s.active}>{s.label}</CouponStatusBadge>
+                    {app && <ReviewPill $status={app.status}>{REVIEW_STATUS_LABEL[app.status] || app.status}</ReviewPill>}
+                  </div>
+                </CouponInfo>
+                <CouponRight>
+                  <UsageBarWrap>
+                    <UsageTrack><UsageFill $percent={usagePercent} /></UsageTrack>
+                    <UsageText>{Math.round(usagePercent)}%</UsageText>
+                  </UsageBarWrap>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    <CardActionBtn onClick={() => openEdit(record)}>{t('admin.coupons.edit')}</CardActionBtn>
+                    <CardActionBtn $tone="blue" onClick={() => openPromo(record)}>{t('admin.coupons.promoBtn')}</CardActionBtn>
+                    <CardActionBtn $tone="orange" disabled={!canSubmit || busy} onClick={() => handleSubmitReview(record)}>{busy ? '提交中…' : submitLabel}</CardActionBtn>
+                    <CardActionBtn $tone="danger" onClick={() => setDeleteTarget(record)}>{t('admin.coupons.delete')}</CardActionBtn>
+                  </div>
+                </CouponRight>
+              </CouponCard>
+            )
+          })}
+        </CouponList>
+      )}
 
       <Pagination
         current={page}
