@@ -54,7 +54,7 @@ const TreeNode = styled.div<{ $level: number; $active?: boolean }>`
   cursor: pointer;
   transition: background 0.1s;
   background: ${({ $active }) => ($active ? '#f5f5f5' : 'transparent')};
-  border-left: 3px solid ${({ $active }) => ($active ? '#e74c3c' : 'transparent')};
+  border-left: 3px solid ${({ $active }) => ($active ? Color.primary : 'transparent')};
 
   &:hover {
     background: ${({ $active }) => ($active ? '#f5f5f5' : '#f5f5f5')};

@@ -63,4 +63,14 @@ export const GlobalStyles = createGlobalStyle`
     background: ${Color.border.medium};
     border-radius: 3px;
   }
+
+  /* ── A11y: 尊重系统减弱动效偏好（关闭骨架扫光/滑入/缩放等动画） ── */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
 `

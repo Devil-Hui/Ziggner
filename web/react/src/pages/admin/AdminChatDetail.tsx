@@ -46,7 +46,7 @@ const ORDER_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   delivered: { bg: '#ecfeff', color: '#0891b2' },
   completed: { bg: '#ecfdf5', color: '#047857' },
   cancelled: { bg: '#f3f4f6', color: '#9ca3af' },
-  refunding: { bg: '#fef2f2', color: '#e74c3c' },
+  refunding: { bg: '#fef2f2', color: Color.primary },
 }
 
 // ── Styled Components ──
@@ -152,7 +152,7 @@ const UnreadBadge = styled.span`
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: #e74c3c;
+  background: ${Color.primary};
   color: #fff;
   font-size: 11px;
   font-weight: 600;
@@ -343,7 +343,7 @@ const ProductChip = styled.span`
   gap: 4px;
   font-size: 12px;
   font-weight: 500;
-  color: #e74c3c;
+  color: ${Color.primary};
   background: #fef2f2;
   border: 1px solid #fde2e2;
   border-radius: 10px;
@@ -477,7 +477,7 @@ const CtxProductName = styled.div`
 const CtxProductPrice = styled.div`
   font-size: 13px;
   font-weight: 600;
-  color: #e74c3c;
+  color: ${Color.primary};
 `
 
 const CtxOrder = styled.button`
@@ -522,9 +522,9 @@ const FilterTabs = styled.div`
 const FilterTab = styled.button<{ $active: boolean }>`
   padding: 4px 12px;
   border-radius: ${Radius.full}px;
-  border: 1px solid ${props => props.$active ? '#e74c3c' : Color.border.light};
+  border: 1px solid ${props => props.$active ? Color.primary : Color.border.light};
   background: ${props => props.$active ? '#fef2f2' : 'transparent'};
-  color: ${props => props.$active ? '#e74c3c' : '#666'};
+  color: ${props => props.$active ? Color.primary : '#666'};
   font-size: 12px;
   font-weight: ${props => props.$active ? 600 : 400};
   cursor: pointer;
@@ -533,8 +533,8 @@ const FilterTab = styled.button<{ $active: boolean }>`
   transition: all ${Transition.fast};
 
   &:hover {
-    border-color: #e74c3c;
-    color: ${props => props.$active ? '#e74c3c' : '#333'};
+    border-color: ${Color.primary};
+    color: ${props => props.$active ? Color.primary : '#333'};
   }
 `
 
@@ -841,7 +841,7 @@ const ProductItemName = styled.div`
 
 const ProductItemPrice = styled.div`
   font-size: 14px;
-  color: #e74c3c;
+  color: ${Color.primary};
   font-weight: 600;
   margin-top: 2px;
 `

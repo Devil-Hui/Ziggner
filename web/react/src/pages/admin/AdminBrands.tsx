@@ -11,6 +11,7 @@ import { adminAPI } from '../../api/admin';
 import { postWithProgress } from '../../api/request';
 import { resolveMediaUrl } from '../../api/chat';
 import { compressImage } from '../../utils/imageCompression';
+import Upload from '../../components/admin/common/Upload';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
@@ -74,7 +75,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
   }
 `;
 
@@ -118,8 +119,8 @@ const UploadBtn = styled.button<{ $disabled?: boolean }>`
   opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
 
   &:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
+    border-color: ${Color.primary};
+    color: ${Color.primary};
   }
 `;
 
@@ -140,7 +141,7 @@ const LogoPreviewRemove = styled.button`
   height: 20px;
   border-radius: 50%;
   border: none;
-  background: #e74c3c;
+  background: ${Color.primary};
   color: #fff;
   font-size: 12px;
   line-height: 20px;
@@ -201,6 +202,14 @@ export default function AdminBrands() {
   const showMsg = (type: 'success' | 'error', msg: string) => {
     setToast({ type, msg });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const uploadBrandLogo = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const data = await postWithProgress<{ url?: string; detail?: string }>('/goods/upload/image', formData);
+    if (data && data.url) return resolveMediaUrl(data.url) ?? data.url;
+    throw new Error(data?.detail || '上传失败');
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -358,8 +367,8 @@ export default function AdminBrands() {
           {isSuperUser && (
             <button
               style={{
-                padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c', background: '#fff',
-                color: '#e74c3c', borderRadius: 2, cursor: 'pointer',
+                padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`, background: '#fff',
+                color: Color.primary, borderRadius: 2, cursor: 'pointer',
               }}
               onClick={() => setDeleteTarget(record)}
             >
@@ -418,26 +427,13 @@ export default function AdminBrands() {
             </FormGroup>
             <FormGroup>
               <Label>{t('admin.brands.logoLabel') || 'Logo'}</Label>
-              {formLogo ? (
-                <LogoPreview>
-                  <img src={formLogo} alt="logo preview" style={{ maxWidth: 120, maxHeight: 80, objectFit: 'contain' }} />
-                  <LogoPreviewRemove onClick={() => setFormLogo('')}>✕</LogoPreviewRemove>
-                </LogoPreview>
-              ) : (
-                <UploadBtn
-                  type="button"
-                  $disabled={uploadingLogo}
-                  onClick={() => logoInputRef.current?.click()}
-                >
-                  {uploadingLogo ? '上传中...' : '选择图片'}
-                </UploadBtn>
-              )}
-              <input
-                ref={logoInputRef}
-                type="file"
-                accept="image/*"
-                style={{ display: 'none' }}
-                onChange={handleLogoUpload}
+              <Upload
+                value={formLogo ? [formLogo] : []}
+                onChange={urls => setFormLogo(urls[0] ?? '')}
+                upload={uploadBrandLogo}
+                multiple={false}
+                maxFiles={1}
+                placeholder="拖拽 Logo 至此或点击上传"
               />
             </FormGroup>
             <FormGroup>

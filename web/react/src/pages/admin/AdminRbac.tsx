@@ -214,7 +214,7 @@ const ToastMsg = styled.div<{ $type: 'success' | 'error' }>`
   padding: 10px 20px;
   border-radius: ${Radius.md}px;
   color: #fff;
-  background: ${({ $type }) => ($type === 'success' ? '#2ecc71' : '#e74c3c')};
+  background: ${({ $type }) => ($type === 'success' ? '#2ecc71' : Color.primary)};
   box-shadow: ${Shadow.md};
   z-index: 2000;
   font-size: ${FontSize.sm}px;
@@ -620,7 +620,7 @@ export default function AdminRbac() {
             {matrixLoading ? (
               <div style={{ color: Color.text.muted }}>Loading…</div>
             ) : matrixError ? (
-              <div style={{ color: '#e74c3c' }}>{matrixError}</div>
+              <div style={{ color: Color.primary }}>{matrixError}</div>
             ) : (
               <>
                 {(matrix?.domains || []).map((domain: RbacDomain) => (

@@ -17,16 +17,16 @@ const PageContainer = styled.div`
 const ActionBtn = styled.button<{ $variant?: 'restore' | 'danger' }>`
   padding: 4px 12px;
   font-size: ${FontSize.xs}px;
-  border: 1px solid ${({ $variant }) => ($variant === 'danger' ? '#e74c3c' : '#27ae60')};
+  border: 1px solid ${({ $variant }) => ($variant === 'danger' ? Color.primary : '#27ae60')};
   background: ${Color.bg.card};
-  color: ${({ $variant }) => ($variant === 'danger' ? '#e74c3c' : '#27ae60')};
+  color: ${({ $variant }) => ($variant === 'danger' ? Color.primary : '#27ae60')};
   border-radius: 2px;
   cursor: pointer;
   margin-right: 6px;
   transition: ${Transition.fast};
 
   &:hover {
-    background: ${({ $variant }) => ($variant === 'danger' ? '#e74c3c' : '#27ae60')};
+    background: ${({ $variant }) => ($variant === 'danger' ? Color.primary : '#27ae60')};
     color: ${Color.text.inverse};
   }
 `
@@ -51,7 +51,7 @@ const Toast = styled.div<{ $type: 'success' | 'error' }>`
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.sm}px;
   color: ${Color.text.inverse};
-  background: ${({ $type }) => ($type === 'success' ? '#27ae60' : '#e74c3c')};
+  background: ${({ $type }) => ($type === 'success' ? '#27ae60' : Color.primary)};
   z-index: 2000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   animation: fadeIn 0.2s ease;

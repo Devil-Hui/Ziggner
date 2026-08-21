@@ -196,10 +196,10 @@ export default function AdminAuditLogs() {
             height: 32,
             padding: '0 14px',
             fontSize: 13,
-            border: '1px solid #e74c3c',
-            background: '#e74c3c',
+            border: `1px solid ${Color.primary}`,
+            background: Color.primary,
             color: '#fff',
-            borderRadius: 2,
+            borderRadius: 4,
             cursor: 'pointer',
           }}
         >

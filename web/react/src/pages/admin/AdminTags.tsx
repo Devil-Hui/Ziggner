@@ -266,7 +266,7 @@ export default function AdminTags() {
           )}
           {isSuperUser && (
             <button
-              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c', background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer' }}
+              style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`, background: '#fff', color: Color.primary, borderRadius: 2, cursor: 'pointer' }}
               onClick={() => setDeleteTarget(record)}
             >
               {t('admin.tags.delete')}

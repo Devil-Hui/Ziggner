@@ -85,7 +85,7 @@ const ToggleInput = styled.input`
   height: 0;
 
   &:checked + span {
-    background: #e74c3c;
+    background: ${Color.primary};
   }
 
   &:checked + span::before {
@@ -926,8 +926,8 @@ export default function AdminCoupons() {
             </button>
             <button
               style={{
-                padding: '4px 10px', fontSize: 12, border: '1px solid #e74c3c',
-                background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer',
+                padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`,
+                background: '#fff', color: Color.primary, borderRadius: 2, cursor: 'pointer',
               }}
               onClick={() => setDeleteTarget(record)}
             >
@@ -1325,9 +1325,9 @@ export default function AdminCoupons() {
                               onClick={() => handleTogglePromo(pc)}
                               style={{
                                 padding: '4px 10px', fontSize: 12,
-                                border: `1px solid ${pc.is_active ? '#e74c3c' : '#2e7d32'}`,
+                                border: `1px solid ${pc.is_active ? Color.primary : '#2e7d32'}`,
                                 background: '#fff', borderRadius: 2, cursor: 'pointer',
-                                color: pc.is_active ? '#e74c3c' : '#2e7d32',
+                                color: pc.is_active ? Color.primary : '#2e7d32',
                                 opacity: promoBusyId === pc.id ? 0.5 : 1,
                               }}
                             >

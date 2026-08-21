@@ -72,13 +72,13 @@ const Tab = styled.button<{ $active?: boolean }>`
   font-size: ${FontSize.sm}px;
   border: none;
   background: none;
-  color: ${({ $active }) => ($active ? '#e74c3c' : '#666')};
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#e74c3c' : 'transparent')};
+  color: ${({ $active }) => ($active ? Color.primary : '#666')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? Color.primary : 'transparent')};
   cursor: pointer;
   transition: ${Transition.fast};
 
   &:hover {
-    color: #e74c3c;
+    color: ${Color.primary};
   }
 `;
 
@@ -188,7 +188,7 @@ const Textarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
   }
 `;
 
@@ -236,7 +236,7 @@ const ChatCountBadge = styled.span`
   min-width: 18px;
   height: 18px;
   padding: 0 4px;
-  background: #e74c3c;
+  background: ${Color.primary};
   color: #fff;
   font-size: 0.625rem;
   font-weight: 600;

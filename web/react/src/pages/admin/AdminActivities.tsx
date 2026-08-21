@@ -979,7 +979,7 @@ const AdminActivities: React.FC = () => {
               </SkuSaveBtn>
             </div>
             {skuToast && (
-              <div style={{ color: skuToast.type === 'success' ? '#2ecc71' : '#e74c3c', fontSize: 12, marginTop: 6 }}>
+              <div style={{ color: skuToast.type === 'success' ? '#2ecc71' : Color.primary, fontSize: 12, marginTop: 6 }}>
                 {skuToast.msg}
               </div>
             )}

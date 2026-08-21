@@ -26,7 +26,7 @@ const ProgressBarWrapper = styled.div`
 const ProgressFill = styled.div<{ $progress: number }>`
   width: ${({ $progress }) => Math.min(100, Math.max(0, $progress))}%;
   height: 100%;
-  background: #e74c3c;
+  background: ${Color.primary};
   border-radius: 3px;
   transition: width 0.6s ease;
 `

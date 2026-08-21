@@ -25,7 +25,7 @@ const Card = styled.div`
 // ── Upload Area ──
 
 const UploadArea = styled.div<{ $isDragging: boolean; $hasFile: boolean }>`
-  border: 2px dashed ${({ $isDragging }) => ($isDragging ? '#e74c3c' : '#ddd')};
+  border: 2px dashed ${({ $isDragging }) => ($isDragging ? Color.primary : '#ddd')};
   border-radius: 6px;
   padding: 48px 24px;
   text-align: center;
@@ -34,7 +34,7 @@ const UploadArea = styled.div<{ $isDragging: boolean; $hasFile: boolean }>`
   transition: ${Transition.normal};
 
   &:hover {
-    border-color: #e74c3c;
+    border-color: ${Color.primary};
     background: ${Color.primaryLight};
   }
 `
@@ -76,7 +76,7 @@ const Spinner = styled.div`
   width: 36px;
   height: 36px;
   border: 3px solid ${Color.border.light};
-  border-top-color: #e74c3c;
+  border-top-color: ${Color.primary};
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 16px;

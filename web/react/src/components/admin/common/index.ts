@@ -49,6 +49,8 @@ export { default as Descriptions } from './Descriptions';
 export type { DescriptionsProps, DescriptionsItem } from './Descriptions';
 export { default as Result } from './Result';
 export type { ResultProps, ResultStatus } from './Result';
+export { default as Upload } from './Upload';
+export type { UploadProps } from './Upload';
 export { default as StepModal } from './StepModal';
 export { StepBar, StepNode } from './StepModal';
 export type { StepModalProps } from './StepModal';
