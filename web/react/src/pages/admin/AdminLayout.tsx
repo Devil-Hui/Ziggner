@@ -28,6 +28,7 @@ const Sidebar = styled.aside<{ $collapsed: boolean }>`
   height: 100vh;
   width: ${({ $collapsed }) => ($collapsed ? '64px' : '220px')};
   flex-shrink: 0;
+  z-index: ${ZIndex.sidebar};
   background: #1a1a2e;
   color: #a0aec0;
   display: flex;

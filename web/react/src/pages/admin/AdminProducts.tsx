@@ -515,7 +515,7 @@ const ProductCard = memo(function ProductCard({
         </CardBadges>
       </CardMain>
       <CardRight>
-        <CardPrice>{item.price_range ? `$${item.price_range.min} – $${item.price_range.max}` : '-'}</CardPrice>
+        <CardPrice>{item.price_range ? `$${Number(item.price_range.min).toLocaleString('en-US', { minimumFractionDigits: 2 })} – $${Number(item.price_range.max).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</CardPrice>
         <Actions>
           <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
           {item.status === 'draft' && (

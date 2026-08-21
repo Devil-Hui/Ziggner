@@ -139,7 +139,7 @@ const Th = styled.th`
 `
 
 const Td = styled.td`
-  padding: 10px 18px;
+  padding: 22px 18px; /* 22*2 + 内容 ≈ 64px 行高（min-height 在 tr 上无效，用 td 撑起） */
   font-size: 0.875rem;
   color: #1a1712;
   border-bottom: 1px solid rgba(26, 23, 18, 0.10);
@@ -147,7 +147,6 @@ const Td = styled.td`
 `
 
 const Tr = styled.tr`
-  min-height: 64px;
   transition: background ${Transition.fast};
 
   &:hover { background: rgba(26, 86, 219, 0.04); }
