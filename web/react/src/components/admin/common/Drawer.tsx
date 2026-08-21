@@ -2,8 +2,11 @@
  * Drawer（右侧滑入辅助面板 / Contextual Drawer）
  * ─────────────────────────────────────────────
  * - 默认宽度 440px（400–480 区间）；角色抽屉等窄场景传 width="360px"。
- * - 从右滑入（0.28s cubic-bezier），带遮罩与细腻阴影；zIndex.drawer(1000) < modal。
- * - 不遮挡左侧导航、不遮盖主内容区关键操作；Esc/遮罩关闭；body 滚动锁定。
+ * - 从右滑入（0.28s cubic-bezier），带遮罩与细腻阴影；zIndex.drawer(700) < modal。
+ * - 不遮挡左侧导航、不遮盖主内容区关键操作；Esc 关闭；body 滚动锁定。
+ * - 遮罩关闭策略（统一规则）：
+ *   - 只读/详情类（订单详情、券详情）→ maskClosable 默认 true（点遮罩关闭）；
+ *   - 表单/编辑类（角色编辑、编辑表单）→ 必须传 maskClosable={false}（防误触丢已填内容）。
  * - 打开时记录/关闭时恢复列表滚动位置由调用方负责（onClose 回调后恢复）。
  */
 import { useEffect, type ReactNode, type CSSProperties } from 'react'

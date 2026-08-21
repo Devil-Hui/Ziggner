@@ -681,11 +681,12 @@ export default function AdminRbac() {
       )}
 
       {editingUser && (
-        // 角色编辑：右侧滑出抽屉（360px，非弹窗）
+        // 角色编辑：右侧滑出抽屉（360px，非弹窗）；表单类遮罩不关（防误触丢已选角色）
         <Drawer
           open
           title={`${t('admin.rbac.roleEdit')}: ${editingUser.username}`}
           width="360px"
+          maskClosable={false}
           onClose={() => setEditingUser(null)}
           footer={
             <>

@@ -1,121 +1,70 @@
-import React from 'react';
-import styled from 'styled-components';
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../../theme/tokens';
-import { SecondaryBtn as CancelBtn } from './ui';
+/**
+ * DeleteConfirmDialog（删除确认对话框）
+ * ─────────────────────────
+ * 基于新 Modal 实现（role="dialog" + aria-modal + 统一遮罩/z=1100）：
+ * - 删除目标名高亮红色；确认按钮加载态（loading 时禁用并显示「删除中...」）；
+ * - 遮罩点击不关闭（防止误触丢操作意图），仅 Esc / 取消 / 确认关闭。
+ */
+import type { ReactNode } from 'react'
+import styled from 'styled-components'
+import Modal from './Modal'
+import { Color, FontSize, FontWeight, Spacing } from '../../../theme/tokens'
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  padding: ${Spacing.xxxl}px;
-`;
-
-const DialogCard = styled.div`
-  background: ${Color.bg.card};
-  border-radius: ${Radius.lg}px;
-  width: 100%;
-  max-width: 420px;
-  box-shadow: ${Shadow.modal};
-`;
-
-const Header = styled.div`
-  padding: ${Spacing.xxxl}px ${Spacing.xxxl}px 0;
-`;
-
-const Title = styled.h2`
-  font-size: ${FontSize.xl}px;
-  font-weight: ${600};
-  color: ${Color.text.heading};
-  margin: 0;
-`;
-
-const Body = styled.div`
-  padding: ${Spacing.lg}px ${Spacing.xxxl}px ${Spacing.xxxl}px;
+const Msg = styled.div`
   font-size: ${FontSize.base}px;
   color: ${Color.text.body};
   line-height: 1.6;
-`;
+  padding: ${Spacing.xs}px 0;
+`
 
 const Highlight = styled.span`
-  font-weight: ${600};
+  font-weight: ${FontWeight.semibold};
   color: ${Color.status.error};
-`;
+`
 
-const Footer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: ${Spacing.md}px;
-  padding: 0 ${Spacing.xxxl}px ${Spacing.xxxl}px;
-`;
-
-const ConfirmBtn = styled.button<{ $loading?: boolean }>`
-  padding: 10px ${Spacing.xl}px;
-  border: none;
-  border-radius: ${Radius.md}px;
-  background: ${({ $loading }) => ($loading ? '#f5b7b1' : Color.status.error)};
-  color: ${Color.text.inverse};
-  font-size: ${FontSize.base}px;
-  font-weight: ${500};
-  cursor: ${({ $loading }) => ($loading ? 'not-allowed' : 'pointer')};
-  transition: background ${Transition.normal};
-
-  &:hover {
-    background: ${({ $loading }) => ($loading ? '#f5b7b1' : '#c0392b')};
-  }
-`;
-
-interface DeleteConfirmDialogProps {
-  open: boolean;
-  title?: string;
-  itemName?: string;
-  onClose: () => void;
-  onConfirm: () => void;
-  loading?: boolean;
+export interface DeleteConfirmDialogProps {
+  open: boolean
+  title?: string
+  /** 删除目标名（如优惠券码），为空则显示通用文案 */
+  itemName?: string
+  onClose: () => void
+  onConfirm: () => void
+  loading?: boolean
 }
 
-const DeleteConfirmDialog: React.FC<DeleteConfirmDialogProps> = ({
+export default function DeleteConfirmDialog({
   open,
   title = '确认删除',
   itemName,
   onClose,
   onConfirm,
   loading = false,
-}) => {
-  if (!open) return null;
-
+}: DeleteConfirmDialogProps) {
   return (
-    <Overlay>
-      <DialogCard>
-        <Header>
-          <Title>{title}</Title>
-        </Header>
-        <Body>
-          确定要删除
-          {itemName ? (
-            <>
-              优惠券 <Highlight>{itemName}</Highlight>
-            </>
-          ) : (
-            '该优惠券'
-          )}
-          吗？此操作不可撤销。
-        </Body>
-        <Footer>
-          <CancelBtn onClick={onClose} disabled={loading}>
-            取消
-          </CancelBtn>
-          <ConfirmBtn $loading={loading} onClick={onConfirm} disabled={loading}>
-            {loading ? '删除中...' : '确认删除'}
-          </ConfirmBtn>
-        </Footer>
-      </DialogCard>
-    </Overlay>
-  );
-};
-
-export default DeleteConfirmDialog;
+    <Modal
+      open={open}
+      title={title}
+      width="420px"
+      maskClosable={false}
+      okText="确认删除"
+      okLoadingText="删除中..."
+      okDanger
+      confirmLoading={loading}
+      cancelText="取消"
+      onOk={onConfirm}
+      onClose={onClose}
+    >
+      <Msg>
+        确定要删除
+        {itemName ? (
+          <>
+            优惠券 <Highlight>{itemName}</Highlight>
+          </>
+        ) : (
+          '该优惠券'
+        )}
+        吗？此操作不可撤销。
+      </Msg>
+    </Modal>
+  )
+}

@@ -111,6 +111,8 @@ export interface ModalProps {
   footer?: ReactNode
   okText?: string
   cancelText?: string
+  /** 确认按钮 loading 文案（默认「处理中…」） */
+  okLoadingText?: string
   onOk?: () => void
   onClose: () => void
   confirmLoading?: boolean
@@ -130,6 +132,7 @@ export default function Modal({
   footer,
   okText = '确认',
   cancelText = '取消',
+  okLoadingText = '处理中…',
   onOk,
   onClose,
   confirmLoading = false,
@@ -172,7 +175,7 @@ export default function Modal({
             <>
               <Btn onClick={onClose} disabled={confirmLoading}>{cancelText}</Btn>
               <Btn $kind={okDanger ? 'danger' : 'primary'} onClick={onOk} disabled={confirmLoading}>
-                {confirmLoading ? '处理中…' : okText}
+                {confirmLoading ? okLoadingText : okText}
               </Btn>
             </>
           )}

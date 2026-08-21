@@ -1,71 +1,58 @@
-import styled from 'styled-components';
-import { useEffect } from 'react';
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../../theme/tokens';
-import { SecondaryBtn as CancelBtn } from './ui';
+/**
+ * ConfirmDialog（确认对话框）
+ * ─────────────────────────
+ * 基于新 Modal 实现（获得 role="dialog" + aria-modal + 统一遮罩 0.35/blur + z=1100）：
+ * - 400px 宽、居中；Esc / 遮罩点击关闭（与旧版行为一致）；
+ * - 危险操作确认按钮为红色（danger 语义）。
+ * 调用方仍按原条件渲染（挂载即显示）。
+ */
+import type { ReactNode } from 'react'
+import styled from 'styled-components'
+import Modal from './Modal'
+import { Color, FontSize, FontWeight, Radius, Spacing, Transition } from '../../../theme/tokens'
 
-const Overlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const Dialog = styled.div`
-  background: ${Color.bg.card};
-  border-radius: ${Radius.sm}px;
-  box-shadow: ${Shadow.dropdown};
-  width: 400px;
-  max-width: 90vw;
-  overflow: hidden;
-`;
-
-const Header = styled.div`
-  padding: ${Spacing.xl}px ${Spacing.xxxl}px 0;
-  font-size: ${FontSize.lg}px;
-  font-weight: ${600};
-  color: ${Color.text.heading};
-`;
-
-const Body = styled.div`
-  padding: ${Spacing.md}px ${Spacing.xxxl}px ${Spacing.xl}px;
+const Msg = styled.div`
   font-size: ${FontSize.base}px;
   color: ${Color.text.secondary};
   line-height: 1.6;
-`;
-
-const Footer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: ${Spacing.sm}px;
-  padding: 0 ${Spacing.xxxl}px ${Spacing.xl}px;
-`;
+  padding: ${Spacing.xs}px 0;
+`
 
 const ConfirmBtn = styled.button<{ $danger?: boolean }>`
-  padding: 6px ${Spacing.lg}px;
+  padding: 8px 20px;
   font-size: ${FontSize.sm}px;
+  font-weight: ${FontWeight.medium};
   border: none;
-  background: ${Color.status.error};
-  color: ${Color.text.inverse};
-  border-radius: ${Radius.xs}px;
+  border-radius: ${Radius.sm}px;
+  background: ${({ $danger }) => ($danger ? Color.status.error : Color.primary)};
+  color: #fff;
   cursor: pointer;
   transition: all ${Transition.fast};
 
-  &:hover {
-    background: #c0392b;
-  }
-`;
+  &:hover { filter: brightness(0.94); }
+`
 
-interface ConfirmDialogProps {
-  title: string;
-  message: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  danger?: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
+const CancelBtn = styled.button`
+  padding: 8px 20px;
+  font-size: ${FontSize.sm}px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.sm}px;
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  cursor: pointer;
+  transition: all ${Transition.fast};
+
+  &:hover { border-color: ${Color.primary}; color: ${Color.primary}; }
+`
+
+export interface ConfirmDialogProps {
+  title: ReactNode
+  message: ReactNode
+  confirmLabel?: string
+  cancelLabel?: string
+  danger?: boolean
+  onConfirm: () => void
+  onCancel: () => void
 }
 
 export default function ConfirmDialog({
@@ -73,30 +60,24 @@ export default function ConfirmDialog({
   message,
   confirmLabel = '确定',
   cancelLabel = '取消',
-  danger = false,
+  danger = true,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', handleEsc);
-    return () => document.removeEventListener('keydown', handleEsc);
-  }, [onCancel]);
-
   return (
-    <Overlay onClick={onCancel}>
-      <Dialog onClick={(e) => e.stopPropagation()}>
-        <Header>{title}</Header>
-        <Body>{message}</Body>
-        <Footer>
+    <Modal
+      open
+      title={title}
+      width="400px"
+      onClose={onCancel}
+      footer={
+        <>
           <CancelBtn onClick={onCancel}>{cancelLabel}</CancelBtn>
-          <ConfirmBtn $danger={danger} onClick={onConfirm}>
-            {confirmLabel}
-          </ConfirmBtn>
-        </Footer>
-      </Dialog>
-    </Overlay>
-  );
+          <ConfirmBtn $danger={danger} onClick={onConfirm}>{confirmLabel}</ConfirmBtn>
+        </>
+      }
+    >
+      <Msg>{message}</Msg>
+    </Modal>
+  )
 }
