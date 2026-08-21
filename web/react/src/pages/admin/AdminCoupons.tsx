@@ -1,6 +1,7 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import styled from 'styled-components'
+import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
@@ -452,6 +453,7 @@ let couponDraft: CouponFormData | null = null;
 
 export default function AdminCoupons() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -485,10 +487,9 @@ export default function AdminCoupons() {
   const [appMap, setAppMap] = useState<Record<number, CouponApplicationItem>>({});
   const [reviewingId, setReviewingId] = useState<number | null>(null);
 
-  const openPromo = async (coupon: Coupon) => {
-    setPromoTarget(coupon);
-    setPromoForm({ count: 1, prefix: '', name: '', note: '' });
-    await fetchPromo(coupon.id);
+  // 推广码看板独立为子页面（非弹窗）：/admin/coupons/promo/:couponId
+  const openPromo = (coupon: Coupon) => {
+    navigate(`/admin/coupons/promo/${coupon.id}`);
   };
 
   const fetchPromo = async (couponId: number) => {

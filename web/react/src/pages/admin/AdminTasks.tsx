@@ -6,6 +6,7 @@ import { adminAPI } from '../../api/admin'
 import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
 import StatusBadge from '../../components/admin/common/StatusBadge'
+import Progress from '../../components/admin/common/Progress'
 import { useTranslation } from '../../i18n'
 
 // ── Styled Components ──
@@ -204,9 +205,7 @@ export default function AdminTasks() {
         const isActive = record.state === 'PENDING' || record.state === 'PROCESSING'
         return (
           <ProgressCell>
-            <ProgressBarWrapper>
-              <ProgressFill $progress={progress} />
-            </ProgressBarWrapper>
+            <Progress percent={progress} width="120px" showText={false} />
             <ProgressText>
               {isActive ? `${progress}%` : record.state === 'SUCCESS' ? '100%' : record.state === 'FAILURE' ? '—' : '—'}
             </ProgressText>

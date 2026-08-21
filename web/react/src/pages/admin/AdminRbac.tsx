@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { PrimaryBtn as SaveBtn, Input as SearchInput, SecondaryBtn, SecondaryBtn as ActionBtn, SecondaryBtn as CancelBtn, FormGroup, Label, ErrorText, Hint, Select } from '../../components/admin/common/ui'
 import FormDialog from '../../components/admin/common/FormDialog'
+import Drawer from '../../components/admin/common/Drawer'
 import { adminAPI, type RbacMatrix, type RbacUser, type RbacDomain } from '../../api/admin'
 import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import Pagination from '../../components/admin/common/Pagination'
@@ -90,26 +91,60 @@ const DomainTitle = styled.h4`
   margin: 0 0 8px 0;
 `
 
+/* 权限卡片矩阵：120×80 卡片式勾选，选中蓝边+浅蓝底，悬停上浮 */
 const PermGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
 `
 
 const PermLabel = styled.label`
+  position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  justify-content: center;
+  gap: 4px;
+  min-height: 80px;
+  padding: 8px;
   font-size: ${FontSize.sm}px;
   color: ${Color.text.primary};
-  padding: 6px 8px;
-  border-radius: ${Radius.sm}px;
+  background: #fff;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
   cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+  user-select: none;
+
   &:hover {
-    background: ${Color.primaryLight};
+    border-color: ${Color.primary};
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
   }
+
   input {
-    accent-color: ${Color.primaryHover};
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &:has(input:checked) {
+    border-color: ${Color.primary};
+    background: #eff6ff;
+  }
+
+  .check {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    font-size: 12px;
+    color: ${Color.primary};
+    opacity: 0;
+  }
+
+  &:has(input:checked) .check {
+    opacity: 1;
   }
 `
 
@@ -601,7 +636,9 @@ export default function AdminRbac() {
                             checked={(draft[selectedRole] || []).includes(perm.code)}
                             onChange={() => togglePerm(perm.code)}
                           />
-                          <span title={perm.code}>{perm.label}</span>
+                          <span className="check">✓</span>
+                          <span title={perm.code} style={{ fontWeight: 500 }}>{perm.label}</span>
+                          <span style={{ fontSize: 10, color: '#9ca3af' }}>{perm.code}</span>
                         </PermLabel>
                       ))}
                     </PermGrid>
@@ -644,12 +681,22 @@ export default function AdminRbac() {
       )}
 
       {editingUser && (
-        // 点击遮罩不关闭：防误触丢失已选角色（用弹窗内「保存/取消」关闭）
-        <ModalOverlay>
-          <ModalCard onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>
-              {t('admin.rbac.roleEdit')}: {editingUser.username}
-            </ModalTitle>
+        // 角色编辑：右侧滑出抽屉（360px，非弹窗）
+        <Drawer
+          open
+          title={`${t('admin.rbac.roleEdit')}: ${editingUser.username}`}
+          width="360px"
+          onClose={() => setEditingUser(null)}
+          footer={
+            <>
+              <CancelBtn onClick={() => setEditingUser(null)}>{t('admin.rbac.close')}</CancelBtn>
+              <SaveBtn onClick={saveUserRoles} disabled={savingUser}>
+                {t('admin.rbac.confirm')}
+              </SaveBtn>
+            </>
+          }
+        >
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
             {roleOptions.map((role) => (
               <PermLabel key={role.value}>
                 <input
@@ -663,17 +710,12 @@ export default function AdminRbac() {
                     )
                   }
                 />
+                <span className="check">✓</span>
                 <span>{role.label}</span>
               </PermLabel>
             ))}
-            <ModalActions>
-              <CancelBtn onClick={() => setEditingUser(null)}>{t('admin.rbac.close')}</CancelBtn>
-              <SaveBtn onClick={saveUserRoles} disabled={savingUser}>
-                {t('admin.rbac.confirm')}
-              </SaveBtn>
-            </ModalActions>
-          </ModalCard>
-        </ModalOverlay>
+          </div>
+        </Drawer>
       )}
 
       {showCreateAdmin && (
