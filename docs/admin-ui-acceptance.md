@@ -12,7 +12,7 @@
 | # | 维度 | 分 | 关键发现 |
 |---|------|---|----------|
 | 1 | 可访问性 (A11y) | **3** | 全局 focus-visible、Modal/Drawer 含 `role=dialog` + `aria-modal`、prefers-reduced-motion 关闭动画；**扣分项**：旧 `ConfirmDialog` / `DeleteConfirmDialog` 缺 `role="dialog"`（P2，已记录） |
-| 2 | 性能 | **3** | 主包 gzip ≈ 153KB（<< 500KB）、图片懒加载、Skeleton 扫光、React.memo、路由级代码分割；**扣分项**：表格虚拟化（大数据场景 > 200 行）未做（P2） |
+| 2 | 性能 | **3** | 主包 gzip ≈ 153KB（<< 500KB）、图片懒加载、Skeleton 扫光、React.memo、路由级代码分割；**扣分项**：表格虚拟化（**已决策暂缓**：当前 <200 行数据量无需虚拟滚动，>500 行触发再启用） |
 | 3 | 响应式设计 | **3** | 1024/768/480 三断点突变、侧栏 220/64 sticky 折叠、<768 汉堡抽屉；**扣分项**：管理页移动端简化模板（卡片流 + 操作下拉合并）未做（**P2 = 唯一剩余**） |
 | 4 | 设计令牌 | **4** | 完整 token（Color/Radius/Spacing/Shadow/TypeSize/Transition/Color/BrandBlue 蓝 / 状态语义色 / WCAG AA）、`FontClamp` 相对单位、`MediaQuery` 断点、`ZIndex` 严格对齐基线（修复后）；全站 `#e74c3c` 硬编码清零 |
 | 5 | 反 AI 俗套 | **4** | 定制设计语言（蓝主 + 暗侧栏 + Lumiere 表格白卡）、非通用字体、克制动效；无毛玻璃滥用、无渐变文字、无套娃卡片 |
@@ -84,7 +84,7 @@
 | # | 问题 | 影响 | 建议 |
 |---|------|------|------|
 | 1 | 旧 `ConfirmDialog` / `DeleteConfirmDialog` 缺 `role="dialog"` 与 `aria-modal` | 屏幕阅读器无法识别为对话框 | 下一迭代统一改为新 `Modal` 组件 |
-| 2 | 表格虚拟化未做（>200 行性能） | 超大数据列表渲染抖动 | 引入 `react-window` 或自建 sticky 头部 + 视口裁剪 |
+| 2 | 表格虚拟化未做（**已决策：暂缓**） | 当前数据量（订单/商品列表通常 <200 行）不启用虚拟滚动不影响性能；**触发条件：单列表 >500 行**时再引入 `react-window`（或自建 sticky 头部 + 视口裁剪） | 数据量未达阈值前保持现状，纳入性能观测（列表 count 埋点），达标即启用 |
 | 3 | 管理页**移动简化模板**未做（<768 表格转卡片流 + 操作下拉合并） | 小屏运营体验欠佳 | 与 spec「移动简化模板」项对应，作为下一阶段主线 |
 | 4 | DatePicker / Radio / Form 等组件未单独封装（目前用原生 `input type=date`、`<select>` 等） | 形态一致性 + 校验样式 | 下一阶段封装为统一组件 |
 | 5 | `Drawer` 默认 `closeOnOverlayClick=true`（Drawer 截图里点遮罩可关） | 与"弹窗不遮全"精神一致，但"详情上下文"场景可能误触 | 视场景统一（详情 Drawer 可关、StepModal 不可关） |
