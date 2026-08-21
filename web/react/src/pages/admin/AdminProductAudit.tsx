@@ -7,6 +7,7 @@ import PageHeader from '../../components/admin/common/PageHeader';
 import LoadingSkeleton from '../../components/admin/common/LoadingSkeleton';
 import ErrorRetry from '../../components/admin/common/ErrorRetry';
 import StatusBadge from '../../components/admin/common/StatusBadge';
+import { StepBar, StepNode } from '../../components/admin/common';
 import { adminAPI } from '../../api/admin';
 import { adminChatAPI, resolveMediaUrl, type ConversationSummary } from '../../api/chat';
 import { useAdminAuth } from '../../store/AdminAuthContext';
@@ -356,7 +357,8 @@ export default function AdminProductAudit() {
   const [spu, setSpu] = useState<SPUDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('basic');
+  // 步骤流：0=基本信息 1=SKU 规格 2=审核意见（StepModal 模式）
+  const [activeStep, setActiveStep] = useState(0);
   const [remark, setRemark] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -492,20 +494,28 @@ export default function AdminProductAudit() {
           </div>
         </CardHeader>
 
-        <Tabs>
-          <Tab $active={activeTab === 'basic'} onClick={() => setActiveTab('basic')}>
-            {t('admin.productAudit.basicInfo')}
-          </Tab>
-          <Tab $active={activeTab === 'sku'} onClick={() => setActiveTab('sku')}>
-            {t('admin.productAudit.skuSpec')}
-          </Tab>
-          <Tab $active={activeTab === 'tags'} onClick={() => setActiveTab('tags')}>
-            {t('admin.productAudit.tags')}
-          </Tab>
-        </Tabs>
+        {/* 步骤条：①基本信息 → ②SKU 规格 → ③审核意见 */}
+        <div style={{ padding: '20px 20px 0' }}>
+          <StepBar>
+            {[
+              { title: t('admin.productAudit.basicInfo') },
+              { title: t('admin.productAudit.skuSpec') },
+              { title: t('admin.productAudit.auditAction') },
+            ].map((s, i) => {
+              const state: 'done' | 'current' | 'todo' = i < activeStep ? 'done' : i === activeStep ? 'current' : 'todo'
+              return (
+                <StepNode key={s.title} $state={state}>
+                  <span className="dot">{i < activeStep ? '✓' : i + 1}</span>
+                  {s.title}
+                  {i < 2 && <span className="line" />}
+                </StepNode>
+              )
+            })}
+          </StepBar>
+        </div>
 
         <TabContent>
-          {activeTab === 'basic' && (
+          {activeStep === 0 && (
             <div>
               <InfoGrid>
                 <InfoItem>
@@ -548,8 +558,9 @@ export default function AdminProductAudit() {
             </div>
           )}
 
-          {activeTab === 'sku' && (
+          {activeStep === 1 && (
             <div>
+              <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>{t('admin.productAudit.skuSpec')}</h4>
               {spu.skus && spu.skus.length > 0 ? (
                 <SkuTable>
                   <thead>
@@ -590,11 +601,7 @@ export default function AdminProductAudit() {
               ) : (
                 <p style={{ color: '#999', fontSize: 13 }}>{t('admin.productAudit.noSku')}</p>
               )}
-            </div>
-          )}
-
-          {activeTab === 'tags' && (
-            <div>
+              <h4 style={{ margin: '20px 0 8px', fontSize: 14 }}>{t('admin.productAudit.tags')}</h4>
               {spu.tags && spu.tags.length > 0 ? (
                 <TagList>
                   {spu.tags.map((tag) => (
@@ -606,31 +613,55 @@ export default function AdminProductAudit() {
               )}
             </div>
           )}
+
+          {/* 第 3 步：审核意见（仅 submitted 展示） */}
+          {activeStep === 2 && spu.status === 'submitted' && (
+            <div>
+              <AuditTitle>{t('admin.productAudit.auditComment')}</AuditTitle>
+              <Textarea
+                placeholder={t('admin.productAudit.auditComment')}
+                value={remark}
+                onChange={(e) => setRemark(e.target.value)}
+              />
+              <ButtonGroup>
+                {canAudit && (
+                  <>
+                    <RejectBtn onClick={() => handleAudit('reject')} disabled={submitting}>
+                      {submitting ? t('admin.productAudit.processing') : t('admin.productAudit.reject')}
+                    </RejectBtn>
+                    <ApproveBtn onClick={() => handleAudit('approve')} disabled={submitting}>
+                      {submitting ? t('admin.productAudit.processing') : t('admin.productAudit.approve')}
+                    </ApproveBtn>
+                  </>
+                )}
+              </ButtonGroup>
+            </div>
+          )}
+          {activeStep === 2 && spu.status !== 'submitted' && (
+            <p style={{ color: '#999', fontSize: 13 }}>{t('admin.productAudit.auditAction')}</p>
+          )}
         </TabContent>
       </ContentCard>
 
-      {spu.status === 'submitted' && (
-        <AuditSection>
-          <AuditTitle>{t('admin.productAudit.auditAction')}</AuditTitle>
-          <Textarea
-            placeholder={t('admin.productAudit.auditComment')}
-            value={remark}
-            onChange={(e) => setRemark(e.target.value)}
-          />
-          <ButtonGroup>
-            {canAudit && (
-              <>
-                <RejectBtn onClick={() => handleAudit('reject')} disabled={submitting}>
-                  {submitting ? t('admin.productAudit.processing') : t('admin.productAudit.reject')}
-                </RejectBtn>
-                <ApproveBtn onClick={() => handleAudit('approve')} disabled={submitting}>
-                  {submitting ? t('admin.productAudit.processing') : t('admin.productAudit.approve')}
-                </ApproveBtn>
-              </>
-            )}
-          </ButtonGroup>
-        </AuditSection>
-      )}
+      {/* 步骤导航 */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+        {activeStep > 0 && (
+          <button
+            onClick={() => setActiveStep(s => s - 1)}
+            style={{ padding: '8px 20px', fontSize: 13, border: '1px solid #d1d5db', borderRadius: 4, background: '#fff', color: '#374151', cursor: 'pointer' }}
+          >
+            {t('admin.productAudit.prev') || '上一步'}
+          </button>
+        )}
+        {activeStep < 2 && (
+          <button
+            onClick={() => setActiveStep(s => s + 1)}
+            style={{ padding: '8px 20px', fontSize: 13, border: '1px solid #1a56db', borderRadius: 4, background: '#1a56db', color: '#fff', cursor: 'pointer' }}
+          >
+            {t('admin.productAudit.next') || '下一步'}
+          </button>
+        )}
+      </div>
     </Container>
   );
 }

@@ -48,9 +48,9 @@ const TabBar = styled.div`
 
 const TabButton = styled.button<{ $active: boolean }>`
   padding: 6px 16px;
-  border: 1px solid ${({ $active }) => ($active ? Color.status.error : Color.border.light)};
-  background: ${({ $active }) => ($active ? '#fef2f2' : Color.bg.card)};
-  color: ${({ $active }) => ($active ? '#e74c3c' : Color.text.secondary)};
+  border: 1px solid ${({ $active }) => ($active ? Color.primary : Color.border.light)};
+  background: ${({ $active }) => ($active ? '#eff6ff' : Color.bg.card)};
+  color: ${({ $active }) => ($active ? Color.primary : Color.text.secondary)};
   font-size: ${FontSize.sm}px;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
   border-radius: ${Radius.sm}px;
@@ -59,8 +59,8 @@ const TabButton = styled.button<{ $active: boolean }>`
   transition: all ${Transition.fast};
 
   &:hover {
-    border-color: ${Color.status.error};
-    color: ${({ $active }) => ($active ? '#e74c3c' : Color.text.body)};
+    border-color: ${Color.primary};
+    color: ${({ $active }) => ($active ? Color.primary : Color.text.body)};
   }
 `
 
@@ -253,7 +253,7 @@ export default function AdminNotifications() {
       render: (val: unknown) => (
         val
           ? <span style={{ color: '#27ae60' }}>{t('admin.notifications.statusRead')}</span>
-          : <span style={{ color: '#e74c3c' }}>{t('admin.notifications.statusUnread')}</span>
+          : <span style={{ color: Color.status.error }}>{t('admin.notifications.statusUnread')}</span>
       ),
     },
     {

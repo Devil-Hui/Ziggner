@@ -17,7 +17,7 @@ import { KoboyoRefreshIcon } from '../../components/admin/common/Icon';
 
 // ==================== Theme ====================
 
-const PRIMARY = '#e74c3c';
+const PRIMARY = '#1a56db';
 const BACKGROUND = '#f8f9fa';
 const SURFACE = '#fff';
 
@@ -339,7 +339,7 @@ const ActionCell = styled.div`
 
 const ActionLink = styled.span<{ $danger?: boolean }>`
   font-size: ${FontSize.sm}px;
-  color: ${({ $danger }) => ($danger ? '#e74c3c' : '#e74c3c')};
+  color: ${({ $danger }) => ($danger ? '#dc2626' : '#1a56db')};
   cursor: pointer;
   font-weight: 500;
 

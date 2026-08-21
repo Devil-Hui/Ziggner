@@ -91,7 +91,7 @@ const Label = styled.label`
 `;
 
 const RequiredDot = styled.span`
-  color: #e74c3c;
+  color: ${Color.status.error};
   margin-right: 2px;
 `;
 
@@ -105,7 +105,7 @@ const Textarea = styled.textarea`
   resize: vertical;
   min-height: 80px;
   box-sizing: border-box;
-  &:focus { outline: none; border-color: #e74c3c; }
+  &:focus { outline: none; border-color: ${Color.primary}; }
 `;
 
 const ReadOnlyField = styled.div`
@@ -142,7 +142,7 @@ const Checkbox = styled.input`
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #e74c3c;
+  accent-color: ${Color.primary};
 `;
 
 const FieldHint = styled.span`
@@ -155,7 +155,7 @@ const FieldHint = styled.span`
 const FieldError = styled.span`
   display: block;
   font-size: 11px;
-  color: #e74c3c;
+  color: ${Color.status.error};
   margin-top: 4px;
 `;
 
@@ -189,7 +189,7 @@ const ActionPrimary = styled.button`
   padding: 4px 12px;
   font-size: 12px;
   border: none;
-  background: #e74c3c;
+  background: ${Color.primary};
   color: ${Color.text.inverse};
   border-radius: 2px;
   cursor: pointer;
@@ -209,11 +209,11 @@ const Tab = styled.button<{ $active?: boolean }>`
   font-size: ${FontSize.sm}px;
   border: none;
   background: none;
-  color: ${({ $active }) => ($active ? '#e74c3c' : '#666')};
-  border-bottom: 2px solid ${({ $active }) => ($active ? '#e74c3c' : 'transparent')};
+  color: ${({ $active }) => ($active ? Color.primary : '#666')};
+  border-bottom: 2px solid ${({ $active }) => ($active ? Color.primary : 'transparent')};
   cursor: pointer;
   font-weight: ${({ $active }) => ($active ? 600 : 400)};
-  &:hover { color: #e74c3c; }
+  &:hover { color: ${Color.primary}; }
 `;
 
 const Dropdown = styled.div`
@@ -245,7 +245,7 @@ const DropdownItem = styled.button`
   color: ${Color.primaryHover};
   text-align: left;
   cursor: pointer;
-  &:hover { background: ${Color.primaryLight}; color: #e74c3c; }
+  &:hover { background: ${Color.primaryLight}; color: ${Color.primary}; }
   &:not(:last-child) { border-bottom: 1px solid ${Color.border.light}; }
 `;
 
@@ -1153,7 +1153,7 @@ export default function AdminApplications() {
             <ButtonGroup>
               <SecondaryBtn onClick={() => setReviewTarget(null)}>{t('admin.applications.reviewCancel')}</SecondaryBtn>
               <button
-                style={{ padding: '8px 24px', fontSize: 13, border: '1px solid #e74c3c', background: '#fff', color: '#e74c3c', borderRadius: 2, cursor: 'pointer' }}
+                style={{ padding: '8px 24px', fontSize: 13, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', borderRadius: 2, cursor: 'pointer' }}
                 onClick={() => handleReview('reject')}
                 disabled={reviewSubmitting}
               >

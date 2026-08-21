@@ -6,6 +6,7 @@ import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
+import Modal from '../../components/admin/common/Modal';
 import { adminAPI } from '../../api/admin';
 import { postWithProgress } from '../../api/request';
 import { resolveMediaUrl } from '../../api/chat';
@@ -405,9 +406,12 @@ export default function AdminBrands() {
       />
 
       {showForm && (
-        <FormOverlay onClick={() => setShowForm(false)}>
-          <FormDialog onClick={(e) => e.stopPropagation()}>
-            <FormTitle>{editingId ? t('admin.brands.editBrand') : t('admin.brands.newBrand')}</FormTitle>
+        <Modal
+          open={showForm}
+          title={editingId ? t('admin.brands.editBrand') : t('admin.brands.newBrand')}
+          onClose={() => setShowForm(false)}
+          footer={null}
+        >
             <FormGroup>
               <Label>{t('admin.brands.nameLabel')}</Label>
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.brands.namePlaceholder')} />
@@ -453,8 +457,7 @@ export default function AdminBrands() {
                 {isSaving ? t('common.saving') : editingId ? t('common.save') : t('admin.brands.create')}
               </PrimaryBtn>
             </ButtonGroup>
-          </FormDialog>
-        </FormOverlay>
+        </Modal>
       )}
 
       {deleteTarget && (

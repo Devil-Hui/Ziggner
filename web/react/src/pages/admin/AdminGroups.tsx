@@ -49,10 +49,13 @@ const MemberPanel = styled.div`
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
   box-shadow: ${Shadow.card};
+  position: sticky;
+  top: 16px;
 
   @media (max-width: 1024px) {
     width: 100%;
     max-height: none;
+    position: static;
   }
 `;
 

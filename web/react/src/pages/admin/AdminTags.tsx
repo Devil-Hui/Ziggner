@@ -7,6 +7,7 @@ import PageHeader from '../../components/admin/common/PageHeader';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
+import Modal from '../../components/admin/common/Modal';
 import { adminAPI } from '../../api/admin';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
@@ -308,9 +309,12 @@ export default function AdminTags() {
       />
 
       {showForm && (
-        <FormOverlay onClick={() => setShowForm(false)}>
-          <FormDialog onClick={(e) => e.stopPropagation()}>
-            <FormTitle>{editingId ? t('admin.tags.editTag') : t('admin.tags.newTag')}</FormTitle>
+        <Modal
+          open={showForm}
+          title={editingId ? t('admin.tags.editTag') : t('admin.tags.newTag')}
+          onClose={() => setShowForm(false)}
+          footer={null}
+        >
             <FormGroup>
               <Label>{t('admin.tags.nameLabel')}</Label>
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
@@ -343,8 +347,7 @@ export default function AdminTags() {
               <SecondaryBtn onClick={() => setShowForm(false)}>{t('common.cancel')}</SecondaryBtn>
               <PrimaryBtn onClick={handleSave}>{editingId ? t('admin.tags.save') : t('admin.tags.create')}</PrimaryBtn>
             </ButtonGroup>
-          </FormDialog>
-        </FormOverlay>
+        </Modal>
       )}
 
       {deleteTarget && (
