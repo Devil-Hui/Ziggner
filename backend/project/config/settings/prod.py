@@ -52,7 +52,11 @@ if R2_ACCOUNT_ID and R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY and R2_BUCKET:
     AWS_STORAGE_BUCKET_NAME = R2_BUCKET
     AWS_S3_ENDPOINT_URL = f'https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com'
     AWS_S3_REGION_NAME = 'auto'
-    AWS_S3_FILE_OVERWRITE = False
+    # 全仓所有上传均使用 utils.storage.media_key（UUID 唯一名，含日期分区），
+    # 同名覆盖概率为零。置 True 后 Django 直接 _save 不再调用 get_available_name →
+    # 跳过 exists()/head_object 探测链，根治 django-storages 在 R2 上偶发的
+    # RecursionError(maximum recursion depth exceeded) 导致的「上传 500」。
+    AWS_S3_FILE_OVERWRITE = True
     AWS_QUERYSTRING_AUTH = False
     AWS_DEFAULT_ACL = None
     if R2_PUBLIC_URL:

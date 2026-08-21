@@ -46,7 +46,7 @@ from .views import (
     # Admin Import/Export
     ImportProductsView, ExportProductsView,
     # Admin Media
-    MediaListBySPUView, MediaDeleteView, MediaReorderView, MediaUpdateView, MediaCreateView,
+    MediaListBySPUView, MediaDeleteView, MediaReorderView, MediaUpdateView, MediaCreateView, MediaVideoCreateView,
 )
 
 urlpatterns = [
@@ -161,6 +161,7 @@ urlpatterns = [
     # ==================== Admin Media ====================
     path('media/spu/<int:spu_id>', MediaListBySPUView.as_view(), name='media-spu-list'),
     path('media/spu/<int:spu_id>/upload', MediaCreateView.as_view(), name='media-create'),
+    path('media/spu/<int:spu_id>/video/upload', MediaVideoCreateView.as_view(), name='media-video-create'),
     path('media/<int:media_id>/delete', MediaDeleteView.as_view(), name='media-delete'),
     path('media/<int:media_id>/update', MediaUpdateView.as_view(), name='media-update'),
     path('media/reorder', MediaReorderView.as_view(), name='media-reorder'),

@@ -46,4 +46,4 @@ from .admin_notification import (
 from .admin_stats import AdminStatsView
 from .admin_task import TaskProgressView, TaskListView
 from .admin_import_export import ImportProductsView, ExportProductsView
-from .admin_media import MediaListBySPUView, MediaDeleteView, MediaReorderView, MediaUpdateView, MediaCreateView
+from .admin_media import MediaListBySPUView, MediaDeleteView, MediaReorderView, MediaUpdateView, MediaCreateView, MediaVideoCreateView

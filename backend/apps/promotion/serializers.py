@@ -82,13 +82,32 @@ class PromoCodeDetailSerializer(PromoCodeSerializer):
 
 
 class PromoCodeCreateSerializer(serializers.Serializer):
+    """推广码创建参数（8.3 严谨化）：
+    - name 必填：推广码必须归属一个推广人/渠道，否则无意义；
+    - prefix 仅允许大写字母+数字（0-8 位），为空则纯随机；
+    - codes 可选：显式指定码值时同样必须给 name。
+    """
     codes = serializers.ListField(
         child=serializers.CharField(max_length=32), required=False, allow_empty=True,
     )
     count = serializers.IntegerField(min_value=1, max_value=200, default=1, required=False)
     prefix = serializers.CharField(max_length=8, required=False, allow_blank=True, default='')
-    name = serializers.CharField(max_length=128, required=False, allow_blank=True, default='')
+    name = serializers.CharField(max_length=128, required=True, allow_blank=False,
+                                 error_messages={'blank': '推广码必须绑定推广人/渠道名称', 'required': '推广码必须绑定推广人/渠道名称'},
+                                 help_text='推广人/渠道名称（必填），如：代言人A、直播间、线下门店')
     note = serializers.CharField(required=False, allow_blank=True, default='')
+
+    def validate_prefix(self, value):
+        value = (value or '').strip().upper()
+        import re as _re
+        if value and not _re.fullmatch(r'[A-Z0-9]{1,8}', value):
+            raise serializers.ValidationError('前缀仅允许大写字母与数字（0-8 位），如 ZG、VIP')
+        return value
+
+    def validate(self, attrs):
+        if not (attrs.get('codes') or attrs.get('count')):
+            raise serializers.ValidationError('需提供 codes 或 count')
+        return attrs
 
 
 class UserCouponSerializer(serializers.ModelSerializer):

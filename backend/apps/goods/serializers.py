@@ -137,16 +137,24 @@ class SPUAdminDetailSerializer(serializers.Serializer):
 
 
 class TagCreateRequestSerializer(serializers.Serializer):
-    name = serializers.CharField(max_length=50)
+    name = serializers.CharField(max_length=50, help_text='标签名（话题式，展示为 #名称）')
+    tag_type = serializers.ChoiceField(
+        required=False, default='product',
+        choices=['product', 'activity'],
+        help_text='product=产品标签 / activity=活动标签',
+    )
     color = serializers.CharField(
         required=False, default='#e74c3c', max_length=7,
-        help_text='HEX 色值，如 #e74c3c',
+        help_text='HEX 色值，如 #e74c3c；仅展示用途',
     )
     is_active = serializers.BooleanField(required=False, default=True)
 
 
 class TagUpdateRequestSerializer(serializers.Serializer):
     name = serializers.CharField(required=False, max_length=50)
+    tag_type = serializers.ChoiceField(
+        required=False, choices=['product', 'activity'],
+    )
     color = serializers.CharField(required=False, max_length=7)
     is_active = serializers.BooleanField(required=False)
 
@@ -154,6 +162,7 @@ class TagUpdateRequestSerializer(serializers.Serializer):
 class TagResponseSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+    tag_type = serializers.CharField()
     color = serializers.CharField()
     is_active = serializers.BooleanField()
 

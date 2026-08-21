@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
+import { RefreshButton } from '../../components/admin/common';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
@@ -16,6 +17,7 @@ import { TAG_COLOR_PALETTE, DEFAULT_TAG_COLOR } from '../../constants/tagColors'
 interface Tag {
   id: number;
   name: string;
+  tag_type?: 'product' | 'activity';
   color?: string;
   is_active: boolean;
   created_at: string;
@@ -129,6 +131,7 @@ export default function AdminTags() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState('');
   const [formColor, setFormColor] = useState(DEFAULT_TAG_COLOR);
+  const [formType, setFormType] = useState<'product' | 'activity'>('product');
   const [formActive, setFormActive] = useState(true);
 
   // Delete
@@ -162,6 +165,7 @@ export default function AdminTags() {
     setFormName('');
     setFormColor(DEFAULT_TAG_COLOR);
     setFormActive(true);
+    setFormType('product');
     setShowForm(true);
   };
 
@@ -170,6 +174,7 @@ export default function AdminTags() {
     setFormName(tag.name);
     setFormColor(tag.color || DEFAULT_TAG_COLOR);
     setFormActive(tag.is_active);
+    setFormType(tag.tag_type || 'product');
     setShowForm(true);
   };
 
@@ -180,10 +185,10 @@ export default function AdminTags() {
     }
     try {
       if (editingId) {
-        await adminAPI.updateTag(editingId, { name: formName.trim(), color: formColor, is_active: formActive });
+        await adminAPI.updateTag(editingId, { name: formName.trim(), tag_type: formType, color: formColor, is_active: formActive });
         showMsg('success', t('admin.tags.saveSuccess'));
       } else {
-        await adminAPI.createTag({ name: formName.trim(), color: formColor, is_active: true });
+        await adminAPI.createTag({ name: formName.trim(), tag_type: formType, color: formColor, is_active: true });
         showMsg('success', t('admin.tags.createSuccess'));
       }
       setShowForm(false);
@@ -211,7 +216,23 @@ export default function AdminTags() {
   );
 
   const columns: Column<Tag>[] = [
-    { key: 'name', title: t('admin.tags.nameLabel'), sortable: true },
+    {
+      key: 'name',
+      title: t('admin.tags.nameLabel'),
+      sortable: true,
+      render: (_: unknown, record: Tag) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontWeight: 600, color: '#1a1a2e' }}>#{record.name}</span>
+          <span style={{
+            padding: '1px 7px', borderRadius: 999, fontSize: 11,
+            background: record.tag_type === 'activity' ? '#fef3c7' : '#dbeafe',
+            color: record.tag_type === 'activity' ? '#b45309' : '#1a56db',
+          }}>
+            {record.tag_type === 'activity' ? '活动标签' : '产品标签'}
+          </span>
+        </span>
+      ),
+    },
     {
       key: 'color',
       title: t('admin.tags.columnColor'),
@@ -282,7 +303,7 @@ export default function AdminTags() {
       <PageHeader
         title={t('admin.tags.title')}
         breadcrumb={[{ label: t('admin.tags.subtitle') }, { label: t('admin.tags.title') }]}
-        actions={isSuperUser ? <PrimaryBtn onClick={openCreate}>{t('admin.tags.createTag')}</PrimaryBtn> : null}
+        actions={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{isSuperUser ? <PrimaryBtn onClick={openCreate}>{t('admin.tags.createTag')}</PrimaryBtn> : null}<RefreshButton onRefresh={fetchTags} /></div>}
       />
 
       {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}
@@ -320,6 +341,13 @@ export default function AdminTags() {
               <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
             </FormGroup>
             <FormGroup>
+              <FormGroup>
+                <Label>标签类型（话题式标签）</Label>
+                <Select value={formType} onChange={(e) => setFormType(e.target.value as 'product' | 'activity')}>
+                  <option value="product">产品标签（如 #上新、#热卖）</option>
+                  <option value="activity">活动标签（如 #双十一、#周年庆）</option>
+                </Select>
+              </FormGroup>
               <Label>{t('admin.tags.colorLabel')} <ColorPreview $color={formColor}>{formColor}</ColorPreview></Label>
               <ColorPalette>
                 {TAG_COLOR_PALETTE.map((c) => (

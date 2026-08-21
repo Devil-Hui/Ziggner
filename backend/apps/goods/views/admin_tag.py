@@ -31,12 +31,16 @@ class TagAdminCreateView(BaseApiView):
         color = request.data.get('color', '#e74c3c')
         # 校验 HEX 格式
         validate_tag_color(color)
+        tag_type = request.data.get('tag_type', 'product')
+        if tag_type not in ('product', 'activity'):
+            return Response({'detail': 'Invalid tag_type.'}, status=status.HTTP_400_BAD_REQUEST)
         is_active = request.data.get('is_active', True)
-        tag = Tag.objects.create(name=name, color=color, is_active=is_active)
+        tag = Tag.objects.create(name=name, tag_type=tag_type, color=color, is_active=is_active)
         # 失效标签列表缓存
         GoodsCacheService.invalidate_tag_list()
         return Response({
-            'id': tag.id, 'name': tag.name, 'color': tag.color, 'is_active': tag.is_active,
+            'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type,
+            'color': tag.color, 'is_active': tag.is_active,
         }, status=status.HTTP_201_CREATED)
 
 
@@ -69,6 +73,11 @@ class TagAdminUpdateView(BaseApiView):
             validate_tag_color(request.data['color'])
             tag.color = request.data['color']
             update_fields.append('color')
+        if 'tag_type' in request.data:
+            if request.data['tag_type'] not in ('product', 'activity'):
+                return Response({'detail': 'Invalid tag_type.'}, status=status.HTTP_400_BAD_REQUEST)
+            tag.tag_type = request.data['tag_type']
+            update_fields.append('tag_type')
         if 'is_active' in request.data:
             tag.is_active = request.data['is_active']
             update_fields.append('is_active')
@@ -78,7 +87,8 @@ class TagAdminUpdateView(BaseApiView):
             GoodsCacheService.invalidate_tag_list()
 
         return Response({
-            'id': tag.id, 'name': tag.name, 'color': tag.color, 'is_active': tag.is_active,
+            'id': tag.id, 'name': tag.name, 'tag_type': tag.tag_type,
+            'color': tag.color, 'is_active': tag.is_active,
         })
 
 

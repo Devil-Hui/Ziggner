@@ -627,11 +627,22 @@ class SKU(models.Model):
 
 # ==================== 标签 ====================
 
+class TagType(models.TextChoices):
+    """标签类型：话题式标签分为活动/产品两类（如 #双十一 = 活动标签，#上新 = 产品标签）。"""
+    PRODUCT = 'product', '产品标签'
+    ACTIVITY = 'activity', '活动标签'
+
+
 class Tag(models.Model):
     name = models.CharField(max_length=50, unique=True, verbose_name='标签名称')
+    tag_type = models.CharField(
+        max_length=20, choices=TagType.choices, default=TagType.PRODUCT,
+        verbose_name='标签类型',
+        help_text='产品标签：附着于商品描述（如 #上新）；活动标签：关联营销活动（如 #双十一）',
+    )
     color = models.CharField(
         max_length=7, default='#e74c3c', verbose_name='标签颜色',
-        help_text='HEX 色值，如 #e74c3c',
+        help_text='HEX 色值，如 #e74c3c；仅作展示用途，标签本身是文本话题',
     )
     is_active = models.BooleanField(default=True, verbose_name='启用')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
@@ -645,10 +656,11 @@ class Tag(models.Model):
         indexes = [
             models.Index(fields=['name'], name='idx_tag_name'),
             models.Index(fields=['is_active'], name='idx_tag_is_active'),
+            models.Index(fields=['tag_type'], name='idx_tag_type'),
         ]
 
     def __str__(self):
-        return self.name
+        return f'#{self.name}'
 
 
 # ==================== SPU 标签关联 ====================

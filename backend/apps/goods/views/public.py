@@ -187,7 +187,7 @@ class TagListView(PublicApiView):
         if tags is not None:
             return Response(tags)
         from ..models import Tag
-        tags = list(Tag.objects.filter(is_active=True).values('id', 'name', 'color'))
+        tags = list(Tag.objects.filter(is_active=True).values('id', 'name', 'tag_type', 'color'))
         _cache.set('tag:list', tags, 300)
         return Response(tags)
 

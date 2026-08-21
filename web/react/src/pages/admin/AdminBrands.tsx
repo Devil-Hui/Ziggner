@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
+import { RefreshButton } from '../../components/admin/common';
 import DataTable from '../../components/admin/common/DataTable';
 import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
@@ -385,7 +386,7 @@ export default function AdminBrands() {
       <PageHeader
         title={t('admin.brands.title')}
         breadcrumb={[{ label: t('admin.brands.subtitle') }, { label: t('admin.brands.title') }]}
-        actions={isSuperUser ? <PrimaryBtn onClick={openCreate}>{t('admin.brands.createBrand')}</PrimaryBtn> : null}
+        actions={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{isSuperUser ? <PrimaryBtn onClick={openCreate}>{t('admin.brands.createBrand')}</PrimaryBtn> : null}<RefreshButton onRefresh={fetchBrands} /></div>}
       />
 
       {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}

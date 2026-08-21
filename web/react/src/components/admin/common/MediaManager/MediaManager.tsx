@@ -452,8 +452,27 @@ export default function MediaManager({
         onClose={() => setShowVideoDialog(false)}
         onConfirm={async (item: StagedMediaItem) => {
           if (isEditMode && spuId) {
-            // 视频暂不支持编辑模式直接上传，提示
-            showToast(t('admin.mediaManager.videoNotSupported'), 'warning')
+            // 1.2 编辑模式：直接上传原视频到后端（MP4/WebM/MOV，≤200MB）
+            const videoFile = item.videoBlob ? new File([item.videoBlob], item.fileName, { type: item.videoBlob.type || 'video/mp4' }) : null
+            if (!videoFile) {
+              showToast('未获取到视频文件', 'warning')
+              setShowVideoDialog(false)
+              return
+            }
+            setUploadQueue({ status: 'processing', completed: 0, total: 1, percent: 0, currentFileName: item.fileName })
+            try {
+              await adminAPI.uploadVideo(spuId, videoFile, (percent) => {
+                setUploadQueue((q) => ({ ...q, percent }))
+              })
+              setUploadQueue({ ...INITIAL_QUEUE, status: 'done' })
+              // 刷新已保存媒体列表
+              const fresh = await adminAPI.getMediaBySPU(spuId)
+              if (Array.isArray(fresh)) setSavedItems(fresh)
+              showToast(t('admin.mediaManager.videoUploadSuccess') || '视频上传成功', 'success')
+            } catch (err: unknown) {
+              setUploadQueue(INITIAL_QUEUE)
+              showToast(err instanceof Error ? err.message : t('admin.mediaManager.videoUploadFailed') || '视频上传失败', 'error')
+            }
           } else {
             const stagedId = await addStagedItem(item)
             const updated = [...items, { ...item, id: stagedId }]

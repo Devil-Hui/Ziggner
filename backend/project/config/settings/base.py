@@ -860,6 +860,8 @@ R2_PUBLIC_URL = os.getenv('R2_PUBLIC_URL', '')
 # 媒体数量限制
 MEDIA_MAX_IMAGES_PER_SPU = int(os.getenv('MEDIA_MAX_IMAGES_PER_SPU', '5'))
 MEDIA_MAX_VIDEOS_PER_SPU = int(os.getenv('MEDIA_MAX_VIDEOS_PER_SPU', '1'))
+# 视频单条大小上限（MB）
+MEDIA_MAX_VIDEO_SIZE_MB = int(os.getenv('MEDIA_MAX_VIDEO_SIZE_MB', '200'))
 MEDIA_MAX_FILE_SIZE_MB = int(os.getenv('MEDIA_MAX_FILE_SIZE_MB', '10'))
 
 # ==================== 商品缓存 TTL 配置 ====================

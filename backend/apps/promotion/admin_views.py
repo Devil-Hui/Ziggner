@@ -176,25 +176,44 @@ class ActivitySKUView(BaseApiView):
         except DiscountActivity.DoesNotExist:
             return Response({'detail': 'Activity not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-        sku_ids = request.data.get('sku_ids', [])
-        activity_price = request.data.get('activity_price')
-        if activity_price is None or activity_price == '':
-            return Response({'detail': 'activity_price is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        sku_ids = request.data.get('sku_ids') or []
+        # 9.1 严谨化：activity_price 改为可选（None=不设活动价，仅做活动关联曝光）
+        raw_price = request.data.get('activity_price')
+        activity_price = None
+        if raw_price not in (None, ''):
+            try:
+                activity_price = float(raw_price)
+            except (TypeError, ValueError):
+                return Response({'detail': 'activity_price 必须为数字或留空'}, status=status.HTTP_400_BAD_REQUEST)
+            if activity_price < 0:
+                return Response({'detail': 'activity_price 不能为负数'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 批量 scope（9.1）：tag / category / all 三类，后端解析出 SKU 列表
+        scope = request.data.get('scope') or {}
+        scope_type = scope.get('type') if isinstance(scope, dict) else None
+        if scope_type in ('tag', 'category', 'all'):
+            from apps.goods.scope_helpers import resolve_scope_sku_ids as _resolve
+            sku_ids = _resolve(scope_type, scope)
+        elif scope_type not in (None, ''):
+            return Response({'detail': 'scope.type 仅支持 tag / category / all'}, status=status.HTTP_400_BAD_REQUEST)
+
+        sku_ids = [int(x) for x in sku_ids if str(x).isdigit()]
+        if not sku_ids:
+            return Response({'detail': '未匹配到任何 SKU'}, status=status.HTTP_400_BAD_REQUEST)
 
         ActivitySKURelation.objects.filter(activity=activity).delete()
-
-        if sku_ids:
-            ActivitySKURelation.objects.bulk_create([
-                ActivitySKURelation(
-                    activity=activity,
-                    sku_id=sku_id,
-                    activity_price=activity_price,
-                ) for sku_id in sku_ids
-            ])
+        ActivitySKURelation.objects.bulk_create([
+            ActivitySKURelation(
+                activity=activity,
+                sku_id=sku_id,
+                activity_price=activity_price,
+            ) for sku_id in sku_ids
+        ])
 
         return Response({
             'message': Messages.SUCCESS,
             'linked_count': len(sku_ids),
+            'activity_price': activity_price,
         })
 
 

@@ -524,6 +524,20 @@ class CouponApplicationService:
         CouponApplicationService._record(
             application, user, from_status, CouponApplication.Status.PENDING,
         )
+        # 8.2 站内消息互通：提交审核后通知所有超管
+        try:
+            from apps.notification.models import Notification
+            from django.contrib.auth.models import User
+            admins = list(User.objects.filter(is_active=True, is_superuser=True).values_list('id', flat=True))
+            for uid in admins:
+                Notification.objects.create(
+                    user_id=uid, type='application_pending',
+                    title=f'新的申请待审核：优惠券「{application.coupon_name}」',
+                    content=f'{user.username} 提交了优惠券申请（{application.discount_type} {application.amount}），等待审核。',
+                )
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger('biz').warning('coupon submit notify failed: %s', exc)
         return application
 
     @staticmethod
@@ -549,6 +563,15 @@ class CouponApplicationService:
                 application, reviewer, CouponApplication.Status.PENDING,
                 CouponApplication.Status.REJECTED, comment,
             )
+            try:
+                from apps.notification.models import Notification
+                Notification.objects.create(
+                    user=application.applicant, type='application_result',
+                    title='申请审核结果：已驳回',
+                    content=f'您的优惠券申请「{application.coupon_name}」已被驳回' + (f'：{comment}' if comment else ''),
+                )
+            except Exception:  # noqa: BLE001
+                pass
             return None
 
         application.status = CouponApplication.Status.APPROVED
@@ -557,6 +580,15 @@ class CouponApplicationService:
             application, reviewer, CouponApplication.Status.PENDING,
             CouponApplication.Status.APPROVED, comment,
         )
+        try:
+            from apps.notification.models import Notification
+            Notification.objects.create(
+                user=application.applicant, type='application_result',
+                title='申请审核结果：已通过',
+                content=f'您的优惠券申请「{application.coupon_name}」已通过审核' + (f'：{comment}' if comment else ''),
+            )
+        except Exception:  # noqa: BLE001
+            pass
         coupon_values = {
                 'name': application.coupon_name,
                 'discount_type': application.discount_type,

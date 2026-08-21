@@ -506,9 +506,22 @@ export default function AdminCoupons() {
 
   const handleCreatePromo = async () => {
     if (!promoTarget) return;
+    // 8.3 严谨化：推广码必须绑定推广人/渠道；前缀仅大写字母数字
+    if (!promoForm.name.trim()) {
+      showMsg('error', t('admin.coupons.promoNameRequired') || '推广码必须绑定推广人/渠道名称');
+      return;
+    }
+    if (promoForm.prefix && !/^[A-Z0-9]{1,8}$/.test(promoForm.prefix.trim())) {
+      showMsg('error', t('admin.coupons.promoPrefixInvalid') || '前缀仅允许大写字母与数字（0-8 位）');
+      return;
+    }
     try {
       setPromoCreating(true);
-      await adminAPI.createPromoCodes(promoTarget.id, promoForm);
+      await adminAPI.createPromoCodes(promoTarget.id, {
+        ...promoForm,
+        prefix: promoForm.prefix.trim().toUpperCase(),
+        name: promoForm.name.trim(),
+      });
       showMsg('success', t('admin.coupons.promoCreateSuccess'));
       setPromoForm({ count: 1, prefix: '', name: '', note: '' });
       await fetchPromo(promoTarget.id);

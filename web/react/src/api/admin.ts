@@ -84,6 +84,8 @@ export interface BrandItem {
 export interface TagItem {
   id: number;
   name: string;
+  /** 2.1 话题式标签：product=产品标签 / activity=活动标签 */
+  tag_type?: 'product' | 'activity';
   color: string;
   is_active: boolean;
   created_at: string;
@@ -406,7 +408,7 @@ export const adminAPI = {
   // Tag
   getTags: () =>
     get<TagItem[]>('/goods/tag'),
-  createTag: (data: { name: string; color?: string; is_active?: boolean }) =>
+  createTag: (data: { name: string; tag_type?: 'product' | 'activity'; color?: string; is_active?: boolean }) =>
     post<TagItem>('/goods/tag/create', data),
   updateTag: (id: number, data: Partial<TagItem>) =>
     put<TagItem>(`/goods/tag/${id}/update`, data),
@@ -438,6 +440,18 @@ export const adminAPI = {
     postWithProgress<ProductMediaItem>(
       `/goods/media/spu/${spuId}/upload`, formData, onProgress,
     ),
+  /** 1.2 视频上传（编辑模式）：单文件 video/mp4|webm|mov，≤200MB */
+  uploadVideo: (
+    spuId: number,
+    file: File,
+    onProgress?: (percent: number) => void,
+  ) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return postWithProgress<ProductMediaItem>(
+      `/goods/media/spu/${spuId}/video/upload`, fd, onProgress,
+    );
+  },
 
   // Admin Group —— 管理面统一走 /api/admin/groups/，分组以 slug 寻址、成员以 account_no
   // 指认（不暴露内部 id、不以 PII 查询）。列表/创建仍带 id 仅用于 AdminCategories /
@@ -572,7 +586,12 @@ export const adminAPI = {
     put<ActivityItem>(`/promotion/activity/${id}/update`, data),
   deleteActivity: (id: number) =>
     del(`/promotion/activity/${id}/delete`),
-  setActivitySKUs: (id: number, data: { sku_ids: number[]; activity_price?: number }) =>
+  setActivitySKUs: (id: number, data: {
+    sku_ids?: number[];
+    activity_price?: number;
+    /** 批量关联（9.1）：scope.type ∈ tag/category/all */
+    scope?: { type: 'tag' | 'category' | 'all'; tag_id?: number; category_id?: number };
+  }) =>
     post(`/promotion/activity/${id}/skus`, data),
 
   // Email Templates

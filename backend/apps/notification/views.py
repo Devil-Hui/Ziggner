@@ -39,12 +39,29 @@ class NotificationListView(BaseApiView):
         )
 
         # 过期状态过滤
+        # 注意：list_for_user 缓存命中时返回 dict 列表（无属性访问），未命中时返回模型实例，
+        # 统一用取值函数兼容两种形态，避免 AttributeError → 500。
+        def _expires_at(n):
+            if isinstance(n, dict):
+                return n.get('expires_at')
+            return getattr(n, 'expires_at', None)
+
+        def _parse_dt(v):
+            from django.utils import timezone as _tz
+            if isinstance(v, str):
+                try:
+                    from django.utils.dateparse import parse_datetime
+                    v = parse_datetime(v) or _tz.now()
+                except (TypeError, ValueError):
+                    return None
+            return v
+
         if expired_filter is not None:
             now = timezone.now()
             if expired_filter.lower() == 'true':
-                results = [n for n in results if n.expires_at is not None and now >= n.expires_at]
+                results = [n for n in results if (e := _parse_dt(_expires_at(n))) is not None and now >= e]
             elif expired_filter.lower() == 'false':
-                results = [n for n in results if n.expires_at is None or now < n.expires_at]
+                results = [n for n in results if (e := _parse_dt(_expires_at(n))) is None or now < e]
             total = len(results)
 
         data = NotificationSerializer(results, many=True).data

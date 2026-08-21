@@ -6,6 +6,8 @@ import { Select, Input as SearchInput } from '../../components/admin/common/ui'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 import PromptDialog from '../../components/admin/common/PromptDialog'
 import Drawer from '../../components/admin/common/Drawer'
+import Modal from '../../components/admin/common/Modal'
+import { RefreshButton } from '../../components/admin/common'
 import Tag from '../../components/admin/common/Tag'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary, type ChannelStatsItem } from '../../api/order'
@@ -238,6 +240,10 @@ const ItemNameLink = styled.a`
   &:hover {
     text-decoration: underline;
   }
+
+  /* 作为按钮（商品参数弹窗入口）时继承字体 */
+  font: inherit;
+  text-align: left;
 `
 
 /* ── 状态时间线 ── */
@@ -313,6 +319,8 @@ export default function AdminOrders() {
   const [channelStats, setChannelStats] = useState<ChannelStatsItem[]>([])
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, any> | null>(null)
+  /** 订单商品参数预览（点击商品名弹出，不跳转前台） */
+  const [itemPreview, setItemPreview] = useState<Record<string, any> | null>(null)
 
   const [afterSales, setAfterSales] = useState<AfterSaleRow[]>([])
   const [asTotal, setAsTotal] = useState(0)
@@ -512,6 +520,8 @@ export default function AdminOrders() {
               }}
             />
             <Button $variant="primary" onClick={() => { setPage(1); loadOrders() }}>{t('common.search')}</Button>
+        <span style={{ flex: 1 }} />
+        <RefreshButton onRefresh={loadOrders} />
           </FilterBar>
 
           {items.length === 0 && !loading ? (
@@ -721,7 +731,12 @@ export default function AdminOrders() {
                   <Tr key={it.id || it.sku_code}>
                     <Td>
                       {it.spu_id ? (
-                        <ItemNameLink href={`/product/${it.spu_id}`} target="_blank" rel="noopener noreferrer">
+                        <ItemNameLink
+                          as="button"
+                          type="button"
+                          onClick={() => setItemPreview(it)}
+                          style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
+                        >
                           {it.spu_name}
                         </ItemNameLink>
                       ) : (
@@ -765,6 +780,53 @@ export default function AdminOrders() {
           </>
         )}
       </Drawer>
+
+      {/* 商品参数预览（点击订单商品名弹出，不跳转前台） */}
+      <Modal
+        open={!!itemPreview}
+        title={t('admin.orders.itemPreviewTitle') || '商品参数'}
+        onClose={() => setItemPreview(null)}
+        footer={
+          <button
+            type="button"
+            onClick={() => setItemPreview(null)}
+            style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer', fontSize: 13 }}
+          >
+            {t('common.close') || '关闭'}
+          </button>
+        }
+      >
+        {itemPreview && (
+          <div style={{ display: 'flex', gap: 16 }}>
+            {itemPreview.image ? (
+              <img
+                src={itemPreview.image}
+                alt={itemPreview.spu_name}
+                style={{ width: 96, height: 96, objectFit: 'contain', borderRadius: 8, border: '1px solid #eee', background: '#fafafa' }}
+              />
+            ) : null}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>{itemPreview.spu_name}</div>
+              <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '96px 1fr', gap: '6px 12px', fontSize: 13 }}>
+                {[
+                  ['SKU', itemPreview.sku_code],
+                  ['单价', money(itemPreview.price)],
+                  ['数量', itemPreview.quantity],
+                  ['小计', money(itemPreview.subtotal)],
+                  ...(itemPreview.specs && Array.isArray(itemPreview.specs) && itemPreview.specs.length
+                    ? itemPreview.specs.map((s: any) => [String(s.name || ''), Array.isArray(s.values) ? s.values.join(' / ') : ''])
+                    : []),
+                ].filter(([, v]) => v !== '' && v != null).map(([k, v]) => (
+                  <div key={String(k)} style={{ display: 'contents' }}>
+                    <dt style={{ color: '#888', margin: 0 }}>{k}</dt>
+                    <dd style={{ margin: 0, color: '#222' }}>{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {cancelTarget !== null && (
         <ConfirmDialog

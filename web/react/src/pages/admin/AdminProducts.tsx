@@ -11,6 +11,7 @@ import { useTranslation } from '../../i18n'
 import ChatLink from '../../components/admin/ChatLink'
 import ChatFloatWidget from '../../components/admin/common/ChatFloatWidget'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
+import { RefreshButton } from '../../components/admin/common'
 
 /* ── 布局 ── */
 const PageHeader = styled.div`
@@ -92,8 +93,9 @@ const Thumb = styled.div`
   img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    aspect-ratio: 1 / 1;
+    /* contain：忠实展示上传时的裁切比例（如 4:5），避免被 1:1 容器裁剪失真 */
+    object-fit: contain;
+    background: #f7f7f8;
   }
 
   .ph {
@@ -397,6 +399,8 @@ export default function AdminProducts() {
             <ActionBtn onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</ActionBtn>
           </Actions>
         )}
+        <span style={{ flex: 1 }} />
+        <RefreshButton onRefresh={fetchProducts} />
       </FilterBar>
 
       {error && <ErrorLine>{error}</ErrorLine>}

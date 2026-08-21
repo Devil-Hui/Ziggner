@@ -456,10 +456,19 @@ class MediaCreateView(BaseApiView):
                 path = default_storage.save(media_key('products', ext), strip_exif(f))
                 return default_storage.url(path)
 
-        thumb_url = _save_file(thumb)
-        list_url = _save_file(list_file)
-        large_url = _save_file(large)
-        original_url = _save_file(original)
+        # 保存四尺寸文件；任一失败整体回滚（文件已落盘的由 Redis/周期清理兜底），
+        # 返回友好错误而非裸 500（曾出现 R2 exists() 探测递归导致 500）。
+        try:
+            thumb_url = _save_file(thumb)
+            list_url = _save_file(list_file)
+            large_url = _save_file(large)
+            original_url = _save_file(original)
+        except Exception as exc:  # noqa: BLE001 - 存储异常统一降级为可读错误
+            _logger.exception('SPU %s 媒体保存失败', spu_id)
+            return Response(
+                {'detail': f'图片保存失败（存储服务异常），请稍后重试。{type(exc).__name__}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
 
         total_size = thumb.size + list_file.size + large.size + original.size
         sort_order = MediaService.get_next_sort_order(spu_id, 'image')
@@ -485,4 +494,77 @@ class MediaCreateView(BaseApiView):
         GoodsCacheService.invalidate_spu(spu_id)
         GoodsCacheService.invalidate_spu_list()
 
+        return Response(_serialize_media(media), status=status.HTTP_201_CREATED)
+
+
+class MediaVideoCreateView(BaseApiView):
+    """1.2 视频上传：向已有 SPU 上传一条商品视频。
+
+    路由: POST /goods/media/spu/<spu_id>/video/upload
+    校验：video/mp4、video/webm、video/quicktime；单条 ≤ MEDIA_MAX_VIDEO_SIZE_MB(200)。
+    保存原视频到对象存储，创建 ProductMedia(media_type='video')。
+    """
+
+    permission_classes = [HasPerm('goods.media.write')]
+
+    @extend_schema(
+        request=OpenApiTypes.OBJECT,
+        responses={201: OpenApiResponse(description='Video media created')}
+    )
+    def post(self, request, spu_id):
+        try:
+            spu = SPU.objects.get(id=spu_id, deleted_at__isnull=True)
+        except SPU.DoesNotExist:
+            return Response({'detail': 'SPU 不存在'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not can_operate_spu(request.user, spu):
+            return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # 数量校验
+        if not MediaService.validate_media_count(spu_id, 'video'):
+            return Response(
+                {'detail': f'视频数量已达上限 ({settings.MEDIA_MAX_VIDEOS_PER_SPU} 条)'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        video = request.FILES.get('file')
+        if not video:
+            return Response({'detail': '请上传文件字段 file'}, status=status.HTTP_400_BAD_REQUEST)
+
+        allowed = {'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov'}
+        content_type = (video.content_type or '').lower()
+        ext = allowed.get(content_type)
+        if not ext:
+            return Response(
+                {'detail': f'不支持的文件类型: {content_type}（仅支持 MP4/WebM/MOV）'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        max_bytes = getattr(settings, 'MEDIA_MAX_VIDEO_SIZE_MB', 200) * 1024 * 1024
+        if video.size > max_bytes:
+            return Response(
+                {'detail': f'视频过大（> {settings.MEDIA_MAX_VIDEO_SIZE_MB}MB）'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            path = default_storage.save(media_key('products/video', ext), video)
+            video_url = default_storage.url(path)
+        except Exception as exc:  # noqa: BLE001 - 存储异常统一降级为可读错误
+            _logger.exception('SPU %s 视频保存失败', spu_id)
+            return Response(
+                {'detail': f'视频保存失败（存储服务异常），请稍后重试。{type(exc).__name__}'},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        media = ProductMedia.objects.create(
+            spu=spu,
+            media_type='video',
+            video_url=video_url,
+            sort_order=MediaService.get_next_sort_order(spu_id, 'video'),
+            status='active',
+            file_size=video.size,
+        )
+        GoodsCacheService.invalidate_media_list(spu_id)
+        GoodsCacheService.invalidate_spu(spu_id)
+        GoodsCacheService.invalidate_spu_list()
         return Response(_serialize_media(media), status=status.HTTP_201_CREATED)

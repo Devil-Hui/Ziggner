@@ -22,6 +22,39 @@ import logging
 _logger = logging.getLogger('biz')
 
 
+def _notify_users(user_ids, type_, title, content):
+    """创建站内通知（8.2 站内消息互通）。"""
+    from apps.notification.models import Notification
+    if not user_ids:
+        return
+    for uid in set(user_ids):
+        try:
+            Notification.objects.create(user_id=uid, type=type_, title=title, content=content)
+        except Exception as exc:  # noqa: BLE001 - 通知失败不阻断主流程
+            _logger.warning('站内通知创建失败 user=%s type=%s: %s', uid, type_, exc)
+
+
+def _notify_superadmins(type_, title, content):
+    """给所有超管发站内通知（如新申请待审核）。"""
+    from django.contrib.auth.models import User
+    ids = list(
+        User.objects.filter(is_active=True, is_superuser=True).values_list('id', flat=True)
+    )
+    _notify_users(ids, type_, title, content)
+
+
+def _collect_category_ids(root):
+    """递归收集分类及其全部子分类 id（Category 为自引用树，非 mptt）。"""
+    ids = [root.id]
+    stack = [root]
+    while stack:
+        node = stack.pop()
+        children = list(node.children.all())
+        ids.extend(c.id for c in children)
+        stack.extend(children)
+    return ids
+
+
 class StaffListView(BaseApiView):
     """管理员/员工列表（供申请表单下拉选择）"""
     permission_classes = [HasPerm('goods.spu.read')]
@@ -57,6 +90,12 @@ class ApplicationSubmitView(BaseApiView):
                 category_path = f'{parent.name} > {category_path}'
                 parent = parent.parent
 
+            # 影响范围 SPU 数由后端计算（含全部子分类），不信任前端传入值
+            cat_ids = _collect_category_ids(cat)
+            impact_spu_count = SPU.objects.filter(
+                category_id__in=cat_ids, deleted_at__isnull=True
+            ).count()
+
             app = CategoryRenameApplication.objects.create(
                 category=cat,
                 new_name=request.data.get('new_name'),
@@ -68,10 +107,15 @@ class ApplicationSubmitView(BaseApiView):
                 parent_category_name=cat.parent.name if cat.parent else '',
                 category_description=getattr(cat, 'description', ''),
                 category_path=category_path,
-                impact_spu_count=request.data.get('impact_spu_count', 0),
+                impact_spu_count=impact_spu_count,
                 impact_child_category_count=cat.children.count(),
                 reason=request.data.get('reason', ''),
                 applicant=applicant,
+            )
+            _notify_superadmins(
+                'application_pending',
+                f'新的申请待审核：分类改名「{cat.name}」',
+                f'{applicant.username} 提交了分类改名申请（{category_path} → {request.data.get("new_name", "")}），影响 {impact_spu_count} 个 SPU。',
             )
             return Response({'id': app.id, 'type': app_type, 'status': app.status}, status=status.HTTP_201_CREATED)
 
@@ -80,6 +124,11 @@ class ApplicationSubmitView(BaseApiView):
                 brand = Brand.objects.get(id=request.data.get('brand_id'))
             except (Brand.DoesNotExist, ValueError, TypeError):
                 return Response({'detail': 'Brand not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            # 影响范围 SPU 数由后端计算，不信任前端传入值
+            impact_spu_count = SPU.objects.filter(
+                brand_id=brand.id, deleted_at__isnull=True
+            ).count()
 
             app = BrandRenameApplication.objects.create(
                 brand=brand,
@@ -90,9 +139,14 @@ class ApplicationSubmitView(BaseApiView):
                 brand_logo_url=brand.logo_url,
                 brand_description=brand.description,
                 brand_is_active=brand.is_active,
-                impact_spu_count=request.data.get('impact_spu_count', 0),
+                impact_spu_count=impact_spu_count,
                 reason=request.data.get('reason', ''),
                 applicant=applicant,
+            )
+            _notify_superadmins(
+                'application_pending',
+                f'新的申请待审核：品牌改名「{brand.name}」',
+                f'{applicant.username} 提交了品牌改名申请（{brand.name} → {request.data.get("new_name", "")}），影响 {impact_spu_count} 个 SPU。',
             )
             return Response({'id': app.id, 'type': app_type, 'status': app.status}, status=status.HTTP_201_CREATED)
 
@@ -126,6 +180,11 @@ class ApplicationSubmitView(BaseApiView):
                 handover_plan=request.data.get('handover_plan', ''),
                 reason=request.data.get('reason', ''),
                 applicant=applicant,
+            )
+            _notify_superadmins(
+                'application_pending',
+                f'新的申请待审核：组长变更「{current_leader.group.name if current_leader else "未知组"}」',
+                f'{applicant.username} 提交了组长变更申请（{app.group_name_snapshot}），成员 {member_count} 人，分类 {category_count} 个。',
             )
             return Response({'id': app.id, 'type': app_type, 'status': app.status}, status=status.HTTP_201_CREATED)
 
@@ -427,6 +486,15 @@ class ApplicationReviewView(BaseApiView):
         app.review_comment = comment
         app.reviewed_at = timezone.now()
         app.save()
+
+        # 8.2 站内消息互通：审核结果通知申请人
+        _notify_users(
+            [app.applicant_id],
+            'application_result',
+            f'申请审核结果：{"已通过" if action == "approve" else "已驳回"}',
+            f'您的{app_type}申请（#{app_id}）已被 {reviewer.username} {"通过" if action == "approve" else "驳回"}'
+            + (f'：{comment}' if comment else ''),
+        )
 
         # Execute side effects on approval (with transaction.atomic)
         if action == 'approve':

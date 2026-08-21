@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
-import { adminAPI, Activity, ActivityFormData } from '../../api/admin';
+import { adminAPI, Activity, ActivityFormData, type TagItem, type CategoryNode } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
 import {
@@ -394,6 +394,12 @@ const AdminActivities: React.FC = () => {
   const [skuSearchResults, setSkuSearchResults] = useState<{ id: number; sku_code: string; spu_name?: string; price?: string | number }[]>([]);
   const skuSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [activityPrice, setActivityPrice] = useState('');
+  /* ---- 批量关联 scope（9.1）：全部商品 / 按标签 / 按分类 ---- */
+  const [scopeType, setScopeType] = useState<'all' | 'tag' | 'category' | 'manual'>('manual');
+  const [scopeTagId, setScopeTagId] = useState('');
+  const [scopeCategoryId, setScopeCategoryId] = useState('');
+  const [tagOptions, setTagOptions] = useState<TagItem[]>([]);
+  const [categoryOptions, setCategoryOptions] = useState<CategoryNode[]>([]);
   const [skuSaving, setSkuSaving] = useState(false);
   const [skuToast, setSkuToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -402,17 +408,33 @@ const AdminActivities: React.FC = () => {
     setTimeout(() => setSkuToast(null), 3000);
   };
 
+  // 批量关联数据：标签 / 分类树
+  useEffect(() => {
+    adminAPI.getTags().then((res) => setTagOptions(Array.isArray(res) ? res : [])).catch(() => {})
+    adminAPI.getCategoryTree().then((res) => setCategoryOptions(Array.isArray(res) ? res : [])).catch(() => {})
+  }, [])
+
   const handleSaveSKUs = async () => {
     if (!editingActivity) return;
     const ids = skuSelected.map((s) => s.id);
-    if (ids.length === 0) {
+    // 9.1：批量 scope 优先；未选 scope 时退回手动 SKU 列表
+    const scope = scopeType === 'all'
+      ? { type: 'all' as const }
+      : scopeType === 'tag'
+        ? (scopeTagId ? { type: 'tag' as const, tag_id: Number(scopeTagId) } : null)
+        : scopeType === 'category'
+          ? (scopeCategoryId ? { type: 'category' as const, category_id: Number(scopeCategoryId) } : null)
+          : null;
+    if (!scope && ids.length === 0) {
       showSkuMsg('error', t('admin.activities.skuIdsRequired'));
       return;
     }
+    if (scopeType === 'tag' && !scopeTagId) { showSkuMsg('error', '请先选择标签'); return; }
+    if (scopeType === 'category' && !scopeCategoryId) { showSkuMsg('error', '请先选择一级目录'); return; }
     setSkuSaving(true);
     try {
       await adminAPI.setActivitySKUs(editingActivity.id, {
-        sku_ids: ids,
+        ...(scope ? { scope } : { sku_ids: ids }),
         activity_price: activityPrice ? Number(activityPrice) : undefined,
       });
       showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
@@ -964,6 +986,41 @@ const AdminActivities: React.FC = () => {
                 ))}
               </div>
             )}
+            {/* 批量关联（9.1）：全部商品 / 按标签 / 按分类 */}
+            <div style={{ marginTop: 12, padding: '10px 12px', border: '1px dashed #c7d2fe', borderRadius: 6, background: '#f5f7ff' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#1a56db', marginBottom: 8 }}>批量关联商品</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
+                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
+                  <input type="radio" checked={scopeType === 'manual'} onChange={() => setScopeType('manual')} /> 手动选择
+                </label>
+                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
+                  <input type="radio" checked={scopeType === 'all'} onChange={() => setScopeType('all')} /> 全站商品
+                </label>
+                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
+                  <input type="radio" checked={scopeType === 'tag'} onChange={() => setScopeType('tag')} /> 按标签
+                </label>
+                {scopeType === 'tag' && (
+                  <FormSelect value={scopeTagId} onChange={(e) => setScopeTagId(e.target.value)} style={{ height: 28, fontSize: 12 }}>
+                    <option value="">选择标签</option>
+                    {tagOptions.filter((tg) => tg.is_active !== false).map((tg) => (
+                      <option key={tg.id} value={tg.id}>#{tg.name}</option>
+                    ))}
+                  </FormSelect>
+                )}
+                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
+                  <input type="radio" checked={scopeType === 'category'} onChange={() => setScopeType('category')} /> 按一级目录
+                </label>
+                {scopeType === 'category' && (
+                  <FormSelect value={scopeCategoryId} onChange={(e) => setScopeCategoryId(e.target.value)} style={{ height: 28, fontSize: 12 }}>
+                    <option value="">选择一级目录</option>
+                    {categoryOptions.filter((c) => c.level === 1 || !c.level).map((c) => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </FormSelect>
+                )}
+              </div>
+              <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>批量关联按标签 / 一级目录 / 全站解析全部上架 SKU（上限 2000），将替换当前已关联列表</div>
+            </div>
             <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
               <FormInput
                 type="number"
@@ -977,6 +1034,9 @@ const AdminActivities: React.FC = () => {
               <SkuSaveBtn onClick={handleSaveSKUs} disabled={skuSaving}>
                 {t('admin.activities.saveSkus')}
               </SkuSaveBtn>
+            </div>
+            <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+              活动价可选：留空表示不设活动价（仅做活动关联曝光，按商品原价销售）
             </div>
             {skuToast && (
               <div style={{ color: skuToast.type === 'success' ? '#2ecc71' : Color.primary, fontSize: 12, marginTop: 6 }}>
