@@ -144,7 +144,6 @@ export default function AdminPromoCodes() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const cid = Number(couponId)
-
   const [list, setList] = useState<PromoCodeItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -229,11 +228,26 @@ export default function AdminPromoCodes() {
 
   const sum = (fn: (i: PromoCodeItem) => number) => list.reduce((s, i) => s + (Number(fn(i)) || 0), 0)
 
+  // 参数无效：直接提示返回，避免白屏/静默空态
+  if (!cid) {
+    return (
+      <div>
+        <PageHeader
+          title="代言人券 · 推广码看板"
+          actions={<RowBtn onClick={() => navigate('/admin/coupons')}>返回优惠券</RowBtn>}
+        />
+        <EmptyBox>推广码参数缺失或无效（couponId），请从优惠券列表的「推广码」按钮进入。</EmptyBox>
+      </div>
+    )
+  }
+
+  const couponCode = list[0]?.coupon_code
+
   return (
     <div>
       <PageHeader
         title="代言人券 · 推广码看板"
-        breadcrumb={[{ label: t('admin.coupons.title'), path: '/admin/coupons' }, { label: '推广码' }]}
+        breadcrumb={[{ label: t('admin.coupons.title'), path: '/admin/coupons' }, { label: `推广码 · 优惠券 ${couponCode ?? `#${cid}`}` }]}
         actions={
           <>
             <RowBtn onClick={() => navigate('/admin/coupons')}>返回优惠券</RowBtn>
