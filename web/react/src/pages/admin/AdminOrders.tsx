@@ -545,7 +545,7 @@ export default function AdminOrders() {
                         </Td>
                         <Td><Tag tone={pill.bg === '#fef2f2' ? 'error' : pill.bg === '#ecfdf5' ? 'success' : pill.bg === '#fffbeb' ? 'warning' : pill.bg === '#eff6ff' ? 'info' : 'neutral'}>{pill.label}</Tag></Td>
                         <Td>{item.payment_status}</Td>
-                        <Td><Amount>{money(item.actual_amount)}</Amount></Td>
+                        <Td style={{ textAlign: 'right' }}><Amount>{money(item.actual_amount)}</Amount></Td>
                         <Td>{item.item_count ?? '-'}</Td>
                         <Td style={{ whiteSpace: 'nowrap' }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</Td>
                         <Td>
@@ -630,7 +630,7 @@ export default function AdminOrders() {
                         <Td style={{ fontFamily: 'monospace' }}>{orderNoFromAfterSale(row)}</Td>
                         <Td>{row.type}</Td>
                         <Td><Tag tone={pill.bg === '#fef2f2' ? 'error' : pill.bg === '#ecfdf5' ? 'success' : pill.bg === '#fffbeb' ? 'warning' : 'neutral'}>{pill.label}</Tag></Td>
-                        <Td><Amount>{money(row.amount)}</Amount></Td>
+                        <Td style={{ textAlign: 'right' }}><Amount>{money(row.amount)}</Amount></Td>
                         <Td style={{ maxWidth: 240 }}>{row.reason}</Td>
                         <Td>
                           <Actions>

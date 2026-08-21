@@ -148,7 +148,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <Container>
+      <Container data-testid="toast-container">
         {items.map(t => (
           <Item key={t.id} $type={t.type}>
             <span className="ti">{IconChar[t.type]}</span>
