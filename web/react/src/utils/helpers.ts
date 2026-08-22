@@ -1,5 +1,28 @@
 export function formatPrice(price: number): string {
-  return `$${price.toFixed(2)}`
+  return `$${price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+/**
+ * 管理后台统一日期时间格式：YYYY-MM-DD HH:mm:ss
+ * 避免各页面使用浏览器 locale 导致 2026/8/19 与 2026/08/23 不一致。
+ */
+export function formatDateTime(dateInput: string | number | Date | undefined | null): string {
+  if (!dateInput) return '-'
+  const date = typeof dateInput === 'object' && dateInput !== null ? dateInput : new Date(dateInput)
+  if (Number.isNaN(date.getTime())) return String(dateInput)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+}
+
+/**
+ * 管理后台统一日期格式：YYYY-MM-DD（用于有效期、起止日期等不需要时刻的场景）
+ */
+export function formatDate(dateInput: string | number | Date | undefined | null): string {
+  if (!dateInput) return '-'
+  const date = typeof dateInput === 'object' && dateInput !== null ? dateInput : new Date(dateInput)
+  if (Number.isNaN(date.getTime())) return String(dateInput)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 export function truncateText(text: string, maxLength: number): string {

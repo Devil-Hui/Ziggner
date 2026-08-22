@@ -255,6 +255,8 @@ const zhCN = {
       loadError: '加载失败',
       noCategories: '暂无分类',
       selectCategory: '请在左侧选择一个分类',
+      selectCategoryHint: '点击左侧分类树中的任意节点，可查看详情、编辑属性或迁移商品。需要新增分类时，点击右上角「新建分类」。',
+      selectCategoryAction: '新建分类',
       tree: '分类树',
       detail: '分类详情',
       nameLabel: '名称',

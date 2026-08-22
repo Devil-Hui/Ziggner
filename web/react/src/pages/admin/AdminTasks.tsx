@@ -8,6 +8,7 @@ import PageHeader from '../../components/admin/common/PageHeader'
 import StatusBadge from '../../components/admin/common/StatusBadge'
 import Progress from '../../components/admin/common/Progress'
 import { useTranslation } from '../../i18n'
+import { formatDateTime } from '../../utils/helpers'
 
 // ── Styled Components ──
 
@@ -156,22 +157,6 @@ export default function AdminTasks() {
       }
     }
   }, [hasInProgress, fetchTasks])
-
-  const formatDateTime = (dateStr: string): string => {
-    try {
-      const date = new Date(dateStr)
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-    } catch {
-      return dateStr
-    }
-  }
 
   const columns: Column<TaskItem>[] = [
     {

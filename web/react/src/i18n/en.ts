@@ -257,6 +257,8 @@ const en = {
       loadError: 'Load failed',
       noCategories: 'No categories',
       selectCategory: 'Please select a category in the left panel',
+      selectCategoryHint: 'Click any node in the category tree on the left to view details, edit properties, or migrate products. To add a new category, click the "New Category" button in the top-right corner.',
+      selectCategoryAction: 'New Category',
       tree: 'Category Tree',
       detail: 'Category Details',
       nameLabel: 'Name',

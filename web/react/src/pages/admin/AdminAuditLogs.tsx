@@ -8,6 +8,7 @@ import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
 import FilterBar from '../../components/admin/common/FilterBar'
 import { useTranslation } from '../../i18n'
+import { formatDateTime } from '../../utils/helpers'
 
 // ── Styled Components ──
 
@@ -19,8 +20,8 @@ const JsonPreview = styled.pre`
   margin: 0;
   font-size: 11px;
   color: ${Color.text.secondary};
-  max-width: 260px;
-  max-height: 80px;
+  max-width: 360px;
+  max-height: 220px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-all;
@@ -109,22 +110,6 @@ export default function AdminAuditLogs() {
       return JSON.stringify(changes, null, 2)
     } catch {
       return String(changes)
-    }
-  }
-
-  const formatDateTime = (dateStr: string): string => {
-    try {
-      const date = new Date(dateStr)
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      })
-    } catch {
-      return dateStr
     }
   }
 

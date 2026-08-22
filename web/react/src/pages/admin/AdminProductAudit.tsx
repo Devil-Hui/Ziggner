@@ -12,6 +12,7 @@ import { adminAPI } from '../../api/admin';
 import { adminChatAPI, resolveMediaUrl, type ConversationSummary } from '../../api/chat';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
+import { formatDateTime } from '../../utils/helpers';
 import { SuccessBtn as ApproveBtn, DangerBtn as RejectBtn } from '../../components/admin/common/ui';
 import ChatLink from '../../components/admin/ChatLink';
 
@@ -474,7 +475,7 @@ export default function AdminProductAudit() {
                         <ChatPopupItemInfo>
                           <ChatPopupSubject>{chat.subject}</ChatPopupSubject>
                           <ChatPopupMeta>
-                            {chat.user?.username || '-'} · {new Date(chat.updated_at).toLocaleString(lang)}
+                            {chat.user?.username || '-'} · {formatDateTime(chat.updated_at)}
                           </ChatPopupMeta>
                         </ChatPopupItemInfo>
                         <ChatPopupStatus $status={chat.status}>
@@ -536,7 +537,7 @@ export default function AdminProductAudit() {
                 </InfoItem>
                 <InfoItem>
                   <InfoLabel>{t('admin.productAudit.submittedAt')}</InfoLabel>
-                  <InfoValue>{spu.submitted_at ? new Date(spu.submitted_at).toLocaleString(lang) : '-'}</InfoValue>
+                  <InfoValue>{formatDateTime(spu.submitted_at)}</InfoValue>
                 </InfoItem>
               </InfoGrid>
               <div style={{ marginTop: 20 }}>

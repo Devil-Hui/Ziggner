@@ -522,7 +522,18 @@ export default function AdminCategories() {
                 </MigrateSection>
               </>
             ) : (
-              <EmptyState title={t('admin.categories.selectCategory')} icon="select" />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 320, textAlign: 'center' }}>
+                <EmptyState
+                  title={t('admin.categories.selectCategory')}
+                  message={t('admin.categories.selectCategoryHint')}
+                  icon="📁"
+                />
+                {isSuperUser && (
+                  <PrimaryBtn onClick={handleCreate} style={{ marginTop: 16 }}>
+                    {t('admin.categories.selectCategoryAction')}
+                  </PrimaryBtn>
+                )}
+              </div>
             )}
           </DetailPanel>
         </Container>

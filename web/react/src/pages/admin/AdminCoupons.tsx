@@ -12,6 +12,7 @@ import Pagination from '../../components/admin/common/Pagination';
 import { adminAPI, Coupon, CouponFormData, type PromoCodeItem, type CouponApplicationItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
+import { formatDate } from '../../utils/helpers';
 import { Input, Input as SearchInput, PrimaryBtn, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
 
 // ==================== Styled Components ====================
@@ -844,7 +845,7 @@ export default function AdminCoupons() {
       width: '260px',
       render: (_, record) => (
         <span style={{ color: '#999' }}>
-          {new Date(record.start_time).toLocaleDateString('zh-CN')} ~ {new Date(record.end_time).toLocaleDateString('zh-CN')}
+          {formatDate(record.start_time)} ~ {formatDate(record.end_time)}
         </span>
       ),
     },
@@ -1016,7 +1017,7 @@ export default function AdminCoupons() {
                 <CouponInfo>
                   <div className="cond">{discountText} · {t('admin.coupons.columnMinSpend')} ${record.min_amount}</div>
                   <div className="meta">
-                    {new Date(record.start_time).toLocaleDateString('zh-CN')} ~ {new Date(record.end_time).toLocaleDateString('zh-CN')}
+                    {formatDate(record.start_time)} ~ {formatDate(record.end_time)}
                     {' · '}{t('admin.coupons.usedCountFormat').replace('{used}', String(record.used_count ?? 0)).replace('{total}', String(record.total_count))}
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>

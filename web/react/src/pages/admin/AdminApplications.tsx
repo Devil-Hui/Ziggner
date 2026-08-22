@@ -9,6 +9,7 @@ import type { Column } from '../../components/admin/common/DataTable';
 import StatusBadge from '../../components/admin/common/StatusBadge';
 import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
+import { formatDateTime, formatDate } from '../../utils/helpers';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 
 interface Application {
@@ -960,7 +961,7 @@ export default function AdminApplications() {
             <div><ReviewDetailLabel>{t('admin.applications.formCurrentGroup')}:</ReviewDetailLabel><ReviewDetailValue>{detail.group_name}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formNewLeaderId')}:</ReviewDetailLabel><ReviewDetailValue>{detail.new_leader_name}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formChangeType')}:</ReviewDetailLabel><ReviewDetailValue>{changeTypeLabels[detail.change_type] || detail.change_type}</ReviewDetailValue></div>
-            {detail.effective_date && <div><ReviewDetailLabel>{t('admin.applications.formEffectiveDate')}:</ReviewDetailLabel><ReviewDetailValue>{new Date(detail.effective_date).toLocaleString('zh-CN')}</ReviewDetailValue></div>}
+            {detail.effective_date && <div><ReviewDetailLabel>{t('admin.applications.formEffectiveDate')}:</ReviewDetailLabel><ReviewDetailValue>{formatDate(detail.effective_date)}</ReviewDetailValue></div>}
             {detail.handover_plan && <div><ReviewDetailLabel>{t('admin.applications.formHandoverPlan')}:</ReviewDetailLabel><ReviewDetailValue>{detail.handover_plan}</ReviewDetailValue></div>}
             <div style={{ marginTop: 8 }}><ReviewDetailLabel>{t('admin.applications.formReason')}:</ReviewDetailLabel><ReviewDetailValue>{detail.reason}</ReviewDetailValue></div>
           </ReviewDetailSection>
@@ -977,8 +978,8 @@ export default function AdminApplications() {
             <div><ReviewDetailLabel>{t('admin.applications.formTotalCount')}:</ReviewDetailLabel><ReviewDetailValue>{detail.total_count}</ReviewDetailValue></div>
             <div><ReviewDetailLabel>{t('admin.applications.formPerUserLimit')}:</ReviewDetailLabel><ReviewDetailValue>{detail.per_user_limit}</ReviewDetailValue></div>
             {detail.expected_cost && <div><ReviewDetailLabel>{t('admin.applications.formExpectedCost')}:</ReviewDetailLabel><ReviewDetailValue>$ {detail.expected_cost}</ReviewDetailValue></div>}
-            {detail.start_time && <div><ReviewDetailLabel>{t('admin.applications.formStartTime')}:</ReviewDetailLabel><ReviewDetailValue>{new Date(detail.start_time).toLocaleString('zh-CN')}</ReviewDetailValue></div>}
-            {detail.end_time && <div><ReviewDetailLabel>{t('admin.applications.formEndTime')}:</ReviewDetailLabel><ReviewDetailValue>{new Date(detail.end_time).toLocaleString('zh-CN')}</ReviewDetailValue></div>}
+            {detail.start_time && <div><ReviewDetailLabel>{t('admin.applications.formStartTime')}:</ReviewDetailLabel><ReviewDetailValue>{formatDateTime(detail.start_time)}</ReviewDetailValue></div>}
+            {detail.end_time && <div><ReviewDetailLabel>{t('admin.applications.formEndTime')}:</ReviewDetailLabel><ReviewDetailValue>{formatDateTime(detail.end_time)}</ReviewDetailValue></div>}
             <div><ReviewDetailLabel>{t('admin.applications.formStackable')}:</ReviewDetailLabel><ReviewDetailValue>{detail.stackable ? '✓' : '✗'}</ReviewDetailValue></div>
             <div style={{ marginTop: 8 }}><ReviewDetailLabel>{t('admin.applications.formReason')}:</ReviewDetailLabel><ReviewDetailValue>{detail.reason}</ReviewDetailValue></div>
           </ReviewDetailSection>
@@ -1025,7 +1026,7 @@ export default function AdminApplications() {
       key: 'created_at',
       title: t('admin.applications.columnSubmittedAt'),
       width: '160px',
-      render: (val) => val ? new Date(String(val)).toLocaleString('zh-CN') : '-',
+      render: (val) => formatDateTime(val as string),
     },
     {
       key: 'actions',

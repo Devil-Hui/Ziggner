@@ -54,7 +54,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       format: (amountUsd: number) => {
         const converted = amountUsd * rate
         const digits = currency === 'JPY' ? 0 : 2
-        return `${symbol}${converted.toFixed(digits)}`
+        return `${symbol}${converted.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
       },
     }
   }, [currency])

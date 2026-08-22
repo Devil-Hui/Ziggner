@@ -10,6 +10,7 @@ import type { Column } from '../../components/admin/common/DataTable'
 import { adminAPI } from '../../api/admin'
 import type { NotificationItem } from '../../api/admin'
 import { useTranslation } from '../../i18n'
+import { formatDateTime } from '../../utils/helpers'
 
 // ── Types ──
 
@@ -109,21 +110,6 @@ const DateTime = styled.span`
 `
 
 // ── Helpers ──
-
-function formatDateTime(dateStr: string): string {
-  try {
-    const date = new Date(dateStr)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-  } catch {
-    return dateStr
-  }
-}
 
 // ── Component ──
 

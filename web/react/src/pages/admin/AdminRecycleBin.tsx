@@ -7,6 +7,7 @@ import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 import { useTranslation } from '../../i18n'
+import { formatDateTime } from '../../utils/helpers'
 
 // ── Styled Components ──
 
@@ -171,21 +172,6 @@ export default function AdminRecycleBin() {
           })
         },
       })
-    }
-  }
-
-  const formatDateTime = (dateStr: string): string => {
-    try {
-      const date = new Date(dateStr)
-      return date.toLocaleString('zh-CN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return dateStr
     }
   }
 

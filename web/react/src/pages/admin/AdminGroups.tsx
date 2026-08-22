@@ -8,6 +8,7 @@ import type { Column } from '../../components/admin/common/DataTable';
 import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
 import FormDialog from '../../components/admin/common/FormDialog';
 import { useTranslation } from '../../i18n';
+import { formatDateTime } from '../../utils/helpers';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import {
   useAdminGroupRepository,
@@ -571,7 +572,7 @@ export default function AdminGroups() {
       width: '180px',
       render: (val) => (
         <span style={{ color: Color.text.muted }}>
-          {val ? new Date(String(val)).toLocaleString('zh-CN') : '-'}
+          {formatDateTime(val as string)}
         </span>
       ),
     },

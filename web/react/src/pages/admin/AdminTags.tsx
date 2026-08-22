@@ -12,6 +12,7 @@ import Modal from '../../components/admin/common/Modal';
 import { adminAPI } from '../../api/admin';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
+import { formatDateTime } from '../../utils/helpers';
 import { TAG_COLOR_PALETTE, DEFAULT_TAG_COLOR } from '../../constants/tagColors';
 
 interface Tag {
@@ -268,7 +269,7 @@ export default function AdminTags() {
       title: t('admin.tags.createdAt'),
       width: '180px',
       render: (val) => (
-        <span style={{ color: '#999' }}>{val ? new Date(String(val)).toLocaleString('zh-CN') : '-'}</span>
+        <span style={{ color: '#999' }}>{formatDateTime(val as string)}</span>
       ),
     },
     {

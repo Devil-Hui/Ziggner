@@ -10,6 +10,7 @@ import Modal from '../../components/admin/common/Modal'
 import { RefreshButton } from '../../components/admin/common'
 import Tag from '../../components/admin/common/Tag'
 import { useTranslation } from '../../i18n'
+import { formatDateTime } from '../../utils/helpers'
 import { orderAPI, type OrderSummary, type ChannelStatsItem } from '../../api/order'
 
 type TabKey = 'orders' | 'aftersales'
@@ -553,10 +554,19 @@ export default function AdminOrders() {
                           </ChannelDot>
                         </Td>
                         <Td><Tag tone={pill.bg === '#fef2f2' ? 'error' : pill.bg === '#ecfdf5' ? 'success' : pill.bg === '#fffbeb' ? 'warning' : pill.bg === '#eff6ff' ? 'info' : 'neutral'}>{pill.label}</Tag></Td>
-                        <Td>{item.payment_status}</Td>
+                        <Td>
+                          {(() => {
+                            const payPill = statusPill(item.payment_status)
+                            return (
+                              <Tag tone={payPill.bg === '#fef2f2' ? 'error' : payPill.bg === '#ecfdf5' ? 'success' : payPill.bg === '#fffbeb' ? 'warning' : payPill.bg === '#eff6ff' ? 'info' : 'neutral'}>
+                                {payPill.label}
+                              </Tag>
+                            )
+                          })()}
+                        </Td>
                         <Td style={{ textAlign: 'right' }}><Amount>{money(item.actual_amount)}</Amount></Td>
                         <Td>{item.item_count ?? '-'}</Td>
-                        <Td style={{ whiteSpace: 'nowrap' }}>{item.created_at ? new Date(item.created_at).toLocaleString() : '-'}</Td>
+                        <Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(item.created_at)}</Td>
                         <Td>
                           <Actions>
                             <Button onClick={() => openDetail(item.order_no)}>{t('admin.orders.detail')}</Button>
