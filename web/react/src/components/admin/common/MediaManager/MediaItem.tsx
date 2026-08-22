@@ -26,7 +26,7 @@ function isSavedMedia(item: StagedMediaItem | ProductMediaItem): item is Product
   return 'media_type' in item
 }
 
-export default function MediaItem({ item, onRemove, onEdit, onPreview, dragActive, onDragHandleDown }: Props) {
+export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dragActive, onDragHandleDown }: Props) {
   const saved = isSavedMedia(item)
   const mediaType = saved ? item.media_type : (item as StagedMediaItem).mediaType
   const id = saved ? item.id : (item as StagedMediaItem).id

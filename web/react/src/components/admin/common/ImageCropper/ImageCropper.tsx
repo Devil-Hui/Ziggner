@@ -64,7 +64,7 @@ export const STANDARD_RATIOS = [1, 4 / 5, 3 / 4, 4 / 3, 3 / 2, 16 / 9] as const
 export function matchBestRatio(imgWidth: number, imgHeight: number, fallback = 1): number {
   if (!imgWidth || !imgHeight) return fallback
   const src = imgWidth / imgHeight
-  let best = STANDARD_RATIOS[0]
+  let best: number = STANDARD_RATIOS[0]
   let bestDiff = Math.abs(src - best)
   for (const r of STANDARD_RATIOS) {
     const diff = Math.abs(src - r)

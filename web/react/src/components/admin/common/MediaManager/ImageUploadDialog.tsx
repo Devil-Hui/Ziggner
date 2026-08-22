@@ -2,7 +2,7 @@
  * 支持队列模式：接收 dropzone 预选文件，直接进入裁剪流程。
  * 上传前自动压缩图片（>200KB 触发，保真优先：最长边≤2560px / ≤2.5MB / JPEG 0.92）。
  */
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAppContext } from '../../../../store/AppContext'
 import ImageCropper, { matchBestRatio } from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
