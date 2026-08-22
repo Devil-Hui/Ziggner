@@ -1276,7 +1276,7 @@ export default function Chat() {
                       <PCtxLabel>咨询商品</PCtxLabel>
                       <PCtxName>{activeConv.spu_info.name}</PCtxName>
                     </PCtxInfo>
-                    <PCtxPrice>¥{activeConv.spu_info.price}</PCtxPrice>
+                    <PCtxPrice>${activeConv.spu_info.price}</PCtxPrice>
                     <PCtxSendBtn onClick={() => handleSendProductCard(activeConv.spu_info!)} disabled={sending}>
                       发给客服
                     </PCtxSendBtn>
@@ -1291,7 +1291,7 @@ export default function Chat() {
                       <div>
                         <PCtxOrderMeta>关联订单 {o.order_no}</PCtxOrderMeta>
                         <PCtxOrderSub>
-                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}${o.total_amount}
                         </PCtxOrderSub>
                       </div>
                       <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>

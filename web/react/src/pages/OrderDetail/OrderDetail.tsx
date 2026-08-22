@@ -313,7 +313,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
                 </span>
               </div>
               <span style={{ fontWeight: 600, color: '#c0392b' }}>
-                -¥{parseFloat(refund.amount).toFixed(2)}
+                -${parseFloat(refund.amount).toFixed(2)}
               </span>
             </div>
           ))}
@@ -350,8 +350,8 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <span>¥{parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
-                <span style={{ fontWeight: 600 }}>¥{(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                <span>${parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
+                <span style={{ fontWeight: 600 }}>${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -362,17 +362,17 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       <div className="section" style={{ background: '#fff', border: '1px solid #ecf0f1', borderRadius: 8, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <span>{t('store.orderDetail.subtotal')}</span>
-          <span>¥{amounts.subtotal.toFixed(2)}</span>
+          <span>${amounts.subtotal.toFixed(2)}</span>
         </div>
         {amounts.discount > 0 && (
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#e74c3c' }}>
             <span>{t('store.orderDetail.discount')}</span>
-            <span>-¥{amounts.discount.toFixed(2)}</span>
+            <span>-${amounts.discount.toFixed(2)}</span>
           </div>
         )}
         <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid #ecf0f1', paddingTop: 12, marginTop: 12 }}>
           <span>{t('store.orderDetail.total')}</span>
-          <span>¥{amounts.payable.toFixed(2)}</span>
+          <span>${amounts.payable.toFixed(2)}</span>
         </div>
       </div>
     </div>

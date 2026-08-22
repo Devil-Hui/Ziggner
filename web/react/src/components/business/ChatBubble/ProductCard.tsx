@@ -267,7 +267,7 @@ export default function ProductCard({ product, loading = false, imageError = fal
         <Info>
           <Name>{product.name}</Name>
           <PriceRow>
-            <PriceSymbol>¥</PriceSymbol>
+            <PriceSymbol>$</PriceSymbol>
             <PriceValue>{product.price}</PriceValue>
             {statusCfg && (
               <StatusTag $bg={statusCfg.bg} $color={statusCfg.color}>

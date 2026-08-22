@@ -373,7 +373,7 @@ export default function ChatBubble({
                 />
                 <ProductCardInfo>
                   <ProductCardName $isMine={isMine}>{productSnapshot.name}</ProductCardName>
-                  <ProductCardPrice $isMine={isMine}>¥{productSnapshot.price}</ProductCardPrice>
+                  <ProductCardPrice $isMine={isMine}>${productSnapshot.price}</ProductCardPrice>
                   <ProductCardLink $isMine={isMine}>
                     {isMine ? '点击查看详情' : '点击查看商品'}
                   </ProductCardLink>
@@ -413,7 +413,7 @@ export default function ChatBubble({
                       <CartItemSpec $isMine={isMine}>{item.spec}</CartItemSpec>
                       <CartItemQty $isMine={isMine}>x{item.quantity}</CartItemQty>
                     </span>
-                    <CartItemPrice $isMine={isMine}>¥{item.unit_price}</CartItemPrice>
+                    <CartItemPrice $isMine={isMine}>${item.unit_price}</CartItemPrice>
                   </CartShareItem>
                 ))}
               </CartShareWrap>

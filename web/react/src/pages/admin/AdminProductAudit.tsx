@@ -582,8 +582,8 @@ export default function AdminProductAudit() {
                             </span>
                           ))}
                         </SkuTd>
-                        <SkuTd>¥{sku.price}</SkuTd>
-                        <SkuTd>{sku.discount_price ? `¥${sku.discount_price}` : '-'}</SkuTd>
+                        <SkuTd>${sku.price}</SkuTd>
+                        <SkuTd>{sku.discount_price ? `$${sku.discount_price}` : '-'}</SkuTd>
                         <SkuTd>{sku.stock}</SkuTd>
                         <SkuTd>
                           <span style={{

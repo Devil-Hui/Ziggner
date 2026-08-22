@@ -1395,7 +1395,7 @@ const zhCN = {
       free: '免费',
       discount: '优惠',
       total: '合计',
-      placeOrder: '提交订单 - ¥{amount}',
+      placeOrder: '提交订单 - ${amount}',
       placingOrder: '提交中...',
       backToCart: '返回购物车',
       viewOrders: '查看我的订单',

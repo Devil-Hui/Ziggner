@@ -1508,7 +1508,7 @@ export default function AdminChatDetail() {
                     <CtxLabel>咨询商品</CtxLabel>
                     <CtxProductName>{activeConv.spu_info.name}</CtxProductName>
                   </div>
-                  <CtxProductPrice>¥{activeConv.spu_info.price}</CtxProductPrice>
+                  <CtxProductPrice>${activeConv.spu_info.price}</CtxProductPrice>
                 </CtxProduct>
               )}
 
@@ -1520,7 +1520,7 @@ export default function AdminChatDetail() {
                     <div>
                       <CtxOrderMeta>{o.order_no}</CtxOrderMeta>
                       <CtxOrderSub>
-                        {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                        {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}${o.total_amount}
                       </CtxOrderSub>
                     </div>
                     <OrderStatusTag style={{ background: st.bg, color: st.color }}>{o.status_label}</OrderStatusTag>
@@ -1686,7 +1686,7 @@ export default function AdminChatDetail() {
                     </OrderStatusTag>
                   </OrderRow>
                   <OrderMeta>
-                    {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}¥{o.total_amount}
+                    {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}${o.total_amount}
                   </OrderMeta>
                 </OrderCard>
               )
@@ -1744,7 +1744,7 @@ export default function AdminChatDetail() {
                   />
                   <ProductItemInfo>
                     <ProductItemName>{product.name}</ProductItemName>
-                    <ProductItemPrice>¥{product.price}</ProductItemPrice>
+                    <ProductItemPrice>${product.price}</ProductItemPrice>
                   </ProductItemInfo>
                   <ActionBtn
                     $variant="primary"

@@ -292,7 +292,7 @@ export default function AdminPromoCodes() {
                   <td style={{ textAlign: 'right' }}>{item.claim_count ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.unique_users ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.paid_order_count ?? 0}</td>
-                  <td style={{ textAlign: 'right' }}>¥{Number(item.gmv ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
+                  <td style={{ textAlign: 'right' }}>${Number(item.gmv ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <RowBtn onClick={() => setQrTarget(item)}>二维码</RowBtn>
@@ -313,7 +313,7 @@ export default function AdminPromoCodes() {
                 <td style={{ textAlign: 'right' }}>{sum(i => i.claim_count ?? 0)}</td>
                 <td style={{ textAlign: 'right' }}>{sum(i => i.unique_users ?? 0)}</td>
                 <td style={{ textAlign: 'right' }}>{sum(i => i.paid_order_count ?? 0)}</td>
-                <td style={{ textAlign: 'right' }}>¥{sum(i => Number(i.gmv ?? 0)).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
+                <td style={{ textAlign: 'right' }}>${sum(i => Number(i.gmv ?? 0)).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
                 <td></td>
               </tr>
             </tfoot>

@@ -1009,12 +1009,12 @@ export default function AdminCoupons() {
               <CouponCard key={record.id}>
                 <CouponFace>
                   <span className="amount">
-                    {record.discount_type === 'fixed' ? `¥${record.amount}` : `${record.amount}%`}
+                    {record.discount_type === 'fixed' ? `$${record.amount}` : `${record.amount}%`}
                   </span>
                   <span className="code">{record.code}</span>
                 </CouponFace>
                 <CouponInfo>
-                  <div className="cond">{discountText} · {t('admin.coupons.columnMinSpend')} ¥{record.min_amount}</div>
+                  <div className="cond">{discountText} · {t('admin.coupons.columnMinSpend')} ${record.min_amount}</div>
                   <div className="meta">
                     {new Date(record.start_time).toLocaleDateString('zh-CN')} ~ {new Date(record.end_time).toLocaleDateString('zh-CN')}
                     {' · '}{t('admin.coupons.usedCountFormat').replace('{used}', String(record.used_count ?? 0)).replace('{total}', String(record.total_count))}

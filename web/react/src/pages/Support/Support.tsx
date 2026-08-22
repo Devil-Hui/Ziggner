@@ -679,7 +679,7 @@ export default function Support() {
         <ProductCardImg src={resolveMediaUrl(snapshot.main_image) || snapshot.main_image} alt={snapshot.name} />
         <ProductCardInfo>
           <ProductCardName>{snapshot.name}</ProductCardName>
-          <ProductCardPrice>¥{snapshot.price}</ProductCardPrice>
+          <ProductCardPrice>${snapshot.price}</ProductCardPrice>
         </ProductCardInfo>
       </ProductCard>
     )
