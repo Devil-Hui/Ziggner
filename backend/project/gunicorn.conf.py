@@ -16,7 +16,13 @@ workers = int(os.getenv("GUNICORN_WORKERS", "2"))
 threads = int(os.getenv("GUNICORN_THREADS", "1"))
 worker_class = os.getenv("GUNICORN_WORKER_CLASS", "gevent")
 
-preload_app = True
+# preload_app 必须为 False（gevent worker 关键）：
+# preload=True 时 master 在 fork 前加载 Django app（会导入 boto3/urllib3 → ssl），
+# 随后 gevent worker 的 monkey.patch_all() 在 ssl 已导入后才执行，
+# 触发 gevent SSLContext.options setter 无限递归（RecursionError），
+# 上传视频（boto3 构建 ssl_context）时 worker 崩溃 → 502 / ERR_CONNECTION_CLOSED。
+# False 时每个 worker 先 patch_all() 再加载 app，patch 顺序正确。
+preload_app = False
 # 每个 worker 处理 1000 请求后平滑重启，防止内存泄漏累积
 max_requests = int(os.getenv("GUNICORN_MAX_REQUESTS", "1000"))
 max_requests_jitter = int(os.getenv("GUNICORN_MAX_REQUESTS_JITTER", "100"))
