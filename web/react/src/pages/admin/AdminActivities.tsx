@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useState, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
-import { adminAPI, Activity, ActivityFormData, type TagItem, type CategoryNode } from '../../api/admin';
+import { adminAPI, Activity, ActivityFormData, type TagItem, type CategoryNode, type ActivitySKULinkItem, type ScopePreviewResult } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useTranslation } from '../../i18n';
 import {
@@ -94,26 +94,6 @@ const CreateButton = styled.button`
 
   &:active {
     transform: scale(0.97);
-  }
-`;
-
-const SkuSaveBtn = styled.button`
-  height: 38px;
-  padding: 0 16px;
-  white-space: nowrap;
-  border: none;
-  border-radius: 8px;
-  background: ${PRIMARY};
-  color: ${Color.text.inverse};
-  font-size: ${FontSize.sm}px;
-  cursor: pointer;
-  transition: ${Transition.normal};
-  &:hover {
-    background: ${Color.primaryHover};
-  }
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 `;
 
@@ -348,6 +328,182 @@ const ActionLink = styled.span<{ $danger?: boolean }>`
   }
 `;
 
+// ==================== SKU Link Styles ====================
+
+const SkuSection = styled.div`
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  padding: 12px 14px;
+  background: ${Color.bg.card};
+  margin-bottom: 12px;
+`;
+
+const SkuSectionTitle = styled.div`
+  font-size: ${FontSize.sm}px;
+  font-weight: 600;
+  color: ${Color.text.heading};
+  margin-bottom: 4px;
+`;
+
+const SkuSectionDesc = styled.div`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  margin-bottom: 10px;
+  line-height: 1.6;
+`;
+
+const ScopeRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+`;
+
+const ScopeRadio = styled.label`
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 13px;
+  color: ${Color.text.body};
+  cursor: pointer;
+`;
+
+const MiniBtn = styled.button<{ $danger?: boolean }>`
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid ${({ $danger }) => ($danger ? '#fecaca' : Color.border.medium)};
+  border-radius: 6px;
+  background: ${({ $danger }) => ($danger ? '#fef2f2' : '#fff')};
+  color: ${({ $danger }) => ($danger ? '#dc2626' : '#1a56db')};
+  font-size: ${FontSize.xs}px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: ${Transition.normal};
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ $danger }) => ($danger ? '#fee2e2' : Color.primaryLight)};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const PreviewBox = styled.div`
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  font-size: ${FontSize.xs}px;
+  color: #0369a1;
+  line-height: 1.7;
+`;
+
+const PreviewSample = styled.div`
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+  color: #555;
+  padding: 2px 0;
+
+  & > span:first-child {
+    font-weight: 600;
+    color: #1a56db;
+    min-width: 90px;
+    white-space: nowrap;
+  }
+  & > span:nth-child(2) {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  & > span:last-child {
+    white-space: nowrap;
+  }
+`;
+
+const LinkTableWrap = styled.div`
+  margin-top: 10px;
+  border: 1px solid ${Color.border.light};
+  border-radius: 6px;
+  overflow: auto;
+  max-height: 260px;
+`;
+
+const LinkTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+`;
+
+const LinkTh = styled.th`
+  position: sticky;
+  top: 0;
+  background: #f8f9fa;
+  padding: 8px 10px;
+  text-align: left;
+  color: ${Color.text.secondary};
+  font-weight: 600;
+  border-bottom: 1px solid ${Color.border.medium};
+  white-space: nowrap;
+`;
+
+const LinkTd = styled.td`
+  padding: 7px 10px;
+  border-bottom: 1px solid ${Color.border.light};
+  color: ${Color.text.body};
+  white-space: nowrap;
+  &:nth-child(3) {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+`;
+
+const StatusChip = styled.span<{ $color: string; $bg: string }>`
+  display: inline-block;
+  padding: 1px 8px;
+  font-size: 11px;
+  border-radius: 8px;
+  color: ${({ $color }) => $color};
+  background: ${({ $bg }) => $bg};
+`;
+
+const LinkToolbar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+`;
+
+const PriceInput = styled.input`
+  width: 86px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 4px;
+  font-size: 12px;
+  text-align: right;
+
+  &:focus {
+    outline: none;
+    border-color: #1a56db;
+  }
+`;
+
+const LinkCount = styled.span`
+  font-size: 12px;
+  font-weight: 600;
+  color: ${Color.text.heading};
+`;
+
 // ==================== Component ====================
 
 const AdminActivities: React.FC = () => {
@@ -358,12 +514,14 @@ const AdminActivities: React.FC = () => {
     full_reduction: t('admin.activities.typeFullReduction'),
     percent_off: t('admin.activities.typePercentOff'),
     each_full: t('admin.activities.typeEachFull'),
+    flat_off: t('admin.activities.typeFlatOff'),
   };
 
   const TYPE_OPTIONS: { value: Activity['type']; label: string }[] = [
     { value: 'full_reduction', label: t('admin.activities.typeFullReductionDesc') },
     { value: 'percent_off', label: t('admin.activities.typePercentOffDesc') },
     { value: 'each_full', label: t('admin.activities.typeEachFullDesc') },
+    { value: 'flat_off', label: t('admin.activities.typeFlatOffDesc') },
   ];
 
   /* ---- data state ---- */
@@ -388,19 +546,23 @@ const AdminActivities: React.FC = () => {
   /* ---- delete state ---- */
   const [deleteTarget, setDeleteTarget] = useState<Activity | null>(null);
   const [deleting, setDeleting] = useState(false);
-  /* ---- SKU link state ---- */
-  const [skuSelected, setSkuSelected] = useState<{ id: number; sku_code: string; spu_name?: string; price?: string | number }[]>([]);
+  /* ---- SKU link state（批量关联 / 单独追加 / 关联列表） ---- */
   const [skuSearchQuery, setSkuSearchQuery] = useState('');
   const [skuSearchResults, setSkuSearchResults] = useState<{ id: number; sku_code: string; spu_name?: string; price?: string | number }[]>([]);
   const skuSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [activityPrice, setActivityPrice] = useState('');
-  /* ---- 批量关联 scope（9.1）：全部商品 / 按标签 / 按分类 ---- */
-  const [scopeType, setScopeType] = useState<'all' | 'tag' | 'category' | 'manual'>('manual');
+  const [linkedSkus, setLinkedSkus] = useState<ActivitySKULinkItem[]>([]);
+  const [linkedLoading, setLinkedLoading] = useState(false);
+  /* 批量关联 scope：全部商品 / 按标签 / 按一级目录 */
+  const [scopeType, setScopeType] = useState<'all' | 'tag' | 'category'>('all');
   const [scopeTagId, setScopeTagId] = useState('');
   const [scopeCategoryId, setScopeCategoryId] = useState('');
   const [tagOptions, setTagOptions] = useState<TagItem[]>([]);
   const [categoryOptions, setCategoryOptions] = useState<CategoryNode[]>([]);
-  const [skuSaving, setSkuSaving] = useState(false);
+  const [previewResult, setPreviewResult] = useState<ScopePreviewResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  /* 直降统一价（仅 flat_off 活动） */
+  const [flatOffPrice, setFlatOffPrice] = useState('');
+  const [skuBusy, setSkuBusy] = useState(false);
   const [skuToast, setSkuToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   const showSkuMsg = (type: 'success' | 'error', msg: string) => {
@@ -414,38 +576,194 @@ const AdminActivities: React.FC = () => {
     adminAPI.getCategoryTree().then((res) => setCategoryOptions(Array.isArray(res) ? res : [])).catch(() => {})
   }, [])
 
-  const handleSaveSKUs = async () => {
+  // 拉取当前关联列表
+  const fetchLinkedSkus = useCallback(async (activityId: number) => {
+    setLinkedLoading(true);
+    try {
+      const res = await adminAPI.getActivitySKUs(activityId);
+      setLinkedSkus(Array.isArray(res.items) ? res.items : []);
+    } catch {
+      setLinkedSkus([]);
+    } finally {
+      setLinkedLoading(false);
+    }
+  }, []);
+
+  // 构建 scope 对象（未选全则返回 null）
+  const buildScope = (): { type: 'all' | 'tag' | 'category'; tag_id?: number; category_id?: number } | null => {
+    if (scopeType === 'all') return { type: 'all' };
+    if (scopeType === 'tag') return scopeTagId ? { type: 'tag', tag_id: Number(scopeTagId) } : null;
+    if (scopeType === 'category') return scopeCategoryId ? { type: 'category', category_id: Number(scopeCategoryId) } : null;
+    return null;
+  };
+
+  // 仅直降活动传递统一活动价（满减/折扣由规则计算，不设活动价）
+  const buildPricePayload = () =>
+    formData.type === 'flat_off' && flatOffPrice !== '' ? { activity_price: Number(flatOffPrice) } : {};
+
+  // 解析预览（不落库，仅统计数量 + 样例）
+  const handlePreviewScope = async () => {
     if (!editingActivity) return;
-    const ids = skuSelected.map((s) => s.id);
-    // 9.1：批量 scope 优先；未选 scope 时退回手动 SKU 列表
-    const scope = scopeType === 'all'
-      ? { type: 'all' as const }
-      : scopeType === 'tag'
-        ? (scopeTagId ? { type: 'tag' as const, tag_id: Number(scopeTagId) } : null)
-        : scopeType === 'category'
-          ? (scopeCategoryId ? { type: 'category' as const, category_id: Number(scopeCategoryId) } : null)
-          : null;
-    if (!scope && ids.length === 0) {
-      showSkuMsg('error', t('admin.activities.skuIdsRequired'));
+    const scope = buildScope();
+    if (!scope) {
+      showSkuMsg('error', t('admin.activities.scopeRequired'));
       return;
     }
-    if (scopeType === 'tag' && !scopeTagId) { showSkuMsg('error', '请先选择标签'); return; }
-    if (scopeType === 'category' && !scopeCategoryId) { showSkuMsg('error', '请先选择一级目录'); return; }
-    setSkuSaving(true);
+    setPreviewing(true);
     try {
-      await adminAPI.setActivitySKUs(editingActivity.id, {
-        ...(scope ? { scope } : { sku_ids: ids }),
-        activity_price: activityPrice ? Number(activityPrice) : undefined,
-      });
-      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+      const res = await adminAPI.previewActivityScope({ scope });
+      setPreviewResult(res);
     } catch (err: unknown) {
+      setPreviewResult(null);
       showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
     } finally {
-      setSkuSaving(false);
+      setPreviewing(false);
     }
   };
 
-  /* ---- SKU search & select ---- */
+  // 批量关联：一键替换当前关联列表
+  const handleReplaceScope = async () => {
+    if (!editingActivity) return;
+    const scope = buildScope();
+    if (!scope) {
+      showSkuMsg('error', t('admin.activities.scopeRequired'));
+      return;
+    }
+    setSkuBusy(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, {
+        mode: 'replace',
+        scope,
+        ...buildPricePayload(),
+      });
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+      setPreviewResult(null);
+      await fetchLinkedSkus(editingActivity.id);
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+    } finally {
+      setSkuBusy(false);
+    }
+  };
+
+  // 单独追加：逐条添加 SKU（已存在幂等，不报错）
+  const handleAppendSku = async (sku: { id: number; sku_code: string; spu_name?: string; price?: string | number }) => {
+    if (!editingActivity) return;
+    setSkuBusy(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, {
+        mode: 'append',
+        sku_ids: [sku.id],
+        ...buildPricePayload(),
+      });
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+      setSkuSearchQuery('');
+      setSkuSearchResults([]);
+      await fetchLinkedSkus(editingActivity.id);
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+    } finally {
+      setSkuBusy(false);
+    }
+  };
+
+  // 删除单个关联
+  const handleRemoveSku = async (skuId: number) => {
+    if (!editingActivity) return;
+    if (!window.confirm(t('admin.activities.confirmRemoveSku'))) return;
+    setSkuBusy(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, { mode: 'remove', sku_ids: [skuId] });
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+      await fetchLinkedSkus(editingActivity.id);
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+    } finally {
+      setSkuBusy(false);
+    }
+  };
+
+  // 一键清空
+  const handleClearSkus = async () => {
+    if (!editingActivity) return;
+    if (!window.confirm(t('admin.activities.confirmClearLinked'))) return;
+    setSkuBusy(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, { mode: 'clear' });
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+      setLinkedSkus([]);
+      setPreviewResult(null);
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+    } finally {
+      setSkuBusy(false);
+    }
+  };
+
+  // 直降：按商品维度单独设置活动价（留空 = 不参与直降）
+  const handleSkuPriceBlur = async (skuId: number, value: string) => {
+    if (!editingActivity) return;
+    const isEmpty = value.trim() === '';
+    const parsed = Number(value);
+    if (!isEmpty && (isNaN(parsed) || parsed < 0)) {
+      showSkuMsg('error', t('admin.activities.activityPricePerSkuPlaceholder'));
+      await fetchLinkedSkus(editingActivity.id);
+      return;
+    }
+    const price = isEmpty ? null : parsed;
+    setSkuBusy(true);
+    try {
+      await adminAPI.setActivitySKUs(editingActivity.id, {
+        mode: 'append',
+        sku_ids: [skuId],
+        sku_prices: [{ sku_id: skuId, activity_price: price }],
+      });
+      setLinkedSkus((prev) => prev.map((s) =>
+        s.sku_id === skuId ? { ...s, activity_price: price === null ? null : String(price) } : s
+      ));
+      showSkuMsg('success', t('admin.activities.skuSaveSuccess'));
+    } catch (err: unknown) {
+      showSkuMsg('error', err instanceof Error ? err.message : t('admin.activities.skuSaveFailed'));
+      await fetchLinkedSkus(editingActivity.id);
+    } finally {
+      setSkuBusy(false);
+    }
+  };
+
+  // 导出关联列表 CSV
+  const exportLinked = () => {
+    const header = [
+      t('admin.activities.colSpuId'), t('admin.activities.colSkuCode'), t('admin.activities.colName'),
+      t('admin.activities.colPrice'), t('admin.activities.colActivityPrice'), t('admin.activities.colStatus'),
+    ];
+    const rows = linkedSkus.map((s) => [s.spu_id, s.sku_code, s.spu_name, s.price, s.activity_price ?? '', s.spu_status]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((c) => `"${String(c ?? '').replace(/"/g, '""')}"`).join(','))
+      .join('\r\n');
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `activity_${editingActivity?.id ?? 'skus'}_linked.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleStatusLabel = (spuStatus: string): { label: string; color: string; bg: string } => {
+    const map: Record<string, { label: string; color: string; bg: string }> = {
+      on_sale: { label: t('admin.activities.statusOnSale'), color: '#28a745', bg: '#f6ffed' },
+      off_sale: { label: t('admin.activities.statusOffSale'), color: '#dc2626', bg: '#fef2f2' },
+      draft: { label: t('admin.activities.statusDraft'), color: '#888', bg: '#f5f5f5' },
+      suspended: { label: t('admin.activities.statusSuspended'), color: '#d97706', bg: '#fffbeb' },
+      approved: { label: t('admin.activities.statusApproved'), color: '#0369a1', bg: '#f0f9ff' },
+      rejected: { label: t('admin.activities.statusRejected'), color: '#dc2626', bg: '#fef2f2' },
+    };
+    return map[spuStatus] || { label: spuStatus, color: '#888', bg: '#f5f5f5' };
+  };
+
+  /* ---- SKU search & append ---- */
   const handleSkuSearch = (q: string) => {
     setSkuSearchQuery(q);
     if (skuSearchTimer.current) clearTimeout(skuSearchTimer.current);
@@ -463,14 +781,8 @@ const AdminActivities: React.FC = () => {
     }, 300);
   };
 
-  const addSku = (sku: { id: number; sku_code: string; spu_name?: string; price?: string | number }) => {
-    setSkuSelected((prev) => (prev.some((s) => s.id === sku.id) ? prev : [...prev, sku]));
-    setSkuSearchQuery('');
-    setSkuSearchResults([]);
-  };
-
-  const removeSku = (id: number) => {
-    setSkuSelected((prev) => prev.filter((s) => s.id !== id));
+  const handleSearchResultClick = (sku: { id: number; sku_code: string; spu_name?: string; price?: string | number }) => {
+    handleAppendSku(sku);
   };
 
   /* ---- fetch ---- */
@@ -508,10 +820,13 @@ const AdminActivities: React.FC = () => {
 
   const openEditDialog = (activity: Activity) => {
     setEditingActivity(activity);
-    setSkuSelected([]);
+    setLinkedSkus([]);
     setSkuSearchQuery('');
     setSkuSearchResults([]);
-    setActivityPrice('');
+    setPreviewResult(null);
+    setScopeTagId('');
+    setScopeCategoryId('');
+    setFlatOffPrice('');
     setSkuToast(null);
     setFormData({
       name: activity.name,
@@ -522,6 +837,7 @@ const AdminActivities: React.FC = () => {
     });
     setFormErrors({});
     setDialogOpen(true);
+    fetchLinkedSkus(activity.id);
   };
 
   const closeDialog = () => {
@@ -542,6 +858,13 @@ const AdminActivities: React.FC = () => {
     });
     setFormErrors({});
     setEditingActivity(null);
+    setLinkedSkus([]);
+    setSkuSearchQuery('');
+    setSkuSearchResults([]);
+    setPreviewResult(null);
+    setScopeTagId('');
+    setScopeCategoryId('');
+    setFlatOffPrice('');
   };
 
   /* ---- validation ---- */
@@ -564,7 +887,8 @@ const AdminActivities: React.FC = () => {
     ) {
       errors.end_time = t('admin.activities.endTimeAfterStart');
     }
-    if (!Array.isArray(formData.rule) || formData.rule.length === 0) {
+    // 直降活动按活动价定价，无需规则条目；满减/折扣必须有规则
+    if (formData.type !== 'flat_off' && (!Array.isArray(formData.rule) || formData.rule.length === 0)) {
       errors.rule = t('admin.activities.rulesRequired');
     }
 
@@ -796,107 +1120,126 @@ const AdminActivities: React.FC = () => {
           </FormSelect>
         </FormGroup>
 
-        <FormGroup>
-          <FormLabel>{t('admin.activities.rules')}</FormLabel>
-          <RuleSection>
-            <RuleHeader>
-              <span>{t('admin.activities.rulesCount').replace('{count}', String(formData.rule.length))}</span>
-              <RuleAddBtn
-                type="button"
-                onClick={() => {
-                  setFormData({
-                    ...formData,
-                    rule: [...formData.rule, { min_amount: 0, discount: 0 }],
-                  });
-                  setFormErrors((prev) => {
-                    const next = { ...prev };
-                    delete next.rule;
-                    return next;
-                  });
-                }}
-              >
-                {t('admin.activities.addRule')}
-              </RuleAddBtn>
-            </RuleHeader>
-            {formData.rule.map((item, idx) => (
-              <RuleRow key={idx}>
-                <RuleField>
-                  <RuleFieldLabel>
-                    {formData.type === 'each_full' ? t('admin.activities.eachFullAmount') : t('admin.activities.thresholdAmount')}
-                  </RuleFieldLabel>
-                  <RuleFieldInput
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.min_amount}
-                    onChange={(e) => {
-                      const updated = [...formData.rule];
-                      updated[idx] = { ...updated[idx], min_amount: Number(e.target.value) };
-                      setFormData({ ...formData, rule: updated });
-                    }}
-                  />
-                </RuleField>
-                <RuleField>
-                  <RuleFieldLabel>
-                    {formData.type === 'percent_off' ? t('admin.activities.discount') : formData.type === 'each_full' ? t('admin.activities.eachFullReduce') : t('admin.activities.reduceAmount')}
-                  </RuleFieldLabel>
-                  <RuleFieldInput
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    value={item.discount}
-                    onChange={(e) => {
-                      const updated = [...formData.rule];
-                      updated[idx] = { ...updated[idx], discount: Number(e.target.value) };
-                      setFormData({ ...formData, rule: updated });
-                    }}
-                  />
-                </RuleField>
-                <RuleField>
-                  <RuleFieldLabel>{t('admin.activities.maxDiscount')}</RuleFieldLabel>
-                  <RuleFieldInput
-                    type="number"
-                    min={0}
-                    step={0.01}
-                    placeholder={t('admin.activities.maxDiscountHint')}
-                    value={item.max_discount ?? ''}
-                    onChange={(e) => {
-                      const updated = [...formData.rule];
-                      updated[idx] = {
-                        ...updated[idx],
-                        max_discount: e.target.value === '' ? undefined : Number(e.target.value),
-                      };
-                      setFormData({ ...formData, rule: updated });
-                    }}
-                  />
-                </RuleField>
-                <RuleRemoveBtn
+        {/* 直降活动：无规则条目，按统一活动价 / 商品维度定价 */}
+        {formData.type === 'flat_off' ? (
+          <FormGroup>
+            <FormLabel>{t('admin.activities.flatOffPriceLabel')}</FormLabel>
+            <FormInput
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder={t('admin.activities.activityPricePlaceholder')}
+              value={flatOffPrice}
+              onChange={(e) => setFlatOffPrice(e.target.value)}
+            />
+            <RuleTypeHint>{t('admin.activities.flatOffHint')}</RuleTypeHint>
+            <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
+              {t('admin.activities.flatOffPriceHint')}
+            </div>
+          </FormGroup>
+        ) : (
+          <FormGroup>
+            <FormLabel>{t('admin.activities.rules')}</FormLabel>
+            <RuleSection>
+              <RuleHeader>
+                <span>{t('admin.activities.rulesCount').replace('{count}', String(formData.rule.length))}</span>
+                <RuleAddBtn
                   type="button"
-                  disabled={formData.rule.length <= 1}
                   onClick={() => {
-                    const updated = formData.rule.filter((_, i) => i !== idx);
-                    setFormData({ ...formData, rule: updated });
+                    setFormData({
+                      ...formData,
+                      rule: [...formData.rule, { min_amount: 0, discount: 0 }],
+                    });
+                    setFormErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.rule;
+                      return next;
+                    });
                   }}
-                  style={formData.rule.length <= 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
                 >
-                  ×
-                </RuleRemoveBtn>
-              </RuleRow>
-            ))}
-          </RuleSection>
-          {formErrors.rule && <FormError>{formErrors.rule}</FormError>}
-          <RuleTypeHint>
-            {formData.type === 'full_reduction' && (
-              <>{t('admin.activities.fullReductionHint')}</>
-            )}
-            {formData.type === 'percent_off' && (
-              <>{t('admin.activities.percentOffHint')}</>
-            )}
-            {formData.type === 'each_full' && (
-              <>{t('admin.activities.eachFullHint')}</>
-            )}
-          </RuleTypeHint>
-        </FormGroup>
+                  {t('admin.activities.addRule')}
+                </RuleAddBtn>
+              </RuleHeader>
+              {formData.rule.map((item, idx) => (
+                <RuleRow key={idx}>
+                  <RuleField>
+                    <RuleFieldLabel>
+                      {formData.type === 'each_full' ? t('admin.activities.eachFullAmount') : t('admin.activities.thresholdAmount')}
+                    </RuleFieldLabel>
+                    <RuleFieldInput
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={item.min_amount}
+                      onChange={(e) => {
+                        const updated = [...formData.rule];
+                        updated[idx] = { ...updated[idx], min_amount: Number(e.target.value) };
+                        setFormData({ ...formData, rule: updated });
+                      }}
+                    />
+                  </RuleField>
+                  <RuleField>
+                    <RuleFieldLabel>
+                      {formData.type === 'percent_off' ? t('admin.activities.discount') : formData.type === 'each_full' ? t('admin.activities.eachFullReduce') : t('admin.activities.reduceAmount')}
+                    </RuleFieldLabel>
+                    <RuleFieldInput
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={item.discount}
+                      onChange={(e) => {
+                        const updated = [...formData.rule];
+                        updated[idx] = { ...updated[idx], discount: Number(e.target.value) };
+                        setFormData({ ...formData, rule: updated });
+                      }}
+                    />
+                  </RuleField>
+                  <RuleField>
+                    <RuleFieldLabel>{t('admin.activities.maxDiscount')}</RuleFieldLabel>
+                    <RuleFieldInput
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder={t('admin.activities.maxDiscountHint')}
+                      value={item.max_discount ?? ''}
+                      onChange={(e) => {
+                        const updated = [...formData.rule];
+                        updated[idx] = {
+                          ...updated[idx],
+                          max_discount: e.target.value === '' ? undefined : Number(e.target.value),
+                        };
+                        setFormData({ ...formData, rule: updated });
+                      }}
+                    />
+                  </RuleField>
+                  <RuleRemoveBtn
+                    type="button"
+                    disabled={formData.rule.length <= 1}
+                    onClick={() => {
+                      const updated = formData.rule.filter((_, i) => i !== idx);
+                      setFormData({ ...formData, rule: updated });
+                    }}
+                    style={formData.rule.length <= 1 ? { opacity: 0.3, cursor: 'not-allowed' } : undefined}
+                  >
+                    ×
+                  </RuleRemoveBtn>
+                </RuleRow>
+              ))}
+            </RuleSection>
+            {formErrors.rule && <FormError>{formErrors.rule}</FormError>}
+            <RuleTypeHint>
+              {formData.type === 'full_reduction' && (
+                <>{t('admin.activities.fullReductionHint')}</>
+              )}
+              {formData.type === 'percent_off' && (
+                <>{t('admin.activities.percentOffHint')}</>
+              )}
+              {formData.type === 'each_full' && (
+                <>{t('admin.activities.eachFullHint')}</>
+              )}
+            </RuleTypeHint>
+          </FormGroup>
+        )}
 
         <FormGroup>
           <FormLabel>{t('admin.activities.startTime')}</FormLabel>
@@ -934,110 +1277,206 @@ const AdminActivities: React.FC = () => {
           )}
         </FormGroup>
 
-        {/* SKU 关联（仅编辑模式，后端 ActivitySKUView 能力入口） */}
+        {/* SKU 关联（仅编辑模式）：批量关联 / 单独追加 / 关联列表 */}
         {editingActivity && (
           <FormGroup>
             <FormLabel>{t('admin.activities.skuLinkTitle')}</FormLabel>
-            <div style={{ position: 'relative' }}>
-              <FormInput
-                placeholder={t('admin.activities.skuSearchPlaceholder')}
-                value={skuSearchQuery}
-                onChange={(e) => handleSkuSearch(e.target.value)}
-              />
-              {skuSearchResults.length > 0 && (
-                <div
-                  style={{
-                    position: 'absolute', zIndex: 10, top: '100%', left: 0, right: 0,
-                    background: '#fff', border: '1px solid #ddd', borderRadius: 6,
-                    maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  }}
-                >
-                  {skuSearchResults.map((sku) => (
-                    <div
-                      key={sku.id}
-                      onClick={() => addSku(sku)}
-                      style={{
-                        padding: '8px 12px', cursor: 'pointer', fontSize: 13,
-                        display: 'flex', justifyContent: 'space-between', gap: 8,
-                      }}
-                    >
-                      <span style={{ fontWeight: 600, color: '#1a56db', whiteSpace: 'nowrap' }}>{sku.sku_code}</span>
-                      <span style={{ color: '#666', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.spu_name}</span>
-                      <span style={{ color: '#111', whiteSpace: 'nowrap' }}>${sku.price}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {skuSelected.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                {skuSelected.map((sku) => (
-                  <span
-                    key={sku.id}
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      background: '#dbeafe', color: '#1a56db', borderRadius: 999,
-                      padding: '3px 10px', fontSize: 12,
-                    }}
-                  >
-                    {sku.sku_code}
-                    <span style={{ cursor: 'pointer', fontWeight: 700 }} onClick={() => removeSku(sku.id)}>×</span>
-                  </span>
-                ))}
-              </div>
-            )}
-            {/* 批量关联（9.1）：全部商品 / 按标签 / 按分类 */}
-            <div style={{ marginTop: 12, padding: '10px 12px', border: '1px dashed #c7d2fe', borderRadius: 6, background: '#f5f7ff' }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#1a56db', marginBottom: 8 }}>批量关联商品</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
-                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
-                  <input type="radio" checked={scopeType === 'manual'} onChange={() => setScopeType('manual')} /> 手动选择
-                </label>
-                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
-                  <input type="radio" checked={scopeType === 'all'} onChange={() => setScopeType('all')} /> 全站商品
-                </label>
-                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
-                  <input type="radio" checked={scopeType === 'tag'} onChange={() => setScopeType('tag')} /> 按标签
-                </label>
+
+            {/* ① 批量关联：标签 / 一级目录 / 全站上架，解析预览 + 一键替换 */}
+            <SkuSection>
+              <SkuSectionTitle>{t('admin.activities.batchLinkTitle')}</SkuSectionTitle>
+              <SkuSectionDesc>{t('admin.activities.batchLinkDesc')}</SkuSectionDesc>
+              <ScopeRow>
+                <ScopeRadio>
+                  <input
+                    type="radio"
+                    checked={scopeType === 'all'}
+                    onChange={() => { setScopeType('all'); setPreviewResult(null); }}
+                  />
+                  {t('admin.activities.scopeAll')}
+                </ScopeRadio>
+                <ScopeRadio>
+                  <input
+                    type="radio"
+                    checked={scopeType === 'tag'}
+                    onChange={() => { setScopeType('tag'); setPreviewResult(null); }}
+                  />
+                  {t('admin.activities.scopeTag')}
+                </ScopeRadio>
                 {scopeType === 'tag' && (
-                  <FormSelect value={scopeTagId} onChange={(e) => setScopeTagId(e.target.value)} style={{ height: 28, fontSize: 12 }}>
-                    <option value="">选择标签</option>
+                  <FormSelect
+                    value={scopeTagId}
+                    onChange={(e) => { setScopeTagId(e.target.value); setPreviewResult(null); }}
+                    style={{ height: 28, fontSize: 12 }}
+                  >
+                    <option value="">{t('admin.activities.scopeSelectPlaceholder')}</option>
                     {tagOptions.filter((tg) => tg.is_active !== false).map((tg) => (
                       <option key={tg.id} value={tg.id}>#{tg.name}</option>
                     ))}
                   </FormSelect>
                 )}
-                <label style={{ display: 'inline-flex', gap: 4, alignItems: 'center', fontSize: 13 }}>
-                  <input type="radio" checked={scopeType === 'category'} onChange={() => setScopeType('category')} /> 按一级目录
-                </label>
+                <ScopeRadio>
+                  <input
+                    type="radio"
+                    checked={scopeType === 'category'}
+                    onChange={() => { setScopeType('category'); setPreviewResult(null); }}
+                  />
+                  {t('admin.activities.scopeCategory')}
+                </ScopeRadio>
                 {scopeType === 'category' && (
-                  <FormSelect value={scopeCategoryId} onChange={(e) => setScopeCategoryId(e.target.value)} style={{ height: 28, fontSize: 12 }}>
-                    <option value="">选择一级目录</option>
+                  <FormSelect
+                    value={scopeCategoryId}
+                    onChange={(e) => { setScopeCategoryId(e.target.value); setPreviewResult(null); }}
+                    style={{ height: 28, fontSize: 12 }}
+                  >
+                    <option value="">{t('admin.activities.scopeSelectPlaceholder')}</option>
                     {categoryOptions.filter((c) => c.level === 1 || !c.level).map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
                   </FormSelect>
                 )}
+              </ScopeRow>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <MiniBtn onClick={handlePreviewScope} disabled={previewing || skuBusy}>
+                  {previewing ? '...' : t('admin.activities.previewScope')}
+                </MiniBtn>
+                <MiniBtn onClick={handleReplaceScope} disabled={skuBusy}>
+                  {t('admin.activities.replaceLinked')}
+                </MiniBtn>
+                <span style={{ fontSize: 11, color: '#999' }}>{t('admin.activities.previewScopeHint')}</span>
               </div>
-              <div style={{ fontSize: 11, color: '#888', marginTop: 6 }}>批量关联按标签 / 一级目录 / 全站解析全部上架 SKU（上限 2000），将替换当前已关联列表</div>
-            </div>
-            <div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-              <FormInput
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder={t('admin.activities.activityPricePlaceholder')}
-                value={activityPrice}
-                onChange={(e) => setActivityPrice(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <SkuSaveBtn onClick={handleSaveSKUs} disabled={skuSaving}>
-                {t('admin.activities.saveSkus')}
-              </SkuSaveBtn>
-            </div>
-            <div style={{ fontSize: 11, color: '#999', marginTop: 4 }}>
-              活动价可选：留空表示不设活动价（仅做活动关联曝光，按商品原价销售）
-            </div>
+              {previewResult && (
+                <PreviewBox>
+                  <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                    {t('admin.activities.previewScopeResult').replace('{count}', String(previewResult.count))}
+                  </div>
+                  {previewResult.items.slice(0, 6).map((it) => (
+                    <PreviewSample key={it.sku_id}>
+                      <span>{it.sku_code}</span>
+                      <span>{it.spu_name}</span>
+                      <span>${it.price}</span>
+                    </PreviewSample>
+                  ))}
+                  {previewResult.items.length === 0 && (
+                    <div style={{ color: '#888' }}>—</div>
+                  )}
+                </PreviewBox>
+              )}
+            </SkuSection>
+
+            {/* ② 单独追加：按 SKU 名称 / 编码模糊搜索，逐条添加 */}
+            <SkuSection>
+              <SkuSectionTitle>{t('admin.activities.appendTitle')}</SkuSectionTitle>
+              <SkuSectionDesc>{t('admin.activities.appendDesc')}</SkuSectionDesc>
+              <div style={{ position: 'relative' }}>
+                <FormInput
+                  placeholder={t('admin.activities.skuSearchPlaceholder')}
+                  value={skuSearchQuery}
+                  onChange={(e) => handleSkuSearch(e.target.value)}
+                />
+                {skuSearchResults.length > 0 && (
+                  <div
+                    style={{
+                      position: 'absolute', zIndex: 10, top: '100%', left: 0, right: 0,
+                      background: '#fff', border: '1px solid #ddd', borderRadius: 6,
+                      maxHeight: 220, overflowY: 'auto', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    }}
+                  >
+                    {skuSearchResults.map((sku) => (
+                      <div
+                        key={sku.id}
+                        onClick={() => handleSearchResultClick(sku)}
+                        style={{
+                          padding: '8px 12px', cursor: 'pointer', fontSize: 13,
+                          display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center',
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, color: '#1a56db', whiteSpace: 'nowrap' }}>{sku.sku_code}</span>
+                        <span style={{ color: '#666', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.spu_name}</span>
+                        <span style={{ color: '#111', whiteSpace: 'nowrap' }}>${sku.price}</span>
+                        <MiniBtn style={{ height: 22, padding: '0 8px' }}>{t('admin.activities.appendSku')}</MiniBtn>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </SkuSection>
+
+            {/* ③ 当前已关联列表：ID / 名称 / 原价 / 活动价（直降可编辑）/ 状态，支持删除 / 清空 / 导出 */}
+            <SkuSection>
+              <LinkToolbar>
+                <LinkCount>{t('admin.activities.linkedListTitle').replace('{count}', String(linkedSkus.length))}</LinkCount>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <MiniBtn onClick={exportLinked} disabled={linkedSkus.length === 0}>
+                    {t('admin.activities.exportLinked')}
+                  </MiniBtn>
+                  <MiniBtn $danger onClick={handleClearSkus} disabled={linkedSkus.length === 0 || skuBusy}>
+                    {t('admin.activities.clearLinked')}
+                  </MiniBtn>
+                </div>
+              </LinkToolbar>
+              {linkedLoading ? (
+                <div style={{ padding: '16px 0', textAlign: 'center', color: '#999', fontSize: 12 }}>...</div>
+              ) : linkedSkus.length === 0 ? (
+                <div style={{ padding: '16px 0', textAlign: 'center', color: '#999', fontSize: 12 }}>
+                  {t('admin.activities.linkedEmpty')}
+                </div>
+              ) : (
+                <LinkTableWrap>
+                  <LinkTable>
+                    <thead>
+                      <tr>
+                        <LinkTh>{t('admin.activities.colSpuId')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colSkuCode')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colName')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colPrice')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colActivityPrice')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colStatus')}</LinkTh>
+                        <LinkTh>{t('admin.activities.colActions')}</LinkTh>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {linkedSkus.map((s) => {
+                        const st = handleStatusLabel(s.spu_status);
+                        return (
+                          <tr key={s.sku_id}>
+                            <LinkTd>{s.spu_id}</LinkTd>
+                            <LinkTd style={{ fontWeight: 600, color: '#1a56db' }}>{s.sku_code}</LinkTd>
+                            <LinkTd>{s.spu_name}</LinkTd>
+                            <LinkTd>${s.price}</LinkTd>
+                            <LinkTd>
+                              {formData.type === 'flat_off' ? (
+                                <PriceInput
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder={t('admin.activities.activityPricePerSkuPlaceholder')}
+                                  defaultValue={s.activity_price ?? ''}
+                                  onBlur={(e) => handleSkuPriceBlur(s.sku_id, e.target.value)}
+                                />
+                              ) : (
+                                <span style={{ color: s.activity_price ? '#111' : '#bbb' }}>
+                                  {s.activity_price ? `$${s.activity_price}` : '—'}
+                                </span>
+                              )}
+                            </LinkTd>
+                            <LinkTd>
+                              <StatusChip $color={st.color} $bg={st.bg}>{st.label}</StatusChip>
+                            </LinkTd>
+                            <LinkTd>
+                              <ActionLink $danger onClick={() => handleRemoveSku(s.sku_id)}>
+                                {t('admin.activities.delete')}
+                              </ActionLink>
+                            </LinkTd>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </LinkTable>
+                </LinkTableWrap>
+              )}
+            </SkuSection>
+
             {skuToast && (
               <div style={{ color: skuToast.type === 'success' ? '#2ecc71' : Color.primary, fontSize: 12, marginTop: 6 }}>
                 {skuToast.msg}

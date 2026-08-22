@@ -254,10 +254,12 @@ export interface CouponApplicationItem {
   coupon_code?: string;
 }
 
+export type ActivityType = 'full_reduction' | 'percent_off' | 'each_full' | 'flat_off';
+
 export interface ActivityItem {
   id: number;
   name: string;
-  type: 'full_reduction' | 'percent_off' | 'each_full';
+  type: ActivityType;
   rule: Array<{ min_amount: number; discount: number; max_discount?: number }>;
   start_time: string;
   end_time: string;
@@ -273,10 +275,37 @@ export interface RuleItem {
 }
 export interface ActivityFormData {
   name: string;
-  type: 'full_reduction' | 'percent_off' | 'each_full';
+  type: ActivityType;
   rule: RuleItem[];
   start_time: string;
   end_time: string;
+}
+
+/** 活动关联 SKU 项（含商品维度信息，供关联列表展示 / 直降单独定价） */
+export interface ActivitySKULinkItem {
+  id: number;
+  sku_id: number;
+  sku_code: string;
+  spu_id: number;
+  spu_name: string;
+  price: string;
+  activity_price: string | null;
+  spu_status: string;
+  sku_shelf_status: string;
+}
+
+/** 批量关联 scope 解析预览结果 */
+export interface ScopePreviewResult {
+  count: number;
+  items: Array<{
+    sku_id: number;
+    sku_code: string;
+    spu_id: number;
+    spu_name: string;
+    price: string;
+    spu_status: string;
+    sku_shelf_status: string;
+  }>;
 }
 
 export interface AuditLogItem {
@@ -586,13 +615,23 @@ export const adminAPI = {
     put<ActivityItem>(`/promotion/activity/${id}/update`, data),
   deleteActivity: (id: number) =>
     del(`/promotion/activity/${id}/delete`),
+  getActivitySKUs: (id: number) =>
+    get<{ items: ActivitySKULinkItem[]; count: number }>(`/promotion/activity/${id}/skus`),
   setActivitySKUs: (id: number, data: {
+    mode?: 'replace' | 'append' | 'remove' | 'clear';
     sku_ids?: number[];
-    activity_price?: number;
+    activity_price?: number | null;
+    /** 按商品维度设置活动价：[{sku_id, activity_price}]（直降活动，覆盖统一价） */
+    sku_prices?: Array<{ sku_id: number; activity_price: number | null }>;
     /** 批量关联（9.1）：scope.type ∈ tag/category/all */
     scope?: { type: 'tag' | 'category' | 'all'; tag_id?: number; category_id?: number };
   }) =>
     post(`/promotion/activity/${id}/skus`, data),
+  previewActivityScope: (data: {
+    scope: { type: 'tag' | 'category' | 'all'; tag_id?: number; category_id?: number };
+    preview_limit?: number;
+  }) =>
+    post<ScopePreviewResult>('/promotion/activity/scope-preview', data),
 
   // Email Templates
   getEmailTemplates: () =>

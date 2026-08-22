@@ -11,7 +11,7 @@ from .views import (
 from .admin_views import (
     CouponAdminListView, CouponAdminDetailView,
     ActivityAdminListView, ActivityAdminDetailView,
-    CouponScopeView, ActivitySKUView,
+    CouponScopeView, ActivitySKUView, ActivityScopePreviewView,
     PromoCodeAdminListView, PromoCodeDashboardView, PromoCodeAdminDetailView,
 )
 
@@ -47,5 +47,6 @@ urlpatterns = [
     path('activity/create', ActivityAdminListView.as_view(), name='promotion-activity-create'),
     path('activity/<int:pk>/update', ActivityAdminDetailView.as_view(), name='promotion-activity-update'),
     path('activity/<int:pk>/delete', ActivityAdminDetailView.as_view(), name='promotion-activity-delete'),
+    path('activity/scope-preview', ActivityScopePreviewView.as_view(), name='promotion-activity-scope-preview'),
     path('activity/<int:pk>/skus', ActivitySKUView.as_view(), name='promotion-activity-skus'),
 ]

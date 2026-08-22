@@ -346,6 +346,7 @@ class ActivityType(models.TextChoices):
     FULL_REDUCTION = 'full_reduction', 'Full Reduction'
     PERCENT_OFF = 'percent_off', 'Percent Off'
     EACH_FULL = 'each_full', 'Each Full'
+    FLAT_OFF = 'flat_off', 'Flat Off'  # 直降：按统一活动价或商品维度单独定价
 
 
 class DiscountActivity(models.Model):
@@ -404,8 +405,9 @@ class ActivitySKURelation(models.Model):
     )
     activity_price = models.DecimalField(
         max_digits=10, decimal_places=2,
+        null=True, blank=True,
         validators=[MinValueValidator(Decimal('0.00'))],
-        verbose_name='活动价',
+        verbose_name='活动价（留空=不参与直降）',
     )
     created_at = models.DateTimeField(default=timezone.now, verbose_name='创建时间')
     updated_at = models.DateTimeField(default=timezone.now, verbose_name='更新时间')
