@@ -282,6 +282,8 @@ export default function AdminProducts() {
   const [error, setError] = useState('')
   const [shelfError, setShelfError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<number | null>(null)
+  // 上架中商品不允许直接删除：给出「请先下架」提示（统一删除规则）
+  const [saleDeleteHint, setSaleDeleteHint] = useState(false)
 
   const fetchProducts = useCallback(async () => {
     setLoading(true)
@@ -335,7 +337,15 @@ export default function AdminProducts() {
   const onEdit = useCallback((id: number) => navigate(`/admin/products/${id}`), [navigate])
   const onReview = useCallback((id: number) => navigate(`/admin/products/${id}/audit`), [navigate])
   const onChat = useCallback((id: number) => navigate(`/admin/chat?product_id=${id}`), [navigate])
-  const onDelete = useCallback((id: number) => setDeleteTarget(id), [])
+  const onDelete = useCallback((id: number) => {
+    // 统一删除规则：上架中（on_sale）商品必须先下架才能删除
+    const item = items.find((it) => it.id === id)
+    if (item && item.status === 'on_sale') {
+      setSaleDeleteHint(true)
+      return
+    }
+    setDeleteTarget(id)
+  }, [items])
   const onSubmitAudit = useCallback((id: number) => {
     adminAPI.submitAudit(id).then(fetchProducts).catch(() => setError(t('admin.products.submitFailed')))
   }, [fetchProducts, t])
@@ -453,6 +463,16 @@ export default function AdminProducts() {
         </>
       )}
       <ChatFloatWidget />
+      {saleDeleteHint && (
+        <ConfirmDialog
+          title={t('admin.products.deleteProduct')}
+          message={t('admin.products.cannotDeleteOnSale')}
+          confirmLabel={t('common.close')}
+          cancelLabel=""
+          onConfirm={() => setSaleDeleteHint(false)}
+          onCancel={() => setSaleDeleteHint(false)}
+        />
+      )}
       {deleteTarget !== null && (
         <ConfirmDialog
           title={t('admin.products.deleteProduct')}

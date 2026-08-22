@@ -47,7 +47,34 @@ function ratioLabel(r: number): string {
   if (Math.abs(r - 1) < 1e-6) return '1:1'
   if (Math.abs(r - 4 / 5) < 1e-6) return '4:5'
   if (Math.abs(r - 3 / 4) < 1e-6) return '3:4'
+  if (Math.abs(r - 4 / 3) < 1e-6) return '4:3'
+  if (Math.abs(r - 3 / 2) < 1e-6) return '3:2'
+  if (Math.abs(r - 16 / 9) < 1e-6) return '16:9'
   return `${r.toFixed(2)}:1`
+}
+
+/** 常用标准比例（供选择器与"按源图自动匹配初次裁切"使用） */
+export const STANDARD_RATIOS = [1, 4 / 5, 3 / 4, 4 / 3, 3 / 2, 16 / 9] as const
+
+/**
+ * 依据图片源尺寸自动匹配最合适的标准比例（主流电商/图库逻辑）：
+ * 计算源图宽高比，取与之最接近的标准比例；竖图→4:5/3:4，方图→1:1，横图→4:3/3:2/16:9。
+ * 返回 0 表示无接近项（调用方自行决定）。
+ */
+export function matchBestRatio(imgWidth: number, imgHeight: number, fallback = 1): number {
+  if (!imgWidth || !imgHeight) return fallback
+  const src = imgWidth / imgHeight
+  let best = STANDARD_RATIOS[0]
+  let bestDiff = Math.abs(src - best)
+  for (const r of STANDARD_RATIOS) {
+    const diff = Math.abs(src - r)
+    if (diff < bestDiff) {
+      best = r
+      bestDiff = diff
+    }
+  }
+  // 与最接近比例的偏差过大（如全景/长图）时仍返回该最接近项，让用户可再手动切换
+  return best
 }
 
 export default function ImageCropper({
@@ -69,7 +96,12 @@ export default function ImageCropper({
   const [scale, setScale] = useState(1)
   // 用户可选比例（选择器当前值）；0 表示自由比例。
   const [selectedRatio, setSelectedRatio] = useState(aspectRatio)
-  const ratioOptions = aspectRatioOptions ?? [1, 4 / 5, 3 / 4, 0]
+  const ratioOptions = aspectRatioOptions ?? [...STANDARD_RATIOS, 0]
+
+  // file 变化（新图片进入裁剪器）时同步初始比例，避免复用组件时残留上一次的选择
+  useEffect(() => {
+    setSelectedRatio(aspectRatio)
+  }, [file, aspectRatio])
 
   // 加载图片
   useEffect(() => {
@@ -81,12 +113,19 @@ export default function ImageCropper({
       imgRef.current = img
       const scale = canvasWidth / img.width
       setScale(scale)
-      // 初始裁剪区域：居中
-      const cropW = Math.min(img.width * 0.6, img.width)
-      const cropH = cropW / aspectRatio
+      // 初始裁剪区域：按当前比例居中，且不超出图片边界（竖图/横图均适配）
+      const ratio = selectedRatio > 0 ? selectedRatio : 1
+      const maxW = img.width
+      const maxH = img.height
+      let cropW = Math.min(maxW * 0.6, maxW)
+      let cropH = ratio > 0 ? cropW / ratio : cropW
+      if (cropH > maxH) {
+        cropH = maxH
+        cropW = cropH * ratio
+      }
       setCropRect({
-        x: (img.width - cropW) / 2,
-        y: (img.height - cropH) / 2,
+        x: Math.max(0, (maxW - cropW) / 2),
+        y: Math.max(0, (maxH - cropH) / 2),
         w: cropW,
         h: cropH,
       })
@@ -99,7 +138,8 @@ export default function ImageCropper({
     }
     img.src = URL.createObjectURL(file)
     return () => { URL.revokeObjectURL(img.src) }
-  }, [file, canvasWidth, aspectRatio])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file, canvasWidth])
 
   // 绘制画布
   useEffect(() => {
@@ -256,11 +296,18 @@ export default function ImageCropper({
   const resetCropForRatio = useCallback((ratio: number) => {
     const img = imgRef.current
     if (!img) return
-    const cropW = Math.min(img.width * 0.6, img.width)
-    const cropH = ratio > 0 ? cropW / ratio : cropW
+    const maxW = img.width
+    const maxH = img.height
+    const effective = ratio > 0 ? ratio : 1
+    let cropW = Math.min(maxW * 0.6, maxW)
+    let cropH = effective > 0 ? cropW / effective : cropW
+    if (cropH > maxH) {
+      cropH = maxH
+      cropW = cropH * effective
+    }
     setCropRect({
-      x: (img.width - cropW) / 2,
-      y: (img.height - cropH) / 2,
+      x: Math.max(0, (maxW - cropW) / 2),
+      y: Math.max(0, (maxH - cropH) / 2),
       w: cropW,
       h: cropH,
     })

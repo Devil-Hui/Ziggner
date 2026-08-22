@@ -18,6 +18,7 @@ import {
   getAllStagedItems,
   addStagedItem,
   deleteStagedItem,
+  reorderStagedItems,
 } from '../../../../utils/mediaStaging'
 import type { ProductMediaItem } from '../../../../api/admin'
 import { adminAPI } from '../../../../api/admin'
@@ -67,22 +68,39 @@ export default function MediaManager({
   const queueFilesRef = useRef<File[]>([])
   const [dragging, setDragging] = useState(false)
 
+  // ── 视频/图片点击预览（视频直接播放）──
+  const [preview, setPreview] = useState<{ url: string; kind: 'image' | 'video'; name: string } | null>(null)
+
+  // ── 长按 2s 进入拖动排序 ──
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  /** 视频默认置于队列首位（与主流商品详情一致：视频优先展示） */
+  const sortVideoFirst = <T extends { media_type?: string; mediaType?: string; sort_order?: number }>(arr: T[]): T[] =>
+    [...arr].sort((a, b) => {
+      const av = a.media_type === 'video' || a.mediaType === 'video' ? 0 : 1
+      const bv = b.media_type === 'video' || b.mediaType === 'video' ? 0 : 1
+      if (av !== bv) return av - bv
+      return (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    })
+
   // 启动时加载数据
   useEffect(() => {
     if (isEditMode) {
-      // 编辑模式：优先用 savedMedia prop，否则拉取
+      // 编辑模式：优先用 savedMedia prop，否则拉取（视频默认置队首）
       if (savedMedia && savedMedia.length >= 0) {
-        setSavedItems(savedMedia)
+        setSavedItems(sortVideoFirst(savedMedia))
       }
       if (spuId) {
         adminAPI.getMediaBySPU(spuId)
-          .then((data) => setSavedItems(Array.isArray(data) ? data : []))
+          .then((data) => setSavedItems(sortVideoFirst(Array.isArray(data) ? data : [])))
           .catch(() => {})
       }
     } else {
-      // 创建模式：从 IndexedDB 加载
+      // 创建模式：从 IndexedDB 加载（视频默认置队首）
       getAllStagedItems().then((data) => {
-        setItems(data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)))
+        setItems(sortVideoFirst(data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))))
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -91,7 +109,7 @@ export default function MediaManager({
   // savedMedia prop 变化时同步
   useEffect(() => {
     if (isEditMode && savedMedia) {
-      setSavedItems(savedMedia)
+      setSavedItems(sortVideoFirst(savedMedia))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [savedMedia])
@@ -307,6 +325,86 @@ export default function MediaManager({
     [editingMedia, onMediaUpdate, spuId]
   )
 
+  // ── 长按 2s 进入拖动排序（媒体队列切换顺序）──
+
+  const handleDragHandleDown = useCallback(
+    (e: React.PointerEvent, index: number) => {
+      if (dragIndex !== null) return
+      e.preventDefault()
+      clearTimeout(longPressRef.current ?? undefined)
+      longPressRef.current = setTimeout(() => setDragIndex(index), 2000)
+    },
+    [dragIndex]
+  )
+
+  const cancelLongPress = useCallback(() => {
+    clearTimeout(longPressRef.current ?? undefined)
+  }, [])
+
+  const swapMedia = useCallback(
+    (from: number, to: number) => {
+      if (from === to) return
+      if (isEditMode) {
+        setSavedItems((prev) => {
+          const arr = [...prev]
+          const [m] = arr.splice(from, 1)
+          arr.splice(to, 0, m)
+          return arr
+        })
+      } else {
+        setItems((prev) => {
+          const arr = [...prev]
+          const [m] = arr.splice(from, 1)
+          arr.splice(to, 0, m)
+          return arr
+        })
+      }
+    },
+    [isEditMode]
+  )
+
+  /** 拖拽中：根据指针位置找到目标项并实时换位 */
+  const handleGridPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (dragIndex === null) return
+      const el = document.elementFromPoint(e.clientX, e.clientY)
+      const target = el?.closest?.('[data-media-index]') as HTMLElement | null
+      const to = target ? Number(target.dataset.mediaIndex) : -1
+      if (to >= 0 && to !== dragIndex) {
+        swapMedia(dragIndex, to)
+        setDragIndex(to)
+      }
+    },
+    [dragIndex, swapMedia]
+  )
+
+  /** 拖拽结束：清状态并持久化排序（编辑模式写 sort_order；创建模式重写 IndexedDB 顺序） */
+  const handleDragEnd = useCallback(async () => {
+    clearTimeout(longPressRef.current ?? undefined)
+    setDragIndex(null)
+    try {
+      if (isEditMode && spuId) {
+        const ordered = savedItems
+        if (ordered.length > 1) {
+          await Promise.all(
+            ordered.map((m, i) =>
+              m.id != null
+                ? adminAPI.updateMedia(m.id, { sort_order: i }).catch(() => {})
+                : Promise.resolve()
+            )
+          )
+          const fresh = await adminAPI.getMediaBySPU(spuId)
+          if (Array.isArray(fresh)) setSavedItems(sortVideoFirst(fresh))
+        }
+      } else {
+        await reorderStagedItems(items).catch(() => {})
+      }
+    } catch {
+      // 排序持久化失败不阻断页面
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, spuId, savedItems, items])
+
   // ── 计数 ──
   const imageCount = isEditMode
     ? savedItems.filter((i) => i.media_type === 'image').length
@@ -402,20 +500,30 @@ export default function MediaManager({
         </S.QueueProgress>
       )}
 
-      {/* 媒体缩略图网格 */}
-      <S.MediaGrid>
+      {/* 媒体缩略图网格（长按 2s 进入拖动排序；点击视频/图片打开预览） */}
+      <S.MediaGrid
+        ref={listRef}
+        onPointerMove={handleGridPointerMove}
+        onPointerUp={handleDragEnd}
+        onPointerLeave={() => { if (dragIndex !== null) handleDragEnd() }}
+        onPointerCancel={() => { if (dragIndex !== null) handleDragEnd() }}
+      >
         {isEditMode ? (
           savedItems.length === 0 && !showProgress ? (
             <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
           ) : (
             savedItems.map((item, idx) => (
-              <MediaItem
-                key={item.id}
-                item={item}
-                index={idx}
-                onRemove={handleRemove}
-                onEdit={setEditingMedia}
-              />
+              <div key={item.id} data-media-index={idx} style={{ position: 'relative' }}>
+                <MediaItem
+                  item={item}
+                  index={idx}
+                  onRemove={handleRemove}
+                  onEdit={setEditingMedia}
+                  onPreview={(url, kind, name) => setPreview({ url, kind, name })}
+                  dragActive={dragIndex === idx}
+                  onDragHandleDown={handleDragHandleDown}
+                />
+              </div>
             ))
           )
         ) : (
@@ -423,12 +531,16 @@ export default function MediaManager({
             <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
           ) : (
             items.map((item, idx) => (
-              <MediaItem
-                key={item.id ?? idx}
-                item={item}
-                index={idx}
-                onRemove={handleRemove}
-              />
+              <div key={item.id ?? idx} data-media-index={idx} style={{ position: 'relative' }}>
+                <MediaItem
+                  item={item}
+                  index={idx}
+                  onRemove={handleRemove}
+                  onPreview={(url, kind, name) => setPreview({ url, kind, name })}
+                  dragActive={dragIndex === idx}
+                  onDragHandleDown={handleDragHandleDown}
+                />
+              </div>
             ))
           )
         )}
@@ -465,9 +577,9 @@ export default function MediaManager({
                 setUploadQueue((q) => ({ ...q, percent }))
               })
               setUploadQueue({ ...INITIAL_QUEUE, status: 'done' })
-              // 刷新已保存媒体列表
+              // 刷新已保存媒体列表（视频默认置于队列首位）
               const fresh = await adminAPI.getMediaBySPU(spuId)
-              if (Array.isArray(fresh)) setSavedItems(fresh)
+              if (Array.isArray(fresh)) setSavedItems(sortVideoFirst(fresh))
               showToast(t('admin.mediaManager.videoUploadSuccess') || '视频上传成功', 'success')
             } catch (err: unknown) {
               setUploadQueue(INITIAL_QUEUE)
@@ -475,7 +587,8 @@ export default function MediaManager({
             }
           } else {
             const stagedId = await addStagedItem(item)
-            const updated = [...items, { ...item, id: stagedId }]
+            // 视频默认置于队列首位
+            const updated = [{ ...item, id: stagedId }, ...items]
             notifyChange(updated)
           }
           setShowVideoDialog(false)
@@ -501,6 +614,36 @@ export default function MediaManager({
           onConfirm={handleConfirmDeleteActive}
           onCancel={() => setPendingDeleteActiveId(null)}
         />
+      )}
+
+      {/* 媒体预览（点击视频/图片打开；视频直接播放） */}
+      {preview && (
+        <S.DialogOverlay onClick={() => setPreview(null)}>
+          <S.DialogBox onClick={(e) => e.stopPropagation()} style={{ maxWidth: 720, width: '92vw' }}>
+            {preview.kind === 'video' ? (
+              <video
+                key={preview.url}
+                src={preview.url}
+                controls
+                autoPlay
+                playsInline
+                style={{ width: '100%', maxHeight: 480, borderRadius: 8, background: '#000', display: 'block' }}
+              />
+            ) : (
+              <img
+                src={preview.url}
+                alt={preview.name}
+                style={{ width: '100%', maxHeight: 480, objectFit: 'contain', borderRadius: 8, background: '#f7f7f8', display: 'block' }}
+              />
+            )}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, gap: 12 }}>
+              <div style={{ fontSize: 13, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {preview.name}
+              </div>
+              <S.ActionBtn onClick={() => setPreview(null)}>关闭</S.ActionBtn>
+            </div>
+          </S.DialogBox>
+        </S.DialogOverlay>
       )}
     </S.Container>
   )

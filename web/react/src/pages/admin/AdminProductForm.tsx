@@ -1566,9 +1566,6 @@ export default function AdminProductForm() {
                   <option value="physical">{t('admin.productForm.kindPhysical')}</option>
                   <option value="virtual">{t('admin.productForm.kindVirtual')}</option>
                 </Select>
-                {productKind === 'virtual' && (
-                  <SectionDesc style={{ marginTop: 8 }}>{t('admin.productForm.virtualHint')}</SectionDesc>
-                )}
               </Field>
               <Field>
                 <Label>{t('admin.productForm.productName')} *</Label>
@@ -1652,6 +1649,9 @@ export default function AdminProductForm() {
                 </TagList>
               </Field>
               <SubHead>{t('admin.productForm.skuManagement')}</SubHead>
+              <SectionDesc style={{ marginTop: 6, marginBottom: 10 }}>
+                SKU 参数：每个规格组合（变体）独立定价与库存，价格为该变体的「销售单价（元）」，支持两位小数。上方已填写的为商品基本信息，此处仅填写变体级参数。
+              </SectionDesc>
               {specs.map((spec, idx) => (
                 <SpecGroup key={idx}>
                   <SpecGroupHeader>
@@ -1712,7 +1712,7 @@ export default function AdminProductForm() {
 
                       <VariantMainRow>
                         <VariantField>
-                          <VariantFieldLabel>Price *</VariantFieldLabel>
+                          <VariantFieldLabel title="该变体的销售单价，支持两位小数">单价（元） *</VariantFieldLabel>
                           <VariantPriceInput
                             type="number"
                             min="0"
@@ -1720,6 +1720,13 @@ export default function AdminProductForm() {
                             placeholder="0.00"
                             value={sku.price}
                             onChange={(e) => updateSKU(idx, 'price', e.target.value)}
+                            onBlur={() => {
+                              const raw = sku.price
+                              const formatted = raw === '' || raw == null
+                                ? ''
+                                : Number(raw).toFixed(2)
+                              if (formatted !== raw) updateSKU(idx, 'price', formatted)
+                            }}
                           />
                         </VariantField>
                         <VariantField>

@@ -80,6 +80,31 @@ export async function deleteStagedItem(id: number): Promise<void> {
   })
 }
 
+/**
+ * 按新顺序重写暂存排序：getAll 按 createdAt 升序展示，
+ * 故把每个 item 的 createdAt 改写为单调递增（保持传入顺序）。
+ */
+export async function reorderStagedItems(items: StagedMediaItem[]): Promise<void> {
+  const database = await openDB()
+  return new Promise((resolve, reject) => {
+    const transaction = database.transaction(STORE_NAME, 'readwrite')
+    const store = transaction.objectStore(STORE_NAME)
+    const base = Date.now()
+    let done = 0
+    items.forEach((item, index) => {
+      if (item.id == null) return
+      const req = store.put({ ...item, createdAt: base + index })
+      req.onsuccess = () => {
+        done += 1
+        if (done >= items.filter((i) => i.id != null).length) resolve()
+      }
+      req.onerror = () => reject(req.error)
+    })
+    if (!items.some((i) => i.id != null)) resolve()
+    transaction.oncomplete = () => database.close()
+  })
+}
+
 export async function clearAllStaged(): Promise<void> {
   const database = await openDB()
   return new Promise((resolve, reject) => {

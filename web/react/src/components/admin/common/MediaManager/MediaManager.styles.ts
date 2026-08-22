@@ -208,7 +208,7 @@ export const EmptyHint = styled.div`
 
 // ── 媒体项 ──
 
-export const ItemWrap = styled.div`
+export const ItemWrap = styled.div<{ $dragActive?: boolean }>`
   position: relative;
   width: 80px;
   height: 80px;
@@ -217,6 +217,20 @@ export const ItemWrap = styled.div`
   border: 1px solid ${Color.border.light};
   cursor: grab;
   flex-shrink: 0;
+  touch-action: none; /* 触屏长按/拖动不被浏览器手势抢占 */
+  user-select: none;
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+
+  ${({ $dragActive }) =>
+    $dragActive &&
+    `
+    border-color: ${Color.primary};
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+    transform: scale(1.06);
+    z-index: 5;
+    cursor: grabbing;
+    opacity: 0.95;
+  `}
 
   &:hover .hover-overlay {
     opacity: 1;
@@ -227,12 +241,31 @@ export const ItemImg = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none; /* 避免图片自身拦截拖拽/点击事件冒泡 */
 `
 
 export const ItemVideo = styled.video`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
+`
+
+/** 视频播放角标（点击即可直接播放观看） */
+export const VideoPlayBadge = styled.div`
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 2;
 `
 
 /** hover 操作浮层（编辑 / 删除） */

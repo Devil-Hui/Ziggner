@@ -284,7 +284,7 @@ class SPUAdminUpdateView(BaseApiView):
 
 
 class SPUAdminDeleteView(BaseApiView):
-    """软删除 SPU"""
+    """软删除 SPU（统一规则：上架中 on_sale 禁止直接删除，必须先下架）"""
     permission_classes = [IsSuperAdmin]
 
     @extend_schema(responses={200: OpenApiResponse(description='Delete')})
@@ -293,6 +293,12 @@ class SPUAdminDeleteView(BaseApiView):
             spu = SPU.objects.get(id=spu_id, deleted_at__isnull=True)
         except SPU.DoesNotExist:
             return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
+        # 统一删除规则：任何在售商品必须先下架才能删除，避免前台在售状态被静默软删
+        if spu.status == SPUStatus.ON_SALE:
+            return Response(
+                {'detail': '商品正在上架中，请先下架（或挂起）后再删除。'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         spu.soft_delete(request.user)
         create_audit_log(request.user, 'delete', 'spu', spu_id,
                          changes={'name': spu.name},

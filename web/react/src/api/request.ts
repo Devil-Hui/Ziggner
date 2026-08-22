@@ -138,6 +138,10 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       if (await refreshBrowserSession()) return api(originalRequest)
+      // 刷新 token 失败：会话已失效，统一弹出重新登录（避免静默卡死 / 反复 401）
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:relogin-required'))
+      }
     }
     try {
       const appErr = extractAppError(error)

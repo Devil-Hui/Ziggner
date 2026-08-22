@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect } from 'react'
 import { useAppContext } from '../../../../store/AppContext'
-import ImageCropper from '../ImageCropper/ImageCropper'
+import ImageCropper, { matchBestRatio } from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
 import { prepareImageForUpload } from '../../../../utils/imageCompression'
 import * as S from './MediaManager.styles'
@@ -24,7 +24,24 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
   const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [compressing, setCompressing] = useState(false)
+  // 依据源图尺寸自动匹配的初次裁切比例（问题修复：不同图片自动匹配最合适标准比例）
+  const [initialRatio, setInitialRatio] = useState<number>(1)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 读取图片实际尺寸并自动匹配最佳初次裁切比例
+  const applyBestRatio = useCallback((file: File) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      setInitialRatio(matchBestRatio(img.naturalWidth, img.naturalHeight))
+      URL.revokeObjectURL(url)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      setInitialRatio(1)
+    }
+    img.src = url
+  }, [])
 
   // 队列模式：外部传入 file 时，先校验+压缩再进入裁剪
   // 修复：原先直接 setSelectedFile(file) 绕过了尺寸/压缩防护，导致大图进裁剪器 OOM 闪退
@@ -47,6 +64,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
       if (res.ok && res.file) {
         preparedRef.current = file // 仅在成功后才标记，兼容 StrictMode 双调用
         setSelectedFile(res.file)
+        applyBestRatio(res.file)
       } else if (onSkip) {
         preparedRef.current = file
         onSkip() // 被拒绝的文件在队列中跳过，避免整批卡死
@@ -70,6 +88,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
       showToast(`图片已压缩 (-${res.ratio}%)`, 'success')
     }
     setSelectedFile(res.file)
+    applyBestRatio(res.file)
   }
 
   const handleCropConfirm = (results: MultiSizeCropResult) => {
@@ -103,6 +122,8 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
                 }
               }}
               maxWidth={2560}
+              aspectRatio={initialRatio}
+              aspectRatioOptions={[1, 4 / 5, 3 / 4, 4 / 3, 3 / 2, 16 / 9, 0]}
             />
             {file && onSkip && (
               <S.DialogActions>

@@ -112,7 +112,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
             <S.UploadZone onClick={() => fileInputRef.current?.click()}>
               <div>点击选择视频文件</div>
               <div style={{ fontSize: 12, marginTop: 8 }}>
-                支持 MP4 / WebM，最大 10MB，仅提取头帧预览
+                支持 MP4 / WebM / MOV，最大 200MB，仅提取头帧预览
               </div>
             </S.UploadZone>
             <input

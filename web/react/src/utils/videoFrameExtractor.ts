@@ -6,11 +6,12 @@
  */
 
 import { WEBP_QUALITY } from './imageCompression'
+import { matchBestRatio } from '../components/admin/common/ImageCropper/ImageCropper'
 
 export interface VideoFrameResult {
-  thumb: { blob: Blob; dataUrl: string }   // 200x200
-  list: { blob: Blob; dataUrl: string }    // 400x400
-  large: { blob: Blob; dataUrl: string }   // 800x800
+  thumb: { blob: Blob; dataUrl: string }   // 200 × 200/ratio（按源帧最佳比例）
+  list: { blob: Blob; dataUrl: string }    // 400 × 400/ratio
+  large: { blob: Blob; dataUrl: string }   // 800 × 800/ratio
   videoBlob: Blob
   videoBlobUrl: string
 }
@@ -22,10 +23,15 @@ function generateFrameSizes(
   return new Promise((resolve) => {
     video.currentTime = currentTime
     video.onseeked = () => {
+      const videoWidth = video.videoWidth
+      const videoHeight = video.videoHeight
+      // 视频封面按源帧比例自动匹配最合适的标准比例（与图片裁切策略一致）
+      const ratio = matchBestRatio(videoWidth, videoHeight)
+      const deriveH = (w: number) => Math.max(1, Math.round(w / ratio))
       const sizes = [
-        { key: 'thumb', w: 200, h: 200 },
-        { key: 'list', w: 400, h: 400 },
-        { key: 'large', w: 800, h: 800 },
+        { key: 'thumb', w: 200, h: deriveH(200) },
+        { key: 'list', w: 400, h: deriveH(400) },
+        { key: 'large', w: 800, h: deriveH(800) },
       ] as const
       const results: Record<string, { blob: Blob; dataUrl: string }> = {}
       let completed = 0
@@ -35,9 +41,7 @@ function generateFrameSizes(
         canvas.width = size.w
         canvas.height = size.h
         const ctx = canvas.getContext('2d')!
-        // 保持宽高比，居中裁剪
-        const videoWidth = video.videoWidth
-        const videoHeight = video.videoHeight
+        // 保持宽高比，居中裁剪到目标比例
         const scale = Math.max(size.w / videoWidth, size.h / videoHeight)
         const sw = size.w / scale
         const sh = size.h / scale
