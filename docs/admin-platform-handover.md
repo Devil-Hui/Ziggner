@@ -104,6 +104,8 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 - **验证**：每次改动均跑 `tsc -p tsconfig.json` 过滤相关路径，**零报错**；新增件均为 additive（不破坏既有页面）。
 - **公网回归（2026-08-23）**：✅ 前端构建 + `wrangler deploy` 上线三个域名（www/admin/shop.ziggner.com，资源哈希与本地 build 一致）；✅ 超管账号真实浏览器登录 `admin.ziggner.com` 成功（用户名+邮箱 OTP+密码），抽查 商品/订单/权限管理/审计日志 多页渲染与 RBAC 矩阵、URL 状态同步均正常。
 - **热修复（2026-08-23）**：[`base.py`](../backend/project/config/settings/base.py) `CORS_ALLOW_HEADERS` 追加 `x-request-id`，解决预检被拦；重建 `ziggner-django:v1.0.4` 镜像并 recreate `django-app` 容器已生效（`Access-Control-Allow-Headers` 实测已含 `x-request-id`）。
+- **权限门禁修复（2026-08-23）**：[`ProtectedRoute.tsx`](../web/react/src/components/admin/ProtectedRoute.tsx) `ROUTE_PERMISSIONS` 补 `dashboard/import/coupons-promo`，并放行超管访问未注册管理路由。修复 **Dashboard 默认首页此前因 default-deny 不可达**（`/admin` 被误跳商品页）的验收阻断项。公网实测：`/admin`→工作台、`/admin/import`→数据导入 均正常。
+- **Systematized 验收（2026-08-23）**：按 10 项准则静态+构建+浏览器核查。**未达"大厂级"交付线**。PASS：SmartDataTable 覆盖 ≈13 列表页、Sidebar 业务域分组、无僵尸路由、包体积主入口 491KB(<500KB)、CORS 修复、权限门禁修复。FAIL/PARTIAL：① 页内硬编码色值（Activities/Applications/ChatDetail/ProductForm 等，token 混用）；② legacy `components/admin/common/*` 与 design-system 双体系并存，部分页仍有自定义弹窗/表格/按钮；③ `can()`/PermissionGate 业务页零调用、门禁为 legacy 路径表、后端 Scope 仅 order 域；④ 硬编码中文未走 i18n；⑤ Dashboard 可达但 Dashboard 统计 best-effort。**下一步**：can() 落地页面、legacy common 收敛、色值半迁移 token、中文走 i18n、后端 Scope 扩展其余域。
 - **风险**：① 全站迁移是最大 diff，需分页面回归；② Dashboard 统计为 best-effort（端点失败显示 0）；③ 后端 Scope 仅收敛 order 域，`cs/order` 等其余域尚未接入统一抽象，前端 `<Can>` 只是显隐。
 
 ---

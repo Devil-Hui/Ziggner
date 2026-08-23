@@ -51,6 +51,11 @@ const ROUTE_PERMISSIONS: Record<string, string[]> = {
   '/admin/groups': ['superadmin', 'leader'],
   '/admin/tasks': ['superadmin', 'leader', 'member'],
   '/admin/rbac': ['superadmin'],
+  // 工作台：所有管理角色可见（验收默认首页，此前未注册导致 default-deny 误伤而不可达）
+  '/admin/dashboard': ['superadmin', 'leader', 'member'],
+  '/admin/import': ['superadmin', 'leader', 'member'],
+  // 优惠券推广码详情页（coupons 下的子路由），此前未注册导致不可达
+  '/admin/coupons/promo': ['superadmin', 'leader', 'member'],
 }
 
 /**
@@ -104,8 +109,11 @@ export function RoleProtectedRoute({ children }: { children?: ReactNode }) {
   }
 
   // 安全加固：对于 /admin/ 路径但未在 ROUTE_PERMISSIONS 中注册的，默认拒绝访问
-  // 默认拒绝（default-deny）原则，避免新增路由意外暴露
+  // 超管默认放行（未注册的非敏感管理页也不应被误伤）；普通角色保持 default-deny
   if (!matched && currentPath !== '/admin/login' && currentPath.startsWith('/admin/')) {
+    if (role === 'superadmin') {
+      return children ? <>{children}</> : <Outlet />
+    }
     return <Navigate to="/admin/products" replace />
   }
 
