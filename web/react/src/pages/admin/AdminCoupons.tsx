@@ -1,7 +1,7 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useRef, useCallback, type CSSProperties } from 'react';
 import styled from 'styled-components'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
@@ -9,6 +9,7 @@ import { Pagination, ConfirmDialog, StatusBadge } from '../../components/admin/d
 import { adminAPI, Coupon, CouponFormData, type PromoCodeItem, type CouponApplicationItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useUrlState } from '../../hooks/useUrlState';
+import { useDirtyForm } from '../../hooks/useDirtyForm';
 import { useTranslation } from '../../i18n';
 import { formatDate } from '../../utils/helpers';
 import { Input, Input as SearchInput, PrimaryBtn, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
@@ -405,10 +406,12 @@ let couponDraft: CouponFormData | null = null;
 export default function AdminCoupons() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // 搜索词与 URL `?search=` 同步：刷新保留、可复制链接、浏览器 Back 有效
+  const search = searchParams.get('search') ?? '';
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState('');
   const [page, setPage] = useUrlState<string>('page', '1');
   const [total, setTotal] = useState(0);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
@@ -417,6 +420,18 @@ export default function AdminCoupons() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<CouponFormData>(INITIAL_FORM);
+  const [initialForm, setInitialForm] = useState<CouponFormData>(INITIAL_FORM);
+
+  // 脏数据保护：编辑字段后关闭需二次确认
+  const { requestClose: requestCloseForm, guardNode: dirtyFormGuard } = useDirtyForm({
+    initial: initialForm,
+    current: formData,
+    onDiscard: () => {
+      couponDraft = null;
+      setFormData(INITIAL_FORM);
+      setShowForm(false);
+    },
+  });
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<Coupon | null>(null);
@@ -537,7 +552,7 @@ export default function AdminCoupons() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getCoupons({ page: Number(page), search: searchText });
+      const data = await adminAPI.getCoupons({ page: Number(page), search });
       if (data && Array.isArray(data.results)) {
         setCoupons(data.results);
         setTotal(data.count || 0);
@@ -553,7 +568,7 @@ export default function AdminCoupons() {
     } finally {
       setLoading(false);
     }
-  }, [page, searchText, t]);
+  }, [page, search, t]);
 
   // 加载当前用户的优惠券审核申请，按 coupon.id 建索引（用于状态展示 + 提交审核）
   const loadApplications = useCallback(async () => {
@@ -598,19 +613,21 @@ export default function AdminCoupons() {
   const openCreate = () => {
     setEditingId(null);
     // 保留上次未提交的草稿（关闭弹窗不丢失已填内容）；提交成功后清除
-    setFormData(couponDraft ?? {
+    const nextForm = couponDraft ?? {
       ...INITIAL_FORM,
       start_time: new Date().toISOString().slice(0, 16),
       end_time: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
         .toISOString()
         .slice(0, 16),
-    });
+    };
+    setInitialForm(nextForm);
+    setFormData(nextForm);
     setShowForm(true);
   };
 
   const openEdit = (coupon: Coupon) => {
     setEditingId(coupon.id);
-    setFormData({
+    const nextForm: CouponFormData = {
       code: coupon.code,
       discount_type: coupon.discount_type,
       amount: coupon.amount,
@@ -622,7 +639,9 @@ export default function AdminCoupons() {
       end_time: coupon.end_time,
       total_count: coupon.total_count,
       per_user_limit: coupon.per_user_limit || 1,
-    });
+    };
+    setInitialForm(nextForm);
+    setFormData(nextForm);
     setShowForm(true);
   };
 
@@ -697,8 +716,12 @@ export default function AdminCoupons() {
   };
 
   const handleSearchChange = (value: string) => {
-    setSearchText(value);
-    setPage('1');
+    // 搜索词即时写入 URL `?search=`，并重置到第一页
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('search', value);
+    else next.delete('search');
+    next.delete('page');
+    setSearchParams(next, { replace: true });
   };
 
   // 提交审核：无申请则先建草稿（带入 coupon_id，审核时原地更新该券），再提交
@@ -750,7 +773,7 @@ export default function AdminCoupons() {
         <SearchInput
           type="text"
           placeholder={t('admin.coupons.searchPlaceholder')}
-          value={searchText}
+          value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
         />
       </SearchBar>
@@ -834,8 +857,8 @@ export default function AdminCoupons() {
 
       {/* Create / Edit Form Dialog */}
       {showForm && (
-        // 点击遮罩不再关闭窗口：避免误触丢失已填表单项，用户须点「取消/保存」关闭
-        <FormOverlay>
+        // 点击遮罩走脏数据保护：未保存修改时弹「放弃修改」二次确认
+        <FormOverlay onClick={() => requestCloseForm()}>
           <FormDialog onClick={(e) => e.stopPropagation()}>
             <FormTitle>{editingId ? t('admin.coupons.editCoupon') : t('admin.coupons.newCoupon')}</FormTitle>
 
@@ -987,7 +1010,7 @@ export default function AdminCoupons() {
             </FormRow>
 
             <ButtonGroup>
-              <SecondaryBtn onClick={() => { couponDraft = { ...formData }; setShowForm(false); }}>
+              <SecondaryBtn onClick={requestCloseForm}>
                 {t('admin.coupons.cancel')}
               </SecondaryBtn>
               <PrimaryBtn onClick={debouncedSave} disabled={isSaving}>
@@ -1198,6 +1221,9 @@ export default function AdminCoupons() {
           </FormDialog>
         </FormOverlay>
       )}
+
+      {/* 表单脏数据保护：未保存修改时关闭需二次确认 */}
+      {dirtyFormGuard}
     </div>
   );
 }

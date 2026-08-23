@@ -284,7 +284,7 @@ services:
     mem_reservation: 32m
     memswap_limit: 64m
     cpus: "0.05"
-    pids_limit: 32
+    pids_limit: 256
     read_only: true
     tmpfs:
       - /tmp:size=4m,mode=1777
@@ -294,7 +294,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- https://127.0.0.1/health/ --no-check-certificate >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1/health || exit 1"]
       interval: 20s
       timeout: 5s
       retries: 3

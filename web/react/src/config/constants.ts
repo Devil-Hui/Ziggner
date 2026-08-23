@@ -43,9 +43,9 @@ export const CONFIG = {
   // WebSocket：最大自动重连次数，超过后提示连接断开
   WS_MAX_RECONNECT_ATTEMPTS: 5,
   // WebSocket：重连指数退避的初始延迟（毫秒），第n次重连 = BASE * 2^n
-  WS_RECONNECT_BASE_DELAY: 1000,
+  WS_RECONNECT_BASE_DELAY: 2000,
   // WebSocket：重连指数退避的最大延迟上限（毫秒）
-  WS_RECONNECT_MAX_DELAY: 8000,
+  WS_RECONNECT_MAX_DELAY: 30000,
   // 用户端：对方正在输入指示器的超时时间（毫秒）
   TYPING_INDICATOR_TIMEOUT: 3000,
 
