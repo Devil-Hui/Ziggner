@@ -1,7 +1,7 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import { Color, Radius, Shadow, Spacing, FontSize, Transition, Semantic } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import { SmartDataTable, StatusBadge, Button, DetailDrawer, ApprovalTimeline } from '../../components/admin/design-system';
@@ -194,7 +194,7 @@ const ActionPrimary = styled.button`
   color: ${Color.text.inverse};
   border-radius: 2px;
   cursor: pointer;
-  &:hover { background: #c0392b; }
+  &:hover { background: Semantic.status.danger.fg; }
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
@@ -309,8 +309,8 @@ const Toast = styled.div<{ $type: 'success' | 'error' }>`
   margin-bottom: 16px;
   border-radius: 2px;
   font-size: ${FontSize.sm}px;
-  background: ${({ $type }) => ($type === 'success' ? '#e8f5e9' : '#fde8e8')};
-  color: ${({ $type }) => ($type === 'success' ? '#2e7d32' : '#c62828')};
+  background: ${({ $type }) => ($type === 'success' ? Semantic.status.success.bg : Semantic.status.danger.bg)};
+  color: ${({ $type }) => ($type === 'success' ? Semantic.status.success.fg : Semantic.status.danger.fg)};
 `;
 
 // ── Component ──
@@ -1204,7 +1204,7 @@ export default function AdminApplications() {
             <ButtonGroup>
               <SecondaryBtn onClick={() => setReviewTarget(null)}>{t('admin.applications.reviewCancel')}</SecondaryBtn>
               <button
-                style={{ padding: '8px 24px', fontSize: 13, border: '1px solid #dc2626', background: '#fff', color: '#dc2626', borderRadius: 2, cursor: 'pointer' }}
+                style={{ padding: '8px 24px', fontSize: 13, border: `1px solid ${Semantic.status.danger.fg}`, background: '#fff', color: Semantic.status.danger.fg, borderRadius: 2, cursor: 'pointer' }}
                 onClick={() => handleReview('reject')}
                 disabled={reviewSubmitting}
               >

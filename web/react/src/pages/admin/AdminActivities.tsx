@@ -1,7 +1,7 @@
 // TypeScript strict mode enabled
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import styled, { keyframes, css } from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
+import { Color, Radius, Shadow, Spacing, FontSize, Transition, Semantic } from '../../theme/tokens';
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
 import { adminAPI, Activity, ActivityFormData, type TagItem, type CategoryNode, type ActivitySKULinkItem, type ScopePreviewResult } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
@@ -20,7 +20,7 @@ import { KoboyoRefreshIcon } from '../../components/admin/common/Icon';
 
 // ==================== Theme ====================
 
-const PRIMARY = '#1a56db';
+const PRIMARY = Color.primary;
 const BACKGROUND = '#f8f9fa';
 const SURFACE = '#fff';
 
@@ -196,7 +196,7 @@ const RuleAddBtn = styled.button`
   transition: ${Transition.normal};
 
   &:hover {
-    background: #fef2f2;
+    background: Semantic.status.danger.bg;
   }
 `;
 
@@ -242,7 +242,7 @@ const RuleRemoveBtn = styled.button`
   &:hover {
     border-color: ${PRIMARY};
     color: ${PRIMARY};
-    background: #fef2f2;
+    background: Semantic.status.danger.bg;
   }
 `;
 
@@ -253,14 +253,14 @@ const RuleTypeHint = styled.div`
   border: 1px solid #bae6fd;
   border-radius: ${Radius.md}px;
   font-size: ${FontSize.xs}px;
-  color: #0369a1;
+  color: Semantic.status.info.fg;
   line-height: 1.7;
 `;
 
 const SubmitError = styled.div`
   margin-top: 12px;
   padding: 10px 14px;
-  background: #fef2f2;
+  background: Semantic.status.danger.bg;
   border: 1px solid #fecaca;
   border-radius: ${Radius.md}px;
   color: ${PRIMARY};
@@ -276,7 +276,7 @@ const ActionCell = styled.div`
 
 const ActionLink = styled.span<{ $danger?: boolean }>`
   font-size: ${FontSize.sm}px;
-  color: ${({ $danger }) => ($danger ? '#dc2626' : '#1a56db')};
+  color: ${({ $danger }) => ($danger ? 'Semantic.status.danger.fg' : 'Color.primary')};
   cursor: pointer;
   font-weight: 500;
 
@@ -331,8 +331,8 @@ const MiniBtn = styled.button<{ $danger?: boolean }>`
   padding: 0 12px;
   border: 1px solid ${({ $danger }) => ($danger ? '#fecaca' : Color.border.medium)};
   border-radius: 6px;
-  background: ${({ $danger }) => ($danger ? '#fef2f2' : '#fff')};
-  color: ${({ $danger }) => ($danger ? '#dc2626' : '#1a56db')};
+  background: ${({ $danger }) => ($danger ? 'Semantic.status.danger.bg' : '#fff')};
+  color: ${({ $danger }) => ($danger ? 'Semantic.status.danger.fg' : 'Color.primary')};
   font-size: ${FontSize.xs}px;
   font-weight: 500;
   cursor: pointer;
@@ -355,7 +355,7 @@ const PreviewBox = styled.div`
   border: 1px solid #bae6fd;
   border-radius: 6px;
   font-size: ${FontSize.xs}px;
-  color: #0369a1;
+  color: Semantic.status.info.fg;
   line-height: 1.7;
 `;
 
@@ -369,7 +369,7 @@ const PreviewSample = styled.div`
 
   & > span:first-child {
     font-weight: 600;
-    color: #1a56db;
+    color: Color.primary;
     min-width: 90px;
     white-space: nowrap;
   }
@@ -442,7 +442,7 @@ const PriceInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #1a56db;
+    border-color: Color.primary;
   }
 `;
 
@@ -1295,7 +1295,7 @@ const AdminActivities: React.FC = () => {
                           display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center',
                         }}
                       >
-                        <span style={{ fontWeight: 600, color: '#1a56db', whiteSpace: 'nowrap' }}>{sku.sku_code}</span>
+                        <span style={{ fontWeight: 600, color: 'Color.primary', whiteSpace: 'nowrap' }}>{sku.sku_code}</span>
                         <span style={{ color: '#666', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sku.spu_name}</span>
                         <span style={{ color: '#111', whiteSpace: 'nowrap' }}>${sku.price}</span>
                         <MiniBtn style={{ height: 22, padding: '0 8px' }}>{t('admin.activities.appendSku')}</MiniBtn>
@@ -1345,7 +1345,7 @@ const AdminActivities: React.FC = () => {
                         return (
                           <tr key={s.sku_id}>
                             <LinkTd>{s.spu_id}</LinkTd>
-                            <LinkTd style={{ fontWeight: 600, color: '#1a56db' }}>{s.sku_code}</LinkTd>
+                            <LinkTd style={{ fontWeight: 600, color: 'Color.primary' }}>{s.sku_code}</LinkTd>
                             <LinkTd>{s.spu_name}</LinkTd>
                             <LinkTd>${s.price}</LinkTd>
                             <LinkTd>

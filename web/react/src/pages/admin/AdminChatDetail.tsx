@@ -4,7 +4,7 @@ import styled from 'styled-components'
 // 消息列表采用原生滚动容器，需要支持滚动容器高度测量与切换会话后重新定位
 // 保留 ReactNode 类型以支持 renderMessageItem 返回任意 React 节点
 import type { ReactNode } from 'react'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { Color, Radius, Shadow, Spacing, FontSize, Transition, Semantic, type StatusTone } from '../../theme/tokens'
 import { PrimaryBtn as SendBtn } from '../../components/admin/common/ui'
 import { StatusBadge, type StatusBadgeProps } from '../../components/admin/design-system'
 import HorizontalScroll from '../../components/common/HorizontalScroll'
@@ -38,16 +38,20 @@ const FILTER_TABS: { key: MsgFilter; labelKey: string }[] = [
   { key: 'product_card', labelKey: 'store.chatDetail.filterCard' },
 ]
 
-// 订单状态 → 徽标配色（与后端 Order.status 对齐）
-const ORDER_STATUS_STYLE: Record<string, { bg: string; color: string }> = {
-  pending_payment: { bg: '#fff7ed', color: '#f59e0b' },
-  paid: { bg: '#eff6ff', color: '#2563eb' },
-  shipped: { bg: '#ecfdf5', color: '#059669' },
-  delivered: { bg: '#ecfeff', color: '#0891b2' },
-  completed: { bg: '#ecfdf5', color: '#047857' },
-  cancelled: { bg: '#f3f4f6', color: '#9ca3af' },
-  refunding: { bg: '#fef2f2', color: Color.primary },
+// 订单状态 → 语义 tone（与后端 Order.status 对齐；颜色统一走 Semantic.status[tone] 解析）
+const ORDER_STATUS_TONE: Record<string, StatusTone> = {
+  pending_payment: 'warning',
+  paid: 'info',
+  shipped: 'success',
+  delivered: 'info',
+  completed: 'success',
+  cancelled: 'neutral',
+  refunding: 'danger',
 }
+const ORDER_STATUS_STYLE = (status: string): { bg: string; color: string } => ({
+  bg: Semantic.status[ORDER_STATUS_TONE[status] ?? 'neutral'].bg,
+  color: Semantic.status[ORDER_STATUS_TONE[status] ?? 'neutral'].fg,
+})
 
 // ── Styled Components ──
 
@@ -886,7 +890,9 @@ export default function AdminChatDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { adminUser, isSuperAdmin, isGroupLeader } = useAdminAuth()
+  const { adminUser, hasPermission } = useAdminAuth()
+  const isSuperAdmin = hasPermission('chat.assign')
+  const isGroupLeader = hasPermission('chat.assign')
 
   // Conversations list
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
@@ -1513,7 +1519,7 @@ export default function AdminChatDetail() {
 
               {activeConv.order_info && activeConv.order_info.length > 0 && (() => {
                 const o = activeConv.order_info![0]
-                const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
+                const st = ORDER_STATUS_STYLE(o.status)
                 return (
                   <CtxOrder onClick={() => navigate(`/order/${o.order_no}`)}>
                     <div>
@@ -1671,7 +1677,7 @@ export default function AdminChatDetail() {
           </OrdersHeader>
           <OrdersBody>
             {activeConv!.order_info!.map((o) => {
-              const st = ORDER_STATUS_STYLE[o.status] || { bg: '#f3f4f6', color: '#666' }
+              const st = ORDER_STATUS_STYLE(o.status)
               return (
                 <OrderCard
                   key={o.order_id}

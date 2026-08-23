@@ -345,10 +345,8 @@ const ChatPopupWrapper = styled.div`
 
 export default function AdminProductAudit() {
   const { t, lang } = useTranslation();
-  const { adminUser } = useAdminAuth()
-  const isGroupLeader = adminUser?.is_group_leader ?? false
-  const isSuperuser = adminUser?.is_superuser ?? false
-  const canAudit = isGroupLeader || isSuperuser
+  const { hasPermission } = useAdminAuth()
+  const canAudit = hasPermission('product.audit')
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [spu, setSpu] = useState<SPUDetail | null>(null);

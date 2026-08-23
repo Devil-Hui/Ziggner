@@ -290,9 +290,12 @@ const fmtPrice = (v: string) => Number(v).toLocaleString('en-US', { minimumFract
 export default function AdminProducts() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { isSuperAdmin, isGroupLeader, isGroupMember } = useAdminAuth()
-  const canSubmit = isSuperAdmin || isGroupLeader || isGroupMember
-  const canAudit = isSuperAdmin || isGroupLeader
+  const { hasPermission } = useAdminAuth()
+  const canSubmit = hasPermission('product.create')
+  const canEdit = hasPermission('product.edit')
+  const canAudit = hasPermission('product.audit')
+  const canDelete = hasPermission('product.delete')
+  const canPublish = hasPermission('product.publish')
 
   /* URL State：视图 / 筛选 / 搜索 / 分页（刷新不丢、可分享、Back 有效） */
   const [view, setView] = useUrlState<'card' | 'list'>('view', 'card')
@@ -397,16 +400,16 @@ export default function AdminProducts() {
       key: 'put_off_sale',
       label: t('admin.products.batchOffSale'),
       variant: 'secondary',
-      confirmTitle: '批量下架确认',
-      confirmMessage: `即将下架 ${selected.length} 个商品。\n其中正在售卖的商品将立即停止售卖，请确认影响范围后再继续。`,
+      confirmTitle: t('admin.products.batchOffSaleConfirmTitle'),
+      confirmMessage: t('admin.products.batchOffSaleConfirmMessage', { count: selected.length }),
       onClick: () => handleBatchAction('put_off_sale'),
     },
     {
       key: 'batch_audit',
       label: t('admin.products.batchAudit'),
       variant: 'secondary',
-      confirmTitle: '批量提交审核确认',
-      confirmMessage: `即将提交 ${selected.length} 个商品进入审核队列。`,
+      confirmTitle: t('admin.products.batchAuditConfirmTitle'),
+      confirmMessage: t('admin.products.batchAuditConfirmMessage', { count: selected.length }),
       onClick: () => handleBatchAction('batch_audit'),
     },
   ]
@@ -417,29 +420,29 @@ export default function AdminProducts() {
       <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
       {item.status === 'draft' && (
         <>
-          <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+          {canPublish && <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>}
           {canSubmit && <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>}
         </>
       )}
       {item.status === 'submitted' && canAudit && (
         <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
       )}
-      {item.status === 'approved' && (
+      {item.status === 'approved' && canPublish && (
         <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
       )}
-      {item.status === 'on_sale' && (
+      {item.status === 'on_sale' && canPublish && (
         <>
           <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
           <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
         </>
       )}
-      {item.status === 'suspended' && (
+      {item.status === 'suspended' && canPublish && (
         <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
       )}
-      {item.status === 'off_sale' && (
+      {item.status === 'off_sale' && canPublish && (
         <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
       )}
-      {isSuperAdmin && (
+      {canDelete && (
         <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
       )}
       <ChatLink onClick={() => onChat(item.id)} />
@@ -575,7 +578,8 @@ export default function AdminProducts() {
                   isShelfing={shelfingIds.has(item.id)}
                   canSubmit={canSubmit}
                   canAudit={canAudit}
-                  isSuperAdmin={isSuperAdmin}
+                  canDelete={canDelete}
+                  canPublish={canPublish}
                   onToggleSelect={(id) => {
                     setSelected((prev) =>
                       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
@@ -664,7 +668,8 @@ interface ProductCardProps {
   isShelfing: boolean
   canSubmit: boolean
   canAudit: boolean
-  isSuperAdmin: boolean
+  canDelete: boolean
+  canPublish: boolean
   onToggleSelect: (id: number) => void
   onEdit: (id: number) => void
   onShelf: (id: number, action: string) => void
@@ -680,7 +685,8 @@ const ProductCard = memo(function ProductCard({
   isShelfing,
   canSubmit,
   canAudit,
-  isSuperAdmin,
+  canDelete,
+  canPublish,
   onToggleSelect,
   onEdit,
   onShelf,
@@ -709,29 +715,29 @@ const ProductCard = memo(function ProductCard({
           <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
           {item.status === 'draft' && (
             <>
-              <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+              {canPublish && <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>}
               {canSubmit && <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>}
             </>
           )}
           {item.status === 'submitted' && canAudit && (
             <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
           )}
-          {item.status === 'approved' && (
+          {item.status === 'approved' && canPublish && (
             <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
           )}
-          {item.status === 'on_sale' && (
+          {item.status === 'on_sale' && canPublish && (
             <>
               <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
               <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
             </>
           )}
-          {item.status === 'suspended' && (
+          {item.status === 'suspended' && canPublish && (
             <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
           )}
-          {item.status === 'off_sale' && (
+          {item.status === 'off_sale' && canPublish && (
             <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
           )}
-          {isSuperAdmin && (
+          {canDelete && (
             <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
           )}
           <ChatLink onClick={() => onChat(item.id)} />

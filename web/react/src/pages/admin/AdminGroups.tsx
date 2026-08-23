@@ -280,7 +280,8 @@ const ToggleLabel = styled.span`
 
 export default function AdminGroups() {
   const { t } = useTranslation();
-  const { isSuperAdmin } = useAdminAuth();
+  const { hasPermission } = useAdminAuth();
+  const isSuperAdmin = hasPermission('rbac.manage');
   const groupRepo = useAdminGroupRepository();
   // Group list state
   const [groups, setGroups] = useState<AdminGroupItem[]>([]);

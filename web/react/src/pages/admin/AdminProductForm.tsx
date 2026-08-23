@@ -563,7 +563,7 @@ const UploadSpin = styled.span`
   width: 34px;
   height: 34px;
   border: 3px solid #e5e7eb;
-  border-top-color: #1a56db;
+  border-top-color: ${Color.primary};
   border-radius: 50%;
   animation: up-spin 0.8s linear infinite;
   @keyframes up-spin {
@@ -589,7 +589,7 @@ const UploadTrack = styled.div`
 const UploadFill = styled.div<{ $percent: number }>`
   height: 100%;
   width: ${(p) => p.$percent}%;
-  background: #1a56db;
+  background: ${Color.primary};
   border-radius: 999px;
   transition: width 0.2s ease;
 `
