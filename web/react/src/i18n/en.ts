@@ -70,6 +70,7 @@ const en = {
 
     layout: {
       sidebar: {
+        dashboard: 'Dashboard',
         productOps: 'Product Operations',
         reviewMgmt: 'Review Management',
         opsTools: 'Operations Tools',
@@ -80,6 +81,7 @@ const en = {
       },
       breadcrumb: {
         home: 'Dashboard',
+        dashboard: 'Dashboard',
         products: 'Products',
         categories: 'Categories',
         brands: 'Brands',
@@ -164,6 +166,11 @@ const en = {
       batchFailed: 'Batch operation failed.',
       deleteFailed: 'Delete failed.',
       shelfFailed: 'Shelf operation failed, please retry.',
+      viewCard: 'Card',
+      viewList: 'List',
+      columnBrand: 'Brand',
+      columnSku: 'SKU',
+      columnCreated: 'Created',
     },
 
     productForm: {
@@ -521,6 +528,21 @@ const en = {
       reviewCancel: 'Cancel',
       reviewReject: 'Reject',
       reviewApprove: 'Approve',
+      // Detail drawer
+      detailTitle: 'Application Detail',
+      viewDetail: 'View Detail',
+      sectionApplyInfo: 'Application Info',
+      sectionChange: 'Change',
+      sectionApprovalRecord: 'Approval Record',
+      reviewerLabel: 'Reviewer',
+      statusDraft: 'Draft',
+      statusPending: 'Pending',
+      statusApproved: 'Approved',
+      statusRejected: 'Rejected',
+      impactChildCategoryCount: 'Child Categories',
+      groupMemberCount: 'Group Members',
+      groupCategoryCount: 'Managed Categories',
+      oldLeaderName: 'Previous Leader',
     },
 
     emailTemplates: {
@@ -851,7 +873,7 @@ const en = {
     auditLogs: {
       title: 'Audit Logs',
       subtitle: 'Admin',
-      searchPlaceholder: 'Filter by SPU name...',
+      searchPlaceholder: 'Search by user / resource / action...',
       search: 'Search',
       loadFailed: 'Failed to load audit logs',
       noLogs: 'No audit logs',
@@ -862,6 +884,22 @@ const en = {
       columnChanges: 'Changes',
       columnIp: 'IP Address',
       columnTime: 'Time',
+      allActions: 'All Actions',
+      allResourceTypes: 'All Resources',
+      timeRange: 'Time Range',
+      allTime: 'All Time',
+      last7Days: 'Last 7 days',
+      last30Days: 'Last 30 days',
+      last90Days: 'Last 90 days',
+      detailTitle: 'Action Detail',
+      operationInfo: 'Operation',
+      requestInfo: 'Request',
+      changesTitle: 'Changes (after)',
+      extraDataTitle: 'Extra Data',
+      userId: 'User ID',
+      openDetail: 'View Detail',
+      noChanges: '—',
+      refresh: 'Refresh',
     },
     recycleBin: {
       title: 'Recycle Bin',
@@ -897,6 +935,7 @@ const en = {
       createGroup: '+ New Group',
       loadFailed: 'Failed to load admin groups',
       noGroups: 'No admin groups',
+      searchPlaceholder: 'Search groups by name or slug...',
       nameRequired: 'Group name is required',
       slugRequired: 'Group slug is required',
       createSuccess: 'Group created successfully',

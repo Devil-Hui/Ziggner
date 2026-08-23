@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize, FontWeight, Transition } from '../../theme/tokens'
 import { Select as StatusFilter } from '../../components/admin/common/ui'
-import { PageHeader, SearchFilter, Pagination, Avatar, Skeleton, Empty } from '../../components/admin/common'
+import { PageHeader, SearchFilter, Avatar, Skeleton, Empty } from '../../components/admin/common'
+import { Pagination } from '../../components/admin/design-system'
 import { useTranslation } from '../../i18n'
 import { adminChatAPI, type ConversationSummary, type PaginatedResult } from '../../api/chat'
 import { CONFIG } from '../../config/constants'
@@ -229,7 +230,13 @@ export default function AdminChatList() {
       )}
 
       {totalPages > 1 && (
-        <Pagination current={page} total={total} pageSize={pageSize} onChange={setPage} />
+        <Pagination
+          page={page}
+          pageCount={totalPages}
+          total={total}
+          pageSize={pageSize}
+          onChange={setPage}
+        />
       )}
     </PageWrap>
   )

@@ -6,7 +6,7 @@ import styled from 'styled-components'
 import type { ReactNode } from 'react'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { PrimaryBtn as SendBtn } from '../../components/admin/common/ui'
-import { StatusBadge } from '../../components/admin/common'
+import { StatusBadge, type StatusBadgeProps } from '../../components/admin/design-system'
 import HorizontalScroll from '../../components/common/HorizontalScroll'
 import { Icon } from '../../components/admin/common/Icon'
 import { useTranslation } from '../../i18n'
@@ -868,9 +868,10 @@ function formatTime(ts: string, t: (key: string) => string): string {
   return `${date.getMonth() + 1}/${date.getDate()} ${time}`
 }
 
-function statusBadgeType(status: string) {
-  if (status === 'open') return 'submitted'
-  return 'off_sale'
+function statusTone(status: string): NonNullable<StatusBadgeProps['tone']> {
+  if (status === 'open') return 'warning'
+  if (status === 'replied') return 'success'
+  return 'neutral'
 }
 
 function statusLabel(status: string, t: (key: string) => string) {
@@ -1434,10 +1435,9 @@ export default function AdminChatDetail() {
                       🙋 {conv.handled_by_name}
                     </span>
                   )}
-                  <StatusBadge
-                    status={statusBadgeType(conv.status) as 'submitted' | 'approved' | 'off_sale'}
-                    label={statusLabel(conv.status, t)}
-                  />
+                  <StatusBadge tone={statusTone(conv.status)}>
+                    {statusLabel(conv.status, t)}
+                  </StatusBadge>
                 </div>
               </ConvTop>
               <ConvSubject>{conv.subject || `${t('store.chatDetail.support')} #${conv.id}`}</ConvSubject>
@@ -1468,10 +1468,9 @@ export default function AdminChatDetail() {
                     🛍️ {activeConv.spu_info.name}
                   </ProductChip>
                 )}
-                <StatusBadge
-                  status={statusBadgeType(activeConv.status) as 'submitted' | 'approved' | 'off_sale'}
-                  label={statusLabel(activeConv.status, t)}
-                />
+                <StatusBadge tone={statusTone(activeConv.status)}>
+                  {statusLabel(activeConv.status, t)}
+                </StatusBadge>
               </DetailTitle>
               <DetailActions>
                 {activeConv.status === 'open' && (

@@ -10,6 +10,8 @@ import { orderAPI, type OrderSummary } from '../../api/order'
 import { useAllowedMenuPaths } from '../../components/admin/ProtectedRoute'
 import { useIsMobile } from '../../hooks/useBreakpoint'
 import { Icon } from '../../components/admin/common/Icon'
+import { TaskCenter } from '../../components/admin/TaskCenter'
+import { CommandPalette, type PaletteSection } from '../../components/admin/CommandPalette'
 import { ToastProvider, toast } from '../../components/admin/common/Toast'
 import { Badge, Avatar } from '../../components/admin/common'
 
@@ -509,6 +511,12 @@ function useMenuItems() {
 
   const allItems: { section: string; items: { to: string; label: string; icon: string }[] }[] = [
     {
+      section: t('admin.layout.sidebar.dashboard'),
+      items: [
+        { to: '/admin/dashboard', label: t('admin.layout.sidebar.dashboard'), icon: 'grid' },
+      ],
+    },
+    {
       section: t('admin.layout.sidebar.productOps'),
       items: [
         { to: '/admin/products', label: t('admin.layout.menu.products'), icon: 'package' },
@@ -559,6 +567,7 @@ function useMenuItems() {
 /* ── 面包屑映射 ── */
 const BREADCRUMB_MAP: Record<string, string> = {
   '/admin': 'admin.layout.breadcrumb.home',
+  '/admin/dashboard': 'admin.layout.breadcrumb.dashboard',
   '/admin/products': 'admin.layout.breadcrumb.products',
   '/admin/categories': 'admin.layout.breadcrumb.categories',
   '/admin/brands': 'admin.layout.breadcrumb.brands',
@@ -667,6 +676,7 @@ export default function AdminLayout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [bellOpen, setBellOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   const [notifications, setNotifications] = useState<NotificationRow[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const notifInterval = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
@@ -760,6 +770,30 @@ export default function AdminLayout() {
   }, [searchText])
 
   const menuItems = useMenuItems()
+
+  // 命令面板（⌘K）：导航 + 常用操作（不抢现有头部搜索的 Ctrl+K）
+  const paletteSections: PaletteSection[] = [
+    {
+      title: '导航',
+      items: menuItems.flatMap(g => g.items.map(m => ({
+        id: m.to,
+        label: m.label,
+        icon: '→',
+        keywords: m.label,
+        onSelect: () => { setPaletteOpen(false); navigate(m.to) },
+      }))),
+    },
+    {
+      title: '操作',
+      items: [
+        { id: 'act-product', label: '新建商品', icon: '🛍️', keywords: 'create product', onSelect: () => { setPaletteOpen(false); navigate('/admin/products/create') } },
+        { id: 'act-coupon', label: '创建优惠券', icon: '🎟️', keywords: 'coupon create', onSelect: () => { setPaletteOpen(false); navigate('/admin/coupons') } },
+        { id: 'act-order', label: '查看订单', icon: '📦', keywords: 'orders', onSelect: () => { setPaletteOpen(false); navigate('/admin/orders') } },
+        { id: 'act-chat', label: '客服工作台', icon: '💬', keywords: 'chat support', onSelect: () => { setPaletteOpen(false); navigate('/admin/chat') } },
+        { id: 'act-recycle', label: '回收站', icon: '🗑️', keywords: 'trash recycle', onSelect: () => { setPaletteOpen(false); navigate('/admin/recycle-bin') } },
+      ],
+    },
+  ]
   const actionBar = useActionBar()
 
   const toggleSidebar = () => {
@@ -898,6 +932,18 @@ export default function AdminLayout() {
 
               <LanguageSwitch position="header" />
 
+              {/* 全局任务中心（↻ 任务 + 进度） */}
+              <TaskCenter />
+
+              {/* 命令面板入口（⌘K） */}
+              <button
+                onClick={() => setPaletteOpen(true)}
+                aria-label="命令面板"
+                style={{ height: 32, padding: '0 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, cursor: 'pointer' }}
+              >
+                ⌘K
+              </button>
+
               {/* 通知铃（聚合未读） */}
               <BellWrap>
                 <BellBtn onClick={() => setBellOpen(v => !v)} aria-label="通知">
@@ -982,6 +1028,8 @@ export default function AdminLayout() {
             <Outlet />
           </Content>
         </MainArea>
+
+        <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} sections={paletteSections} />
       </Layout>
     </ToastProvider>
   )

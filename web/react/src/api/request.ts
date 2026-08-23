@@ -23,7 +23,12 @@ const api = axios.create({
 // 显式兜底：axios 在相对 baseURL 下对 withXSRFToken 的 isURLSameOrigin 判定
 // 在某些版本/场景下可能不附 X-CSRFToken 头，导致登录/写操作 403 CSRF token missing。
 // 这里在请求发出前从 document.cookie 直接读取 csrftoken 并强制写入头，确保一定携带。
+// 同时为每个请求注入 X-Request-ID（前端 trace 用，后端日志可据此关联）。
 api.interceptors.request.use((config) => {
+  config.headers.set(
+    'X-Request-ID',
+    `req_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`,
+  )
   const method = (config.method || 'get').toLowerCase()
   if (method === 'get' || method === 'head' || method === 'options') return config
   const token = readCSRFCookie()

@@ -26,25 +26,23 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install k6
-        run: |
-          # k6 官方安装（压测脚本在仓库 test 目录或 backend/scripts/loadtest）
-          curl -sL https://github.com/grafana/k6/releases/download/v0.49.0/k6-v0.49.0-linux-amd64.tar.gz | tar xz
-          sudo mv k6-*/k6 /usr/local/bin/
-          k6 version
+      - name: Install locust
+        run: pip install locust
       - name: Run load test (public shop)
         continue-on-error: true
         env:
           E2E_BASE_URL: https://shop.ziggner.com
         run: |
-          k6 run --summary-export=k6-summary.json backend/scripts/loadtest/loadtest.js 2>&1 | tail -40 || true
+          cd backend && locust -f scripts/loadtest/locustfile.py \
+            --host "https://shop.ziggner.com" -u 50 -r 10 -t 60s \
+            --headless --csv=ziggner-perf 2>&1 | tail -40 || true
       - name: Enforce perf baseline (WARNING → human review)
         id: perf
         env:
           PERF_P95_MS: "500"
           PERF_MIN_TPS: "100"
         run: |
-          python backend/scripts/perf_gate.py --k6-json k6-summary.json --p95-ms 500 --min-tps 100 || {
+          python backend/scripts/perf_gate.py --locust-csv backend/ziggner-perf_stats.csv --p95-ms 500 --min-tps 100 || {
             echo "PERF_FAILED=1" >> "$GITHUB_ENV"
             exit 0   # 不阻断 CI；改由评论强制人工 Review
           }

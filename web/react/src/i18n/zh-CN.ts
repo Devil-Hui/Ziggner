@@ -69,6 +69,7 @@ const zhCN = {
 
     layout: {
       sidebar: {
+        dashboard: '工作台',
         productOps: '商品运营',
         reviewMgmt: '审核管理',
         opsTools: '运营工具',
@@ -79,6 +80,7 @@ const zhCN = {
       },
       breadcrumb: {
         home: '控制台',
+        dashboard: '工作台',
         products: '商品管理',
         categories: '分类管理',
         brands: '品牌管理',
@@ -162,6 +164,11 @@ const zhCN = {
       batchFailed: '批量操作失败。',
       deleteFailed: '删除失败。',
       shelfFailed: '上下架操作失败，请重试。',
+      viewCard: '卡片',
+      viewList: '列表',
+      columnBrand: '品牌',
+      columnSku: 'SKU',
+      columnCreated: '创建时间',
     },
 
     productForm: {
@@ -519,6 +526,21 @@ const zhCN = {
       reviewCancel: '取消',
       reviewReject: '驳回',
       reviewApprove: '审核通过',
+      // Detail drawer
+      detailTitle: '申请详情',
+      viewDetail: '查看详情',
+      sectionApplyInfo: '申请信息',
+      sectionChange: '变更内容',
+      sectionApprovalRecord: '审批记录',
+      reviewerLabel: '审核人',
+      statusDraft: '草稿',
+      statusPending: '待审核',
+      statusApproved: '已通过',
+      statusRejected: '已驳回',
+      impactChildCategoryCount: '子分类数',
+      groupMemberCount: '分组成员数',
+      groupCategoryCount: '管辖分类数',
+      oldLeaderName: '原组长',
     },
 
     emailTemplates: {
@@ -851,7 +873,7 @@ const zhCN = {
     auditLogs: {
       title: '审计日志',
       subtitle: '管理后台',
-      searchPlaceholder: '按 SPU 名称筛选...',
+      searchPlaceholder: '按用户/资源/操作搜索...',
       search: '搜索',
       loadFailed: '加载审计日志失败',
       noLogs: '暂无审计日志',
@@ -862,6 +884,22 @@ const zhCN = {
       columnChanges: '变更内容',
       columnIp: 'IP 地址',
       columnTime: '时间',
+      allActions: '全部操作',
+      allResourceTypes: '全部资源',
+      timeRange: '时间范围',
+      allTime: '全部时间',
+      last7Days: '最近 7 天',
+      last30Days: '最近 30 天',
+      last90Days: '最近 90 天',
+      detailTitle: '操作详情',
+      operationInfo: '操作信息',
+      requestInfo: '请求信息',
+      changesTitle: '变更内容（操作后）',
+      extraDataTitle: '附加数据',
+      userId: '用户ID',
+      openDetail: '查看详情',
+      noChanges: '—',
+      refresh: '刷新',
     },
     recycleBin: {
       title: '回收站',
@@ -897,6 +935,7 @@ const zhCN = {
       createGroup: '+ 新建分组',
       loadFailed: '加载管理员分组失败',
       noGroups: '暂无管理员分组',
+      searchPlaceholder: '搜索分组名称或标识...',
       nameRequired: '分组名称不能为空',
       slugRequired: '分组标识不能为空',
       createSuccess: '分组创建成功',

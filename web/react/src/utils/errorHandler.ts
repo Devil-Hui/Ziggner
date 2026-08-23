@@ -31,27 +31,51 @@ export const AUTH_ERROR_CODES = [
   'REAUTH_REQUIRED',
 ]
 
+/**
+ * HTTP 状态 → 友好文案（P0-3 统一状态语义）
+ * 仅在后端未返回 message/detail 时作为兜底；后端有信息时优先用后端文案。
+ */
+export const HTTP_STATUS_MESSAGES: Record<number, string> = {
+  400: '请求参数有误，请检查后重试',
+  401: '登录状态已失效，请重新登录',
+  403: '没有执行此操作的权限',
+  404: '请求的资源不存在或已被删除',
+  405: '请求方法不被支持',
+  409: '数据冲突，请刷新后重试',
+  422: '表单校验未通过，请检查填写内容',
+  429: '请求过于频繁，请稍后再试',
+  500: '系统繁忙，请稍后重试',
+  502: '网关异常，请稍后重试',
+  503: '服务暂不可用，请稍后重试',
+}
+
+/** 取某 HTTP 状态对应的友好文案（无映射返回 undefined） */
+export function friendlyStatusMessage(status: number): string | undefined {
+  return HTTP_STATUS_MESSAGES[status]
+}
+
 export type ToastType = 'error' | 'warning' | 'info' | 'success'
 export type ToastFn = (message: string, type?: ToastType) => void
 
-/** 从 AxiosError 中提取统一错误结构；兼容后端未返回标准信封的情况（回退到 HTTP 状态）。 */
+/** 从 AxiosError 中提取统一错误结构；兼容后端未返回标准信封的情况（回退到 HTTP 状态语义文案）。 */
 export function extractAppError(error: AxiosError): AppError {
   const res = error.response
   const data = (res?.data ?? {}) as Record<string, unknown>
+  const status = res?.status ?? 0
   const message =
     typeof data?.message === 'string' ? data.message
     : typeof data?.detail === 'string' ? data.detail
-    : error.message || 'Request failed'
+    : friendlyStatusMessage(status) || error.message || 'Request failed'
   const detail = typeof data?.detail === 'string' ? data.detail : message
 
   return {
     error_code:
-      typeof data?.error_code === 'string' ? data.error_code : `HTTP_${res?.status ?? 0}`,
+      typeof data?.error_code === 'string' ? data.error_code : `HTTP_${status}`,
     message,
     detail,
     category: typeof data?.category === 'string' ? data.category : undefined,
     request_id: typeof data?.request_id === 'string' ? data.request_id : undefined,
-    status: res?.status ?? 0,
+    status,
     raw: error,
   }
 }

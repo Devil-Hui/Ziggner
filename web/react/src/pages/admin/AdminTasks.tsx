@@ -3,10 +3,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { adminAPI } from '../../api/admin'
-import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
-import StatusBadge from '../../components/admin/common/StatusBadge'
 import Progress from '../../components/admin/common/Progress'
+import { Button, SmartDataTable, StatusBadge } from '../../components/admin/design-system'
+import type { SmartColumn, StatusBadgeProps } from '../../components/admin/design-system'
 import { useTranslation } from '../../i18n'
 import { formatDateTime } from '../../utils/helpers'
 
@@ -75,6 +75,22 @@ interface TaskItem {
 }
 
 // ── Component ──
+
+/** 任务状态 → StatusBadge tone（业务只声明 tone，颜色由 design-system 解析） */
+function taskStateMeta(state: TaskItem['state']): { tone: StatusBadgeProps['tone']; label: string } {
+  switch (state) {
+    case 'SUCCESS':
+      return { tone: 'success', label: '已完成' }
+    case 'FAILURE':
+      return { tone: 'danger', label: '失败' }
+    case 'PENDING':
+      return { tone: 'info', label: '等待中' }
+    case 'PROCESSING':
+      return { tone: 'info', label: '处理中' }
+    default:
+      return { tone: 'neutral', label: String(state) }
+  }
+}
 
 export default function AdminTasks() {
   const { t } = useTranslation()
@@ -158,7 +174,7 @@ export default function AdminTasks() {
     }
   }, [hasInProgress, fetchTasks])
 
-  const columns: Column<TaskItem>[] = [
+  const columns: SmartColumn<TaskItem>[] = [
     {
       key: 'task_id',
       title: t('admin.asyncTasks.columnTaskId'),
@@ -179,7 +195,10 @@ export default function AdminTasks() {
       key: 'state',
       title: t('admin.asyncTasks.columnStatus'),
       width: '100px',
-      render: (val: unknown) => <StatusBadge status={val as TaskItem['state']} />,
+      render: (val: unknown) => {
+        const meta = taskStateMeta(val as TaskItem['state'])
+        return <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
+      },
     },
     {
       key: 'progress',
@@ -212,32 +231,19 @@ export default function AdminTasks() {
         title={t('admin.asyncTasks.title')}
         breadcrumb={[{ label: t('admin.asyncTasks.subtitle') }, { label: t('admin.asyncTasks.title') }]}
         actions={
-          <button
-            onClick={fetchTasks}
-            style={{
-              height: 32,
-              padding: '0 14px',
-              fontSize: 13,
-              border: '1px solid ${Color.border.medium}',
-              background: '#fff',
-              color: '#333',
-              borderRadius: 2,
-              cursor: 'pointer',
-            }}
-          >
+          <Button variant="secondary" onClick={fetchTasks}>
             {t('admin.asyncTasks.refresh')}
-          </button>
+          </Button>
         }
       />
 
-      <DataTable<TaskItem>
+      <SmartDataTable<TaskItem>
         columns={columns}
         data={tasks}
         loading={loading}
         error={error}
         onRetry={fetchTasks}
         emptyTitle={t('admin.asyncTasks.noTasks')}
-        emptyIcon="⏳"
         rowKey="task_id"
       />
     </PageContainer>

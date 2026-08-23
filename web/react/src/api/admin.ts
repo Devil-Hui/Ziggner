@@ -310,12 +310,14 @@ export interface ScopePreviewResult {
 
 export interface AuditLogItem {
   id: number;
-  user: string;
+  user: string | null;
+  user_id: number | null;
   action: string;
   resource_type: string;
   resource_id: number;
   changes: Record<string, unknown>;
-  ip_address: string;
+  extra_data?: Record<string, unknown>;
+  ip_address: string | null;
   created_at: string;
 }
 
@@ -561,8 +563,17 @@ export const adminAPI = {
     get<Record<string, unknown>>('/goods/stats'),
 
   // Audit
-  getAuditLogs: (params?: { page?: number; spu_id?: number }) =>
-    get<PaginatedData<AuditLogItem>>('/goods/audit_log', params),
+  getAuditLogs: (params?: {
+    page?: number;
+    page_size?: number;
+    action?: string;
+    resource_type?: string;
+    user_id?: number;
+    resource_id?: number;
+    date_from?: string;
+    date_to?: string;
+    q?: string;
+  }) => get<PaginatedData<AuditLogItem>>('/goods/audit_log', params),
   getSPUAuditLog: (spuId: number) =>
     get<AuditLogItem[]>(`/goods/audit_log/${spuId}`),
 

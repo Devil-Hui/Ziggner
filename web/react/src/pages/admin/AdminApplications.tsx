@@ -4,13 +4,13 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
-import DataTable from '../../components/admin/common/DataTable';
-import type { Column } from '../../components/admin/common/DataTable';
-import StatusBadge from '../../components/admin/common/StatusBadge';
+import { SmartDataTable, StatusBadge, Button, DetailDrawer, ApprovalTimeline } from '../../components/admin/design-system';
+import type { SmartColumn, ApprovalStep } from '../../components/admin/design-system';
 import { adminAPI } from '../../api/admin';
 import { useTranslation } from '../../i18n';
 import { formatDateTime, formatDate } from '../../utils/helpers';
 import { useAdminAuth } from '../../store/AdminAuthContext';
+import { approvalTone, type ApprovalStatus } from '../../theme/business';
 
 interface Application {
   id: number;
@@ -361,6 +361,44 @@ export default function AdminApplications() {
   const [reviewTarget, setReviewTarget] = useState<Application | null>(null);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
+
+  // ── Detail drawer（申请信息/变更/影响/审批记录）──
+  const [detailTarget, setDetailTarget] = useState<Application | null>(null);
+
+  // 状态文案与 tone（业务只声明状态，颜色由 Semantic 解析）
+  const statusLabel = (s: string): string => {
+    const m: Record<string, string> = {
+      draft: t('admin.applications.statusDraft'),
+      pending: t('admin.applications.statusPending'),
+      approved: t('admin.applications.statusApproved'),
+      rejected: t('admin.applications.statusRejected'),
+    };
+    return m[s] ?? s;
+  };
+
+  // 审批记录 → ApprovalTimeline steps（提交 → 待处理/通过/驳回）
+  const buildApprovalSteps = (app: Application): ApprovalStep[] => {
+    const steps: ApprovalStep[] = [
+      {
+        id: 'submit',
+        actor: app.applicant_name || '-',
+        action: 'submit',
+        at: formatDateTime(app.created_at),
+      },
+    ];
+    if (app.status === 'pending') {
+      steps.push({ id: 'pending', actor: t('admin.applications.reviewerLabel'), action: 'pending', isCurrent: true });
+    } else {
+      steps.push({
+        id: 'review',
+        actor: t('admin.applications.reviewerLabel'),
+        action: app.status === 'approved' ? 'approve' : 'reject',
+        at: app.reviewed_at ? formatDateTime(app.reviewed_at) : undefined,
+        note: app.review_comment || undefined,
+      });
+    }
+    return steps;
+  };
 
   // ── 优惠券草稿：编辑 / 提交审核 ──
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -928,10 +966,10 @@ export default function AdminApplications() {
   };
 
   // ── Render review detail ──
-  const renderReviewDetail = () => {
-    if (!reviewTarget) return null;
-    const detail = reviewTarget.detail || {};
-    switch (reviewTarget.type) {
+  const renderReviewDetail = (app: Application) => {
+    if (!app) return null;
+    const detail = app.detail || {};
+    switch (app.type) {
       case 'category_rename':
         return (
           <ReviewDetailSection>
@@ -990,18 +1028,19 @@ export default function AdminApplications() {
   };
 
   // ── Table columns ──
-  const columns: Column<Application>[] = [
+  const columns: SmartColumn<Application>[] = [
     {
       key: 'type',
       title: t('admin.applications.columnType'),
+      sortable: true,
       width: '120px',
-      render: (val) => typeLabels[String(val)] || String(val),
+      render: (val: unknown) => typeLabels[String(val)] || String(val),
     },
     {
       key: 'detail',
       title: t('admin.applications.columnContent'),
-      render: (val, record) => {
-        const detail = val as Record<string, any> || {};
+      render: (val: unknown, record: Application) => {
+        const detail = (val as Record<string, any>) || {};
         switch (record.type) {
           case 'category_rename': return `${detail.category_name} → ${detail.new_name}`;
           case 'brand_rename': return `${detail.brand_name} → ${detail.new_name}`;
@@ -1014,57 +1053,67 @@ export default function AdminApplications() {
     {
       key: 'status',
       title: t('admin.applications.columnStatus'),
-      width: '100px',
-      render: (val) => <StatusBadge status={String(val) as any} />,
+      width: '110px',
+      render: (val: unknown) => {
+        const s = String(val ?? '')
+        return <StatusBadge tone={approvalTone(s as ApprovalStatus)} dot>{statusLabel(s)}</StatusBadge>
+      },
     },
     {
       key: 'applicant_name',
       title: t('admin.applications.columnApplicant'),
+      sortable: true,
       width: '100px',
     },
     {
       key: 'created_at',
       title: t('admin.applications.columnSubmittedAt'),
+      sortable: true,
       width: '160px',
-      render: (val) => formatDateTime(val as string),
+      render: (val: unknown) => formatDateTime(val as string),
     },
     {
       key: 'actions',
       title: t('admin.applications.columnActions'),
-      width: '120px',
-      render: (_, record) => {
-        const actions: ReactNode[] = [];
+      width: '200px',
+      hideable: false,
+      render: (_: unknown, record: Application) => {
+        const actions: ReactNode[] = [
+          <Button key="detail" size="sm" variant="ghost" onClick={() => setDetailTarget(record)}>
+            {t('admin.applications.viewDetail')}
+          </Button>,
+        ];
         if (activeTab === 'pending' && record.status === 'pending') {
           actions.push(
-            <ActionPrimary
+            <Button
               key="review"
+              size="sm"
+              variant="primary"
               onClick={() => { setReviewTarget(record); setReviewComment(''); }}
             >
               {t('admin.applications.review')}
-            </ActionPrimary>
+            </Button>
           );
         }
         // 我的申请：优惠券草稿/驳回态 → 编辑 + 提交审核
         if (activeTab === 'my' && record.type === 'coupon' && (record.status === 'draft' || record.status === 'rejected')) {
           actions.push(
-            <ActionSecondary
-              key="edit"
-              onClick={() => openEditForm(record)}
-            >
+            <Button key="edit" size="sm" variant="secondary" onClick={() => openEditForm(record)}>
               {t('common.edit')}
-            </ActionSecondary>
+            </Button>
           );
           actions.push(
-            <ActionPrimary
+            <Button
               key="submit"
+              size="sm"
+              variant="primary"
               disabled={submittingId === record.id}
               onClick={() => handleSubmitForReview(record)}
             >
               {submittingId === record.id ? t('admin.applications.formSubmitting') : t('admin.applications.submitForReview')}
-            </ActionPrimary>
+            </Button>
           );
         }
-        if (actions.length === 0) return null;
         return <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{actions}</div>;
       },
     },
@@ -1103,15 +1152,16 @@ export default function AdminApplications() {
         </Tab>
       </Tabs>
 
-      <DataTable
+      <SmartDataTable<Application>
         columns={columns}
-        data={applications}
+        dataSource={applications}
+        rowKey="id"
         loading={loading}
         error={error}
         onRetry={fetchApplications}
+        onRowClick={(r) => setDetailTarget(r)}
         emptyTitle={t('admin.applications.noApplications')}
-        emptyIcon="applications"
-        rowKey="id"
+        stickyHeader
       />
 
       {/* ── Submit Form Overlay ── */}
@@ -1142,7 +1192,7 @@ export default function AdminApplications() {
               <ReviewDetailLabel>{t('admin.applications.reviewApplicant')}</ReviewDetailLabel>
               <ReviewDetailValue>{reviewTarget.applicant_name}</ReviewDetailValue>
             </p>
-            {renderReviewDetail()}
+            {renderReviewDetail(reviewTarget)}
             <FormGroup>
               <Label>{t('admin.applications.reviewComment')}</Label>
               <Textarea
@@ -1167,6 +1217,48 @@ export default function AdminApplications() {
           </ReviewDialog>
         </ReviewOverlay>
       )}
+
+      {/* ── Detail Drawer（申请信息 → 变更前/后 → 影响范围 → 审批记录）── */}
+      <DetailDrawer
+        open={!!detailTarget}
+        size="lg"
+        title={detailTarget ? `${t('admin.applications.detailTitle')} #${detailTarget.id}` : ''}
+        onClose={() => setDetailTarget(null)}
+      >
+        {detailTarget && (
+          <>
+            <FormSectionTitle>{t('admin.applications.sectionApplyInfo')}</FormSectionTitle>
+            <ReviewDetailSection>
+              <div>
+                <ReviewDetailLabel>{t('admin.applications.columnType')}:</ReviewDetailLabel>
+                <ReviewDetailValue>{typeLabels[detailTarget.type] || detailTarget.type}</ReviewDetailValue>
+              </div>
+              <div>
+                <ReviewDetailLabel>{t('admin.applications.columnApplicant')}:</ReviewDetailLabel>
+                <ReviewDetailValue>{detailTarget.applicant_name}</ReviewDetailValue>
+              </div>
+              <div>
+                <ReviewDetailLabel>{t('admin.applications.columnSubmittedAt')}:</ReviewDetailLabel>
+                <ReviewDetailValue>{formatDateTime(detailTarget.created_at)}</ReviewDetailValue>
+              </div>
+              <div>
+                <ReviewDetailLabel>{t('admin.applications.columnStatus')}:</ReviewDetailLabel>
+                <ReviewDetailValue>
+                  <StatusBadge tone={approvalTone(detailTarget.status as ApprovalStatus)} dot>
+                    {statusLabel(detailTarget.status)}
+                  </StatusBadge>
+                </ReviewDetailValue>
+              </div>
+            </ReviewDetailSection>
+
+            <FormSectionTitle>{t('admin.applications.sectionChange')}</FormSectionTitle>
+            {renderReviewDetail(detailTarget)}
+
+            <FormSectionTitle>{t('admin.applications.sectionApprovalRecord')}</FormSectionTitle>
+            <ApprovalTimeline steps={buildApprovalSteps(detailTarget)} />
+          </>
+        )}
+      </DetailDrawer>
     </div>
   );
 }

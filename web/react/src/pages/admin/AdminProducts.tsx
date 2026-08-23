@@ -2,16 +2,26 @@
 import { useState, useEffect, useCallback, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Color, Radius, Spacing, FontSize, FontWeight, Transition } from '../../theme/tokens'
+import { Color, Radius, FontWeight, Transition } from '../../theme/tokens'
 import { Select, Input as SearchInput } from '../../components/admin/common/ui'
-import { Skeleton, Empty, ErrorState } from '../../components/admin/common'
+import { Skeleton, Empty, RefreshButton } from '../../components/admin/common'
 import { adminAPI } from '../../api/admin'
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation } from '../../i18n'
 import ChatLink from '../../components/admin/ChatLink'
 import ChatFloatWidget from '../../components/admin/common/ChatFloatWidget'
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
-import { RefreshButton } from '../../components/admin/common'
+import {
+  SmartDataTable,
+  StatusBadge,
+  Button,
+  Pagination,
+  BulkActionBar,
+  ConfirmDialog,
+} from '../../components/admin/design-system'
+import type { SmartColumn, BulkAction } from '../../components/admin/design-system'
+import { productTone, type ProductStatus } from '../../theme/business'
+import { useUrlState } from '../../hooks/useUrlState'
+import { formatDateTime } from '../../utils/helpers'
 
 /* ── 布局 ── */
 const PageHeader = styled.div`
@@ -33,6 +43,29 @@ const Actions = styled.div`
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+`
+
+/* 视图切换（卡片 / 列表） */
+const ViewToggle = styled.div`
+  display: inline-flex;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.sm}px;
+  overflow: hidden;
+`
+
+const ViewBtn = styled.button<{ $active: boolean }>`
+  padding: 6px 14px;
+  border: none;
+  background: ${({ $active }) => ($active ? Color.primary : Color.bg.card)};
+  color: ${({ $active }) => ($active ? '#fff' : Color.text.secondary)};
+  font-size: 0.813rem;
+  cursor: pointer;
+  transition: all ${Transition.fast};
+
+  &:hover:not([data-active]) {
+    background: ${({ $active }) => ($active ? Color.primary : Color.primaryLight)};
+    color: ${({ $active }) => ($active ? '#fff' : Color.primary)};
+  }
 `
 
 const FilterBar = styled.div`
@@ -139,37 +172,6 @@ const CardBadges = styled.div`
   flex-wrap: wrap;
 `
 
-/* 状态徽章：圆角 12px、高 22px、字 12px */
-const StatusPill = styled.span<{ $status: string }>`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: ${Radius.lg}px;
-  font-size: 12px;
-  font-weight: ${FontWeight.medium};
-  background: ${({ $status }) => {
-    switch ($status) {
-      case 'on_sale': return '#ecfdf5'
-      case 'submitted': return '#fffbeb'
-      case 'approved': return '#eff6ff'
-      case 'rejected': return '#fef2f2'
-      case 'suspended': return '#fdf2f8'
-      default: return '#f3f4f6'
-    }
-  }};
-  color: ${({ $status }) => {
-    switch ($status) {
-      case 'on_sale': return '#047857'
-      case 'submitted': return '#b45309'
-      case 'approved': return '#1e40af'
-      case 'rejected': return '#b91c1c'
-      case 'suspended': return '#be185d'
-      default: return '#4b5563'
-    }
-  }};
-`
-
 const CardRight = styled.div`
   display: flex;
   flex-direction: column;
@@ -222,32 +224,49 @@ const Checkbox = styled.input.attrs({ type: 'checkbox' })`
   flex-shrink: 0;
 `
 
-const Pagination = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-`
-
-const PageBtn = styled.button<{ $active?: boolean }>`
-  padding: 6px 12px;
-  border: 1px solid ${({ $active }) => ($active ? Color.primary : Color.border.medium)};
-  background: ${({ $active }) => ($active ? Color.primary : '#fff')};
-  color: ${({ $active }) => ($active ? '#fff' : Color.text.secondary)};
-  border-radius: ${Radius.sm}px;
-  font-size: 0.813rem;
-  cursor: pointer;
-  transition: all ${Transition.fast};
-
-  &:hover { border-color: ${Color.primary}; color: ${({ $active }) => ($active ? '#fff' : Color.primary)}; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
-`
-
 const ErrorLine = styled.div`
   color: ${Color.status.error};
   margin-bottom: 12px;
   font-size: 0.875rem;
+`
+
+/* 列表视图：商品名单元格（缩略图 + 名称） */
+const ProductCell = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+`
+
+const CellThumb = styled.div`
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  border: 1px solid ${Color.border.light};
+  overflow: hidden;
+  background: #f7f7f8;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+  span { font-size: 16px; }
+`
+
+const CellName = styled.div`
+  font-size: 13px;
+  font-weight: 500;
+  color: ${Color.text.heading};
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`
+
+const RowActions = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 `
 
 // ── Component ──
@@ -265,18 +284,29 @@ interface SPUItem {
   created_at: string
 }
 
+const PAGE_SIZE = 20
+const fmtPrice = (v: string) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })
+
 export default function AdminProducts() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { adminUser, isSuperAdmin, isGroupLeader, isGroupMember } = useAdminAuth()
+  const { isSuperAdmin, isGroupLeader, isGroupMember } = useAdminAuth()
   const canSubmit = isSuperAdmin || isGroupLeader || isGroupMember
   const canAudit = isSuperAdmin || isGroupLeader
+
+  /* URL State：视图 / 筛选 / 搜索 / 分页（刷新不丢、可分享、Back 有效） */
+  const [view, setView] = useUrlState<'card' | 'list'>('view', 'card')
+  const [status, setStatus] = useUrlState<string>('status', '')
+  const [search, setSearch] = useUrlState<string>('q', '')
+  const [page, setPage] = useUrlState<string>('page', '1')
+  const pageNum = Math.max(1, Number(page) || 1)
+
+  const [searchInput, setSearchInput] = useState(search)
+  useEffect(() => setSearchInput(search), [search])
+
   const [items, setItems] = useState<SPUItem[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState('')
-  const [search, setSearch] = useState('')
-  const [selected, setSelected] = useState<Set<number>>(new Set())
+  const [selected, setSelected] = useState<(string | number)[]>([])
   const [loading, setLoading] = useState(true)
   const [shelfingIds, setShelfingIds] = useState<Set<number>>(new Set())
   const [error, setError] = useState('')
@@ -289,7 +319,7 @@ export default function AdminProducts() {
     setLoading(true)
     setError('')
     try {
-      const params: Record<string, unknown> = { page, page_size: 20 }
+      const params: Record<string, unknown> = { page: pageNum, page_size: PAGE_SIZE }
       if (status) params.status = status
       if (search) params.q = search
       const response = await adminAPI.getSPUs(params)
@@ -299,7 +329,7 @@ export default function AdminProducts() {
       setError(t('admin.products.loadFailed'))
     }
     setLoading(false)
-  }, [page, status, search, t])
+  }, [pageNum, status, search, t])
 
   const doShelfAction = useCallback(async (id: number, action: string) => {
     setShelfingIds(prev => new Set(prev).add(id))
@@ -317,23 +347,6 @@ export default function AdminProducts() {
     fetchProducts()
   }, [fetchProducts])
 
-  const toggleSelect = useCallback((id: number) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const toggleAll = useCallback(() => {
-    setSelected((prev) =>
-      prev.size === items.length && items.length > 0
-        ? new Set()
-        : new Set(items.map((i) => i.id)),
-    )
-  }, [items])
-
   const onEdit = useCallback((id: number) => navigate(`/admin/products/${id}`), [navigate])
   const onReview = useCallback((id: number) => navigate(`/admin/products/${id}/audit`), [navigate])
   const onChat = useCallback((id: number) => navigate(`/admin/chat?product_id=${id}`), [navigate])
@@ -350,16 +363,17 @@ export default function AdminProducts() {
     adminAPI.submitAudit(id).then(fetchProducts).catch(() => setError(t('admin.products.submitFailed')))
   }, [fetchProducts, t])
 
-  const handleBatchAction = async (action: string) => {
-    if (selected.size === 0) return
+  /* 批量操作：BulkActionBar 风险分级确认后执行 */
+  const handleBatchAction = useCallback(async (action: string) => {
+    if (selected.length === 0) return
     try {
-      await adminAPI.batchSPU({ spu_ids: Array.from(selected), action })
-      setSelected(new Set())
+      await adminAPI.batchSPU({ spu_ids: selected.map(Number), action })
+      setSelected([])
       fetchProducts()
     } catch {
       setError(t('admin.products.batchFailed'))
     }
-  }
+  }, [selected, fetchProducts, t])
 
   const handleDelete = async (id: number) => {
     try {
@@ -370,22 +384,140 @@ export default function AdminProducts() {
     }
   }
 
-  const totalPages = Math.ceil(total / 20)
-  const allChecked = items.length > 0 && selected.size === items.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  const bulkActions: BulkAction[] = [
+    {
+      key: 'put_on_sale',
+      label: t('admin.products.batchOnSale'),
+      variant: 'primary',
+      onClick: () => handleBatchAction('put_on_sale'),
+    },
+    {
+      key: 'put_off_sale',
+      label: t('admin.products.batchOffSale'),
+      variant: 'secondary',
+      confirmTitle: '批量下架确认',
+      confirmMessage: `即将下架 ${selected.length} 个商品。\n其中正在售卖的商品将立即停止售卖，请确认影响范围后再继续。`,
+      onClick: () => handleBatchAction('put_off_sale'),
+    },
+    {
+      key: 'batch_audit',
+      label: t('admin.products.batchAudit'),
+      variant: 'secondary',
+      confirmTitle: '批量提交审核确认',
+      confirmMessage: `即将提交 ${selected.length} 个商品进入审核队列。`,
+      onClick: () => handleBatchAction('batch_audit'),
+    },
+  ]
+
+  /* 列表视图：行内操作按钮（阻止冒泡避免触发行点击） */
+  const renderRowActions = (item: SPUItem) => (
+    <RowActions onClick={(e) => e.stopPropagation()}>
+      <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
+      {item.status === 'draft' && (
+        <>
+          <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+          {canSubmit && <ActionBtn onClick={() => onSubmitAudit(item.id)}>{t('admin.products.submitReview')}</ActionBtn>}
+        </>
+      )}
+      {item.status === 'submitted' && canAudit && (
+        <ActionBtn onClick={() => onReview(item.id)}>{t('admin.products.review')}</ActionBtn>
+      )}
+      {item.status === 'approved' && (
+        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+      )}
+      {item.status === 'on_sale' && (
+        <>
+          <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'suspend')}>{t('admin.products.suspend')}</ActionBtn>
+          <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_off_sale')}>{t('admin.products.offSale')}</ActionBtn>
+        </>
+      )}
+      {item.status === 'suspended' && (
+        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'resume')}>{t('admin.products.resume')}</ActionBtn>
+      )}
+      {item.status === 'off_sale' && (
+        <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+      )}
+      {isSuperAdmin && (
+        <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
+      )}
+      <ChatLink onClick={() => onChat(item.id)} />
+    </RowActions>
+  )
+
+  /* 列表视图列定义 */
+  const columns: SmartColumn<SPUItem>[] = [
+    {
+      key: 'name',
+      title: t('admin.products.columnProduct'),
+      sortable: true,
+      render: (_: unknown, r: SPUItem) => (
+        <ProductCell>
+          <CellThumb>
+            {r.main_image ? <img src={r.main_image} alt={r.name} loading="lazy" /> : <span>📦</span>}
+          </CellThumb>
+          <CellName>{r.name}</CellName>
+        </ProductCell>
+      ),
+    },
+    { key: 'brand_name', title: t('admin.products.columnBrand'), width: '140px' },
+    { key: 'category_path', title: t('admin.products.columnCategory'), width: '160px' },
+    { key: 'sku_count', title: t('admin.products.columnSku'), width: '80px', align: 'center' },
+    {
+      key: 'price_range',
+      title: t('admin.products.columnPrice'),
+      width: '180px',
+      render: (val: unknown) => {
+        const pr = val as SPUItem['price_range'] | null
+        if (!pr) return '-'
+        return `${fmtPrice(pr.min)} – ${fmtPrice(pr.max)}`
+      },
+    },
+    {
+      key: 'status',
+      title: t('admin.products.columnStatus'),
+      width: '120px',
+      render: (_: unknown, r: SPUItem) => (
+        <StatusBadge tone={productTone(r.status as ProductStatus)} dot>{r.status_display}</StatusBadge>
+      ),
+    },
+    {
+      key: 'created_at',
+      title: t('admin.products.columnCreated'),
+      sortable: true,
+      width: '160px',
+      render: (val: unknown) => formatDateTime(val as string),
+    },
+    { key: 'actions', title: t('admin.products.columnActions'), width: '300px', hideable: false, render: (_: unknown, r: SPUItem) => renderRowActions(r) },
+  ]
+
+  const rowSelection = {
+    selectedRowKeys: selected,
+    onChange: (keys: (string | number)[]) => setSelected(keys),
+  }
 
   return (
     <div>
       <PageHeader>
-        <Title>{t('admin.products.title')} ({total})</Title>
+        <Title>{t('admin.products.title')} · {total}</Title>
         <Actions>
-          <ActionBtn style={{ padding: '7px 16px', fontWeight: 500, background: Color.primary, borderColor: Color.primary, color: '#fff' }} onClick={() => navigate('/admin/products/create')}>
+          <ViewToggle>
+            <ViewBtn $active={view === 'card'} data-active={view === 'card' ? 'true' : undefined} onClick={() => setView('card')}>
+              {t('admin.products.viewCard')}
+            </ViewBtn>
+            <ViewBtn $active={view === 'list'} data-active={view === 'list' ? 'true' : undefined} onClick={() => setView('list')}>
+              {t('admin.products.viewList')}
+            </ViewBtn>
+          </ViewToggle>
+          <Button variant="primary" onClick={() => navigate('/admin/products/create')}>
             {t('admin.products.createProduct')}
-          </ActionBtn>
+          </Button>
         </Actions>
       </PageHeader>
 
       <FilterBar>
-        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1) }}>
+        <Select value={status} onChange={(e) => { setStatus(e.target.value); setPage('1') }}>
           <option value="">{t('admin.products.filterAllStatus')}</option>
           <option value="draft">{t('admin.products.statusDraft')}</option>
           <option value="submitted">{t('admin.products.statusSubmitted')}</option>
@@ -397,18 +529,10 @@ export default function AdminProducts() {
         </Select>
         <SearchInput
           placeholder={t('admin.products.searchPlaceholder')}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && fetchProducts()}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { setSearch(searchInput.trim()); setPage('1') } }}
         />
-        <Checkbox checked={allChecked} onChange={toggleAll} title="全选本页" />
-        {selected.size > 0 && (
-          <Actions>
-            <ActionBtn onClick={() => handleBatchAction('put_on_sale')}>{t('admin.products.batchOnSale')} ({selected.size})</ActionBtn>
-            <ActionBtn onClick={() => handleBatchAction('put_off_sale')}>{t('admin.products.batchOffSale')}</ActionBtn>
-            <ActionBtn onClick={() => handleBatchAction('batch_audit')}>{t('admin.products.batchAudit')}</ActionBtn>
-          </Actions>
-        )}
         <span style={{ flex: 1 }} />
         <RefreshButton onRefresh={fetchProducts} />
       </FilterBar>
@@ -416,57 +540,97 @@ export default function AdminProducts() {
       {error && <ErrorLine>{error}</ErrorLine>}
       {shelfError && <ErrorLine>{shelfError}</ErrorLine>}
 
-      {loading ? (
-        <CardList><Skeleton type="card" rows={5} /></CardList>
-      ) : items.length === 0 ? (
-        <Empty
-          title={t('admin.products.emptyState')}
-          children={
-            <ActionBtn style={{ padding: '7px 16px', background: Color.primary, borderColor: Color.primary, color: '#fff' }} onClick={() => navigate('/admin/products/create')}>
-              {t('admin.products.createOne')}
-            </ActionBtn>
-          }
-        />
+      {view === 'card' ? (
+        loading ? (
+          <CardList><Skeleton type="card" rows={5} /></CardList>
+        ) : items.length === 0 ? (
+          <Empty
+            title={t('admin.products.emptyState')}
+            children={
+              <ActionBtn style={{ padding: '7px 16px', background: Color.primary, borderColor: Color.primary, color: '#fff' }} onClick={() => navigate('/admin/products/create')}>
+                {t('admin.products.createOne')}
+              </ActionBtn>
+            }
+          />
+        ) : (
+          <>
+            <FilterBar style={{ marginBottom: 12 }}>
+              <Checkbox
+                checked={selected.length > 0 && selected.length === items.length}
+                onChange={(e) => setSelected(e.target.checked ? items.map((i) => i.id) : [])}
+                title="全选本页"
+              />
+              <BulkActionBar
+                selectedCount={selected.length}
+                actions={bulkActions}
+                onClear={() => setSelected([])}
+              />
+            </FilterBar>
+            <CardList>
+              {items.map((item) => (
+                <ProductCard
+                  key={item.id}
+                  item={item}
+                  isSelected={selected.includes(item.id)}
+                  isShelfing={shelfingIds.has(item.id)}
+                  canSubmit={canSubmit}
+                  canAudit={canAudit}
+                  isSuperAdmin={isSuperAdmin}
+                  onToggleSelect={(id) => {
+                    setSelected((prev) =>
+                      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+                    )
+                  }}
+                  onEdit={onEdit}
+                  onShelf={doShelfAction}
+                  onSubmitAudit={onSubmitAudit}
+                  onReview={onReview}
+                  onDelete={onDelete}
+                  onChat={onChat}
+                />
+              ))}
+            </CardList>
+            {totalPages > 1 && (
+              <div style={{ marginTop: 20 }}>
+                <Pagination page={pageNum} pageCount={totalPages} total={total} pageSize={PAGE_SIZE} onChange={(p) => setPage(String(p))} />
+              </div>
+            )}
+          </>
+        )
       ) : (
         <>
-          <CardList>
-            {items.map((item) => (
-              <ProductCard
-                key={item.id}
-                item={item}
-                isSelected={selected.has(item.id)}
-                isShelfing={shelfingIds.has(item.id)}
-                canSubmit={canSubmit}
-                canAudit={canAudit}
-                isSuperAdmin={isSuperAdmin}
-                onToggleSelect={toggleSelect}
-                onEdit={onEdit}
-                onShelf={doShelfAction}
-                onSubmitAudit={onSubmitAudit}
-                onReview={onReview}
-                onDelete={onDelete}
-                onChat={onChat}
+          <SmartDataTable
+            columns={columns}
+            dataSource={items}
+            rowKey="id"
+            loading={loading}
+            error={error || null}
+            onRetry={fetchProducts}
+            emptyTitle={t('admin.products.emptyState')}
+            emptyText={t('admin.products.createOne')}
+            onRowClick={(r) => onEdit(r.id)}
+            rowSelection={rowSelection}
+            bulkBar={
+              <BulkActionBar
+                selectedCount={selected.length}
+                actions={bulkActions}
+                onClear={() => setSelected([])}
               />
-            ))}
-          </CardList>
-
-          {totalPages > 1 && (
-            <Pagination>
-              <PageBtn disabled={page <= 1} onClick={() => setPage(page - 1)}>{t('common.previous')}</PageBtn>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1
-                return <PageBtn key={pageNum} $active={pageNum === page} onClick={() => setPage(pageNum)}>{pageNum}</PageBtn>
-              })}
-              <PageBtn disabled={page >= totalPages} onClick={() => setPage(page + 1)}>{t('common.next')}</PageBtn>
-            </Pagination>
-          )}
+            }
+            stickyHeader
+          />
+          <div style={{ marginTop: 20 }}>
+            <Pagination page={pageNum} pageCount={totalPages} total={total} pageSize={PAGE_SIZE} onChange={(p) => setPage(String(p))} />
+          </div>
         </>
       )}
       <ChatFloatWidget />
       {saleDeleteHint && (
         <ConfirmDialog
+          open={saleDeleteHint}
           title={t('admin.products.deleteProduct')}
           message={t('admin.products.cannotDeleteOnSale')}
+          tone="info"
           confirmLabel={t('common.close')}
           cancelLabel=""
           onConfirm={() => setSaleDeleteHint(false)}
@@ -475,11 +639,12 @@ export default function AdminProducts() {
       )}
       {deleteTarget !== null && (
         <ConfirmDialog
+          open={deleteTarget !== null}
           title={t('admin.products.deleteProduct')}
-          message={t('admin.products.confirmDeleteProduct')}
+          message={`确定删除该商品？\n该商品当前有 ${items.find((i) => i.id === deleteTarget)?.sku_count ?? 0} 个 SKU，删除后商品将进入回收站。`}
+          tone="danger"
           confirmLabel={t('admin.products.confirmDelete')}
           cancelLabel={t('common.cancel')}
-          danger
           onConfirm={() => {
             const id = deleteTarget
             setDeleteTarget(null)
@@ -535,11 +700,11 @@ const ProductCard = memo(function ProductCard({
         <CardName>{item.name}</CardName>
         <CardMeta>{item.brand_name} · {item.sku_count} SKUs · {item.category_path}</CardMeta>
         <CardBadges>
-          <StatusPill $status={item.status}>{item.status_display}</StatusPill>
+          <StatusBadge tone={productTone(item.status as ProductStatus)} dot>{item.status_display}</StatusBadge>
         </CardBadges>
       </CardMain>
       <CardRight>
-        <CardPrice>{item.price_range ? `$${Number(item.price_range.min).toLocaleString('en-US', { minimumFractionDigits: 2 })} – $${Number(item.price_range.max).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '-'}</CardPrice>
+        <CardPrice>{item.price_range ? `$${fmtPrice(item.price_range.min)} – $${fmtPrice(item.price_range.max)}` : '-'}</CardPrice>
         <Actions>
           <ActionBtn onClick={() => onEdit(item.id)}>{t('common.edit')}</ActionBtn>
           {item.status === 'draft' && (

@@ -3,10 +3,8 @@ import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, DangerBtn, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
-import LoadingSkeleton from '../../components/admin/common/LoadingSkeleton';
-import ErrorRetry from '../../components/admin/common/ErrorRetry';
-import EmptyState from '../../components/admin/common/EmptyState';
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
+import { ConfirmDialog, EmptyState, ErrorState, LoadingState, StatusBadge } from '../../components/admin/design-system';
+import { useUrlState } from '../../hooks/useUrlState';
 import { adminAPI } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useAdminAuth } from '../../store/AdminAuthContext';
@@ -165,6 +163,8 @@ export default function AdminCategories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<CategoryNode | null>(null);
+  // 把选中的类目 id 同步进 query（刷新/分享链接保留当前定位类目）
+  const [selectedId, setSelectedId] = useUrlState<string>('id', '');
   const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -226,6 +226,7 @@ export default function AdminCategories() {
     setFormLevel(node.level);
     setFormActive(node.is_active);
     setFormAdminGroupId(node.admin_group_id || null);
+    if (String(selectedId) !== String(node.id)) setSelectedId(String(node.id));
   };
 
   const handleCreate = () => {
@@ -340,6 +341,15 @@ export default function AdminCategories() {
 
   const allNodes = getFlatNodes(tree);
 
+  // 接入 useUrlState：加载完成后，若 URL 指定了类目 id，自动回放选中（刷新/分享链接定位）
+  useEffect(() => {
+    const id = Number(selectedId);
+    if (!id || selected?.id === id) return;
+    const target = allNodes.find((n) => n.id === id);
+    if (target) selectNode(target);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, allNodes, selected?.id]);
+
   return (
     <div>
       <PageHeader
@@ -353,9 +363,9 @@ export default function AdminCategories() {
       {toast && <Toast $type={toast.type}>{toast.msg}</Toast>}
 
       {loading ? (
-        <LoadingSkeleton type="card" rows={8} />
+        <LoadingState rows={8} />
       ) : error ? (
-        <ErrorRetry message={t('admin.categories.loadError')} detail={error} onRetry={fetchTree} />
+        <ErrorState message={`${t('admin.categories.loadError')}${error ? `: ${error}` : ''}`} onRetry={fetchTree} />
       ) : tree.length === 0 ? (
         <EmptyState title={t('admin.categories.noCategories')} icon="categories" />
       ) : (
@@ -379,7 +389,9 @@ export default function AdminCategories() {
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>{t('admin.categories.statusLabel')}</DetailLabel>
-                  <DetailValue>{selected.is_active ? t('admin.categories.enabled') : t('admin.categories.disabled')}</DetailValue>
+                  <StatusBadge tone={selected.is_active ? 'success' : 'neutral'}>
+                    {selected.is_active ? t('admin.categories.enabled') : t('admin.categories.disabled')}
+                  </StatusBadge>
                 </DetailRow>
                 <DetailRow>
                   <DetailLabel>{t('admin.categories.childCountLabel')}</DetailLabel>
@@ -525,7 +537,7 @@ export default function AdminCategories() {
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 320, textAlign: 'center' }}>
                 <EmptyState
                   title={t('admin.categories.selectCategory')}
-                  message={t('admin.categories.selectCategoryHint')}
+                  description={t('admin.categories.selectCategoryHint')}
                   icon="📁"
                 />
                 {isSuperUser && (
@@ -541,10 +553,12 @@ export default function AdminCategories() {
 
       {showDeleteConfirm && selected && (
         <ConfirmDialog
+          open={showDeleteConfirm}
           title={t('admin.categories.deleteCategory')}
           message={`${t('admin.categories.confirmDeleteCategory').replace('{name}', selected.name)}${selected.children?.length ? ' ' + t('admin.categories.hasChildrenError') : ''}`}
+          tone="danger"
           confirmLabel={t('admin.categories.confirmDelete')}
-          danger
+          cancelLabel={t('common.cancel')}
           onConfirm={handleDelete}
           onCancel={() => setShowDeleteConfirm(false)}
         />

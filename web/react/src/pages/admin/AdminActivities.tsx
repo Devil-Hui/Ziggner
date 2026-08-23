@@ -5,14 +5,17 @@ import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../them
 import { Input as FormInput, Input as RuleFieldInput, Select as FormSelect } from '../../components/admin/common/ui';
 import { adminAPI, Activity, ActivityFormData, type TagItem, type CategoryNode, type ActivitySKULinkItem, type ScopePreviewResult } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
+import { useUrlState } from '../../hooks/useUrlState';
 import { useTranslation } from '../../i18n';
+import { SearchFilter } from '../../components/admin/common';
 import {
-  DataTable,
+  SmartDataTable,
+  Pagination,
   FormDialog,
-  DeleteConfirmDialog,
-  SearchFilter,
-} from '../../components/admin/common';
-import type { Column } from '../../components/admin/common';
+  ConfirmDialog,
+  StatusBadge,
+} from '../../components/admin/design-system';
+import type { SmartColumn } from '../../components/admin/design-system';
 import { KoboyoRefreshIcon } from '../../components/admin/common/Icon';
 
 // ==================== Theme ====================
@@ -27,14 +30,14 @@ const PAGE_SIZE = 10;
 
 // ==================== Helpers ====================
 
-function getStatus(activity: Activity, t: (key: string) => string): { label: string; color: string; bg: string } {
+function getStatus(activity: Activity, t: (key: string) => string): { label: string; tone: 'warning' | 'neutral' | 'success' } {
   const now = new Date();
   const start = new Date(activity.start_time);
   const end = new Date(activity.end_time);
 
-  if (now < start) return { label: t('admin.activities.statusNotStarted'), color: '#f5c518', bg: '#fff7e6' };
-  if (now > end) return { label: t('admin.activities.statusEnded'), color: '#999', bg: '#f5f5f5' };
-  return { label: t('admin.activities.statusActive'), color: '#28a745', bg: '#f6ffed' };
+  if (now < start) return { label: t('admin.activities.statusNotStarted'), tone: 'warning' };
+  if (now > end) return { label: t('admin.activities.statusEnded'), tone: 'neutral' };
+  return { label: t('admin.activities.statusActive'), tone: 'success' };
 }
 
 function formatDateTime(iso: string): string {
@@ -136,52 +139,6 @@ const Toolbar = styled.div`
   margin-bottom: 20px;
   flex-wrap: wrap;
   gap: 12px;
-`;
-
-const Pagination = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 20px;
-  justify-content: flex-end;
-`;
-
-const PageButton = styled.button<{ $active?: boolean }>`
-  min-width: 36px;
-  height: 36px;
-  padding: 0 ${Spacing.sm}px;
-  border: 1px solid ${({ $active }) => ($active ? PRIMARY : '#ddd')};
-  border-radius: ${Radius.md}px;
-  background: ${({ $active }) => ($active ? PRIMARY : SURFACE)};
-  color: ${({ $active }) => ($active ? '#fff' : '#444')};
-  font-size: ${FontSize.base}px;
-  cursor: pointer;
-  transition: ${Transition.normal};
-
-  &:hover {
-    border-color: ${PRIMARY};
-    background: ${({ $active }) => ($active ? PRIMARY : '#f5f5f5')};
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-`;
-
-const PageInfo = styled.span`
-  font-size: ${FontSize.base}px;
-  color: ${Color.text.secondary};
-`;
-
-const StatusBadge = styled.span<{ $color: string; $bg: string }>`
-  display: inline-block;
-  padding: 2px 10px;
-  font-size: ${FontSize.xs}px;
-  font-weight: 500;
-  border-radius: 10px;
-  color: ${({ $color }) => $color};
-  background: ${({ $bg }) => $bg};
 `;
 
 // ==================== Form Styles ====================
@@ -465,15 +422,6 @@ const LinkTd = styled.td`
   }
 `;
 
-const StatusChip = styled.span<{ $color: string; $bg: string }>`
-  display: inline-block;
-  padding: 1px 8px;
-  font-size: 11px;
-  border-radius: 8px;
-  color: ${({ $color }) => $color};
-  background: ${({ $bg }) => $bg};
-`;
-
 const LinkToolbar = styled.div`
   display: flex;
   align-items: center;
@@ -529,8 +477,9 @@ const AdminActivities: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [page, setPage] = useUrlState<string>('page', '1');
+  const pageNum = Number(page) || 1;
+  const [search, setSearch] = useUrlState<string>('search', '');
 
   /* ---- dialog state ---- */
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -751,16 +700,16 @@ const AdminActivities: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleStatusLabel = (spuStatus: string): { label: string; color: string; bg: string } => {
-    const map: Record<string, { label: string; color: string; bg: string }> = {
-      on_sale: { label: t('admin.activities.statusOnSale'), color: '#28a745', bg: '#f6ffed' },
-      off_sale: { label: t('admin.activities.statusOffSale'), color: '#dc2626', bg: '#fef2f2' },
-      draft: { label: t('admin.activities.statusDraft'), color: '#888', bg: '#f5f5f5' },
-      suspended: { label: t('admin.activities.statusSuspended'), color: '#d97706', bg: '#fffbeb' },
-      approved: { label: t('admin.activities.statusApproved'), color: '#0369a1', bg: '#f0f9ff' },
-      rejected: { label: t('admin.activities.statusRejected'), color: '#dc2626', bg: '#fef2f2' },
+  const handleStatusLabel = (spuStatus: string): { label: string; tone: 'success' | 'danger' | 'neutral' | 'warning' | 'info' } => {
+    const map: Record<string, { label: string; tone: 'success' | 'danger' | 'neutral' | 'warning' | 'info' }> = {
+      on_sale: { label: t('admin.activities.statusOnSale'), tone: 'success' },
+      off_sale: { label: t('admin.activities.statusOffSale'), tone: 'danger' },
+      draft: { label: t('admin.activities.statusDraft'), tone: 'neutral' },
+      suspended: { label: t('admin.activities.statusSuspended'), tone: 'warning' },
+      approved: { label: t('admin.activities.statusApproved'), tone: 'info' },
+      rejected: { label: t('admin.activities.statusRejected'), tone: 'danger' },
     };
-    return map[spuStatus] || { label: spuStatus, color: '#888', bg: '#f5f5f5' };
+    return map[spuStatus] || { label: spuStatus, tone: 'neutral' };
   };
 
   /* ---- SKU search & append ---- */
@@ -790,7 +739,7 @@ const AdminActivities: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await adminAPI.getActivities({ page, search });
+      const response = await adminAPI.getActivities({ page: pageNum, search });
       setActivities(response.results || response.items || []);
       setTotalCount(response.count || response.total || 0);
     } catch (err: unknown) {
@@ -800,7 +749,7 @@ const AdminActivities: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, t]);
+  }, [pageNum, search, t]);
 
   useEffect(() => {
     fetchActivities();
@@ -809,7 +758,7 @@ const AdminActivities: React.FC = () => {
   /* ---- search ---- */
   const handleSearchChange = (value: string) => {
     setSearch(value);
-    setPage(1);
+    setPage('1');
   };
 
   /* ---- dialog open/close ---- */
@@ -944,7 +893,7 @@ const AdminActivities: React.FC = () => {
   };
 
   /* ---- columns ---- */
-  const columns: Column<Activity>[] = [
+  const columns: SmartColumn<Activity>[] = [
     {
       key: 'name',
       title: t('admin.activities.columnName'),
@@ -971,7 +920,7 @@ const AdminActivities: React.FC = () => {
       render: (_val, record) => {
         const status = getStatus(record, t);
         return (
-          <StatusBadge $color={status.color} $bg={status.bg}>
+          <StatusBadge tone={status.tone}>
             {status.label}
           </StatusBadge>
         );
@@ -991,56 +940,6 @@ const AdminActivities: React.FC = () => {
       ),
     },
   ];
-
-  /* ---- pagination ---- */
-  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
-
-  const renderPagination = () => {
-    if (totalPages <= 1) return null;
-
-    const pages: number[] = [];
-    if (totalPages <= 7) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else if (page <= 4) {
-      for (let i = 1; i <= 7; i++) pages.push(i);
-    } else if (page >= totalPages - 3) {
-      for (let i = totalPages - 6; i <= totalPages; i++) pages.push(i);
-    } else {
-      for (let i = page - 3; i <= page + 3; i++) pages.push(i);
-    }
-
-    return (
-      <Pagination>
-        <PageInfo>
-          {t('admin.activities.pagination')
-            .replace('{totalCount}', String(totalCount))
-            .replace('{page}', String(page))
-            .replace('{totalPages}', String(totalPages))}
-        </PageInfo>
-        <PageButton
-          disabled={page <= 1}
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
-        >
-          {t('admin.activities.previous')}
-        </PageButton>
-        {pages.map((p) => (
-          <PageButton
-            key={p}
-            $active={p === page}
-            onClick={() => setPage(p)}
-          >
-            {p}
-          </PageButton>
-        ))}
-        <PageButton
-          disabled={page >= totalPages}
-          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-        >
-          {t('admin.activities.next')}
-        </PageButton>
-      </Pagination>
-    );
-  };
 
   /* ---- render ---- */
   return (
@@ -1066,28 +965,33 @@ const AdminActivities: React.FC = () => {
         </RefreshBtn>
       </Toolbar>
 
-      <DataTable<Activity>
+      <SmartDataTable<Activity>
         columns={columns}
         data={activities}
         loading={loading}
         error={error}
         onRetry={fetchActivities}
         emptyTitle={t('admin.activities.noActivities')}
-        emptyIcon="&#127873;"
         rowKey={(record) => String(record.id)}
       />
 
-      {renderPagination()}
+      <Pagination
+        page={pageNum}
+        pageCount={Math.max(1, Math.ceil(totalCount / PAGE_SIZE))}
+        total={totalCount}
+        pageSize={PAGE_SIZE}
+        onChange={(p) => setPage(String(p))}
+      />
 
       {/* Create / Edit Dialog */}
       <FormDialog
         open={dialogOpen}
         title={editingActivity ? t('admin.activities.editActivity') : t('admin.activities.createActivityTitle')}
-        onClose={closeDialog}
-        onSubmit={debouncedSubmit}
-        submitLabel={isSaving ? t('admin.activities.submitting') : editingActivity ? t('admin.activities.saveEdit') : t('admin.activities.createActivityTitle')}
-        submitDisabled={isSaving}
-        width="580px"
+        onCancel={closeDialog}
+        onOk={debouncedSubmit}
+        okText={isSaving ? t('admin.activities.submitting') : editingActivity ? t('admin.activities.saveEdit') : t('admin.activities.createActivityTitle')}
+        loading={isSaving}
+        size="md"
       >
         <FormGroup>
           <FormLabel>{t('admin.activities.nameLabel')}</FormLabel>
@@ -1461,7 +1365,7 @@ const AdminActivities: React.FC = () => {
                               )}
                             </LinkTd>
                             <LinkTd>
-                              <StatusChip $color={st.color} $bg={st.bg}>{st.label}</StatusChip>
+                              <StatusBadge tone={st.tone}>{st.label}</StatusBadge>
                             </LinkTd>
                             <LinkTd>
                               <ActionLink $danger onClick={() => handleRemoveSku(s.sku_id)}>
@@ -1489,11 +1393,12 @@ const AdminActivities: React.FC = () => {
       </FormDialog>
 
       {/* Delete Confirm Dialog */}
-      <DeleteConfirmDialog
+      <ConfirmDialog
         open={!!deleteTarget}
         title={t('admin.activities.confirmDelete')}
-        itemName={deleteTarget?.name}
-        onClose={() => setDeleteTarget(null)}
+        message={`确定要删除活动「${deleteTarget?.name ?? ''}」吗？此操作不可撤销。`}
+        tone="danger"
+        onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}
         loading={deleting}
       />

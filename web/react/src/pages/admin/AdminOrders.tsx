@@ -1,17 +1,26 @@
 // TypeScript strict mode enabled
 import { useCallback, useEffect, useState } from 'react'
 import styled from 'styled-components'
-import { Color, Radius, Spacing, FontSize, FontWeight, Transition, FluidSpace } from '../../theme/tokens'
+import { Color, Radius, Spacing, FontSize, FontWeight, Transition } from '../../theme/tokens'
 import { Select, Input as SearchInput } from '../../components/admin/common/ui'
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
 import PromptDialog from '../../components/admin/common/PromptDialog'
-import Drawer from '../../components/admin/common/Drawer'
-import Modal from '../../components/admin/common/Modal'
 import { RefreshButton } from '../../components/admin/common'
-import Tag from '../../components/admin/common/Tag'
 import { useTranslation } from '../../i18n'
 import { formatDateTime } from '../../utils/helpers'
 import { orderAPI, type OrderSummary, type ChannelStatsItem } from '../../api/order'
+import {
+  SmartDataTable,
+  StatusBadge,
+  Button,
+  Pagination,
+  Dialog,
+  DetailDrawer,
+  ConfirmDialog,
+} from '../../components/admin/design-system'
+import type { SmartColumn } from '../../components/admin/design-system'
+import { orderTone, type OrderStatus } from '../../theme/business'
+import type { StatusTone } from '../../theme'
+import { useUrlState } from '../../hooks/useUrlState'
 
 type TabKey = 'orders' | 'aftersales'
 
@@ -28,6 +37,21 @@ interface AfterSaleRow {
   order_no?: string
 }
 
+/* ── 支付 / 售后状态 → semantic tone（业务只声明 tone，颜色由 Semantic 解析） ── */
+const PAYMENT_TONE: Record<string, StatusTone> = {
+  unpaid: 'warning',
+  paid: 'success',
+  refunding: 'warning',
+  refunded: 'danger',
+}
+const AFTERSALE_TONE: Record<string, StatusTone> = {
+  pending_review: 'warning',
+  approved: 'info',
+  rejected: 'danger',
+  processing: 'info',
+  completed: 'success',
+}
+
 /* ── 渠道色板（固定语义）：商城绿 / 代言人蓝 / 其他灰 ── */
 const CHANNEL_COLOR: Record<string, string> = {
   mall: '#059669',
@@ -36,23 +60,6 @@ const CHANNEL_DEFAULT = '#6b7280'
 function channelColor(channel?: string | null): string {
   if (!channel) return CHANNEL_COLOR.mall
   return CHANNEL_COLOR[channel] ?? '#1a56db'
-}
-
-/* ── 状态圆角标签色板 ── */
-const STATUS_PILL: Record<string, { bg: string; color: string; label: string }> = {
-  pending_payment: { bg: '#fffbeb', color: '#b45309', label: '待支付' },
-  paid: { bg: '#eff6ff', color: '#1e40af', label: '已支付' },
-  shipped: { bg: '#eef2ff', color: '#4338ca', label: '已发货' },
-  delivered: { bg: '#ecfdf5', color: '#047857', label: '已送达' },
-  completed: { bg: '#f3f4f6', color: '#374151', label: '已完成' },
-  cancelled: { bg: '#fef2f2', color: '#b91c1c', label: '已取消' },
-  pending_review: { bg: '#fffbeb', color: '#b45309', label: '待审核' },
-  approved: { bg: '#ecfdf5', color: '#047857', label: '已通过' },
-  rejected: { bg: '#fef2f2', color: '#b91c1c', label: '已驳回' },
-  processing: { bg: '#eff6ff', color: '#1e40af', label: '处理中' },
-  refunding: { bg: '#fffbeb', color: '#b45309', label: '退款中' },
-  refunded: { bg: '#f3f4f6', color: '#374151', label: '已退款' },
-  unpaid: { bg: '#fffbeb', color: '#b45309', label: '未支付' },
 }
 
 /* ── 订单状态时间线 ── */
@@ -95,65 +102,14 @@ const FilterBar = styled.div`
   gap: 12px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+  align-items: center;
 `
 
-const Button = styled.button<{ $variant?: 'primary' | 'danger' | 'ghost' | 'ok' }>`
-  padding: 6px 12px;
-  border: 1px solid
-    ${({ $variant }) => ($variant === 'danger' ? Color.status.error : $variant === 'primary' ? Color.primary : $variant === 'ok' ? Color.status.success : Color.border.medium)};
-  background: ${({ $variant }) => ($variant === 'primary' ? Color.primary : $variant === 'ok' ? Color.status.success : '#fff')};
-  color: ${({ $variant }) =>
-    $variant === 'primary' || $variant === 'ok' ? '#fff' : $variant === 'danger' ? Color.status.error : Color.text.secondary};
-  border-radius: ${Radius.sm}px;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: ${Transition.fast};
-
-  &:hover { opacity: 0.9; }
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
-`
-
-const TableScroll = styled.div`
-  overflow-x: auto;
-`
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: #fff;
-  border: 1px solid rgba(26, 23, 18, 0.10);
-  border-radius: ${Radius.md}px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-`
-
-const Th = styled.th`
-  padding: 12px 18px;
-  text-align: left;
-  font-size: 11px;
-  font-weight: 600;
-  color: #8a8175;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
-  background: rgba(26, 23, 18, 0.03);
+const MonoText = styled.span`
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.813rem;
+  color: ${Color.text.body};
   white-space: nowrap;
-`
-
-const Td = styled.td`
-  padding: 22px 18px; /* 22*2 + 内容 ≈ 64px 行高（min-height 在 tr 上无效，用 td 撑起） */
-  font-size: 0.875rem;
-  color: #1a1712;
-  border-bottom: 1px solid rgba(26, 23, 18, 0.10);
-  vertical-align: middle;
-`
-
-const Tr = styled.tr`
-  transition: background ${Transition.fast};
-
-  &:hover { background: rgba(26, 86, 219, 0.04); }
-  &:last-child td { border-bottom: none; }
 `
 
 const Amount = styled.span`
@@ -195,9 +151,9 @@ const Empty = styled.div`
   color: ${Color.text.muted};
 `
 
-const Actions = styled.div`
+const RowActions = styled.div`
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 `
 
@@ -226,13 +182,6 @@ const SectionTitle = styled.h4`
   color: ${Color.text.heading};
 `
 
-const PaginationBar = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
-`
-
 const ItemNameLink = styled.a`
   color: ${Color.primary};
   cursor: pointer;
@@ -245,6 +194,31 @@ const ItemNameLink = styled.a`
   /* 作为按钮（商品参数弹窗入口）时继承字体 */
   font: inherit;
   text-align: left;
+`
+
+/* ── 订单详情内嵌只读小表（商品明细 / 售后列表） ── */
+const DetailTable = styled.table`
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: #fff;
+  border: 1px solid rgba(26, 23, 18, 0.10);
+  border-radius: ${Radius.sm}px;
+  overflow: hidden;
+  font-size: 12px;
+
+  th, td {
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(26, 23, 18, 0.08);
+  }
+  th {
+    font-weight: 600;
+    color: #8a8175;
+    background: rgba(26, 23, 18, 0.03);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
 `
 
 /* ── 状态时间线 ── */
@@ -284,10 +258,6 @@ const Step = styled.div<{ $state: 'done' | 'current' | 'todo' }>`
   }
 `
 
-function statusPill(status: string) {
-  return STATUS_PILL[status] ?? { bg: '#f3f4f6', color: '#374151', label: status }
-}
-
 function normalizeList<T>(data: unknown): { results: T[]; count: number } {
   if (Array.isArray(data)) return { results: data as T[], count: data.length }
   const obj = (data || {}) as Record<string, unknown>
@@ -307,28 +277,46 @@ function orderNoFromAfterSale(row: AfterSaleRow): string {
   return '-'
 }
 
+const STEP_LABEL: Record<string, string> = {
+  pending_payment: '待支付',
+  paid: '已支付',
+  shipped: '已发货',
+  delivered: '已签收',
+  completed: '已完成',
+}
+
+const PAGE_SIZE = 20
+
 export default function AdminOrders() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<TabKey>('orders')
+
+  /* URL State：Tab / 订单筛选 / 售后筛选 / 分页（刷新不丢、可分享、Back 有效） */
+  const [tab, setTab] = useUrlState<TabKey>('tab', 'orders')
+  const [status, setStatus] = useUrlState<string>('status', '')
+  const [paymentStatus, setPaymentStatus] = useUrlState<string>('payment', '')
+  const [channel, setChannel] = useUrlState<string>('channel', '')
+  const [search, setSearch] = useUrlState<string>('q', '')
+  const [page, setPage] = useUrlState<string>('page', '1')
+  const pageNum = Math.max(1, Number(page) || 1)
+
+  const [asStatus, setAsStatus] = useUrlState<string>('asStatus', '')
+  const [asType, setAsType] = useUrlState<string>('asType', '')
+  const [asSearch, setAsSearch] = useUrlState<string>('asQ', '')
+  const [asPage, setAsPage] = useUrlState<string>('asPage', '1')
+  const asPageNum = Math.max(1, Number(asPage) || 1)
+
+  const [searchInput, setSearchInput] = useState(search)
+  const [asSearchInput, setAsSearchInput] = useState(asSearch)
 
   const [items, setItems] = useState<OrderSummary[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [status, setStatus] = useState('')
-  const [paymentStatus, setPaymentStatus] = useState('')
-  const [channel, setChannel] = useState('')
   const [channelStats, setChannelStats] = useState<ChannelStatsItem[]>([])
-  const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<Record<string, any> | null>(null)
   /** 订单商品参数预览（点击商品名弹出，不跳转前台） */
   const [itemPreview, setItemPreview] = useState<Record<string, any> | null>(null)
 
   const [afterSales, setAfterSales] = useState<AfterSaleRow[]>([])
   const [asTotal, setAsTotal] = useState(0)
-  const [asPage, setAsPage] = useState(1)
-  const [asStatus, setAsStatus] = useState('')
-  const [asType, setAsType] = useState('')
-  const [asSearch, setAsSearch] = useState('')
 
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -343,6 +331,38 @@ export default function AdminOrders() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  /* 状态文案（i18n） */
+  const orderStatusLabel = (s: string): string => {
+    const m: Record<string, string> = {
+      pending_payment: t('admin.orders.statusPendingPayment'),
+      paid: t('admin.orders.statusPaid'),
+      shipped: t('admin.orders.statusShipped'),
+      delivered: t('admin.orders.statusDelivered'),
+      completed: t('admin.orders.statusCompleted'),
+      cancelled: t('admin.orders.statusCancelled'),
+    }
+    return m[s] ?? s
+  }
+  const paymentStatusLabel = (s: string): string => {
+    const m: Record<string, string> = {
+      unpaid: t('admin.orders.paymentUnpaid'),
+      paid: t('admin.orders.paymentPaid'),
+      refunding: t('admin.orders.paymentRefunding'),
+      refunded: t('admin.orders.paymentRefunded'),
+    }
+    return m[s] ?? s
+  }
+  const asStatusLabel = (s: string): string => {
+    const m: Record<string, string> = {
+      pending_review: t('admin.orders.asPendingReview'),
+      approved: t('admin.orders.asApproved'),
+      rejected: t('admin.orders.asRejected'),
+      processing: t('admin.orders.asProcessing'),
+      completed: t('admin.orders.asCompleted'),
+    }
+    return m[s] ?? s
+  }
+
   const loadOrders = useCallback(async () => {
     setLoading(true)
     try {
@@ -351,8 +371,8 @@ export default function AdminOrders() {
         payment_status: paymentStatus || undefined,
         search: search || undefined,
         channel: channel || undefined,
-        page,
-        size: 20,
+        page: pageNum,
+        size: PAGE_SIZE,
       })
       const { results, count } = normalizeList<OrderSummary>(data)
       setItems(results)
@@ -362,7 +382,7 @@ export default function AdminOrders() {
     } finally {
       setLoading(false)
     }
-  }, [status, paymentStatus, search, channel, page, t])
+  }, [status, paymentStatus, search, channel, pageNum, t])
 
   const loadChannelStats = useCallback(async () => {
     try {
@@ -380,8 +400,8 @@ export default function AdminOrders() {
         status: asStatus || undefined,
         type: asType || undefined,
         search: asSearch || undefined,
-        page: asPage,
-        size: 20,
+        page: asPageNum,
+        size: PAGE_SIZE,
       })
       const { results, count } = normalizeList<AfterSaleRow>(data)
       setAfterSales(results)
@@ -391,7 +411,7 @@ export default function AdminOrders() {
     } finally {
       setLoading(false)
     }
-  }, [asStatus, asType, asSearch, asPage, t])
+  }, [asStatus, asType, asSearch, asPageNum, t])
 
   useEffect(() => {
     if (tab === 'orders') {
@@ -458,17 +478,160 @@ export default function AdminOrders() {
     }
   }
 
-  const totalPages = Math.max(1, Math.ceil(total / 20))
-  const asTotalPages = Math.max(1, Math.ceil(asTotal / 20))
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const asTotalPages = Math.max(1, Math.ceil(asTotal / PAGE_SIZE))
 
   // 状态时间线（取消/其他状态不渲染步骤）
   const stepIndex = selected ? ORDER_STEPS.indexOf(String(selected.status)) : -1
+
+  /* ── 订单列表列定义（排序为客户端排序：当前页内 asc/desc） ── */
+  const orderColumns: SmartColumn<OrderSummary>[] = [
+    {
+      key: 'order_no',
+      title: t('admin.orders.colOrderNo'),
+      sortable: true,
+      width: '180px',
+      render: (v: unknown) => <MonoText>{String(v)}</MonoText>,
+    },
+    {
+      key: 'channel_code',
+      title: t('admin.orders.colChannel'),
+      width: '120px',
+      render: (_: unknown, r: OrderSummary) => (
+        <ChannelDot $color={channelColor(r.channel_code)}>
+          {r.channel_name || t('admin.orders.channelMall')}
+        </ChannelDot>
+      ),
+    },
+    {
+      key: 'status',
+      title: t('admin.orders.colStatus'),
+      width: '110px',
+      render: (_: unknown, r: OrderSummary) => (
+        <StatusBadge tone={orderTone(r.status as OrderStatus)} dot>{orderStatusLabel(r.status)}</StatusBadge>
+      ),
+    },
+    {
+      key: 'payment_status',
+      title: t('admin.orders.colPayment'),
+      width: '110px',
+      render: (_: unknown, r: OrderSummary) => (
+        <StatusBadge tone={PAYMENT_TONE[r.payment_status] ?? 'neutral'}>{paymentStatusLabel(r.payment_status)}</StatusBadge>
+      ),
+    },
+    {
+      key: 'actual_amount',
+      title: t('admin.orders.colAmount'),
+      sortable: true,
+      align: 'right',
+      width: '120px',
+      render: (v: unknown) => <Amount>{money(v)}</Amount>,
+    },
+    {
+      key: 'item_count',
+      title: t('admin.orders.colItems'),
+      align: 'center',
+      width: '80px',
+      render: (v: unknown) => String(v ?? '-'),
+    },
+    {
+      key: 'created_at',
+      title: t('admin.orders.colCreated'),
+      sortable: true,
+      width: '160px',
+      render: (v: unknown) => formatDateTime(v as string),
+    },
+    {
+      key: 'actions',
+      title: t('common.actions'),
+      width: '260px',
+      hideable: false,
+      render: (_: unknown, r: OrderSummary) => (
+        <RowActions onClick={(e) => e.stopPropagation()}>
+          <Button size="sm" onClick={() => openDetail(r.order_no)}>{t('admin.orders.detail')}</Button>
+          {r.status === 'paid' && (
+            <Button size="sm" variant="primary" disabled={busyNo === r.order_no} onClick={() => setTrackingTarget(r.order_no)}>
+              {t('admin.orders.ship')}
+            </Button>
+          )}
+          {(r.status === 'pending_payment' || r.status === 'paid') && (
+            <Button size="sm" variant="danger" disabled={busyNo === r.order_no} onClick={() => setCancelTarget(r.order_no)}>
+              {t('admin.orders.cancel')}
+            </Button>
+          )}
+        </RowActions>
+      ),
+    },
+  ]
+
+  /* ── 售后列表列定义 ── */
+  const asColumns: SmartColumn<AfterSaleRow>[] = [
+    {
+      key: 'after_sale_no',
+      title: t('admin.orders.colAfterSaleNo'),
+      sortable: true,
+      width: '160px',
+      render: (v: unknown) => <MonoText>{String(v)}</MonoText>,
+    },
+    {
+      key: 'order_no',
+      title: t('admin.orders.colOrderNo'),
+      width: '180px',
+      render: (_: unknown, r: AfterSaleRow) => <MonoText>{orderNoFromAfterSale(r)}</MonoText>,
+    },
+    { key: 'type', title: t('admin.orders.colType'), width: '100px' },
+    {
+      key: 'status',
+      title: t('admin.orders.colStatus'),
+      width: '110px',
+      render: (_: unknown, r: AfterSaleRow) => (
+        <StatusBadge tone={AFTERSALE_TONE[r.status] ?? 'neutral'} dot>{asStatusLabel(r.status)}</StatusBadge>
+      ),
+    },
+    {
+      key: 'amount',
+      title: t('admin.orders.colAmount'),
+      align: 'right',
+      width: '120px',
+      render: (v: unknown) => <Amount>{money(v)}</Amount>,
+    },
+    {
+      key: 'reason',
+      title: t('admin.orders.colReason'),
+      render: (v: unknown) => <div style={{ maxWidth: 240 }}>{String(v ?? '-')}</div>,
+    },
+    {
+      key: 'actions',
+      title: t('common.actions'),
+      width: '220px',
+      hideable: false,
+      render: (_: unknown, r: AfterSaleRow) => (
+        <RowActions onClick={(e) => e.stopPropagation()}>
+          {r.status === 'pending_review' && (
+            <>
+              <Button size="sm" variant="primary" disabled={busyNo === r.after_sale_no} onClick={() => setRemarkTarget({ afterSaleNo: r.after_sale_no, action: 'approve' })}>
+                {t('admin.orders.approve')}
+              </Button>
+              <Button size="sm" variant="danger" disabled={busyNo === r.after_sale_no} onClick={() => setRemarkTarget({ afterSaleNo: r.after_sale_no, action: 'reject' })}>
+                {t('admin.orders.reject')}
+              </Button>
+            </>
+          )}
+          {r.status === 'approved' && (
+            <Button size="sm" variant="primary" disabled={busyNo === r.after_sale_no} onClick={() => setRefundTarget(r.after_sale_no)}>
+              {t('admin.orders.completeRefund')}
+            </Button>
+          )}
+        </RowActions>
+      ),
+    },
+  ]
 
   return (
     <div>
       <PageHeader>
         <Title>{t('admin.orders.title')}</Title>
-        <Button $variant="ghost" onClick={() => (tab === 'orders' ? loadOrders() : loadAfterSales())} disabled={loading}>
+        <Button variant="ghost" onClick={() => (tab === 'orders' ? loadOrders() : loadAfterSales())} disabled={loading}>
           {loading ? t('common.loading') : t('admin.orders.refresh')}
         </Button>
       </PageHeader>
@@ -483,7 +646,7 @@ export default function AdminOrders() {
       {tab === 'orders' && (
         <>
           <FilterBar>
-            <Select value={status} onChange={e => { setPage(1); setStatus(e.target.value) }}>
+            <Select value={status} onChange={e => { setStatus(e.target.value); setPage('1') }}>
               <option value="">{t('admin.orders.allStatus')}</option>
               <option value="pending_payment">{t('admin.orders.statusPendingPayment')}</option>
               <option value="paid">{t('admin.orders.statusPaid')}</option>
@@ -492,14 +655,14 @@ export default function AdminOrders() {
               <option value="completed">{t('admin.orders.statusCompleted')}</option>
               <option value="cancelled">{t('admin.orders.statusCancelled')}</option>
             </Select>
-            <Select value={paymentStatus} onChange={e => { setPage(1); setPaymentStatus(e.target.value) }}>
+            <Select value={paymentStatus} onChange={e => { setPaymentStatus(e.target.value); setPage('1') }}>
               <option value="">{t('admin.orders.allPayment')}</option>
               <option value="unpaid">{t('admin.orders.paymentUnpaid')}</option>
               <option value="paid">{t('admin.orders.paymentPaid')}</option>
               <option value="refunding">{t('admin.orders.paymentRefunding')}</option>
               <option value="refunded">{t('admin.orders.paymentRefunded')}</option>
             </Select>
-            <Select value={channel} onChange={e => { setPage(1); setChannel(e.target.value) }}>
+            <Select value={channel} onChange={e => { setChannel(e.target.value); setPage('1') }}>
               <option value="">
                 {t('admin.orders.allChannel')} ({channelStats.reduce((s, c) => s + (c.order_count || 0), 0)})
               </option>
@@ -514,94 +677,42 @@ export default function AdminOrders() {
             </Select>
             <SearchInput
               placeholder={t('admin.orders.searchPlaceholder')}
-              value={search}
-              onChange={e => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => {
-                if (e.key === 'Enter') { setPage(1); loadOrders() }
+                if (e.key === 'Enter') { setSearch(searchInput.trim()); setPage('1') }
               }}
             />
-            <Button $variant="primary" onClick={() => { setPage(1); loadOrders() }}>{t('common.search')}</Button>
-        <span style={{ flex: 1 }} />
-        <RefreshButton onRefresh={loadOrders} />
+            <Button variant="primary" onClick={() => { setSearch(searchInput.trim()); setPage('1') }}>{t('common.search')}</Button>
+            <span style={{ flex: 1 }} />
+            <RefreshButton onRefresh={loadOrders} />
           </FilterBar>
 
           {items.length === 0 && !loading ? (
             <Empty>{t('admin.orders.empty')}</Empty>
           ) : (
-            <TableScroll>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>{t('admin.orders.colOrderNo')}</Th>
-                    <Th>{t('admin.orders.colChannel')}</Th>
-                    <Th>{t('admin.orders.colStatus')}</Th>
-                    <Th>{t('admin.orders.colPayment')}</Th>
-                    <Th style={{ textAlign: 'right' }}>{t('admin.orders.colAmount')}</Th>
-                    <Th>{t('admin.orders.colItems')}</Th>
-                    <Th>{t('admin.orders.colCreated')}</Th>
-                    <Th>{t('common.actions')}</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map(item => {
-                    const pill = statusPill(item.status)
-                    return (
-                      <Tr key={item.order_no}>
-                        <Td style={{ fontFamily: 'monospace' }}>{item.order_no}</Td>
-                        <Td>
-                          <ChannelDot $color={channelColor(item.channel_code)}>
-                            {item.channel_name || t('admin.orders.channelMall')}
-                          </ChannelDot>
-                        </Td>
-                        <Td><Tag tone={pill.bg === '#fef2f2' ? 'error' : pill.bg === '#ecfdf5' ? 'success' : pill.bg === '#fffbeb' ? 'warning' : pill.bg === '#eff6ff' ? 'info' : 'neutral'}>{pill.label}</Tag></Td>
-                        <Td>
-                          {(() => {
-                            const payPill = statusPill(item.payment_status)
-                            return (
-                              <Tag tone={payPill.bg === '#fef2f2' ? 'error' : payPill.bg === '#ecfdf5' ? 'success' : payPill.bg === '#fffbeb' ? 'warning' : payPill.bg === '#eff6ff' ? 'info' : 'neutral'}>
-                                {payPill.label}
-                              </Tag>
-                            )
-                          })()}
-                        </Td>
-                        <Td style={{ textAlign: 'right' }}><Amount>{money(item.actual_amount)}</Amount></Td>
-                        <Td>{item.item_count ?? '-'}</Td>
-                        <Td style={{ whiteSpace: 'nowrap' }}>{formatDateTime(item.created_at)}</Td>
-                        <Td>
-                          <Actions>
-                            <Button onClick={() => openDetail(item.order_no)}>{t('admin.orders.detail')}</Button>
-                            {item.status === 'paid' && (
-                              <Button $variant="primary" disabled={busyNo === item.order_no} onClick={() => setTrackingTarget(item.order_no)}>
-                                {t('admin.orders.ship')}
-                              </Button>
-                            )}
-                            {(item.status === 'pending_payment' || item.status === 'paid') && (
-                              <Button $variant="danger" disabled={busyNo === item.order_no} onClick={() => setCancelTarget(item.order_no)}>
-                                {t('admin.orders.cancel')}
-                              </Button>
-                            )}
-                          </Actions>
-                        </Td>
-                      </Tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
-            </TableScroll>
+            <SmartDataTable
+              columns={orderColumns}
+              dataSource={items}
+              rowKey="order_no"
+              loading={loading}
+              error={null}
+              onRowClick={(r) => openDetail(r.order_no)}
+              emptyTitle={t('admin.orders.empty')}
+              stickyHeader
+            />
           )}
 
-          <PaginationBar>
-            <Button disabled={page <= 1} onClick={() => setPage(p => Math.max(1, p - 1))}>{t('common.previous')}</Button>
-            <span style={{ alignSelf: 'center', fontSize: 13, color: '#666' }}>{page} / {totalPages}</span>
-            <Button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>{t('common.next')}</Button>
-          </PaginationBar>
+          <div style={{ marginTop: 20 }}>
+            <Pagination page={pageNum} pageCount={totalPages} total={total} pageSize={PAGE_SIZE} onChange={(p) => setPage(String(p))} />
+          </div>
         </>
       )}
 
       {tab === 'aftersales' && (
         <>
           <FilterBar>
-            <Select value={asStatus} onChange={e => { setAsPage(1); setAsStatus(e.target.value) }}>
+            <Select value={asStatus} onChange={e => { setAsStatus(e.target.value); setAsPage('1') }}>
               <option value="">{t('admin.orders.allStatus')}</option>
               <option value="pending_review">{t('admin.orders.asPendingReview')}</option>
               <option value="approved">{t('admin.orders.asApproved')}</option>
@@ -609,7 +720,7 @@ export default function AdminOrders() {
               <option value="processing">{t('admin.orders.asProcessing')}</option>
               <option value="completed">{t('admin.orders.asCompleted')}</option>
             </Select>
-            <Select value={asType} onChange={e => { setAsPage(1); setAsType(e.target.value) }}>
+            <Select value={asType} onChange={e => { setAsType(e.target.value); setAsPage('1') }}>
               <option value="">{t('admin.orders.allTypes')}</option>
               <option value="return">{t('admin.orders.typeReturn')}</option>
               <option value="exchange">{t('admin.orders.typeExchange')}</option>
@@ -617,80 +728,38 @@ export default function AdminOrders() {
             </Select>
             <SearchInput
               placeholder={t('admin.orders.aftersaleSearchPlaceholder')}
-              value={asSearch}
-              onChange={e => setAsSearch(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { setAsPage(1); loadAfterSales() } }}
+              value={asSearchInput}
+              onChange={e => setAsSearchInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { setAsSearch(asSearchInput.trim()); setAsPage('1') } }}
             />
-            <Button $variant="primary" onClick={() => { setAsPage(1); loadAfterSales() }}>{t('common.search')}</Button>
+            <Button variant="primary" onClick={() => { setAsSearch(asSearchInput.trim()); setAsPage('1') }}>{t('common.search')}</Button>
           </FilterBar>
 
           {afterSales.length === 0 && !loading ? (
             <Empty>{t('admin.orders.aftersaleEmpty')}</Empty>
           ) : (
-            <TableScroll>
-              <Table>
-                <thead>
-                  <tr>
-                    <Th>{t('admin.orders.colAfterSaleNo')}</Th>
-                    <Th>{t('admin.orders.colOrderNo')}</Th>
-                    <Th>{t('admin.orders.colType')}</Th>
-                    <Th>{t('admin.orders.colStatus')}</Th>
-                    <Th style={{ textAlign: 'right' }}>{t('admin.orders.colAmount')}</Th>
-                    <Th>{t('admin.orders.colReason')}</Th>
-                    <Th>{t('common.actions')}</Th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {afterSales.map(row => {
-                    const pill = statusPill(row.status)
-                    return (
-                      <Tr key={row.after_sale_no}>
-                        <Td style={{ fontFamily: 'monospace' }}>{row.after_sale_no}</Td>
-                        <Td style={{ fontFamily: 'monospace' }}>{orderNoFromAfterSale(row)}</Td>
-                        <Td>{row.type}</Td>
-                        <Td><Tag tone={pill.bg === '#fef2f2' ? 'error' : pill.bg === '#ecfdf5' ? 'success' : pill.bg === '#fffbeb' ? 'warning' : 'neutral'}>{pill.label}</Tag></Td>
-                        <Td style={{ textAlign: 'right' }}><Amount>{money(row.amount)}</Amount></Td>
-                        <Td style={{ maxWidth: 240 }}>{row.reason}</Td>
-                        <Td>
-                          <Actions>
-                            {row.status === 'pending_review' && (
-                              <>
-                                <Button $variant="ok" disabled={busyNo === row.after_sale_no} onClick={() => setRemarkTarget({ afterSaleNo: row.after_sale_no, action: 'approve' })}>
-                                  {t('admin.orders.approve')}
-                                </Button>
-                                <Button $variant="danger" disabled={busyNo === row.after_sale_no} onClick={() => setRemarkTarget({ afterSaleNo: row.after_sale_no, action: 'reject' })}>
-                                  {t('admin.orders.reject')}
-                                </Button>
-                              </>
-                            )}
-                            {row.status === 'approved' && (
-                              <Button $variant="primary" disabled={busyNo === row.after_sale_no} onClick={() => setRefundTarget(row.after_sale_no)}>
-                                {t('admin.orders.completeRefund')}
-                              </Button>
-                            )}
-                          </Actions>
-                        </Td>
-                      </Tr>
-                    )
-                  })}
-                </tbody>
-              </Table>
-            </TableScroll>
+            <SmartDataTable
+              columns={asColumns}
+              dataSource={afterSales}
+              rowKey="after_sale_no"
+              loading={loading}
+              error={null}
+              emptyTitle={t('admin.orders.aftersaleEmpty')}
+              stickyHeader
+            />
           )}
 
-          <PaginationBar>
-            <Button disabled={asPage <= 1} onClick={() => setAsPage(p => Math.max(1, p - 1))}>{t('common.previous')}</Button>
-            <span style={{ alignSelf: 'center', fontSize: 13, color: '#666' }}>{asPage} / {asTotalPages}</span>
-            <Button disabled={asPage >= asTotalPages} onClick={() => setAsPage(p => p + 1)}>{t('common.next')}</Button>
-          </PaginationBar>
+          <div style={{ marginTop: 20 }}>
+            <Pagination page={asPageNum} pageCount={asTotalPages} total={asTotal} pageSize={PAGE_SIZE} onChange={(p) => setAsPage(String(p))} />
+          </div>
         </>
       )}
 
       {/* 订单详情 Drawer（右侧滑入，不遮挡列表） */}
-      <Drawer
+      <DetailDrawer
         open={!!selected}
+        size="lg"
         title={selected ? `${t('admin.orders.detailTitle')} — ${String(selected.order_no || '')}` : ''}
-        width="480px"
         onClose={() => setSelected(null)}
       >
         {selected && (
@@ -700,7 +769,7 @@ export default function AdminOrders() {
                 {ORDER_STEPS.map((s, i) => (
                   <Step key={s} $state={i < stepIndex ? 'done' : i === stepIndex ? 'current' : 'todo'}>
                     <span className="dot">{i < stepIndex ? '✓' : i + 1}</span>
-                    {STATUS_PILL[s]?.label ?? s}
+                    {STEP_LABEL[s] ?? s}
                     {i < ORDER_STEPS.length - 1 && <span className="line" />}
                   </Step>
                 ))}
@@ -708,8 +777,8 @@ export default function AdminOrders() {
             )}
 
             <Grid>
-              <Field><strong>{t('admin.orders.colStatus')}</strong>{statusPill(String(selected.status)).label}</Field>
-              <Field><strong>{t('admin.orders.colPayment')}</strong>{String(selected.payment_status || '-')}</Field>
+              <Field><strong>{t('admin.orders.colStatus')}</strong>{orderStatusLabel(String(selected.status))}</Field>
+              <Field><strong>{t('admin.orders.colPayment')}</strong>{paymentStatusLabel(String(selected.payment_status || '-'))}</Field>
               <Field><strong>{t('admin.orders.colAmount')}</strong>{money(selected.actual_amount)}</Field>
               <Field><strong>{t('admin.orders.paymentMethod')}</strong>{String(selected.payment_method || '-')}</Field>
               <Field><strong>{t('admin.orders.shippingName')}</strong>{String(selected.shipping_name || '-')}</Field>
@@ -726,20 +795,20 @@ export default function AdminOrders() {
             </Field>
 
             <SectionTitle>{t('admin.orders.items')}</SectionTitle>
-            <Table>
+            <DetailTable>
               <thead>
                 <tr>
-                  <Th>{t('admin.orders.itemName')}</Th>
-                  <Th>SKU</Th>
-                  <Th style={{ textAlign: 'right' }}>{t('admin.orders.itemPrice')}</Th>
-                  <Th style={{ textAlign: 'right' }}>{t('admin.orders.itemQty')}</Th>
-                  <Th style={{ textAlign: 'right' }}>{t('admin.orders.itemSubtotal')}</Th>
+                  <th>{t('admin.orders.itemName')}</th>
+                  <th>SKU</th>
+                  <th style={{ textAlign: 'right' }}>{t('admin.orders.itemPrice')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('admin.orders.itemQty')}</th>
+                  <th style={{ textAlign: 'right' }}>{t('admin.orders.itemSubtotal')}</th>
                 </tr>
               </thead>
               <tbody>
                 {(selected.items || []).map((it: any) => (
-                  <Tr key={it.id || it.sku_code}>
-                    <Td>
+                  <tr key={it.id || it.sku_code}>
+                    <td>
                       {it.spu_id ? (
                         <ItemNameLink
                           as="button"
@@ -752,59 +821,54 @@ export default function AdminOrders() {
                       ) : (
                         it.spu_name
                       )}
-                    </Td>
-                    <Td style={{ fontFamily: 'monospace' }}>{it.sku_code}</Td>
-                    <Td><Amount>{money(it.price)}</Amount></Td>
-                    <Td style={{ textAlign: 'right' }}>{it.quantity}</Td>
-                    <Td><Amount>{money(it.subtotal)}</Amount></Td>
-                  </Tr>
+                    </td>
+                    <td style={{ fontFamily: 'monospace' }}>{it.sku_code}</td>
+                    <td style={{ textAlign: 'right' }}><Amount>{money(it.price)}</Amount></td>
+                    <td style={{ textAlign: 'right' }}>{it.quantity}</td>
+                    <td style={{ textAlign: 'right' }}><Amount>{money(it.subtotal)}</Amount></td>
+                  </tr>
                 ))}
               </tbody>
-            </Table>
+            </DetailTable>
 
             {(selected.after_sales || []).length > 0 && (
               <>
                 <SectionTitle>{t('admin.orders.afterSalesOnOrder')}</SectionTitle>
-                <Table>
+                <DetailTable>
                   <thead>
                     <tr>
-                      <Th>{t('admin.orders.colAfterSaleNo')}</Th>
-                      <Th>{t('admin.orders.colType')}</Th>
-                      <Th>{t('admin.orders.colStatus')}</Th>
-                      <Th style={{ textAlign: 'right' }}>{t('admin.orders.colAmount')}</Th>
+                      <th>{t('admin.orders.colAfterSaleNo')}</th>
+                      <th>{t('admin.orders.colType')}</th>
+                      <th>{t('admin.orders.colStatus')}</th>
+                      <th style={{ textAlign: 'right' }}>{t('admin.orders.colAmount')}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {(selected.after_sales || []).map((as: any) => (
-                      <Tr key={as.after_sale_no || as.id}>
-                        <Td style={{ fontFamily: 'monospace' }}>{as.after_sale_no}</Td>
-                        <Td>{as.type}</Td>
-                        <Td>{statusPill(String(as.status)).label}</Td>
-                        <Td><Amount>{money(as.amount)}</Amount></Td>
-                      </Tr>
+                      <tr key={as.after_sale_no || as.id}>
+                        <td style={{ fontFamily: 'monospace' }}>{as.after_sale_no}</td>
+                        <td>{as.type}</td>
+                        <td>{asStatusLabel(String(as.status))}</td>
+                        <td style={{ textAlign: 'right' }}><Amount>{money(as.amount)}</Amount></td>
+                      </tr>
                     ))}
                   </tbody>
-                </Table>
+                </DetailTable>
               </>
             )}
           </>
         )}
-      </Drawer>
+      </DetailDrawer>
 
       {/* 商品参数预览（点击订单商品名弹出，不跳转前台） */}
-      <Modal
+      <Dialog
         open={!!itemPreview}
         title={t('admin.orders.itemPreviewTitle') || '商品参数'}
-        onClose={() => setItemPreview(null)}
+        size="md"
         footer={
-          <button
-            type="button"
-            onClick={() => setItemPreview(null)}
-            style={{ padding: '6px 18px', borderRadius: 4, border: '1px solid #d9d9d9', background: '#fff', cursor: 'pointer', fontSize: 13 }}
-          >
-            {t('common.close') || '关闭'}
-          </button>
+          <Button variant="secondary" onClick={() => setItemPreview(null)}>{t('common.close') || '关闭'}</Button>
         }
+        onClose={() => setItemPreview(null)}
       >
         {itemPreview && (
           <div style={{ display: 'flex', gap: 16 }}>
@@ -836,31 +900,29 @@ export default function AdminOrders() {
             </div>
           </div>
         )}
-      </Modal>
+      </Dialog>
 
-      {cancelTarget !== null && (
-        <ConfirmDialog
-          title={t('admin.orders.title')}
-          message={t('admin.orders.confirmCancel')}
-          confirmLabel={t('common.confirm')}
-          cancelLabel={t('common.cancel')}
-          danger
-          onConfirm={() => { const no = cancelTarget; setCancelTarget(null); handleCancel(no) }}
-          onCancel={() => setCancelTarget(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={cancelTarget !== null}
+        title={t('admin.orders.title')}
+        message={t('admin.orders.confirmCancel')}
+        tone="warning"
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => { const no = cancelTarget; setCancelTarget(null); if (no) handleCancel(no) }}
+        onCancel={() => setCancelTarget(null)}
+      />
 
-      {refundTarget !== null && (
-        <ConfirmDialog
-          title={t('admin.orders.title')}
-          message={t('admin.orders.confirmCompleteRefund')}
-          confirmLabel={t('common.confirm')}
-          cancelLabel={t('common.cancel')}
-          danger
-          onConfirm={() => { const no = refundTarget; setRefundTarget(null); handleAfterSaleReview(no, 'complete_refund') }}
-          onCancel={() => setRefundTarget(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={refundTarget !== null}
+        title={t('admin.orders.title')}
+        message={t('admin.orders.confirmCompleteRefund')}
+        tone="warning"
+        confirmLabel={t('common.confirm')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={() => { const no = refundTarget; setRefundTarget(null); if (no) handleAfterSaleReview(no, 'complete_refund') }}
+        onCancel={() => setRefundTarget(null)}
+      />
 
       {trackingTarget !== null && (
         <PromptDialog

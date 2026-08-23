@@ -29,6 +29,7 @@ import { RoleProtectedRoute } from '../components/admin/ProtectedRoute'
 // Admin pages — lazy loaded
 const AdminLogin = lazy(() => import('../pages/admin/AdminLogin'))
 const AdminLayout = lazy(() => import('../pages/admin/AdminLayout'))
+const AdminDashboard = lazy(() => import('../pages/admin/AdminDashboard'))
 const AdminProducts = lazy(() => import('../pages/admin/AdminProducts'))
 const AdminProductForm = lazy(() => import('../pages/admin/AdminProductForm'))
 const AdminProductAudit = lazy(() => import('../pages/admin/AdminProductAudit'))
@@ -118,7 +119,8 @@ export const routes: RouteObject[] = [
       </Suspense>
     ),
     children: [
-      { index: true, element: <Navigate to="/admin/products" replace /> },
+      { index: true, element: <Navigate to="/admin/dashboard" replace /> },
+      { path: 'dashboard', element: <Suspense fallback={<PageLoading />}><AdminDashboard /></Suspense> },
       { path: 'products', element: <Suspense fallback={<PageLoading />}><AdminProducts /></Suspense> },
       { path: 'products/create', element: <Suspense fallback={<PageLoading />}><AdminProductForm /></Suspense> },
       { path: 'products/:id', element: <Suspense fallback={<PageLoading />}><AdminProductForm /></Suspense> },

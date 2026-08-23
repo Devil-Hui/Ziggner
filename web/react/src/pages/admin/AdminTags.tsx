@@ -1,19 +1,18 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
-import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
+import { Color, FontSize } from '../../theme/tokens';
+import { Input, Select, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import { RefreshButton } from '../../components/admin/common';
-import DataTable from '../../components/admin/common/DataTable';
-import type { Column } from '../../components/admin/common/DataTable';
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
-import Modal from '../../components/admin/common/Modal';
+import { SmartDataTable, Button, ConfirmDialog, FormDialog, StatusBadge } from '../../components/admin/design-system';
+import type { SmartColumn } from '../../components/admin/design-system';
 import { adminAPI } from '../../api/admin';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
 import { formatDateTime } from '../../utils/helpers';
 import { TAG_COLOR_PALETTE, DEFAULT_TAG_COLOR } from '../../constants/tagColors';
+import { useUrlState } from '../../hooks/useUrlState';
 
 interface Tag {
   id: number;
@@ -24,32 +23,6 @@ interface Tag {
   created_at: string;
 }
 
-const FormOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const FormDialog = styled.div`
-  background: ${Color.bg.card};
-  border-radius: ${Radius.sm}px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-  width: 400px;
-  max-width: 90vw;
-  padding: ${Spacing.xxl}px;
-`;
-
-const FormTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${Color.text.heading};
-  margin: 0 0 20px 0;
-`;
-
 const FormGroup = styled.div`
   margin-bottom: 16px;
 `;
@@ -59,13 +32,6 @@ const Label = styled.label`
   font-size: ${FontSize.sm}px;
   color: ${Color.text.secondary};
   margin-bottom: 6px;
-`;
-
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
 `;
 
 const Toast = styled.div<{ $type: 'success' | 'error' }>`
@@ -124,7 +90,7 @@ export default function AdminTags() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useUrlState<string>('q', '');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // Form
@@ -134,6 +100,9 @@ export default function AdminTags() {
   const [formColor, setFormColor] = useState(DEFAULT_TAG_COLOR);
   const [formType, setFormType] = useState<'product' | 'activity'>('product');
   const [formActive, setFormActive] = useState(true);
+  // 脏数据快照：打开时记录，字段变更后 diff 决定是否启用离开二次确认
+  const [formInit, setFormInit] = useState('');
+  const formDirty = JSON.stringify({ name: formName, color: formColor, type: formType, active: formActive }) !== formInit;
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null);
@@ -167,6 +136,7 @@ export default function AdminTags() {
     setFormColor(DEFAULT_TAG_COLOR);
     setFormActive(true);
     setFormType('product');
+    setFormInit(JSON.stringify({ name: '', color: DEFAULT_TAG_COLOR, type: 'product', active: true }));
     setShowForm(true);
   };
 
@@ -176,6 +146,7 @@ export default function AdminTags() {
     setFormColor(tag.color || DEFAULT_TAG_COLOR);
     setFormActive(tag.is_active);
     setFormType(tag.tag_type || 'product');
+    setFormInit(JSON.stringify({ name: tag.name, color: tag.color || DEFAULT_TAG_COLOR, type: tag.tag_type || 'product', active: tag.is_active }));
     setShowForm(true);
   };
 
@@ -216,7 +187,7 @@ export default function AdminTags() {
     !searchText || t.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const columns: Column<Tag>[] = [
+  const columns: SmartColumn<Tag>[] = [
     {
       key: 'name',
       title: t('admin.tags.nameLabel'),
@@ -224,13 +195,9 @@ export default function AdminTags() {
       render: (_: unknown, record: Tag) => (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontWeight: 600, color: '#1a1a2e' }}>#{record.name}</span>
-          <span style={{
-            padding: '1px 7px', borderRadius: 999, fontSize: 11,
-            background: record.tag_type === 'activity' ? '#fef3c7' : '#dbeafe',
-            color: record.tag_type === 'activity' ? '#b45309' : '#1a56db',
-          }}>
+          <StatusBadge tone={record.tag_type === 'activity' ? 'warning' : 'info'}>
             {record.tag_type === 'activity' ? '活动标签' : '产品标签'}
-          </span>
+          </StatusBadge>
         </span>
       ),
     },
@@ -255,13 +222,9 @@ export default function AdminTags() {
       title: t('admin.tags.statusLabel'),
       width: '100px',
       render: (val) => (
-        <span style={{
-          padding: '2px 8px', borderRadius: 2, fontSize: 12,
-          background: val ? '#e8f5e9' : '#eee',
-          color: val ? '#2e7d32' : '#999',
-        }}>
+        <StatusBadge tone={val ? 'success' : 'neutral'} dot>
           {val ? t('admin.tags.enabled') : t('admin.tags.disabled')}
-        </span>
+        </StatusBadge>
       ),
     },
     {
@@ -275,24 +238,19 @@ export default function AdminTags() {
     {
       key: 'actions',
       title: t('admin.tags.actions'),
-      width: '120px',
+      width: '150px',
+      hideable: false,
       render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isSuperUser && (
-            <button
-              style={{ padding: '4px 10px', fontSize: 12, border: '1px solid ${Color.border.medium}', background: '#fff', color: '#666', borderRadius: 2, cursor: 'pointer' }}
-              onClick={() => openEdit(record)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => openEdit(record)}>
               {t('admin.tags.edit')}
-            </button>
+            </Button>
           )}
           {isSuperUser && (
-            <button
-              style={{ padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`, background: '#fff', color: Color.primary, borderRadius: 2, cursor: 'pointer' }}
-              onClick={() => setDeleteTarget(record)}
-            >
+            <Button size="sm" variant="danger" onClick={() => setDeleteTarget(record)}>
               {t('admin.tags.delete')}
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -315,80 +273,76 @@ export default function AdminTags() {
           placeholder={t('admin.tags.searchPlaceholder')}
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          style={{ height: 32, padding: '0 10px', fontSize: 13, border: '1px solid ${Color.border.medium}', borderRadius: 2, width: 200, outline: 'none' }}
+          style={{ height: 32, padding: '0 10px', fontSize: 13, border: `1px solid ${Color.border.medium}`, borderRadius: 6, width: 220, outline: 'none' }}
         />
       </div>
 
-      <DataTable
+      <SmartDataTable<Tag>
         columns={columns}
-        data={filtered}
+        dataSource={filtered}
         loading={loading}
         error={error}
         onRetry={fetchTags}
         emptyTitle={t('admin.tags.noTags')}
-        emptyIcon="tags"
         rowKey="id"
       />
 
-      {showForm && (
-        <Modal
-          open={showForm}
-          title={editingId ? t('admin.tags.editTag') : t('admin.tags.newTag')}
-          onClose={() => setShowForm(false)}
-          footer={null}
-        >
-            <FormGroup>
-              <Label>{t('admin.tags.nameLabel')}</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
-            </FormGroup>
-            <FormGroup>
-              <FormGroup>
-                <Label>标签类型（话题式标签）</Label>
-                <Select value={formType} onChange={(e) => setFormType(e.target.value as 'product' | 'activity')}>
-                  <option value="product">产品标签（如 #上新、#热卖）</option>
-                  <option value="activity">活动标签（如 #双十一、#周年庆）</option>
-                </Select>
-              </FormGroup>
-              <Label>{t('admin.tags.colorLabel')} <ColorPreview $color={formColor}>{formColor}</ColorPreview></Label>
-              <ColorPalette>
-                {TAG_COLOR_PALETTE.map((c) => (
-                  <ColorSwatch
-                    key={c}
-                    $color={c}
-                    $selected={formColor.toLowerCase() === c.toLowerCase()}
-                    onClick={() => setFormColor(c)}
-                    type="button"
-                    title={c}
-                  />
-                ))}
-              </ColorPalette>
-            </FormGroup>
-            {editingId && (
-              <FormGroup>
-                <Label>{t('admin.tags.statusLabel')}</Label>
-                <Select value={formActive ? '1' : '0'} onChange={(e) => setFormActive(e.target.value === '1')}>
-                  <option value="1">{t('admin.tags.enabled')}</option>
-                  <option value="0">{t('admin.tags.disabled')}</option>
-                </Select>
-              </FormGroup>
-            )}
-            <ButtonGroup>
-              <SecondaryBtn onClick={() => setShowForm(false)}>{t('common.cancel')}</SecondaryBtn>
-              <PrimaryBtn onClick={handleSave}>{editingId ? t('admin.tags.save') : t('admin.tags.create')}</PrimaryBtn>
-            </ButtonGroup>
-        </Modal>
-      )}
+      <FormDialog
+        open={showForm}
+        title={editingId ? t('admin.tags.editTag') : t('admin.tags.newTag')}
+        size="sm"
+        okText={editingId ? t('admin.tags.save') : t('admin.tags.create')}
+        cancelText={t('common.cancel')}
+        dirty={formDirty}
+        onOk={handleSave}
+        onCancel={() => setShowForm(false)}
+      >
+        <FormGroup>
+          <Label>{t('admin.tags.nameLabel')}</Label>
+          <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
+        </FormGroup>
+        <FormGroup>
+          <Label>标签类型（话题式标签）</Label>
+          <Select value={formType} onChange={(e) => setFormType(e.target.value as 'product' | 'activity')}>
+            <option value="product">产品标签（如 #上新、#热卖）</option>
+            <option value="activity">活动标签（如 #双十一、#周年庆）</option>
+          </Select>
+        </FormGroup>
+        <FormGroup>
+          <Label>{t('admin.tags.colorLabel')} <ColorPreview $color={formColor}>{formColor}</ColorPreview></Label>
+          <ColorPalette>
+            {TAG_COLOR_PALETTE.map((c) => (
+              <ColorSwatch
+                key={c}
+                $color={c}
+                $selected={formColor.toLowerCase() === c.toLowerCase()}
+                onClick={() => setFormColor(c)}
+                type="button"
+                title={c}
+              />
+            ))}
+          </ColorPalette>
+        </FormGroup>
+        {editingId && (
+          <FormGroup>
+            <Label>{t('admin.tags.statusLabel')}</Label>
+            <Select value={formActive ? '1' : '0'} onChange={(e) => setFormActive(e.target.value === '1')}>
+              <option value="1">{t('admin.tags.enabled')}</option>
+              <option value="0">{t('admin.tags.disabled')}</option>
+            </Select>
+          </FormGroup>
+        )}
+      </FormDialog>
 
-      {deleteTarget && (
-        <ConfirmDialog
-          title={t('admin.tags.deleteTag')}
-          message={t('admin.tags.confirmDeleteTag').replace('{name}', deleteTarget.name)}
-          confirmLabel={t('admin.tags.confirmDelete')}
-          danger
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={t('admin.tags.deleteTag')}
+        message={t('admin.tags.confirmDeleteTag').replace('{name}', deleteTarget?.name ?? '')}
+        tone="danger"
+        confirmLabel={t('admin.tags.confirmDelete')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

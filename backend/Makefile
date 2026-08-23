@@ -9,7 +9,7 @@
 #   make test-all           全量回归（除 e2e；含核心模块覆盖率门禁）
 #   make test-e2e           端到端（前端 Playwright，见 web/react）
 #
-# 覆盖率门禁（里程碑值 → 最终目标，见 docs/testing.md 升级路线）：
+# 覆盖率门禁（里程碑值 → 最终目标，见 ../docs/admin-platform-handover.md §九 测试体系）：
 #   单元层：当前基线 24%（需求目标 ≥85%）
 #   集成层：当前基线 39%（需求目标 ≥80%）
 #   全量：  当前基线 42%（累计 unit+integration+slow）

@@ -5,12 +5,10 @@ import { useNavigate } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react';
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
-import DataTable from '../../components/admin/common/DataTable';
-import type { Column } from '../../components/admin/common/DataTable';
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
-import Pagination from '../../components/admin/common/Pagination';
+import { Pagination, ConfirmDialog, StatusBadge } from '../../components/admin/design-system';
 import { adminAPI, Coupon, CouponFormData, type PromoCodeItem, type CouponApplicationItem } from '../../api/admin';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
+import { useUrlState } from '../../hooks/useUrlState';
 import { useTranslation } from '../../i18n';
 import { formatDate } from '../../utils/helpers';
 import { Input, Input as SearchInput, PrimaryBtn, Select, SecondaryBtn, SecondaryBtn as GenerateBtn } from '../../components/admin/common/ui';
@@ -263,30 +261,6 @@ const UsageText = styled.span`
   white-space: nowrap;
 `;
 
-const CouponStatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: ${Radius.lg}px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $active }) => ($active ? '#ecfdf5' : '#f3f4f6')};
-  color: ${({ $active }) => ($active ? '#047857' : '#6b7280')};
-`;
-
-const ReviewPill = styled.span<{ $status: string }>`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: ${Radius.lg}px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $status }) => ($status === 'APPROVED' || $status === 'ACTIVE' || $status === 'SCHEDULED' ? '#eff6ff' : $status === 'REJECTED' ? '#fef2f2' : '#fffbeb')};
-  color: ${({ $status }) => ($status === 'APPROVED' || $status === 'ACTIVE' || $status === 'SCHEDULED' ? '#1e40af' : $status === 'REJECTED' ? '#b91c1c' : '#b45309')};
-`;
-
 const CardActionBtn = styled.button<{ $tone?: 'default' | 'blue' | 'orange' | 'danger' }>`
   padding: 4px 10px;
   font-size: 12px;
@@ -309,30 +283,13 @@ const CardActionBtn = styled.button<{ $tone?: 'default' | 'blue' | 'orange' | 'd
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `;
 
-const Badge = styled.span<{ $variant: 'fixed' | 'percent' }>`
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-size: ${FontSize.xs}px;
-  font-weight: 500;
-  background: ${({ $variant }) =>
-    $variant === 'fixed' ? '#f5f5f5' : '#e3f2fd'};
-  color: ${({ $variant }) =>
-    $variant === 'fixed' ? '#c62828' : '#1565c0'};
+const SearchBar = styled.div`
+  margin-bottom: 12px;
 `;
 
-const StatusBadge = styled.span<{ $active: boolean }>`
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-size: ${FontSize.xs}px;
-  background: ${({ $active }) => ($active ? '#e8f5e9' : '#eee')};
-  color: ${({ $active }) => ($active ? '#2e7d32' : '#999')};
-`;
+// ==================== Constants ====================
 
-const StackableText = styled.span<{ $stackable: boolean }>`
-  color: ${({ $stackable }) => ($stackable ? '#2e7d32' : '#999')};
-`;
+const PAGE_SIZE = 20;
 
 const REVIEW_STATUS_LABEL: Record<string, string> = {
   DRAFT: '草稿',
@@ -344,33 +301,26 @@ const REVIEW_STATUS_LABEL: Record<string, string> = {
   EXPIRED: '已过期',
 };
 
-const ReviewStatusBadge = styled.span<{ $status: string }>`
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 2px;
-  font-size: ${FontSize.xs}px;
-  ${({ $status }) => {
-    const map: Record<string, [string, string]> = {
-      DRAFT: ['#eee', '#999'],
-      PENDING: ['#e3f2fd', '#1565c0'],
-      APPROVED: ['#e8f5e9', '#2e7d32'],
-      REJECTED: ['#fde8e8', '#c62828'],
-      SCHEDULED: ['#fff3e0', '#e65100'],
-      ACTIVE: ['#e8f5e9', '#2e7d32'],
-      EXPIRED: ['#eee', '#999'],
-    };
-    const [bg, fg] = map[$status] || ['#eee', '#999'];
-    return `background:${bg};color:${fg};`;
-  }}
-`;
+// 审核状态 → 语义 tone（design-system StatusBadge）
+const reviewTone = (status: string): 'success' | 'warning' | 'danger' | 'neutral' => {
+  switch (status) {
+    case 'PENDING':
+    case 'SCHEDULED':
+      return 'warning';
+    case 'APPROVED':
+    case 'ACTIVE':
+      return 'success';
+    case 'REJECTED':
+    case 'EXPIRED':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+};
 
-const SearchBar = styled.div`
-  margin-bottom: 12px;
-`;
-
-// ==================== Constants ====================
-
-const PAGE_SIZE = 20;
+// 优惠券生命周期 → 语义 tone
+const couponTone = (active: boolean, label: string): 'success' | 'danger' | 'neutral' =>
+  active ? 'success' : label === '已过期' ? 'danger' : 'neutral';
 
 /**
  * 数字输入框：内部保留用户正在编辑的原始字符串。
@@ -459,7 +409,7 @@ export default function AdminCoupons() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchText, setSearchText] = useState('');
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useUrlState<string>('page', '1');
   const [total, setTotal] = useState(0);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
@@ -587,7 +537,7 @@ export default function AdminCoupons() {
     try {
       setLoading(true);
       setError(null);
-      const data = await adminAPI.getCoupons({ page, search: searchText });
+      const data = await adminAPI.getCoupons({ page: Number(page), search: searchText });
       if (data && Array.isArray(data.results)) {
         setCoupons(data.results);
         setTotal(data.count || 0);
@@ -734,13 +684,6 @@ export default function AdminCoupons() {
 
   // ==================== Helpers ====================
 
-  const formatDiscount = (record: Coupon): string => {
-    if (record.discount_type === 'fixed') {
-      return t('admin.coupons.discountFormat').replace('{amount}', String(record.amount));
-    }
-    return `-${record.amount}%`;
-  };
-
   const getCouponStatus = (record: Coupon): { active: boolean; label: string } => {
     if ((record as unknown as Record<string, unknown>).is_active === false) {
       return { active: false, label: '已停用' };
@@ -755,7 +698,7 @@ export default function AdminCoupons() {
 
   const handleSearchChange = (value: string) => {
     setSearchText(value);
-    setPage(1);
+    setPage('1');
   };
 
   // 提交审核：无申请则先建草稿（带入 coupon_id，审核时原地更新该券），再提交
@@ -790,168 +733,6 @@ export default function AdminCoupons() {
       setReviewingId(null);
     }
   };
-
-  // ==================== Columns ====================
-
-  const columns: Column<Coupon>[] = [
-    { key: 'id', title: 'ID', width: '60px' },
-    {
-      key: 'code',
-      title: t('admin.coupons.columnCode'),
-      width: '150px',
-      render: (val) => <strong>{String(val)}</strong>,
-    },
-    {
-      key: 'discount_type',
-      title: t('admin.coupons.columnType'),
-      width: '90px',
-      render: (val) => (
-        <Badge $variant={val as 'fixed' | 'percent'}>
-          {val === 'fixed' ? t('admin.coupons.columnFixed') : t('admin.coupons.columnPercentage')}
-        </Badge>
-      ),
-    },
-    {
-      key: 'amount',
-      title: t('admin.coupons.columnDiscount'),
-      width: '90px',
-      render: (_, record) => formatDiscount(record),
-    },
-    {
-      key: 'min_amount',
-      title: t('admin.coupons.columnMinSpend'),
-      width: '90px',
-      render: (val) => `${val}${t('admin.coupons.columnYuan')}`,
-    },
-    {
-      key: 'max_discount',
-      title: t('admin.coupons.columnMaxDiscount'),
-      width: '90px',
-      render: (val) => (val != null ? `${val}${t('admin.coupons.columnYuan')}` : '-'),
-    },
-    {
-      key: 'stackable',
-      title: t('admin.coupons.columnStackable'),
-      width: '70px',
-      render: (val) => (
-        <StackableText $stackable={Boolean(val)}>
-          {val ? t('admin.coupons.columnYes') : t('admin.coupons.columnNo')}
-        </StackableText>
-      ),
-    },
-    {
-      key: 'start_time',
-      title: t('admin.coupons.columnValidity'),
-      width: '260px',
-      render: (_, record) => (
-        <span style={{ color: '#999' }}>
-          {formatDate(record.start_time)} ~ {formatDate(record.end_time)}
-        </span>
-      ),
-    },
-    {
-      key: 'used_count',
-      title: t('admin.coupons.columnUsage'),
-      width: '80px',
-      render: (_, record) => (
-        <span>
-          {t('admin.coupons.usedCountFormat')
-            .replace('{used}', String(record.used_count ?? 0))
-            .replace('{total}', String(record.total_count))}
-        </span>
-      ),
-    },
-    {
-      key: 'status',
-      title: t('admin.coupons.columnStatus'),
-      width: '80px',
-      render: (_, record) => {
-        const s = getCouponStatus(record);
-        return <StatusBadge $active={s.active}>{s.label}</StatusBadge>;
-      },
-    },
-    {
-      key: 'review',
-      title: '审核状态',
-      width: '100px',
-      render: (_, record) => {
-        const app = appMap[record.id];
-        if (!app) return <span style={{ color: '#999' }}>未提交</span>;
-        return (
-          <ReviewStatusBadge $status={app.status}>
-            {REVIEW_STATUS_LABEL[app.status] || app.status}
-          </ReviewStatusBadge>
-        );
-      },
-    },
-    {
-      key: 'actions',
-      title: t('admin.coupons.columnActions'),
-      width: '260px',
-      render: (_, record) => {
-        const app = appMap[record.id];
-        const canSubmit = !app || app.status === 'DRAFT' || app.status === 'REJECTED';
-        const busy = reviewingId === record.id;
-        const submitLabel = !app
-          ? '提交审核'
-          : app.status === 'REJECTED'
-            ? '重新提交'
-            : app.status === 'PENDING'
-              ? '审核中'
-              : app.status === 'APPROVED'
-                ? '已通过'
-                : app.status === 'SCHEDULED'
-                  ? '待生效'
-                  : app.status === 'ACTIVE'
-                    ? '生效中'
-                    : '提交审核';
-        return (
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              style={{
-                padding: '4px 10px', fontSize: 12, border: '1px solid #999',
-                background: '#fff', color: '#666', borderRadius: 2, cursor: 'pointer',
-              }}
-              onClick={() => openEdit(record)}
-            >
-              {t('admin.coupons.edit')}
-            </button>
-            <button
-              style={{
-                padding: '4px 10px', fontSize: 12, border: '1px solid #2d8cf0',
-                background: '#fff', color: '#2d8cf0', borderRadius: 2, cursor: 'pointer',
-              }}
-              onClick={() => openPromo(record)}
-            >
-              {t('admin.coupons.promoBtn')}
-            </button>
-            <button
-              disabled={!canSubmit || busy}
-              onClick={() => handleSubmitReview(record)}
-              style={{
-                padding: '4px 10px', fontSize: 12,
-                border: '1px solid #e65100',
-                background: !canSubmit || busy ? '#f5f5f5' : '#fff',
-                color: !canSubmit || busy ? '#bbb' : '#e65100',
-                borderRadius: 2, cursor: !canSubmit || busy ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {busy ? '提交中…' : submitLabel}
-            </button>
-            <button
-              style={{
-                padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`,
-                background: '#fff', color: Color.primary, borderRadius: 2, cursor: 'pointer',
-              }}
-              onClick={() => setDeleteTarget(record)}
-            >
-              {t('admin.coupons.delete')}
-            </button>
-          </div>
-        );
-      },
-    },
-  ];
 
   // ==================== Render ====================
 
@@ -1021,8 +802,8 @@ export default function AdminCoupons() {
                     {' · '}{t('admin.coupons.usedCountFormat').replace('{used}', String(record.used_count ?? 0)).replace('{total}', String(record.total_count))}
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                    <CouponStatusBadge $active={s.active}>{s.label}</CouponStatusBadge>
-                    {app && <ReviewPill $status={app.status}>{REVIEW_STATUS_LABEL[app.status] || app.status}</ReviewPill>}
+                    <StatusBadge tone={couponTone(s.active, s.label)}>{s.label}</StatusBadge>
+                    {app && <StatusBadge tone={reviewTone(app.status)}>{REVIEW_STATUS_LABEL[app.status] || app.status}</StatusBadge>}
                   </div>
                 </CouponInfo>
                 <CouponRight>
@@ -1044,10 +825,11 @@ export default function AdminCoupons() {
       )}
 
       <Pagination
-        current={page}
+        page={Number(page)}
+        pageCount={Math.max(1, Math.ceil(total / PAGE_SIZE))}
         total={total}
         pageSize={PAGE_SIZE}
-        onChange={setPage}
+        onChange={(p) => setPage(String(p))}
       />
 
       {/* Create / Edit Form Dialog */}
@@ -1219,10 +1001,11 @@ export default function AdminCoupons() {
       {/* Delete Confirmation */}
       {deleteTarget && (
         <ConfirmDialog
+          open
           title={t('admin.coupons.deleteCoupon')}
           message={t('admin.coupons.confirmDeleteCoupon').replace('{code}', deleteTarget.code)}
           confirmLabel={t('admin.coupons.confirmDelete')}
-          danger
+          tone="danger"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />
@@ -1231,10 +1014,11 @@ export default function AdminCoupons() {
       {/* Promo Code Delete Confirmation */}
       {promoDeleteTarget && (
         <ConfirmDialog
+          open
           title={t('admin.coupons.promoDeleteConfirmTitle')}
           message={t('admin.coupons.promoDeleteConfirmMsg').replace('{code}', promoDeleteTarget.code)}
           confirmLabel={t('admin.coupons.confirmDelete')}
-          danger
+          tone="danger"
           onConfirm={handleDeletePromo}
           onCancel={() => setPromoDeleteTarget(null)}
         />
@@ -1309,7 +1093,7 @@ export default function AdminCoupons() {
                         <td style={tdStyle}><strong>{pc.code}</strong></td>
                         <td style={tdStyle}>{pc.name || '-'}</td>
                         <td style={tdStyle}>
-                          <StatusBadge $active={pc.is_active}>
+                          <StatusBadge tone={pc.is_active ? 'success' : 'neutral'}>
                             {pc.is_active ? t('admin.coupons.promoEnabled') : t('admin.coupons.promoDisabled')}
                           </StatusBadge>
                         </td>

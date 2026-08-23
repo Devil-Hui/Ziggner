@@ -22,6 +22,10 @@ interface AdminAuthContextType {
   isSuperAdmin: boolean
   isGroupLeader: boolean
   isGroupMember: boolean
+  /** 当前管理员的有效权限码（超管隐式全量；非超管 best-effort 由 RBAC 矩阵解析） */
+  permissionCodes: string[]
+  /** 权限判定：hasPermission('product.delete')。前端显隐用，后端仍须二次鉴权。 */
+  hasPermission: (code: string) => boolean
   login: (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string, password?: string, username?: string) => Promise<boolean>
   logout: () => void
 }
@@ -29,6 +33,7 @@ interface AdminAuthContextType {
 const AdminAuthContext = createContext<AdminAuthContextType>({
   adminUser: null, role: 'none', isAuthenticated: false, isLoading: true,
   isSuperAdmin: false, isGroupLeader: false, isGroupMember: false,
+  permissionCodes: [], hasPermission: () => false,
   login: async () => false, logout: () => undefined,
 })
 
@@ -43,6 +48,7 @@ function deriveRole(user: AdminUser | null): AdminRole {
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [permissionCodes, setPermissionCodes] = useState<string[]>([])
 
   const fetchUser = useCallback(async (attempt = 0): Promise<AdminUser | null> => {
     try {
@@ -68,6 +74,31 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => { void fetchUser() }, [fetchUser])
 
+  // P0-4：非超管按 RBAC 矩阵 best-effort 解析有效权限码（失败保持空，仅影响前端显隐）
+  useEffect(() => {
+    if (!adminUser || adminUser.is_superuser) {
+      setPermissionCodes([])
+      return
+    }
+    let alive = true
+    void (async () => {
+      try {
+        const matrix = await adminAPI.getRbacMatrix()
+        const users = await adminAPI.getRbacUsers({ size: 500 })
+        const me = (users?.items ?? []).find((u) => u.username === adminUser.username)
+        if (!me || !me.roles?.length) return
+        const codes = new Set<string>()
+        for (const role of me.roles) {
+          for (const c of matrix.grants?.[role] ?? []) codes.add(c)
+        }
+        if (alive) setPermissionCodes([...codes])
+      } catch {
+        // best-effort：解析失败保持空；后端鉴权仍兜底，不影响功能
+      }
+    })()
+    return () => { alive = false }
+  }, [adminUser])
+
   const login = async (email: string, verifyId?: string, verifyCode?: string, turnstileToken?: string, password?: string, username?: string) => {
     try {
       const result = await adminAPI.login(email, verifyId, verifyCode, turnstileToken, password, username)
@@ -91,11 +122,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const role = deriveRole(adminUser)
+  const hasPermission = useCallback(
+    (code: string) => (adminUser?.is_superuser ? true : permissionCodes.includes(code)),
+    [adminUser, permissionCodes],
+  )
   return (
     <AdminAuthContext.Provider value={{
       adminUser, role, isAuthenticated: role !== 'none', isLoading,
       isSuperAdmin: role === 'superadmin', isGroupLeader: role === 'leader',
-      isGroupMember: role === 'member', login, logout,
+      isGroupMember: role === 'member', permissionCodes, hasPermission, login, logout,
     }}>
       {children}
     </AdminAuthContext.Provider>

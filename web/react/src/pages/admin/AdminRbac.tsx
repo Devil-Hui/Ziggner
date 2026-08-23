@@ -3,12 +3,17 @@ import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { PrimaryBtn as SaveBtn, Input as SearchInput, SecondaryBtn, SecondaryBtn as ActionBtn, SecondaryBtn as CancelBtn, FormGroup, Label, ErrorText, Hint, Select } from '../../components/admin/common/ui'
-import FormDialog from '../../components/admin/common/FormDialog'
-import Drawer from '../../components/admin/common/Drawer'
+import {
+  Drawer,
+  FormDialog,
+  Pagination,
+  SmartDataTable,
+  StatusBadge,
+} from '../../components/admin/design-system'
+import type { SmartColumn } from '../../components/admin/design-system'
 import { adminAPI, type RbacMatrix, type RbacUser, type RbacDomain } from '../../api/admin'
-import DataTable, { type Column } from '../../components/admin/common/DataTable'
-import Pagination from '../../components/admin/common/Pagination'
 import PageHeader from '../../components/admin/common/PageHeader'
+import { useUrlState } from '../../hooks/useUrlState'
 import { useTranslation } from '../../i18n'
 
 // ── Styled Components ──
@@ -167,44 +172,7 @@ const RoleTag = styled.span`
   margin-right: 6px;
 `
 
-const StatusText = styled.span<{ $active: boolean }>`
-  font-size: ${FontSize.xs}px;
-  color: ${({ $active }) => ($active ? '#2ecc71' : '#999')};
-`
-
 // ── Modal ──
-
-const ModalOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`
-
-const ModalCard = styled.div`
-  background: #fff;
-  border-radius: ${Radius.lg}px;
-  box-shadow: ${Shadow.lg};
-  padding: ${Spacing.xl}px;
-  width: 420px;
-  max-width: 90vw;
-`
-
-const ModalTitle = styled.h3`
-  font-size: ${FontSize.lg}px;
-  color: ${Color.text.primary};
-  margin: 0 0 ${Spacing.lg}px 0;
-`
-
-const ModalActions = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: ${Spacing.lg}px;
-`
 
 const ToastMsg = styled.div<{ $type: 'success' | 'error' }>`
   position: fixed;
@@ -291,8 +259,10 @@ export default function AdminRbac() {
   // Users state
   const [users, setUsers] = useState<RbacUser[]>([])
   const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
-  const [search, setSearch] = useState('')
+  // 分页/搜索同步进 URL（刷新不丢、可分享链接）
+  const [page, setPage] = useUrlState<string>('page', '1')
+  const [search, setSearch] = useUrlState<string>('q', '')
+  const pageNum = Math.max(1, Number(page) || 1)
   const [usersLoading, setUsersLoading] = useState(false)
   const [usersError, setUsersError] = useState<string | null>(null)
 
@@ -414,7 +384,7 @@ export default function AdminRbac() {
     try {
       setUsersLoading(true)
       setUsersError(null)
-      const data = await adminAPI.getRbacUsers({ page, size: 20, account_no: search || undefined })
+      const data = await adminAPI.getRbacUsers({ page: pageNum, size: 20, account_no: search || undefined })
       if (data && Array.isArray(data.results)) {
         setUsers(data.results)
         setTotal(data.count || 0)
@@ -427,7 +397,7 @@ export default function AdminRbac() {
     } finally {
       setUsersLoading(false)
     }
-  }, [page, search, t])
+  }, [pageNum, search, t])
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers()
@@ -537,7 +507,7 @@ export default function AdminRbac() {
 
   const roleOptions = (matrix?.roles || []).filter((r) => r.value !== 'superadmin')
 
-  const userColumns: Column<RbacUser>[] = [
+  const userColumns: SmartColumn<RbacUser>[] = [
     {
       key: 'account_no',
       title: t('admin.rbac.columnAccountNo'),
@@ -570,9 +540,9 @@ export default function AdminRbac() {
       title: t('admin.rbac.columnStatus'),
       width: '80px',
       render: (val: unknown) => (
-        <StatusText $active={Boolean(val)}>
+        <StatusBadge tone={Boolean(val) ? 'success' : 'neutral'}>
           {val ? t('admin.rbac.active') : t('admin.rbac.inactive')}
-        </StatusText>
+        </StatusBadge>
       ),
     },
     {
@@ -661,32 +631,36 @@ export default function AdminRbac() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
-                setPage(1)
+                setPage('1')
               }}
             />
             <SaveBtn onClick={openCreateAdmin}>{t('admin.rbac.createAdmin')}</SaveBtn>
           </div>
-          <DataTable<RbacUser>
+          <SmartDataTable<RbacUser>
             columns={userColumns}
             data={users}
             loading={usersLoading}
             error={usersError}
             onRetry={fetchUsers}
             emptyTitle={t('admin.rbac.noData')}
-            emptyIcon="👥"
             rowKey="account_no"
           />
-          <Pagination current={page} total={total} onChange={setPage} />
+          <Pagination
+            page={pageNum}
+            pageCount={Math.max(1, Math.ceil(total / 20))}
+            total={total}
+            pageSize={20}
+            onChange={(p) => setPage(String(p))}
+          />
         </>
       )}
 
       {editingUser && (
-        // 角色编辑：右侧滑出抽屉（360px，非弹窗）；表单类遮罩不关（防误触丢已选角色）
+        // 角色编辑：右侧滑出抽屉（sm=360px，非弹窗）；表单类遮罩不关（防误触丢已选角色）
         <Drawer
-          open
+          open={!!editingUser}
           title={`${t('admin.rbac.roleEdit')}: ${editingUser.username}`}
-          width="360px"
-          maskClosable={false}
+          size="sm"
           onClose={() => setEditingUser(null)}
           footer={
             <>
@@ -723,12 +697,12 @@ export default function AdminRbac() {
         <FormDialog
           open={showCreateAdmin}
           title={t('admin.rbac.createAdminTitle')}
-          submitLabel={createdAccountNo ? t('admin.rbac.createAnother') : creating ? t('admin.rbac.creating') : t('admin.rbac.create')}
-          submitDisabled={creating}
-          submitVariant="primary"
-          cancelLabel={t('common.cancel')}
-          onClose={() => setShowCreateAdmin(false)}
-          onSubmit={handleCreateAdmin}
+          okText={createdAccountNo ? t('admin.rbac.createAnother') : creating ? t('admin.rbac.creating') : t('admin.rbac.create')}
+          loading={creating}
+          cancelText={t('common.cancel')}
+          dirty={false}
+          onCancel={() => setShowCreateAdmin(false)}
+          onOk={handleCreateAdmin}
         >
           {createdAccountNo ? (
             <div>

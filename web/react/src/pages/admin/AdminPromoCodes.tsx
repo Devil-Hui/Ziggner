@@ -5,8 +5,7 @@ import styled from 'styled-components'
 import { QRCodeSVG } from 'qrcode.react'
 import { Color, Radius, Spacing, FontSize, FontWeight, Transition } from '../../theme/tokens'
 import PageHeader from '../../components/admin/common/PageHeader'
-import Modal from '../../components/admin/common/Modal'
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
+import { StatusBadge, ConfirmDialog, Dialog, FormDialog } from '../../components/admin/design-system'
 import { toast } from '../../components/admin/common/Toast'
 import { adminAPI, type PromoCodeItem } from '../../api/admin'
 import { useTranslation } from '../../i18n'
@@ -68,18 +67,6 @@ const Mono = styled.span`
   font-family: 'SF Mono', Consolas, monospace;
   font-size: ${FontSize.xs}px;
   letter-spacing: 0.5px;
-`
-
-const StatusPill = styled.span<{ $active: boolean }>`
-  display: inline-flex;
-  align-items: center;
-  height: 22px;
-  padding: 0 10px;
-  border-radius: ${Radius.lg}px;
-  font-size: 12px;
-  font-weight: 500;
-  background: ${({ $active }) => ($active ? '#ecfdf5' : '#f3f4f6')};
-  color: ${({ $active }) => ($active ? '#047857' : '#6b7280')};
 `
 
 const RowBtn = styled.button<{ $tone?: 'blue' | 'danger' }>`
@@ -288,7 +275,7 @@ export default function AdminPromoCodes() {
               {list.map(item => (
                 <tr key={item.id}>
                   <td><Mono>{item.code}</Mono></td>
-                  <td><StatusPill $active={item.is_active}>{item.is_active ? '启用' : '停用'}</StatusPill></td>
+                  <td><StatusBadge tone={item.is_active ? 'success' : 'neutral'}>{item.is_active ? '启用' : '停用'}</StatusBadge></td>
                   <td style={{ textAlign: 'right' }}>{item.claim_count ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.unique_users ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.paid_order_count ?? 0}</td>
@@ -322,14 +309,14 @@ export default function AdminPromoCodes() {
       )}
 
       {/* 生成推广码 */}
-      <Modal
+      <FormDialog
         open={showGenerate}
         title="生成推广码"
-        width="560px"
+        size="md"
         okText="生成"
         onOk={handleGenerate}
-        onClose={() => setShowGenerate(false)}
-        confirmLoading={genBusy}
+        onCancel={() => setShowGenerate(false)}
+        loading={genBusy}
       >
         <GenerateForm>
           <Field>
@@ -359,10 +346,10 @@ export default function AdminPromoCodes() {
             <input value={genForm.note} onChange={e => setGenForm(f => ({ ...f, note: e.target.value }))} />
           </Field>
         </GenerateForm>
-      </Modal>
+      </FormDialog>
 
       {/* 二维码 */}
-      <Modal open={!!qrTarget} title="推广码二维码" width="360px" onClose={() => setQrTarget(null)} footer={null}>
+      <Dialog open={!!qrTarget} title="推广码二维码" size="sm" footer={null} onClose={() => setQrTarget(null)}>
         {qrTarget && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             <QRCodeSVG value={shareUrl(qrTarget.code)} size={200} />
@@ -370,15 +357,16 @@ export default function AdminPromoCodes() {
             <span style={{ fontSize: 12, color: Color.text.muted }}>{shareUrl(qrTarget.code)}</span>
           </div>
         )}
-      </Modal>
+      </Dialog>
 
       {/* 删除确认 */}
       {deleteTarget && (
         <ConfirmDialog
+          open
           title="删除推广码"
           message={`确定删除推广码 ${deleteTarget.code} 吗？此操作不可撤销。`}
           confirmLabel="确认删除"
-          danger
+          tone="danger"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />

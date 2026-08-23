@@ -1,16 +1,16 @@
 // TypeScript strict mode enabled
 import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { PrimaryBtn, SecondaryBtn } from '../../components/admin/common/ui'
 import PageHeader from '../../components/admin/common/PageHeader'
-import DataTable from '../../components/admin/common/DataTable'
-import Pagination from '../../components/admin/common/Pagination'
-import type { Column } from '../../components/admin/common/DataTable'
+import { SmartDataTable, Pagination, Button, StatusBadge } from '../../components/admin/design-system'
+import type { SmartColumn } from '../../components/admin/design-system'
 import { adminAPI } from '../../api/admin'
 import type { NotificationItem } from '../../api/admin'
 import { useTranslation } from '../../i18n'
 import { formatDateTime } from '../../utils/helpers'
+import { useUrlState } from '../../hooks/useUrlState'
 
 // ── Types ──
 
@@ -70,33 +70,6 @@ const ActionsRow = styled.div`
   gap: ${Spacing.sm}px;
 `
 
-const Badge = styled.span<{ $type: string }>`
-  display: inline-block;
-  padding: 2px 8px;
-  font-size: ${FontSize.xs}px;
-  border-radius: 2px;
-  background: ${({ $type }) => {
-    switch ($type) {
-      case 'system': return '#e8f5e9'
-      case 'operation': return '#fff3e0'
-      case 'notification': return '#e3f2fd'
-      case 'security': return '#fce4ec'
-      case 'error': return '#ffebee'
-      default: return '#f5f5f5'
-    }
-  }};
-  color: ${({ $type }) => {
-    switch ($type) {
-      case 'system': return '#2e7d32'
-      case 'operation': return '#e65100'
-      case 'notification': return '#1565c0'
-      case 'security': return '#c62828'
-      case 'error': return '#b71c1c'
-      default: return '#666'
-    }
-  }};
-`
-
 const MonoText = styled.span`
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: ${FontSize.xs}px;
@@ -116,14 +89,15 @@ const DateTime = styled.span`
 export default function AdminNotifications() {
   const { t, lang } = useTranslation()
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<TabKey>('all')
+  // Tab state（URL 同步）
+  const [activeTab, setActiveTab] = useUrlState<TabKey>('tab', 'all')
 
   // Notifications state
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [notifLoading, setNotifLoading] = useState(false)
   const [notifError, setNotifError] = useState<string | null>(null)
-  const [notifPage, setNotifPage] = useState(1)
+  const [notifPage, setNotifPage] = useUrlState<string>('page', '1')
+  const notifPageNum = Number(notifPage) || 1
   const [notifTotal, setNotifTotal] = useState(0)
 
   const pageSize = 20
@@ -133,7 +107,7 @@ export default function AdminNotifications() {
     setNotifLoading(true)
     setNotifError(null)
     try {
-      const params: Record<string, unknown> = { page: notifPage, per_page: pageSize }
+      const params: Record<string, unknown> = { page: notifPageNum, per_page: pageSize }
       if (activeTab === 'unread') {
         params.unread = '1'
       } else if (activeTab === 'expired') {
@@ -152,7 +126,7 @@ export default function AdminNotifications() {
       setNotifError(message)
     }
     setNotifLoading(false)
-  }, [notifPage, activeTab, lang])
+  }, [notifPageNum, activeTab, lang])
 
   // ── Fetch based on active tab ──
   useEffect(() => {
@@ -161,7 +135,7 @@ export default function AdminNotifications() {
 
   // Reset page when tab changes
   useEffect(() => {
-    setNotifPage(1)
+    setNotifPage('1')
   }, [activeTab])
 
   // ── Mark single notification as read ──
@@ -188,12 +162,8 @@ export default function AdminNotifications() {
 
   // ── Pagination handler ──
   const handlePageChange = (page: number) => {
-    setNotifPage(page)
+    setNotifPage(String(page))
   }
-
-  // ── Active page for current tab ──
-  const currentPage = notifPage
-  const currentTotal = notifTotal
 
   // ── Columns for notifications ──
   const getTypeLabel = (type: string): string => {
@@ -209,7 +179,7 @@ export default function AdminNotifications() {
     return labels[type] || type
   }
 
-  const notifColumns: Column<NotificationItem>[] = [
+  const notifColumns: SmartColumn<NotificationItem>[] = [
     {
       key: 'id',
       title: 'ID',
@@ -220,7 +190,11 @@ export default function AdminNotifications() {
       key: 'type',
       title: t('admin.notifications.columnType'),
       width: '100px',
-      render: (val: unknown) => <Badge $type={String(val ?? '')}>{getTypeLabel(String(val ?? ''))}</Badge>,
+      render: (val: unknown) => {
+        const tp = String(val ?? '')
+        const tone = tp === 'system' ? 'success' : tp === 'operation' ? 'warning' : tp === 'error' ? 'danger' : tp === 'security' ? 'danger' : 'info'
+        return <StatusBadge tone={tone as 'success' | 'warning' | 'danger' | 'info'}>{getTypeLabel(tp)}</StatusBadge>
+      },
     },
     {
       key: 'title',
@@ -236,11 +210,10 @@ export default function AdminNotifications() {
       key: 'is_read',
       title: t('admin.notifications.columnStatus'),
       width: '80px',
-      render: (val: unknown) => (
+      render: (val: unknown) =>
         val
-          ? <span style={{ color: '#27ae60' }}>{t('admin.notifications.statusRead')}</span>
-          : <span style={{ color: Color.status.error }}>{t('admin.notifications.statusUnread')}</span>
-      ),
+          ? <StatusBadge tone="success">{t('admin.notifications.statusRead')}</StatusBadge>
+          : <StatusBadge tone="neutral">{t('admin.notifications.statusUnread')}</StatusBadge>,
     },
     {
       key: 'created_at',
@@ -255,9 +228,9 @@ export default function AdminNotifications() {
       render: (_val: unknown, record?: NotificationItem) => {
         if (!record || record.is_read) return <span style={{ color: '#ccc' }}>—</span>
         return (
-          <PrimaryBtn onClick={() => handleMarkRead(record.id)} style={{ padding: '4px 12px', fontSize: '12px' }}>
+          <Button size="sm" variant="ghost" onClick={() => handleMarkRead(record.id)}>
             {t('admin.notifications.markRead')}
-          </PrimaryBtn>
+          </Button>
         )
       },
     },
@@ -297,22 +270,23 @@ export default function AdminNotifications() {
         </ActionsRow>
       </Toolbar>
 
-      <DataTable<NotificationItem>
-            columns={notifColumns}
-            data={notifications}
-            loading={notifLoading}
-            error={notifError}
-            onRetry={fetchNotifications}
-            emptyTitle={t('admin.notifications.emptyTitle')}
-            emptyIcon="notifications"
-            rowKey="id"
-          />
-          <Pagination
-            current={notifPage}
-            total={notifTotal}
-            pageSize={pageSize}
-            onChange={(page) => setNotifPage(page)}
-          />
+      <SmartDataTable<NotificationItem>
+        columns={notifColumns}
+        data={notifications}
+        loading={notifLoading}
+        error={notifError}
+        onRetry={fetchNotifications}
+        emptyTitle={t('admin.notifications.emptyTitle')}
+        rowKey="id"
+        stickyHeader
+      />
+      <Pagination
+        page={notifPageNum}
+        pageCount={Math.max(1, Math.ceil(notifTotal / pageSize))}
+        total={notifTotal}
+        pageSize={pageSize}
+        onChange={handlePageChange}
+      />
     </PageContainer>
   )
 }

@@ -4,7 +4,7 @@ import { useTranslation } from '../../i18n'
 import { adminAPI, type EmailTemplateItem } from '../../api/admin'
 import { Color, Radius, Shadow, FontSize, Spacing } from '../../theme/tokens'
 import { Input, PrimaryBtn as SaveBtn } from '../../components/admin/common/ui'
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
+import { ConfirmDialog } from '../../components/admin/design-system'
 
 /* ───────────────────────── 布局 ───────────────────────── */
 const Wrap = styled.div`
@@ -511,11 +511,12 @@ const AdminEmailTemplates: React.FC = () => {
 
       {resetTarget !== null && (
         <ConfirmDialog
+          open
           title={t('admin.emailTemplates.resetTitle')}
           message={t('admin.emailTemplates.confirmReset')}
           confirmLabel={t('admin.emailTemplates.resetToDefault')}
           cancelLabel={t('common.cancel')}
-          danger
+          tone="danger"
           onConfirm={() => { const type = resetTarget; setResetTarget(null); handleReset(type) }}
           onCancel={() => setResetTarget(null)}
         />

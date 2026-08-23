@@ -3,10 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import PageHeader from '../../components/admin/common/PageHeader';
-import DataTable from '../../components/admin/common/DataTable';
-import type { Column } from '../../components/admin/common/DataTable';
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
-import FormDialog from '../../components/admin/common/FormDialog';
+import { SmartDataTable, Pagination, ConfirmDialog, FormDialog } from '../../components/admin/design-system';
+import type { SmartColumn } from '../../components/admin/design-system';
+import { useUrlState } from '../../hooks/useUrlState';
 import { useTranslation } from '../../i18n';
 import { formatDateTime } from '../../utils/helpers';
 import { useAdminAuth } from '../../store/AdminAuthContext';
@@ -39,6 +38,9 @@ interface GroupFormDraft {
   isActive: boolean;
 }
 let groupDraft: GroupFormDraft | null = null;
+
+// 客户端分页：每页展示条数（分组列表由后端起全量返回，前端本地分页）
+const PAGE_SIZE = 10;
 
 /* ========== Member Panel ========== */
 
@@ -286,6 +288,10 @@ export default function AdminGroups() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
+  // 搜索/分页同步进 URL（刷新不丢、可分享链接）
+  const [q, setQ] = useUrlState<string>('q', '');
+  const [page, setPage] = useUrlState<string>('page', '1');
+
   // Create form state
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState('');
@@ -323,6 +329,10 @@ export default function AdminGroups() {
   const [addMemberRole, setAddMemberRole] = useState<'leader' | 'member'>('member');
   const [addingMember, setAddingMember] = useState(false);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
+  // 添加成员脏数据保护：记录打开时快照，字段变更后置 dirty（关闭需二次确认）
+  const [addMemberInit, setAddMemberInit] = useState('');
+  const addMemberDirty =
+    JSON.stringify({ accountNo: addMemberAccountNo, role: addMemberRole }) !== addMemberInit;
 
   // Remove member confirmation state
   const [removeMemberTarget, setRemoveMemberTarget] = useState<GroupMember | null>(null);
@@ -561,9 +571,20 @@ export default function AdminGroups() {
 
   const expandedGroup = groups.find((group) => group.slug === expandedGroupSlug);
 
+  /* ---- 客户端搜索 + 分页 ---- */
+  const filtered = groups.filter((g) => {
+    const kw = q.trim().toLowerCase();
+    if (!kw) return true;
+    return g.name.toLowerCase().includes(kw) || g.slug.toLowerCase().includes(kw);
+  });
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const pageNum = Math.max(1, Number(page) || 1);
+  const safePage = Math.min(pageNum, totalPages);
+  const pagedGroups = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   /* ---- Columns ---- */
 
-  const columns: Column<AdminGroupItem>[] = [
+  const columns: SmartColumn<AdminGroupItem>[] = [
     { key: 'name', title: t('admin.groups.columnName'), sortable: true },
     { key: 'slug', title: t('admin.groups.columnSlug'), sortable: true },
     {
@@ -612,16 +633,36 @@ export default function AdminGroups() {
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 480px', minWidth: 0 }}>
-          <DataTable
+          <div style={{ marginBottom: 12 }}>
+            <input
+              type="text"
+              placeholder={t('admin.groups.searchPlaceholder')}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage('1');
+              }}
+              style={{ height: 32, padding: '0 10px', fontSize: 13, border: `1px solid ${Color.border.medium}`, borderRadius: 6, width: 220, outline: 'none' }}
+            />
+          </div>
+          <SmartDataTable
             columns={columns}
-            data={groups}
+            dataSource={pagedGroups}
             loading={loading}
             error={error}
             onRetry={fetchGroups}
             emptyTitle={t('admin.groups.noGroups')}
-            emptyIcon="groups"
             rowKey="slug"
           />
+          {filtered.length > 0 && (
+            <Pagination
+              page={safePage}
+              pageCount={totalPages}
+              total={filtered.length}
+              pageSize={PAGE_SIZE}
+              onChange={(p) => setPage(String(p))}
+            />
+          )}
         </div>
 
         {/* ====== Member Panel (right side) ====== */}
@@ -635,6 +676,8 @@ export default function AdminGroups() {
               <OutlinePrimaryBtn
                 onClick={() => {
                   setAddMemberAccountNo('');
+                  setAddMemberRole('member');
+                  setAddMemberInit(JSON.stringify({ accountNo: '', role: 'member' }));
                   setShowAddMemberDialog(true);
                 }}
               >
@@ -720,7 +763,7 @@ export default function AdminGroups() {
       <FormDialog
         open={showForm}
         title={t('admin.groups.createMenu')}
-        submitLabel={
+        okText={
           createTab === 'group'
             ? t('admin.groups.create')
             : createdAccountNo
@@ -729,10 +772,12 @@ export default function AdminGroups() {
                 ? t('admin.groups.creating')
                 : t('admin.groups.createAdmin')
         }
-        submitDisabled={creatingAdmin}
-        submitVariant="primary"
-        cancelLabel={t('common.cancel')}
-        onClose={() => {
+        loading={creatingAdmin}
+        cancelText={t('common.cancel')}
+        // 新建弹窗关闭时会把已填内容写入草稿 groupDraft 保留（密码/用户名除外）,
+        // 因此无需脏数据二次确认，避免与草稿保留相矛盾。
+        dirty={false}
+        onCancel={() => {
           // 关闭时保留已填内容（密码/用户名不入草稿——安全）
           groupDraft = {
             tab: createTab,
@@ -749,7 +794,7 @@ export default function AdminGroups() {
           };
           setShowForm(false);
         }}
-        onSubmit={createTab === 'group' ? handleCreate : handleCreateAdmin}
+        onOk={createTab === 'group' ? handleCreate : handleCreateAdmin}
       >
         <div style={{ display: 'flex', gap: 8, marginBottom: Spacing.lg }}>
           <TabBtn type="button" $active={createTab === 'group'} onClick={() => setCreateTab('group')}>
@@ -951,15 +996,15 @@ export default function AdminGroups() {
       {/* ====== Add Member Dialog ======
           修复：showAddMemberDialog / addMemberAccountNo / addMemberRole / handleAddMember
           此前为孤儿状态（定义+set 但从未在 JSX 渲染），Add Member 按钮点击无任何反馈。 */}
-      {showAddMemberDialog && (
-        <FormDialog
+      <FormDialog
           open={showAddMemberDialog}
           title={t('admin.groups.addMemberBtn')}
-          submitLabel={addingMember ? t('admin.groups.memberAdded') : t('admin.groups.addMemberBtn')}
-          submitDisabled={addingMember}
-          cancelLabel={t('common.cancel')}
-          onClose={() => setShowAddMemberDialog(false)}
-          onSubmit={handleAddMember}
+          okText={t('admin.groups.addMemberBtn')}
+          loading={addingMember}
+          cancelText={t('common.cancel')}
+          dirty={addMemberDirty}
+          onCancel={() => setShowAddMemberDialog(false)}
+          onOk={handleAddMember}
         >
           <FormGroup>
             <Label>{t('admin.groups.accountNoLabel')}</Label>
@@ -981,19 +1026,20 @@ export default function AdminGroups() {
             </Select>
           </FormGroup>
         </FormDialog>
-      )}
 
       {/* ====== Remove Member Confirmation ====== */}
       {removeMemberTarget && removeMemberGroupSlug !== null && (
         <ConfirmDialog
+          open={!!removeMemberTarget && removeMemberGroupSlug !== null}
           title={t('admin.groups.removeMember')}
           message={composeRemoveMemberConfirmMessage({
             groupName: expandedGroup?.name || '',
             username: removeMemberTarget.username || removeMemberTarget.account_no,
             t,
           })}
+          tone="danger"
           confirmLabel={t('admin.groups.confirmRemove')}
-          danger
+          cancelLabel={t('common.cancel')}
           onConfirm={handleRemoveMember}
           onCancel={() => {
             setRemoveMemberTarget(null);
@@ -1011,10 +1057,12 @@ export default function AdminGroups() {
         });
         return (
           <ConfirmDialog
+            open={!!deleteGroupTarget}
             title={t('admin.groups.deleteGroup')}
             message={deleteMsg}
+            tone="danger"
             confirmLabel={t('admin.groups.confirmDelete')}
-            danger
+            cancelLabel={t('common.cancel')}
             onConfirm={handleDeleteGroup}
             onCancel={() => setDeleteGroupTarget(null)}
           />

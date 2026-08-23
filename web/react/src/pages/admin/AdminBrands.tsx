@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
-import { Input, Select, SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui';
+import { Color, FontSize } from '../../theme/tokens';
+import { Input, Select, PrimaryBtn } from '../../components/admin/common/ui';
 import PageHeader from '../../components/admin/common/PageHeader';
 import { RefreshButton } from '../../components/admin/common';
-import DataTable from '../../components/admin/common/DataTable';
-import type { Column } from '../../components/admin/common/DataTable';
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog';
-import Modal from '../../components/admin/common/Modal';
+import { SmartDataTable, Button, ConfirmDialog, FormDialog, StatusBadge } from '../../components/admin/design-system';
+import type { SmartColumn } from '../../components/admin/design-system';
 import { adminAPI } from '../../api/admin';
 import { postWithProgress } from '../../api/request';
 import { resolveMediaUrl } from '../../api/chat';
@@ -16,6 +14,7 @@ import Upload from '../../components/admin/common/Upload';
 import { useDebounceSubmit } from '../../hooks/useDebounceSubmit';
 import { useAdminAuth } from '../../store/AdminAuthContext';
 import { useTranslation } from '../../i18n';
+import { useUrlState } from '../../hooks/useUrlState';
 
 interface Brand {
   id: number;
@@ -25,32 +24,6 @@ interface Brand {
   is_active: boolean;
   created_at: string;
 }
-
-const FormOverlay = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-`;
-
-const FormDialog = styled.div`
-  background: ${Color.bg.card};
-  border-radius: ${Radius.sm}px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
-  width: 480px;
-  max-width: 90vw;
-  padding: ${Spacing.xxl}px;
-`;
-
-const FormTitle = styled.h3`
-  font-size: 16px;
-  font-weight: 600;
-  color: ${Color.text.heading};
-  margin: 0 0 20px 0;
-`;
 
 const FormGroup = styled.div`
   margin-bottom: 16px;
@@ -80,13 +53,6 @@ const Textarea = styled.textarea`
   }
 `;
 
-const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
-`;
-
 const LogoImg = styled.img`
   width: 40px;
   height: 40px;
@@ -109,48 +75,6 @@ const LogoPlaceholder = styled.div`
   color: ${Color.border.dark};
 `;
 
-const UploadBtn = styled.button<{ $disabled?: boolean }>`
-  padding: 8px 18px;
-  font-size: ${FontSize.sm}px;
-  border: 1px dashed ${Color.border.medium};
-  background: ${Color.bg.card};
-  color: ${Color.text.secondary};
-  border-radius: 2px;
-  cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${({ $disabled }) => ($disabled ? 0.6 : 1)};
-
-  &:hover {
-    border-color: ${Color.primary};
-    color: ${Color.primary};
-  }
-`;
-
-const LogoPreview = styled.div`
-  position: relative;
-  display: inline-block;
-  padding: 8px;
-  border: 1px solid ${Color.border.light};
-  border-radius: 2px;
-  background: ${Color.primaryLight};
-`;
-
-const LogoPreviewRemove = styled.button`
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: none;
-  background: ${Color.primary};
-  color: #fff;
-  font-size: 12px;
-  line-height: 20px;
-  text-align: center;
-  cursor: pointer;
-  padding: 0;
-`;
-
 const Toast = styled.div<{ $type: 'success' | 'error' }>`
   padding: 10px 16px;
   margin-bottom: 16px;
@@ -167,7 +91,7 @@ export default function AdminBrands() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useUrlState<string>('q', '');
   const [toast, setToast] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
 
   // Form
@@ -175,10 +99,11 @@ export default function AdminBrands() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [formName, setFormName] = useState('');
   const [formLogo, setFormLogo] = useState('');
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const logoInputRef = React.useRef<HTMLInputElement>(null);
   const [formDesc, setFormDesc] = useState('');
   const [formActive, setFormActive] = useState(true);
+  // 脏数据快照：打开时记录，字段变更后 diff 决定是否启用离开二次确认
+  const [formInit, setFormInit] = useState('');
+  const formDirty = JSON.stringify({ name: formName, logo: formLogo, desc: formDesc, active: formActive }) !== formInit;
 
   // Delete
   const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null);
@@ -213,42 +138,13 @@ export default function AdminBrands() {
     throw new Error(data?.detail || '上传失败');
   };
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      showMsg('error', '请选择图片文件');
-      return;
-    }
-    setUploadingLogo(true);
-    try {
-      // 大图自动压缩
-      const uploadFile = await compressImage(file, { maxSizeMB: 0.5, maxWidthOrHeight: 512, initialQuality: 0.85 });
-      const formData = new FormData();
-      formData.append('file', uploadFile);
-      // 走项目统一的 cookie + CSRF 上传通道（postWithProgress 已处理鉴权）
-      const data = await postWithProgress<{ url?: string; detail?: string }>('/goods/upload/image', formData);
-      if (data && data.url) {
-        setFormLogo(resolveMediaUrl(data.url) ?? data.url);
-        showMsg('success', 'Logo 上传成功');
-      } else {
-        showMsg('error', data?.detail || '上传失败');
-      }
-    } catch (err: any) {
-      showMsg('error', err?.message || '上传请求异常');
-    } finally {
-      setUploadingLogo(false);
-      // reset input so same file can be re-selected
-      if (logoInputRef.current) logoInputRef.current.value = '';
-    }
-  };
-
   const openCreate = () => {
     setEditingId(null);
     setFormName('');
     setFormLogo('');
     setFormDesc('');
     setFormActive(true);
+    setFormInit(JSON.stringify({ name: '', logo: '', desc: '', active: true }));
     setShowForm(true);
   };
 
@@ -258,6 +154,7 @@ export default function AdminBrands() {
     setFormLogo(brand.logo_url || '');
     setFormDesc(brand.description || '');
     setFormActive(brand.is_active);
+    setFormInit(JSON.stringify({ name: brand.name, logo: brand.logo_url || '', desc: brand.description || '', active: brand.is_active }));
     setShowForm(true);
   };
 
@@ -310,11 +207,12 @@ export default function AdminBrands() {
     !searchText || b.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const columns: Column<Brand>[] = [
+  const columns: SmartColumn<Brand>[] = [
     {
       key: 'logo_url',
       title: 'Logo',
       width: '60px',
+      hideable: false,
       render: (_, record) =>
         record.logo_url ? (
           <LogoImg src={resolveMediaUrl(record.logo_url) ?? record.logo_url} alt={record.name} />
@@ -335,46 +233,29 @@ export default function AdminBrands() {
     {
       key: 'is_active',
       title: t('admin.brands.statusLabel'),
-      width: '80px',
+      width: '90px',
       render: (val) => (
-        <span style={{
-          padding: '2px 8px',
-          borderRadius: 2,
-          fontSize: 12,
-          background: val ? '#e8f5e9' : '#eee',
-          color: val ? '#2e7d32' : '#999',
-        }}>
+        <StatusBadge tone={val ? 'success' : 'neutral'} dot>
           {val ? t('admin.brands.enabled') : t('admin.brands.disabled')}
-        </span>
+        </StatusBadge>
       ),
     },
     {
       key: 'actions',
       title: t('admin.brands.actions'),
-      width: '120px',
+      width: '150px',
+      hideable: false,
       render: (_, record) => (
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {isSuperUser && (
-            <button
-              style={{
-                padding: '4px 10px', fontSize: 12, border: '1px solid ${Color.border.medium}', background: '#fff',
-                color: '#666', borderRadius: 2, cursor: 'pointer',
-              }}
-              onClick={() => openEdit(record)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => openEdit(record)}>
               {t('admin.brands.edit')}
-            </button>
+            </Button>
           )}
           {isSuperUser && (
-            <button
-              style={{
-                padding: '4px 10px', fontSize: 12, border: `1px solid ${Color.primary}`, background: '#fff',
-                color: Color.primary, borderRadius: 2, cursor: 'pointer',
-              }}
-              onClick={() => setDeleteTarget(record)}
-            >
+            <Button size="sm" variant="danger" onClick={() => setDeleteTarget(record)}>
               {t('admin.brands.delete')}
-            </button>
+            </Button>
           )}
         </div>
       ),
@@ -398,75 +279,70 @@ export default function AdminBrands() {
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
           style={{
-            height: 32, padding: '0 10px', fontSize: 13, border: '1px solid ${Color.border.medium}',
-            borderRadius: 2, width: 200, outline: 'none',
+            height: 32, padding: '0 10px', fontSize: 13, border: `1px solid ${Color.border.medium}`,
+            borderRadius: 6, width: 220, outline: 'none',
           }}
         />
       </div>
 
-      <DataTable
+      <SmartDataTable<Brand>
         columns={columns}
-        data={filtered}
+        dataSource={filtered}
         loading={loading}
         error={error}
         onRetry={fetchBrands}
         emptyTitle={t('admin.brands.noBrands')}
-        emptyIcon="brands"
         rowKey="id"
       />
 
-      {showForm && (
-        <Modal
-          open={showForm}
-          title={editingId ? t('admin.brands.editBrand') : t('admin.brands.newBrand')}
-          onClose={() => setShowForm(false)}
-          footer={null}
-        >
-            <FormGroup>
-              <Label>{t('admin.brands.nameLabel')}</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.brands.namePlaceholder')} />
-            </FormGroup>
-            <FormGroup>
-              <Label>{t('admin.brands.logoLabel') || 'Logo'}</Label>
-              <Upload
-                value={formLogo ? [formLogo] : []}
-                onChange={urls => setFormLogo(urls[0] ?? '')}
-                upload={uploadBrandLogo}
-                multiple={false}
-                maxFiles={1}
-                placeholder="拖拽 Logo 至此或点击上传"
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label>{t('admin.brands.descriptionLabel')}</Label>
-              <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder={t('admin.brands.descriptionPlaceholder')} />
-            </FormGroup>
-            <FormGroup>
-              <Label>{t('admin.brands.statusLabel')}</Label>
-              <Select value={formActive ? '1' : '0'} onChange={(e) => setFormActive(e.target.value === '1')}>
-                <option value="1">{t('admin.brands.enabled')}</option>
-                <option value="0">{t('admin.brands.disabled')}</option>
-              </Select>
-            </FormGroup>
-            <ButtonGroup>
-              <SecondaryBtn onClick={() => setShowForm(false)}>{t('common.cancel')}</SecondaryBtn>
-              <PrimaryBtn onClick={debouncedSave} disabled={isSaving}>
-                {isSaving ? t('common.saving') : editingId ? t('common.save') : t('admin.brands.create')}
-              </PrimaryBtn>
-            </ButtonGroup>
-        </Modal>
-      )}
+      <FormDialog
+        open={showForm}
+        title={editingId ? t('admin.brands.editBrand') : t('admin.brands.newBrand')}
+        size="sm"
+        okText={editingId ? t('common.save') : t('admin.brands.create')}
+        cancelText={t('common.cancel')}
+        loading={isSaving}
+        dirty={formDirty}
+        onOk={debouncedSave}
+        onCancel={() => setShowForm(false)}
+      >
+        <FormGroup>
+          <Label>{t('admin.brands.nameLabel')}</Label>
+          <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.brands.namePlaceholder')} />
+        </FormGroup>
+        <FormGroup>
+          <Label>{t('admin.brands.logoLabel') || 'Logo'}</Label>
+          <Upload
+            value={formLogo ? [formLogo] : []}
+            onChange={urls => setFormLogo(urls[0] ?? '')}
+            upload={uploadBrandLogo}
+            multiple={false}
+            maxFiles={1}
+            placeholder="拖拽 Logo 至此或点击上传"
+          />
+        </FormGroup>
+        <FormGroup>
+          <Label>{t('admin.brands.descriptionLabel')}</Label>
+          <Textarea value={formDesc} onChange={(e) => setFormDesc(e.target.value)} placeholder={t('admin.brands.descriptionPlaceholder')} />
+        </FormGroup>
+        <FormGroup>
+          <Label>{t('admin.brands.statusLabel')}</Label>
+          <Select value={formActive ? '1' : '0'} onChange={(e) => setFormActive(e.target.value === '1')}>
+            <option value="1">{t('admin.brands.enabled')}</option>
+            <option value="0">{t('admin.brands.disabled')}</option>
+          </Select>
+        </FormGroup>
+      </FormDialog>
 
-      {deleteTarget && (
-        <ConfirmDialog
-          title={t('admin.brands.deleteBrand')}
-          message={t('admin.brands.confirmDeleteBrand').replace('{name}', deleteTarget.name)}
-          confirmLabel={t('admin.brands.confirmDelete')}
-          danger
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title={t('admin.brands.deleteBrand')}
+        message={t('admin.brands.confirmDeleteBrand').replace('{name}', deleteTarget?.name ?? '')}
+        tone="danger"
+        confirmLabel={t('admin.brands.confirmDelete')}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../them
 import PageHeader from '../../components/admin/common/PageHeader';
 import LoadingSkeleton from '../../components/admin/common/LoadingSkeleton';
 import ErrorRetry from '../../components/admin/common/ErrorRetry';
-import StatusBadge from '../../components/admin/common/StatusBadge';
+import { StatusBadge, type StatusBadgeProps } from '../../components/admin/design-system';
 import { StepBar, StepNode } from '../../components/admin/common';
 import { adminAPI } from '../../api/admin';
 import { adminChatAPI, resolveMediaUrl, type ConversationSummary } from '../../api/chat';
@@ -35,6 +35,29 @@ interface SPUDetail {
     shelf_status: string;
   }>;
   tags?: Array<{ id: number; name: string }>;
+}
+
+type Tone = NonNullable<StatusBadgeProps['tone']>
+
+// SPU 状态 → semantic tone（业务只声明 tone，颜色由 design-system 解析）
+function spuStatusMeta(status: string): { tone: Tone; label: string } {
+  switch (status) {
+    case 'draft': return { tone: 'neutral', label: '草稿' }
+    case 'submitted': return { tone: 'warning', label: '待审核' }
+    case 'approved': return { tone: 'success', label: '已通过' }
+    case 'rejected': return { tone: 'danger', label: '已驳回' }
+    case 'on_sale': return { tone: 'success', label: '已上架' }
+    case 'suspended': return { tone: 'warning', label: '已挂起' }
+    case 'off_sale': return { tone: 'neutral', label: '已下架' }
+    default: return { tone: 'neutral', label: status }
+  }
+}
+
+function chatTone(status: string): Tone {
+  if (status === 'open') return 'info'
+  if (status === 'pending') return 'warning'
+  if (status === 'replied') return 'success'
+  return 'neutral'
 }
 
 const Container = styled.div`
@@ -309,33 +332,6 @@ const ChatPopupMeta = styled.div`
   margin-top: 2px;
 `
 
-const ChatPopupStatus = styled.span<{ $status: string }>`
-  display: inline-block;
-  padding: 1px 8px;
-  border-radius: 10px;
-  font-size: 0.625rem;
-  font-weight: 500;
-  flex-shrink: 0;
-  background: ${({ $status }) => {
-    switch ($status) {
-      case 'open': return '#e3f2fd'
-      case 'pending': return '#fff3e0'
-      case 'replied': return '#e8f5e9'
-      case 'closed': return '#f5f5f5'
-      default: return '#f5f5f5'
-    }
-  }};
-  color: ${({ $status }) => {
-    switch ($status) {
-      case 'open': return '#1565c0'
-      case 'pending': return '#e65100'
-      case 'replied': return '#2e7d32'
-      case 'closed': return '#999'
-      default: return '#999'
-    }
-  }};
-`
-
 const ChatPopupEmpty = styled.div`
   padding: 24px 16px;
   text-align: center;
@@ -478,20 +474,20 @@ export default function AdminProductAudit() {
                             {chat.user?.username || '-'} · {formatDateTime(chat.updated_at)}
                           </ChatPopupMeta>
                         </ChatPopupItemInfo>
-                        <ChatPopupStatus $status={chat.status}>
+                        <StatusBadge tone={chatTone(chat.status)}>
                           {chat.status === 'open' ? t('admin.chat.statusOpen') :
                            chat.status === 'closed' ? t('admin.chat.statusClosed') :
                            chat.status === 'pending' ? t('admin.chat.statusPending') :
                            chat.status === 'replied' ? t('admin.chat.statusReplied') :
                            t('admin.chat.statusClosed')}
-                        </ChatPopupStatus>
+                        </StatusBadge>
                       </ChatPopupItem>
                     ))
                   )}
                 </ChatPopup>
               </ChatPopupWrapper>
             )}
-            <StatusBadge status={spu.status as any} />
+            <StatusBadge tone={spuStatusMeta(spu.status).tone}>{spuStatusMeta(spu.status).label}</StatusBadge>
           </div>
         </CardHeader>
 
@@ -587,13 +583,9 @@ export default function AdminProductAudit() {
                         <SkuTd>{sku.discount_price ? `$${sku.discount_price}` : '-'}</SkuTd>
                         <SkuTd>{sku.stock}</SkuTd>
                         <SkuTd>
-                          <span style={{
-                            padding: '2px 6px', borderRadius: 2, fontSize: 11,
-                            background: sku.shelf_status === 'on' ? '#e8f5e9' : '#eee',
-                            color: sku.shelf_status === 'on' ? '#2e7d32' : '#999',
-                          }}>
+                          <StatusBadge tone={sku.shelf_status === 'on' ? 'success' : 'neutral'}>
                             {sku.shelf_status === 'on' ? t('admin.productAudit.onShelf') : t('admin.productAudit.offShelf')}
-                          </span>
+                          </StatusBadge>
                         </SkuTd>
                       </tr>
                     ))}

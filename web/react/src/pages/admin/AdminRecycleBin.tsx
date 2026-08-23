@@ -3,9 +3,9 @@ import { useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { adminAPI } from '../../api/admin'
-import DataTable, { type Column } from '../../components/admin/common/DataTable'
 import PageHeader from '../../components/admin/common/PageHeader'
-import ConfirmDialog from '../../components/admin/common/ConfirmDialog'
+import { SmartDataTable, ConfirmDialog } from '../../components/admin/design-system'
+import type { SmartColumn } from '../../components/admin/design-system'
 import { useTranslation } from '../../i18n'
 import { formatDateTime } from '../../utils/helpers'
 
@@ -175,7 +175,7 @@ export default function AdminRecycleBin() {
     }
   }
 
-  const columns: Column<RecycleItem>[] = [
+  const columns: SmartColumn<RecycleItem>[] = [
     {
       key: 'id',
       title: 'ID',
@@ -238,24 +238,24 @@ export default function AdminRecycleBin() {
         breadcrumb={[{ label: t('admin.recycleBin.subtitle') }, { label: t('admin.recycleBin.title') }]}
       />
 
-      <DataTable<RecycleItem>
+      <SmartDataTable<RecycleItem>
         columns={columns}
         data={items}
         loading={loading}
         error={error}
         onRetry={fetchList}
         emptyTitle={t('admin.recycleBin.empty')}
-        emptyIcon="recycle"
         rowKey="id"
       />
 
       {confirmDialog && (
         <ConfirmDialog
+          open
           title={confirmDialog.title}
           message={confirmDialog.message}
           confirmLabel={confirmDialog.confirmLabel}
           cancelLabel={t('admin.recycleBin.cancel')}
-          danger={confirmDialog.danger}
+          tone={confirmDialog.danger ? 'danger' : 'info'}
           onConfirm={confirmDialog.onConfirm}
           onCancel={() => {
             setConfirmDialog(null)
