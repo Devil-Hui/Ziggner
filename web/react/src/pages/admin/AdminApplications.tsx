@@ -372,6 +372,10 @@ export default function AdminApplications() {
       pending: t('admin.applications.statusPending'),
       approved: t('admin.applications.statusApproved'),
       rejected: t('admin.applications.statusRejected'),
+      scheduled: t('admin.applications.statusScheduled'),
+      active: t('admin.applications.statusActive'),
+      paused: t('admin.applications.statusPaused'),
+      expired: t('admin.applications.statusExpired'),
     };
     return m[s] ?? s;
   };
