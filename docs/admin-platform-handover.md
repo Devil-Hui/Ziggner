@@ -102,8 +102,9 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 ## 七、验证状态与风险
 
 - **验证**：每次改动均跑 `tsc -p tsconfig.json` 过滤相关路径，**零报错**；新增件均为 additive（不破坏既有页面）。
-- **未验证**：未跑构建/未部署/未公网回归（页面迁移完成前不建议部署）。
-- **风险**：① 全站迁移是最大 diff，需分页面回归；② Dashboard 统计为 best-effort（端点失败显示 0）；③ 后端 Scope 未做，前端 `<Can>` 只是显隐。
+- **公网回归（2026-08-23）**：✅ 前端构建 + `wrangler deploy` 上线三个域名（www/admin/shop.ziggner.com，资源哈希与本地 build 一致）；✅ 超管账号真实浏览器登录 `admin.ziggner.com` 成功（用户名+邮箱 OTP+密码），抽查 商品/订单/权限管理/审计日志 多页渲染与 RBAC 矩阵、URL 状态同步均正常。
+- **热修复（2026-08-23）**：[`base.py`](../backend/project/config/settings/base.py) `CORS_ALLOW_HEADERS` 追加 `x-request-id`，解决预检被拦；重建 `ziggner-django:v1.0.4` 镜像并 recreate `django-app` 容器已生效（`Access-Control-Allow-Headers` 实测已含 `x-request-id`）。
+- **风险**：① 全站迁移是最大 diff，需分页面回归；② Dashboard 统计为 best-effort（端点失败显示 0）；③ 后端 Scope 仅收敛 order 域，`cs/order` 等其余域尚未接入统一抽象，前端 `<Can>` 只是显隐。
 
 ---
 
