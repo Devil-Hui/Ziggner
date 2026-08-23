@@ -1,3 +1,4 @@
+from django.db.models import ProtectedError
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from utils.api_base_view import BaseApiView
@@ -75,5 +76,11 @@ class RecyclePermanentDeleteView(BaseApiView):
             spu = SPU.objects.get(id=spu_id, deleted_at__isnull=False)
         except SPU.DoesNotExist:
             return Response({'detail': 'SPU not found in recycle bin.'}, status=404)
-        spu.delete()
+        try:
+            spu.delete()
+        except ProtectedError:
+            return Response(
+                {'detail': '该商品仍被订单快照等数据引用，无法永久删除。请先清理相关引用，或仅保留其处于回收站。'},
+                status=400,
+            )
         return Response({'message': 'Permanently deleted.'})

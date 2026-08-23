@@ -12,6 +12,7 @@ export const Business = {
   ProductStatus: {
     draft: 'neutral',
     pending: 'warning',
+    submitted: 'warning',
     approved: 'info',
     rejected: 'danger',
     on_sale: 'success',
@@ -71,8 +72,8 @@ export type ApprovalStatus = keyof typeof Business.ApprovalStatus
 export type TaskStatus = keyof typeof Business.TaskStatus
 
 /** 取业务状态对应的 tone（供 StatusBadge 使用），未知状态兜底 neutral 防抖 */
-export const productTone = (s: ProductStatus): StatusTone => Business.ProductStatus[s]
-export const orderTone = (s: OrderStatus): StatusTone => Business.OrderStatus[s]
-export const couponTone = (s: CouponStatus): StatusTone => Business.CouponStatus[s]
+export const productTone = (s: ProductStatus): StatusTone => Business.ProductStatus[s] ?? 'neutral'
+export const orderTone = (s: OrderStatus): StatusTone => Business.OrderStatus[s] ?? 'neutral'
+export const couponTone = (s: CouponStatus): StatusTone => Business.CouponStatus[s] ?? 'neutral'
 export const approvalTone = (s: ApprovalStatus): StatusTone => Business.ApprovalStatus[s] ?? 'neutral'
-export const taskTone = (s: TaskStatus): StatusTone => Business.TaskStatus[s]
+export const taskTone = (s: TaskStatus): StatusTone => Business.TaskStatus[s] ?? 'neutral'
