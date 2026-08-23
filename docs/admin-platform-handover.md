@@ -161,6 +161,15 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 - 后端：`ruff`（E9/F63/F7/F82）与 `pytest` 分层门禁见 `Makefile`。
 - 前端：`npx tsc --noEmit` 退出码 0（本旧文档 §八 复核一致）。
 
+### 9.5 RBAC 第四维 Scope 落地
+
+- 新增统一抽象 `backend/apps/rbac/scopes.py`：`UserScope`（all/group）+ `get_user_scope` + `is_global_scope`。
+  - 超管 / 运维 → `all`；管理组组长/组员 → `group`（经管理组→Category 派生管辖分类）。
+  - 与前端 `permissions/scope.ts` 的 `ResourceScope`（all/group/category/brand）命名对齐。
+- 收敛 `order/policies.py` 的 `scope_orders` 复用该抽象（行为等价），消除散落角色判断。
+- **修复**前端 `inScope` 的 `group` 分支恒真 bug（`userGroupId==null || true` → 真正按管辖分类判定）。
+- 新增 `rbac/tests/test_scope.py`：全局角色 / customer 收窄 / 组长管辖含子树 / 空管辖 / 前端命名一致。
+
 ---
 
-*最终落点：设计系统组件层与 17 页迁移完成，`tsc` 零报错；测试体系四层 + 六大子系统 + 失败阻断 + 每日回归已实作；剩余中优先级页面与后端 RBAC Scope 留待下一轮。*
+*最终落点：设计系统组件层与 17 页迁移完成，`tsc` 零报错；测试体系四层 + 六大子系统 + 失败阻断 + 每日回归已实作；RBAC 第四维 Scope 已抽象并收敛 order 域；剩余中优先级例外页（Login/ProductForm/Import，不从 design-system）与 TLS 证书轮换留待下一轮。*

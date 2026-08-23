@@ -1,7 +1,8 @@
 from django.db.models import Exists, OuterRef
 
-from apps.goods.admin_permissions import get_group_managed_category_ids
+from .models import OrderItem
 from apps.rbac.constants import Role
+from apps.rbac.scopes import get_user_scope
 from apps.rbac.services import has_role
 
 
@@ -23,12 +24,12 @@ class OrderAdminAccessPolicy:
 
     @staticmethod
     def scope_orders(queryset, user):
-        if OrderAdminAccessPolicy.is_superadmin(user) or OrderAdminAccessPolicy.is_ops(user):
+        # 统一范围判定：超管/运维 → all；其余按管辖分类行级过滤（见 apps.rbac.scopes）
+        scope = get_user_scope(user, category_field='order')
+        if scope.is_all:
             return queryset
 
-        from .models import OrderItem
-
-        category_ids = get_group_managed_category_ids(user)
+        category_ids = scope.managed_category_ids
         if not category_ids:
             return queryset.none()
 

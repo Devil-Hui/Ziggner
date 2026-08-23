@@ -29,11 +29,11 @@ export interface ScopeContext {
 /**
  * 判断某条数据是否在管理员的资源范围内。
  * 默认（未配置 scope）视为 all；后端仍会做最终校验。
+ * group 语义经"管辖分类"落地，因此判定逻辑与 category 一致（组成员资格由 userCategoryIds 携带）。
  */
 export function inScope(data: ScopeConfig, ctx: ScopeContext): boolean {
   if (ctx.scope === 'all') return true
-  if (ctx.scope === 'group') return ctx.userGroupId == null || true // 组内成员资格由后端判定
-  if (ctx.scope === 'category') {
+  if (ctx.scope === 'group' || ctx.scope === 'category') {
     if (!ctx.userCategoryIds || ctx.userCategoryIds.length === 0) return true
     return (data.categoryIds ?? []).some((id) => ctx.userCategoryIds!.includes(id))
   }
