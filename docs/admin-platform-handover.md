@@ -86,6 +86,7 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 3. `PageHeader` 是**默认导出**且 props 仅 `title/breadcrumb/actions`（无 description）。
 4. 现有头部搜索已占用 **Ctrl+K**；⌘K 命令面板先用按钮挂载，后续迁移统一时再接管快捷键。
 5. Vite build 被 sandbox safe-delete 守卫拦截：先 `mv dist dist-old` 再 `npm run build`。
+6. **浏览器自动化（CDP）实测坑（2026-08-25）**：本页 `Input.dispatchMouseEvent`（proxy `/clickAt` 与直连 ws 均试过）在按钮中心坐标点击**不触发** React onClick，但 `el.click()` 可触发；受控 `<select>` 同理需派发 `change` 事件。→ 统一方案：**按钮用 `el.click()`；文本框/下拉用「原生 `value` setter（`Object.getOwnPropertyDescriptor`）+ 派发 `input`/`change` 事件」**驱动受控组件（即 RTL/user-event 内部手法），真实且可靠。
 
 ---
 
@@ -95,7 +96,7 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 
 **修改**：`theme/{tokens,index}.ts` · `utils/errorHandler.ts` · `api/request.ts` · `store/AdminAuthContext.tsx` · `pages/admin/AdminLayout.tsx` · `router/index.tsx` · `i18n/{zh-CN,en}.ts`
 
-**未提交**：以上全部为工作区改动；上一轮 `55d27d4`（Phase B 15 文件）亦未 push。
+**提交/部署（2026-08-25 更新）**：本文档 §三~§九 所列 P0/P1/P2 重构与历次修复均已随提交并入 `master` 并部署至 Cloudflare Pages（三个子域 www/admin/shop.ziggner.com）。最新提交 `0fc3437`（i18n 修复，2026-08-25）。
 
 ---
 
@@ -177,3 +178,32 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
 ---
 
 *最终落点：设计系统组件层与 17 页迁移完成，`tsc` 零报错；测试体系四层 + 六大子系统 + 失败阻断 + 每日回归已实作；RBAC 第四维 Scope 已抽象并收敛 order 域；剩余中优先级例外页（Login/ProductForm/Import，不从 design-system）与 TLS 证书轮换留待下一轮。*
+
+---
+
+## 十、2026-08-25 追加：i18n 修复 + 测试数据清理 + 真实交互验证
+
+### 10.1 i18n 缺键修复（`generateCode`）
+- **问题**：优惠券表单「生成优惠码」按钮在中文环境下回退显示异常。根因：`web/react/src/pages/admin/AdminCoupons.tsx:875` 调用 `t('admin.coupons.generateCode')`，但该键只存在于 `en.ts:705`，`zh-CN.ts` 的 `coupons` 区块漏写。
+- **修复**：`web/react/src/i18n/zh-CN.ts` 在 `codePlaceholder` 之后补 `generateCode: '生成优惠码'`（与英文键对齐）。纯字符串加键，不影响类型。
+- **提交/部署**：commit `0fc3437` → `master`；Cloudflare Pages 部署 Version `3a15596a-6043-48a9-b675-4cfe6e8580cc`，新主包 `index-CsH-wM0B.js`（替代旧 `index-UKXg1Cuv.js`）。线上 `index.html` 已引用新包、主包含「生成优惠码」文案，旧包无残留引用。
+
+### 10.2 生产 QA 测试数据清理（2026-08-25）
+- 3 张 QA 测试券（ID 59/61/62）经 `DELETE /api/v1/promotion/coupon/<id>/delete` 全部删除（券总数 3→0）。
+- 商品 SPU 64「QA 冒烟测试商品 0824」：`POST /goods/spu/64/shelf {action:'put_off_sale'}` 下架 → `DELETE /goods/spu/64/delete` 软删（已移出前台/后台列表）。
+- ⚠️ SPU 64 **永久 purge 被拒（400）**：`DELETE /goods/recycle/64/permanent` 因仍被订单快照外键引用失败。
+- 订单 `20260823558398`（`cancel` 被拒，Shipped 不可取消）：**订单为财务不可变记录，系统无删除端点**，终态保留。
+- → SPU 64 滞留回收站、订单作为财务记录保留，此为**设计终态，非缺陷**。
+
+### 10.3 优惠券创建/编辑/删除 真实交互验证（2026-08-25）
+- 经浏览器（CDP 代理 localhost:3456 / Chrome 9222）走真实 UI 路径验证：按钮用 `el.click()` 触发真实 React onClick；文本框/下拉用「原生 value setter + 派发 input/change 事件」驱动受控组件（见 §五.6）。
+- 全生命周期以公网 API 回查为真相源：
+  - **创建**：填 优惠码 `QAREAL0825`/类型 `percent`/金额 `15`/最低 `50`/总量 `100` → 新增 ID 63（amount 15.00 / percent / min 50.00 / total 100）。
+  - **编辑**：金额改 `20` → 保存 → ID 63 金额 15.00 → 20.00。
+  - **删除**：确认弹窗「确定删除」→ 券总数 1 → 0。
+- 验证报告：`docs/QA_COUPON_FORM_REAL_INTERACTION_2026-08-25.md`（测试用 cdp 脚本/截图按规范已删，未污染仓库）。
+
+### 10.4 当前部署与回归状态（2026-08-25）
+- 前端：Cloudflare Pages Version `3a15596a...`，三子域均更新；主包 `index-CsH-wM0B.js`。
+- 后端：镜像 `ziggner-django:local`（含 `admin_recycle.py` ProtectedError 修复），django-app/celery-worker/celery-beat 全 healthy（2026-08-24 滚动）。
+- 公网 UI 交互（08-25 重跑）全程 0 红色 Console 报错、0 个 4xx/5xx。
