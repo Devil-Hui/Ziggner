@@ -1,7 +1,7 @@
 # Ziggner Admin Platform 重构 · 交接文档（2026-08-23）
 
 > **交接范围**：Ziggner 管理后台（`web/react` SPA）从「17 个能用的 Admin 页面」升级为「统一企业级 Admin Platform」。
-> **上一交接**：`ADMIN_REMEDIATION_STATUS_2026-08-22.md`（Phase A/B 16 页整改复查，历史归档，本轮不再展开）。
+> **历史归档**：原 `ADMIN_REMEDIATION_STATUS_2026-08-22.md`（Phase A/B 16 页整改复查）已于 2026-08-25 由用户移除，其 Phase A/B 结论已并入 §七；**本文档为唯一权威交接文档**，不再另行维护独立报告。
 > **本次交接要点**：P0 地基已全部完成、P1 核心组件层完成、P2 体验层大部分完成；**剩余 = P1 页面级应用 + 全站 17 页集中迁移**。
 
 ---
@@ -11,7 +11,7 @@
 | 阶段 | 内容 | 状态 |
 |---|---|---|
 | Phase A | 18 项 Principal QA 自查 + `REVIEW_REPORT.md` | ✅ 完成（历史） |
-| Phase B | 公网 prod live-execution 修复 + UI 整改（16 页矩阵，`ADMIN_REMEDIATION_STATUS_2026-08-22.md`） | ✅ 完成（历史，`55d27d4` 未 push） |
+| Phase B | 公网 prod live-execution 修复 + UI 整改（16 页矩阵，结论见 §七） | ✅ 完成（历史，已并入 master） |
 | **Phase C（当前）** | 从八方向收敛为统一 Admin Platform（信息架构/设计系统/权限模型/数据密度/交互反馈/状态体系/可观测性/批量操作/响应式） | 🚧 进行中 |
 
 **决策**（用户拍板）：**集中式大改 + 完成全部修改**，不再补页面。但工程顺序固定为 **P0 地基 → P1 核心 → P2 体验 → 全站迁移**（页面必须先有统一基础设施才能 adopt）。
@@ -201,9 +201,16 @@ P2 体验（Dashboard/SavedViews/⌘K/快捷键/响应式/降噪）
   - **创建**：填 优惠码 `QAREAL0825`/类型 `percent`/金额 `15`/最低 `50`/总量 `100` → 新增 ID 63（amount 15.00 / percent / min 50.00 / total 100）。
   - **编辑**：金额改 `20` → 保存 → ID 63 金额 15.00 → 20.00。
   - **删除**：确认弹窗「确定删除」→ 券总数 1 → 0。
-- 验证报告：`docs/QA_COUPON_FORM_REAL_INTERACTION_2026-08-25.md`（测试用 cdp 脚本/截图按规范已删，未污染仓库）。
+- 验证记录已并入本文档（§十.1~10.4 为唯一留存证据）；原独立报告 `QA_COUPON_FORM_REAL_INTERACTION_2026-08-25.md` 与 `ADMIN_FINAL_DELIVERY_REPORT_2026-08-24.md` 已于 2026-08-25 由用户移除，不再单独维护（测试用 cdp 脚本/截图按规范已删，未污染仓库）。
 
 ### 10.4 当前部署与回归状态（2026-08-25）
 - 前端：Cloudflare Pages Version `3a15596a...`，三子域均更新；主包 `index-CsH-wM0B.js`。
 - 后端：镜像 `ziggner-django:local`（含 `admin_recycle.py` ProtectedError 修复），django-app/celery-worker/celery-beat 全 healthy（2026-08-24 滚动）。
 - 公网 UI 交互（08-25 重跑）全程 0 红色 Console 报错、0 个 4xx/5xx。
+
+### 10.5 文档归并（2026-08-25）
+- 用户于 2026-08-25 移除以下独立文档，其有效内容均已并入本 handover：
+  - `ADMIN_REMEDIATION_STATUS_2026-08-22.md`（Phase A/B 结论 → §七）
+  - `ADMIN_FINAL_DELIVERY_REPORT_2026-08-24.md`（交付证据 → §七 / §十）
+  - `QA_COUPON_FORM_REAL_INTERACTION_2026-08-25.md`（验证细节 → §十.3）
+- **本文件 `docs/admin-platform-handover.md` 为 Ziggner Admin Platform 唯一权威交接文档**，后续更新只在此文件进行。
