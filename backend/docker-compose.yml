@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     image: ziggner-mysql:dev
     restart: unless-stopped
-    env_file: [../.env]
+    env_file: [../.env.test]
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-backend}
@@ -47,7 +47,7 @@ services:
       dockerfile: Dockerfile
     environment:
       SERVICE_TYPE: django
-      DJANGO_ENV: dev
+      DJANGO_ENV: ${DJANGO_ENV:-test}
       # 本机即生产源站：允许 Cloudflare Tunnel 公网域名访问（api.ziggner.com）
       DJANGO_DEV_ALLOWED_HOSTS: ${DJANGO_DEV_ALLOWED_HOSTS:-api.ziggner.com}
       # 邮件账号池（Gmail，.env 配置，用于验证码发送）
@@ -65,7 +65,7 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-django-insecure-dev-only-change-in-prod}
       # 不注入 DJANGO_SUPERUSER_*：确保容器创建不自动生成超级管理员。
       # 需要超管时手动执行：docker compose exec web python manage.py createsuperuser
-    env_file: [../.env]
+    env_file: [../.env.test]
     ports: ["8000:8000", "8001:8001"]
     volumes:
       - .:/backend
@@ -89,7 +89,7 @@ services:
     memswap_limit: 448m
     cpus: 0.5
     environment:
-      DJANGO_ENV: dev
+      DJANGO_ENV: ${DJANGO_ENV:-test}
       # 邮件账号池（Gmail，.env 配置，验证码异步发送需要）
       EMAIL_ACCOUNTS: ${EMAIL_ACCOUNTS:-}
       DB_HOST: db

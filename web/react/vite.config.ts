@@ -84,7 +84,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   test: {
-    include: ['test/**/*.test.{ts,tsx}'],
+    include: ['../../../../test/web/**/*.test.{ts,tsx}'],
   },
   build: {
     outDir: 'dist',

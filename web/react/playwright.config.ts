@@ -5,7 +5,7 @@ import { defineConfig, devices } from '@playwright/test'
  * 本地调试：npx playwright test（CI 安装 chromium；本地可复用系统 Chrome：--project=system-chrome）
  */
 export default defineConfig({
-  testDir: './e2e',
+  testDir: '../../../../test/web/e2e',
   timeout: 60_000,
   fullyParallel: true,
   retries: process.env.CI ? 2 : 0,

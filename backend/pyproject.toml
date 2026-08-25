@@ -14,7 +14,10 @@ skips = ["B101"]
 [tool.pytest]
 # 通过 `pytest` 直接运行（等价于 manage.py test 的 pytest 版）
 # 关键：DJANGO_SETTINGS_MODULE 指向 dev（CI 同环境）
+# 测试代码统一存放于仓库根 `change/test/backend`，此处通过 pythonpath 指向源码、testpaths 指向测试目录
 DJANGO_SETTINGS_MODULE = "project.config.settings.dev"
+pythonpath = ["."]
+testpaths = ["../../../test/backend"]
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 python_classes = ["Test*", "*Tests"]
 python_functions = ["test_*"]

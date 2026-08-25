@@ -13,6 +13,7 @@ certs/
 backend/_*_test.py
 backend/test/
 web/react/test/
+web/react/test-results/
 web/react/probe_chunk.js
 web/react/scripts_tmp_rm_pb.py
 web/react/overview-*.md

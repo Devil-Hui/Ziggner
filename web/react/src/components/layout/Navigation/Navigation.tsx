@@ -626,7 +626,7 @@ export default function Navigation() {
     <Header>
       <UtilityBar />
       <TopBar>
-        <Logo src="/logo.png" alt="Ziggner" onClick={handleLogoClick} />
+        <Logo src="/static/images/logo.png" alt="Ziggner" onClick={handleLogoClick} />
 
         <CategoryButton onClick={() => {
           if (!showMegaMenu) { setActiveLevel1(-1); setActiveLevel2(0) }

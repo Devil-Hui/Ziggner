@@ -76,10 +76,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: ["pytest", "--maxfail=1", "-q"]
+    command: ["sh", "-c", "pip install --no-cache-dir -r requirements/test.txt && pytest --maxfail=1 -q"]
     restart: "no"
     volumes:
       - .:/backend
+      # 测试代码统一存放于仓库根 change/test/backend，挂载到容器内与 pyproject.toml testpaths 对应的相对位置
+      - ../../../test/backend:/backend/../../../test/backend
     environment:
       DJANGO_SETTINGS_MODULE: project.config.settings.dev
       DJANGO_ENV: test
