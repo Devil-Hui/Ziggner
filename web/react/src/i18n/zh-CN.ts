@@ -700,6 +700,7 @@ const zhCN = {
       amountRequired: '优惠金额/百分比必须大于 0',
       codeLabel: '优惠码',
       codePlaceholder: '例如：SUMMER2026',
+      generateCode: '生成优惠码',
       discountType: '折扣类型',
       fixedAmount: '固定金额',
       percentage: '百分比',
