@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { useCart } from '../../../store/CartContext';
+import { useCurrency } from '../../../store/CurrencyContext';
 import { tokens } from '../../../theme/tokens';
 import { useTranslation } from '../../../i18n';
 
@@ -27,7 +28,7 @@ const CTA = styled.button`
   margin-top: 16px;
   padding: 14px;
   background: ${tokens.Color.primary};
-  color: #fff;
+  color: ${tokens.Color.text.inverse};
   border: none;
   border-radius: ${tokens.Radius.md};
   font-size: ${tokens.FontSize.md};
@@ -43,6 +44,7 @@ interface Props {
 
 export function OrderSummary({ onCheckout, disabled }: Props) {
   const { items, total } = useCart();
+  const { format } = useCurrency();
   const { t } = useTranslation();
   const shipping = total > 0 ? 0 : 0; // Free shipping for MVP
   const tax = 0; // Tax calculation placeholder
@@ -53,7 +55,7 @@ export function OrderSummary({ onCheckout, disabled }: Props) {
       <Title>{t('store.orderSummary.title')}</Title>
       <Row>
         <span>{t('store.orderSummary.subtotalItems').replace('{count}', String(items.length))}</span>
-        <span>${total.toFixed(2)}</span>
+        <span>{format(total)}</span>
       </Row>
       <Row>
         <span>{t('store.orderSummary.shipping')}</span>
@@ -61,16 +63,16 @@ export function OrderSummary({ onCheckout, disabled }: Props) {
       </Row>
       <Row>
         <span>{t('store.orderSummary.tax')}</span>
-        <span>${tax.toFixed(2)}</span>
+        <span>{format(tax)}</span>
       </Row>
       <Total>
         <span>{t('store.orderSummary.total')}</span>
-        <span>${grand.toFixed(2)}</span>
+        <span>{format(grand)}</span>
       </Total>
       <CTA onClick={onCheckout} disabled={disabled}>
         {disabled
           ? t('store.orderSummary.processing')
-          : t('store.orderSummary.placeOrder').replace('${amount}', grand.toFixed(2))}
+          : t('store.orderSummary.placeOrder').replace('${amount}', format(grand))}
       </CTA>
     </Wrapper>
   );

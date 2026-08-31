@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
+import { useCurrency } from '../../store/CurrencyContext'
 import { Color, Radius, Shadow, FontSize, Layout } from '../../theme/tokens'
 import { publicAPI } from '../../api/public'
 
@@ -49,8 +50,8 @@ const Card = styled.div`
 const CardImage = styled.div<{ $src?: string }>`
   width: 100%;
   height: 200px;
-  background: ${p => p.$src ? `url(${p.$src}) center/cover no-repeat` : '#f0f0f0'};
-  background-color: #f0f0f0;
+  background: ${p => p.$src ? `url(${p.$src}) center/cover no-repeat` : Color.primaryLight};
+  background-color: ${Color.primaryLight};
 `
 
 const CardBody = styled.div`
@@ -71,22 +72,22 @@ const CardName = styled.div`
 const CardPrice = styled.div`
   font-size: ${FontSize.md}px;
   font-weight: 700;
-  color: #111;
+  color: ${Color.text.primary};
 `
 
 const ContactBtn = styled.button`
   margin-top: 10px;
   width: 100%;
   padding: 7px 0;
-  border: 1px solid #ff6a3d;
+  border: 1px solid ${Color.brand};
   border-radius: ${Radius.sm}px;
-  background: #fff;
-  color: #ff6a3d;
+  background: ${Color.bg.card};
+  color: ${Color.brand};
   font-size: ${FontSize.xs}px;
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
-  &:hover { background: #ff6a3d; color: #fff; }
+  &:hover { background: ${Color.brand}; color: ${Color.text.inverse}; }
   &:active { transform: scale(0.98); }
 `
 
@@ -122,6 +123,7 @@ interface FavoriteItem {
 export default function Favorites() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { format } = useCurrency()
   const [favorites, setFavorites] = useState<FavoriteItem[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -176,7 +178,7 @@ export default function Favorites() {
                   <CardBody>
                     <RemoveBtn onClick={e => handleRemove(e, spuId)}>×</RemoveBtn>
                     <CardName>{f.spu_name || `Product #${spuId}`}</CardName>
-                    <CardPrice>{f.spu_price ? `$${f.spu_price}` : ''}</CardPrice>
+                    <CardPrice>{f.spu_price ? format(Number(f.spu_price)) : ''}</CardPrice>
                     <ContactBtn onClick={e => handleContact(e, f)}>
                       {t('store.product.contactSupport')}
                     </ContactBtn>

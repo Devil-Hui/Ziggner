@@ -1,12 +1,12 @@
-// Ziggner Navigation — Main site header with category mega menu, search, and cart dropdown
+// Ziggner Navigation — Main site header with category mega menu and cart dropdown
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../../theme/tokens'
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCart } from '../../../store/CartContext'
 import { useUser } from '../../../store/UserContext'
+import { useCategories } from '../../../hooks/useProducts'
 import CartDropdown from '../../../components/business/CartDropdown/CartDropdown'
 import UtilityBar from './UtilityBar'
-import { useCategories } from '../../../hooks/useProducts'
 import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
 import { patch, post as apiPost } from '../../../api/request'
@@ -16,23 +16,15 @@ import {
   type OpenCartDropdownDetail,
 } from '../../../utils/cartEvents'
 
-// Lumiere editorial palette — keep header in sync with the storefront
-const CREAM = '#f7f4ef'
-const INK = '#1a1712'
-const CLAY = '#1a56db'
-const LINE = 'rgba(26, 23, 18, 0.10)'
+// 品牌配色一律取自 theme 令牌（改令牌即全局联动，此处禁止写十六进制字面量）
+const CLAY = Color.primary
+const LINE = Color.border.light
 
 // ── SVG icons ──
 
 const ArrowDown = () => (
   <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
     <polyline points="1 1 5 5 9 1" />
-  </svg>
-)
-
-const ArrowRight = () => (
-  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <polyline points="3 1 7 5 3 9" />
   </svg>
 )
 
@@ -52,7 +44,8 @@ const UserIcon = () => (
 )
 
 const Header = styled.header`
-  background-color: ${CREAM};
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(14px);
   border-bottom: 1px solid ${LINE};
   position: relative;
   z-index: ${zIndex.header};
@@ -62,54 +55,24 @@ const TopBar = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5vh 2vw;
+  padding: 0.9rem clamp(1.25rem, 4vw, 4.5rem);
   border-radius: 0 0 ${Radius.md}px ${Radius.md}px;
 `
 
-const Logo = styled.img`
-  height: 32px;
-  cursor: pointer;
-`
-
-const SearchBar = styled.form`
-  flex-grow: 1;
-  margin: 0 4vw;
+const Logo = styled.div`
   display: flex;
-
-  input {
-    width: auto;
-    flex: 1;
-    min-width: 0;
-    padding: 10px 20px;
-    border: 1px solid transparent;
-    border-radius: 20px 0 0 20px;
-    font-size: 1rem;
-    background: rgba(26, 23, 18, 0.05);
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-
-    &:focus {
-      border-color: ${CLAY};
-      box-shadow: 0 0 0 2px rgba(26, 86, 219, 0.12);
-    }
-  }
-
-  button {
-    min-width: 64px;
-    min-height: 44px;
-    padding: 0 16px;
-    border: 1px solid ${CLAY};
-    border-radius: 0 20px 20px 0;
-    background: ${CLAY};
-    color: #fff;
-    cursor: pointer;
-    font-weight: 600;
-  }
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  align-items: center;
+  gap: 0.55rem;
+  cursor: pointer;
+  flex-shrink: 0;
 `
+
+const LogoImg = styled.img`
+  height: 40px;
+  width: auto;
+  display: block;
+`
+
 
 const NavActions = styled.div`
   display: flex;
@@ -160,8 +123,8 @@ const CartCount = styled.span<{ $bump?: boolean }>`
   height: 18px;
   padding: 0 5px;
   border-radius: 999px;
-  background: #e74c3c;
-  color: #fff;
+  background: ${Color.status.error};
+  color: ${Color.text.inverse};
   font-size: 0.72rem;
   font-weight: 700;
   line-height: 1;
@@ -198,23 +161,111 @@ const Dropdown = styled.div<{ $forceOpen?: boolean }>`
 const LangMenu = styled.div<{ $show?: boolean }>`
   display: ${props => props.$show ? 'block' : 'none'};
   position: absolute;
-  top: 110%;
+  top: calc(100% + 8px);
   right: 0;
   background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   min-width: 12vw;
-  border-radius: ${Radius.sm};
+  border-radius: 10px;
+  padding: 6px;
   z-index: ${zIndex.dropdownContent};
+  animation: langMenuIn 0.18s ease;
+  @keyframes langMenuIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `
 
 const DropdownItem = styled.div`
-  padding: 1vh 1.5vw;
+  padding: 9px 12px;
+  border-radius: 7px;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.15s ease, color 0.15s ease;
 
   &:hover {
-    background: #f0f0f0;
+    background: ${Color.primaryLight};
+    color: ${CLAY};
+  }
+`
+
+/* ── 主站导航（与落地页 EditorialNav 一致，hover 展开子项） ── */
+const MainNav = styled.nav`
+  display: flex;
+  align-items: center;
+  gap: 1.4vw;
+  margin-left: 1.5vw;
+  flex-shrink: 0;
+
+  @media (max-width: 1100px) {
+    display: none;
+  }
+`
+
+const NavItem = styled.div`
+  position: relative;
+
+  &:hover .nav-submenu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+`
+
+const NavLink = styled.a`
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: ${Color.text.primary};
+  text-decoration: none;
+  padding: 0.5rem 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: ${CLAY};
+  }
+`
+
+const NavCaret = styled.span`
+  font-size: 0.6rem;
+  opacity: 0.6;
+`
+
+const SubMenu = styled.div`
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 15vw;
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+  z-index: ${zIndex.dropdownContent};
+`
+
+const SubItem = styled.a`
+  display: block;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  color: ${Color.text.primary};
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &:hover {
+    background: ${Color.primaryLight};
+    color: ${CLAY};
   }
 `
 
@@ -335,13 +386,14 @@ const ModalBtn = styled.button<{ $primary?: boolean }>`
 
 const UserMenu = styled.div`
   position: absolute;
-  top: 110%;
+  top: calc(100% + 8px);
   right: 0;
   background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
-  box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   min-width: 15vw;
-  border-radius: ${Radius.sm};
+  border-radius: 10px;
+  padding: 6px;
   z-index: ${zIndex.dropdownContent};
   opacity: 0;
   visibility: hidden;
@@ -349,169 +401,66 @@ const UserMenu = styled.div`
   transition: all 0.3s ease;
 
   .user-info {
-    padding: 1.5vh 1.5vw;
+    padding: 10px 12px;
     border-bottom: 1px solid ${Color.border.light};
     font-weight: bold;
     font-size: 1rem;
+    margin-bottom: 4px;
   }
 
   .dropdown-divider {
     border-bottom: 1px solid ${Color.border.light};
+    margin: 4px 0;
   }
 
   .dropdown-logout {
-    color: #ff4646;
+    color: ${Color.status.error};
   }
 `
 
-const BottomNav = styled.nav`
-  display: flex;
-  align-items: center;
-  padding: 0 2vw;
-  border-top: 1px solid #f0f0f0;
-`
-
-const CategoryButton = styled.button`
-  background: ${CLAY};
-  color: #fff;
-  padding: 10px 20px;
-  margin-left: 1.5vw;
-  cursor: pointer;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  border: none;
-  border-radius: ${Radius.full}px;
-  display: flex;
-  align-items: center;
-  gap: 0.5vw;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-  &:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 20px -8px rgba(26, 86, 219, 0.6);
-  }
-`
-
-const MegaMenu = styled.div<{ $active?: boolean }>`
-  position: absolute;
-  top: 100%;
-  left: 2vw;
-  width: calc(100% - 4vw);
-  max-width: 1200px;
-  background: ${Color.bg.card};
-  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-  display: ${props => props.$active ? 'grid' : 'none'};
-  grid-template-columns: 200px 350px 1fr;
-  height: auto;
-  max-height: 450px;
-  z-index: ${zIndex.dropdown};
-  border-radius: 0 0 ${Radius.md} ${Radius.md};
-
-  @media (max-width: 992px) {
-    grid-template-columns: 1fr;
-    height: auto;
-    max-height: 70vh;
-    overflow-y: auto;
-  }
-`
-
-const MenuSidebar = styled.div`
-  background: #f9f9f9;
-  border-right: 1px solid ${Color.border.light};
-  overflow-y: auto;
-`
-
-const MenuLink = styled.div`
-  padding: 1.5vh 2vw;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-
-  &:hover, &.active {
-    background: ${Color.bg.card};
-    color: ${CLAY};
-    font-weight: bold;
-  }
-`
-
-const MenuSub = styled.div`
-  padding: 2.5vh;
-  border-right: 1px solid #f0f0f0;
-  overflow-y: auto;
-`
-
-const SubGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5vw;
-`
-
-const SubGridItem = styled.div`
-  text-align: center;
-  cursor: pointer;
-`
-
-const SubThumb = styled.div`
-  width: 60px;
-  height: 60px;
-  background: #f0f0f0;
-  border-radius: 50%;
-  margin: 0 auto 0.8vh;
-`
-
-const MenuDetail = styled.div`
-  padding: 2.5vh;
-  overflow-y: auto;
-  background: ${Color.bg.card};
-`
-
-const MenuGroup = styled.div`
-  margin-bottom: 3vh;
-`
-
-const MenuGroupTitle = styled.div`
-  font-weight: bold;
-  font-size: 1rem;
-  margin-bottom: 1.5vh;
-  border-bottom: 1px solid ${Color.border.light};
-`
-
-const MenuTagList = styled.div`
-  display: flex;
-  gap: 2vw;
-  flex-wrap: wrap;
-`
-
-const MenuTag = styled.div`
-  text-align: center;
-  width: 70px;
-  cursor: pointer;
-
-  .circle-img {
-    width: 50px;
-    height: 50px;
-    background: #f7f7f7;
-    border-radius: 50%;
-    margin: 0 auto 0.5vh;
-  }
-
-  span {
-    font-size: 0.85rem;
-  }
-`
+/** 主站导航项 —— 品牌锚点项（含子页面），未登录同样可见 */
+const NAV_ITEMS: { label: string; href: string; children: { label: string; href: string }[] }[] = [
+  {
+    label: 'Product',
+    href: '/#optimizer',
+    children: [
+      { label: 'AI Optimizer', href: '/#optimizer' },
+      { label: 'Shop Products', href: '/category' },
+    ],
+  },
+  {
+    label: 'For Creators',
+    href: '/#paths',
+    children: [
+      { label: 'Creator Modes', href: '/#paths' },
+      { label: 'How it works', href: '/#journey' },
+    ],
+  },
+  {
+    label: 'How it works',
+    href: '/#journey',
+    children: [
+      { label: '30-day Workflow', href: '/#journey' },
+      { label: 'AI Agents', href: '/#journey' },
+    ],
+  },
+  {
+    label: 'For Brands',
+    href: '/#monetize',
+    children: [
+      { label: 'Marketplace', href: '/#monetize' },
+      { label: 'Brand Tasks', href: '/#monetize' },
+    ],
+  },
+]
 
 export default function Navigation() {
   const navigate = useNavigate()
   const { count } = useCart()
   const { user, isLoggedIn, logout, refreshUser } = useUser()
-  const { categories: categoryTree } = useCategories()
   const { t, lang, setLang } = useTranslation()
+  const { categories: shopCategories } = useCategories()
   const [showLangMenu, setShowLangMenu] = useState(false)
-  const [showMegaMenu, setShowMegaMenu] = useState(false)
-  const [activeLevel1, setActiveLevel1] = useState(-1)
-  const [activeLevel2, setActiveLevel2] = useState(0)
-  const [searchQuery, setSearchQuery] = useState('')
 
   // Nickname modal state
   const [showNicknameModal, setShowNicknameModal] = useState(false)
@@ -519,7 +468,6 @@ export default function Navigation() {
   const [savingNickname, setSavingNickname] = useState(false)
 
   const langRef = useRef<HTMLDivElement>(null)
-  const megaRef = useRef<HTMLDivElement>(null)
   const userRef = useRef<HTMLDivElement>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const [cartForceOpen, setCartForceOpen] = useState(false)
@@ -538,9 +486,6 @@ export default function Navigation() {
       const target = e.target as HTMLElement
       if (langRef.current && !langRef.current.contains(target)) {
         setShowLangMenu(false)
-      }
-      if (megaRef.current && !megaRef.current.contains(target)) {
-        setShowMegaMenu(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -562,10 +507,6 @@ export default function Navigation() {
       if (timer) window.clearTimeout(timer)
     }
   }, [])
-
-  const currentCategory = activeLevel1 >= 0 ? categoryTree[activeLevel1] : null
-  const currentSubCategories = currentCategory?.children || []
-  const currentThirdLevel = currentSubCategories[activeLevel2]?.children || []
 
   const handleLogoClick = () => navigate('/')
   const handleProfileClick = () => navigate('/profile')
@@ -611,41 +552,76 @@ export default function Navigation() {
       setSavingNickname(false)
     }
   }
-  const handleCategoryClick = (catId?: number) => {
-    navigate(catId ? `/category?cat_id=${catId}` : '/category')
-    setShowMegaMenu(false)
-  }
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const searchParams = new URLSearchParams()
-    if (searchQuery.trim()) searchParams.set('q', searchQuery.trim())
-    navigate(searchParams.size ? `/category?${searchParams.toString()}` : '/category')
-  }
-
   return (
     <Header>
       <UtilityBar />
       <TopBar>
-        <Logo src="/static/images/logo.png" alt="Ziggner" onClick={handleLogoClick} />
+        <Logo onClick={handleLogoClick}>
+          <LogoImg src="/static/images/logo.png" alt="Ziggner" />
+        </Logo>
 
-        <CategoryButton onClick={() => {
-          if (!showMegaMenu) { setActiveLevel1(-1); setActiveLevel2(0) }
-          setShowMegaMenu(!showMegaMenu)
-        }}>
-          {t('store.nav.categories')} <ArrowDown />
-        </CategoryButton>
+        <MainNav>
+          {NAV_ITEMS.map(item => (
+            <NavItem key={item.label}>
+              <NavLink
+                href={item.href}
+                onClick={e => {
+                  e.preventDefault()
+                  navigate(item.href)
+                }}
+              >
+                {item.label}
+                <NavCaret>▾</NavCaret>
+              </NavLink>
+              <SubMenu className="nav-submenu">
+                {item.children.map(child => (
+                  <SubItem
+                    key={child.label}
+                    href={child.href}
+                    onClick={e => {
+                      e.preventDefault()
+                      navigate(child.href)
+                    }}
+                  >
+                    {child.label}
+                  </SubItem>
+                ))}
+              </SubMenu>
+            </NavItem>
+          ))}
 
-        <SearchBar role="search" onSubmit={handleSearchSubmit}>
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder={t('store.nav.searchPlaceholder')}
-          />
-          <button type="submit" aria-label={t('common.search')}>
-            {t('common.search')}
-          </button>
-        </SearchBar>
+          {/* 商城分类：一级标题 = 商城大类，子项 = 二级分类，前瞻性设计 */}
+          {shopCategories.map(cat => (
+            <NavItem key={cat.id}>
+              <NavLink
+                href={`/category?cat_id=${cat.id}`}
+                onClick={e => {
+                  e.preventDefault()
+                  navigate(`/category?cat_id=${cat.id}`)
+                }}
+              >
+                {cat.name}
+                {cat.children && cat.children.length > 0 && <NavCaret>▾</NavCaret>}
+              </NavLink>
+              {cat.children && cat.children.length > 0 && (
+                <SubMenu className="nav-submenu">
+                  {cat.children.map(child => (
+                    <SubItem
+                      key={child.id}
+                      href={`/category?cat_id=${child.id}`}
+                      onClick={e => {
+                        e.preventDefault()
+                        navigate(`/category?cat_id=${child.id}`)
+                      }}
+                    >
+                      {child.name}
+                    </SubItem>
+                  ))}
+                </SubMenu>
+              )}
+            </NavItem>
+          ))}
+        </MainNav>
 
         <NavActions>
           <Dropdown ref={langRef}>
@@ -658,7 +634,6 @@ export default function Navigation() {
             <LangMenu $show={showLangMenu}>
               <DropdownItem onClick={() => { setLang('en-US'); setShowLangMenu(false) }}>{t('store.nav.langEN')}</DropdownItem>
               <DropdownItem onClick={() => { setLang('zh-CN'); setShowLangMenu(false) }}>{t('store.nav.langCN')}</DropdownItem>
-              <DropdownItem onClick={() => setShowLangMenu(false)}>{t('store.nav.langFR')}</DropdownItem>
             </LangMenu>
           </Dropdown>
 
@@ -707,50 +682,6 @@ export default function Navigation() {
           )}
         </NavActions>
       </TopBar>
-
-      <BottomNav ref={megaRef}>
-        <MegaMenu $active={showMegaMenu}>
-          <MenuSidebar>
-            {categoryTree.map((category, index) => (
-              <MenuLink
-                key={category.id}
-                className={activeLevel1 === index ? 'active' : ''}
-                onClick={() => {
-                  setActiveLevel1(index)
-                  setActiveLevel2(0)
-                }}
-              >
-                {category.name} <ArrowRight />
-              </MenuLink>
-            ))}
-          </MenuSidebar>
-
-          <MenuSub>
-            <SubGrid>
-              {currentSubCategories.map((sub, index) => (
-                <SubGridItem key={sub.id} onClick={() => setActiveLevel2(index)}>
-                  <SubThumb />
-                  <span>{sub.name}</span>
-                </SubGridItem>
-              ))}
-            </SubGrid>
-          </MenuSub>
-
-          <MenuDetail>
-            <MenuGroup>
-              <MenuGroupTitle>{currentSubCategories[activeLevel2]?.name || ''}</MenuGroupTitle>
-              <MenuTagList>
-                {currentThirdLevel.map((item) => (
-                  <MenuTag key={item.id} onClick={() => handleCategoryClick(item.id)}>
-                    <div className="circle-img" />
-                    <span>{item.name}</span>
-                  </MenuTag>
-                ))}
-              </MenuTagList>
-            </MenuGroup>
-          </MenuDetail>
-        </MegaMenu>
-      </BottomNav>
 
       {showNicknameModal && (
         <NicknameModalOverlay onClick={() => setShowNicknameModal(false)}>

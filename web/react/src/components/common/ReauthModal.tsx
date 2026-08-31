@@ -1,7 +1,8 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { useAdminAuth } from '../../store/AdminAuthContext'
+import { useUser } from '../../store/UserContext'
 
 /**
  * 重新登录模态框。
@@ -13,8 +14,10 @@ import { useAdminAuth } from '../../store/AdminAuthContext'
  */
 export default function ReauthModal() {
   const { t } = useTranslation()
-  const { logout } = useAdminAuth()
+  const { logout: adminLogout } = useAdminAuth()
+  const { logout: userLogout } = useUser()
   const navigate = useNavigate()
+  const location = useLocation()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -28,8 +31,12 @@ export default function ReauthModal() {
   const handleLoginAgain = () => {
     setVisible(false)
     // 清除本地会话（logout 内部也会调用后端 /users/session/logout/ 使 refresh cookie 失效）
-    logout()
-    navigate('/admin/login', { replace: true })
+    adminLogout()
+    userLogout()
+    // 根据当前所在上下文决定跳转目标：管理员后台 → 管理员登录页；普通用户 → 用户登录页。
+    // 任何情况下都不允许把普通用户带到 admin 后台。
+    const isAdminArea = location.pathname.startsWith('/admin')
+    navigate(isAdminArea ? '/admin/login' : '/auth?tab=login', { replace: true })
   }
 
   return (

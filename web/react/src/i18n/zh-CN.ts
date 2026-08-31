@@ -1611,6 +1611,8 @@ const zhCN = {
       contactSupport: '联系客服',
       activityPrice: '活动价',
       originalPrice: '原价',
+      freeReturn: '30 天无忧退换',
+      securePay: '安全支付保障',
     },
     profile: {
       signIn: '请先登录',

@@ -4,7 +4,8 @@ import styled, { keyframes } from 'styled-components'
 import { publicAPI, type PublicSPUDetail, type PublicSKU, type FavoriteItem } from '../../../api/public'
 import { useTranslation } from '../../../i18n'
 import { useUser } from '../../../store/UserContext'
-import { Color, FontSize, Transition } from '../../../theme/tokens'
+import { useCurrency } from '../../../store/CurrencyContext'
+import { Color, Radius, Shadow, FontSize, Transition, Type } from '../../../theme/tokens'
 import { zIndex } from '../../../styles/zIndex'
 import { resolveMediaUrl } from '../../../api/chat'
 
@@ -16,14 +17,24 @@ export interface ProductDetailModalProps {
   onToggleFavorite?: (productId: number, nextFavorited: boolean) => void
 }
 
+/**
+ * 加购快览弹窗（Quick Add）— SHEIN 规范：参数优先
+ * ─────────────────────────────────────────────────────────
+ * 只做一件事：让用户用最短路径选完规格并加购。
+ *   · 左：紧凑单图（锁死 3:4，任何视口不变形）+ 极小缩略图条，无大图画廊／左右箭头
+ *   · 右：参数面板 —— 名称/价格/SKU → 规格组（必选）→ 库存 → 数量 → 加购
+ *   · 移除长描述，弹窗不为「逛」服务，详情页才是
+ * 保留：规格可用性判断、未选全提示、低库存、移动端下拉关闭、成功后自动关闭。
+ */
+
 const fadeIn = keyframes`
   from { opacity: 0; }
   to { opacity: 1; }
 `
 
 const slideUp = keyframes`
-  from { opacity: 0; transform: translateY(24px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
 `
 
 const sheetUp = keyframes`
@@ -34,49 +45,42 @@ const sheetUp = keyframes`
 const ModalOverlay = styled.div<{ $isOpen: boolean }>`
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(14, 16, 19, 0.55);
+  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: ${zIndex.modal};
   opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
   visibility: ${({ $isOpen }) => ($isOpen ? 'visible' : 'hidden')};
-  transition: opacity 0.25s ease, visibility 0.25s ease;
-  padding: 16px;
-  animation: ${({ $isOpen }) => ($isOpen ? fadeIn : 'none')} 0.25s ease;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+  padding: 20px;
+  animation: ${({ $isOpen }) => ($isOpen ? fadeIn : 'none')} 0.22s ease;
 
   @media (max-width: 768px) {
     align-items: flex-end;
-    justify-content: stretch;
     padding: 0;
   }
 `
 
 const ModalBody = styled.div<{ $dragY?: number; $dragging?: boolean }>`
-  display: flex;
-  width: min(1080px, 96vw);
-  height: min(720px, 90vh);
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  width: min(860px, 100%);
+  max-height: min(88vh, 700px);
   background: ${Color.bg.card};
-  border-radius: 12px;
+  border-radius: ${Radius.panel}px;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-  animation: ${slideUp} 0.28s ease;
-
-  @media (max-width: 900px) and (min-width: 769px) {
-    flex-direction: column;
-    width: 96vw;
-    height: 92vh;
-    overflow-y: auto;
-  }
+  box-shadow: 0 16px 48px rgba(14, 16, 19, 0.28);
+  animation: ${slideUp} 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    width: 100vw;
-    height: min(92vh, 860px);
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: 100%;
     max-height: 92vh;
-    border-radius: 16px 16px 0 0;
-    overflow: hidden;
+    border-radius: ${Radius.xl}px ${Radius.xl}px 0 0;
     animation: ${({ $dragging }) => ($dragging ? 'none' : sheetUp)} 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     transform: translateY(${({ $dragY = 0 }) => $dragY}px);
     transition: ${({ $dragging }) => ($dragging ? 'none' : 'transform 0.22s ease')};
@@ -96,17 +100,17 @@ const SheetHandle = styled.div`
     top: 0;
     left: 0;
     right: 0;
-    height: 28px;
+    height: 24px;
     z-index: 13;
     cursor: grab;
     touch-action: none;
 
     &::after {
       content: '';
-      width: 42px;
+      width: 40px;
       height: 4px;
       border-radius: 999px;
-      background: #d0d0d0;
+      background: ${Color.border.medium};
     }
 
     &:active {
@@ -117,250 +121,184 @@ const SheetHandle = styled.div`
 
 const CloseButton = styled.button`
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 36px;
-  height: 36px;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.65);
-  color: #fff;
-  font-size: 18px;
+  border: 1px solid ${Color.border.light};
+  background: ${Color.bg.card};
+  color: ${Color.text.primary};
+  font-size: 15px;
+  line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 12;
-  transition: background 0.2s ease;
+  transition: background ${Transition.fast}, border-color ${Transition.fast};
 
   &:hover {
-    background: rgba(0, 0, 0, 0.85);
-  }
-
-  @media (max-width: 768px) {
-    top: 12px;
-    right: 12px;
-    width: 32px;
-    height: 32px;
-    background: rgba(0, 0, 0, 0.5);
+    background: ${Color.primaryLight};
+    border-color: ${Color.border.medium};
   }
 `
 
-const Gallery = styled.div`
-  flex: 1.15;
-  display: flex;
-  min-width: 0;
-  background: #fafafa;
-  border-right: 1px solid ${Color.border.light};
-
-  @media (max-width: 900px) and (min-width: 769px) {
-    flex: none;
-    height: 48vh;
-    border-right: none;
-    border-bottom: 1px solid ${Color.border.light};
-  }
-
-  @media (max-width: 768px) {
-    flex: none;
-    height: 42vh;
-    min-height: 240px;
-    border-right: none;
-    border-bottom: 1px solid ${Color.border.light};
-  }
-`
-
-const ThumbnailList = styled.div`
-  width: 84px;
-  min-width: 84px;
-  height: 100%;
+/* ── 左：紧凑主图 ─────────────────────────────────────────── */
+const MediaCol = styled.div`
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 16px 10px;
-  overflow-y: auto;
-  background: #f5f5f5;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 2px;
-  }
-
-  @media (max-width: 900px) and (min-width: 769px) {
-    width: 72px;
-    min-width: 72px;
-  }
+  padding: 14px;
+  background: ${Color.bg.sunken};
+  border-right: 1px solid ${Color.border.light};
+  min-width: 0;
 
   @media (max-width: 768px) {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    flex-direction: row;
-    gap: 8px;
-    padding: 10px 12px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    background: linear-gradient(to top, rgba(255,255,255,0.96), rgba(255,255,255,0.72));
-    z-index: 5;
+    border-right: none;
+    border-bottom: 1px solid ${Color.border.light};
+    padding: 30px 14px 12px;
   }
 `
 
-const ThumbnailItem = styled.button<{ $active: boolean }>`
-  width: 64px;
-  height: 80px;
-  border-radius: 6px;
+/** 锁死 3:4：无论弹窗如何缩放，画幅比例恒定不塌陷 */
+const MainImageBox = styled.div`
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border-radius: ${Radius.md}px;
   overflow: hidden;
-  cursor: pointer;
-  border: 2px solid ${({ $active }) => ($active ? '#222' : 'transparent')};
-  padding: 0;
-  background: #fff;
-  flex-shrink: 0;
-  transition: border-color 0.2s ease;
-
-  &:hover {
-    border-color: #222;
-  }
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
 
   @media (max-width: 768px) {
-    width: 52px;
-    height: 64px;
+    max-height: 42vh;
   }
 `
 
-const ThumbnailImage = styled.img`
+const MainImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 `
 
-const MainImageContainer = styled.div`
-  flex: 1;
+const ThumbRow = styled.div`
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 28px;
-  position: relative;
-  min-width: 0;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 2px;
 
-  @media (max-width: 768px) {
-    padding: 16px 16px 72px;
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${Color.border.medium};
+    border-radius: 2px;
   }
 `
 
-const MainImage = styled.img`
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  display: block;
-`
-
-const NavBtn = styled.button<{ $side: 'left' | 'right' }>`
-  position: absolute;
-  top: 50%;
-  ${({ $side }) => ($side === 'left' ? 'left: 12px;' : 'right: 12px;')}
-  transform: translateY(-50%);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 1px solid ${Color.border.medium};
-  background: rgba(255, 255, 255, 0.95);
+const ThumbItem = styled.button<{ $active: boolean }>`
+  width: 46px;
+  height: 60px;
+  flex-shrink: 0;
+  aspect-ratio: 3 / 4;
+  border-radius: ${Radius.sm}px;
+  overflow: hidden;
   cursor: pointer;
-  font-size: 18px;
-  color: #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 0;
+  background: ${Color.bg.card};
+  border: 2px solid ${({ $active }) => ($active ? Color.text.primary : Color.border.light)};
+  transition: border-color ${Transition.fast};
 
   &:hover {
-    background: #fff;
+    border-color: ${Color.text.primary};
   }
 
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
   }
 `
 
-const InfoPanel = styled.div`
-  width: 380px;
-  min-width: 320px;
-  max-width: 42%;
-  padding: 28px 24px 24px;
+/* ── 右：参数面板 ─────────────────────────────────────────── */
+const ParamCol = styled.div`
   display: flex;
   flex-direction: column;
+  min-width: 0;
   overflow-y: auto;
-
-  @media (max-width: 900px) and (min-width: 769px) {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-  }
+  padding: 26px 26px 22px;
 
   @media (max-width: 768px) {
-    width: 100%;
-    max-width: none;
-    min-width: 0;
-    flex: 1;
-    padding: 16px 16px 18px;
-    overflow-y: auto;
+    padding: 18px 18px 16px;
     -webkit-overflow-scrolling: touch;
   }
 `
 
 const BrandTag = styled.div`
-  font-size: 0.75rem;
-  color: #888;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  ${Type.wideCaps}
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: ${Color.text.muted};
   margin-bottom: 8px;
 `
 
 const ProductName = styled.h2`
   font-size: 1.15rem;
   font-weight: 600;
-  color: #111;
-  margin: 0 0 10px;
   line-height: 1.4;
+  ${Type.tight}
+  color: ${Color.text.primary};
+  margin: 0 0 12px;
 `
 
-const ProductPrice = styled.div`
+const PriceRow = styled.div`
   display: flex;
   align-items: baseline;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 `
 
 const CurrentPrice = styled.span`
-  font-size: 1.6rem;
+  ${Type.tnum}
+  font-size: 1.75rem;
   font-weight: 700;
-  color: #111;
+  ${Type.tighter}
+  color: ${Color.text.primary};
 `
 
 const OriginalPrice = styled.span`
+  ${Type.tnum}
   font-size: 0.95rem;
-  color: #999;
+  color: ${Color.text.muted};
   text-decoration: line-through;
 `
 
 const SkuCode = styled.div`
-  font-size: 0.8rem;
-  color: #999;
+  ${Type.tnum}
+  font-size: 0.78rem;
+  color: ${Color.text.muted};
+  margin-bottom: 18px;
+`
+
+const SpecBlock = styled.div`
   margin-bottom: 16px;
 `
 
-const SectionTitle = styled.h4`
-  font-size: 0.8rem;
+const SpecTitle = styled.h4`
+  font-size: 0.82rem;
   font-weight: 600;
-  color: #333;
-  margin: 14px 0 10px;
+  color: ${Color.text.primary};
+  margin: 0 0 10px;
+  display: flex;
+  align-items: center;
+`
+
+const RequiredMark = styled.span`
+  color: ${Color.status.error};
+  margin-left: 4px;
+  font-weight: 700;
 `
 
 const SpecOptions = styled.div`
@@ -369,75 +307,104 @@ const SpecOptions = styled.div`
   gap: 8px;
 `
 
+/** SHEIN 式方形规格按钮：选中墨黑描边 + 反色，不可选置灰加删除线 */
 const SpecOption = styled.button<{ $selected: boolean; $disabled?: boolean }>`
-  min-width: 44px;
-  padding: 8px 12px;
-  border: 1px solid ${({ $selected, $disabled }) =>
-    $disabled ? '#e5e5e5' : $selected ? '#222' : Color.border.medium};
+  min-width: 56px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: ${Radius.sm}px;
+  border: ${({ $selected, $disabled }) =>
+    $disabled
+      ? `1px solid ${Color.border.light}`
+      : $selected
+        ? `2px solid ${Color.text.primary}`
+        : `1px solid ${Color.border.medium}`};
   background: ${({ $selected, $disabled }) =>
-    $disabled ? '#f5f5f5' : $selected ? '#111' : '#fff'};
+    $disabled ? Color.bg.sunken : $selected ? Color.text.primary : Color.bg.card};
   color: ${({ $selected, $disabled }) =>
-    $disabled ? '#bbb' : $selected ? '#fff' : '#333'};
-  border-radius: 4px;
-  font-size: 0.82rem;
+    $disabled ? Color.text.muted : $selected ? Color.text.inverse : Color.text.primary};
+  font-size: 0.85rem;
+  font-weight: ${({ $selected }) => ($selected ? 700 : 400)};
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
-  opacity: ${({ $disabled }) => ($disabled ? 0.7 : 1)};
   text-decoration: ${({ $disabled }) => ($disabled ? 'line-through' : 'none')};
-  transition: ${Transition.fast};
+  transition: border-color ${Transition.fast}, background ${Transition.fast};
 
   &:hover:not(:disabled) {
-    border-color: #222;
+    border-color: ${Color.text.primary};
   }
 `
 
-const StockInfo = styled.div<{ $low: boolean }>`
-  font-size: 0.82rem;
-  color: ${({ $low }) => ($low ? '#e74c3c' : '#2e7d32')};
+const HintText = styled.div<{ $tone?: 'muted' | 'warn' | 'ok' }>`
+  font-size: 0.8rem;
   font-weight: 600;
-  margin-top: 4px;
+  margin-top: 8px;
+  color: ${({ $tone }) =>
+    $tone === 'warn'
+      ? Color.status.error
+      : $tone === 'ok'
+        ? Color.status.success
+        : Color.text.muted};
 `
 
-const Description = styled.p`
-  font-size: 0.85rem;
-  color: #666;
-  line-height: 1.55;
-  margin: 0;
+const Divider = styled.div`
+  height: 1px;
+  background: ${Color.border.light};
+  margin: 4px 0 16px;
 `
 
 const QuantityRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 12px;
+  margin-top: 4px;
 `
 
-const QuantityButton = styled.button`
+const QuantityLabel = styled.span`
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: ${Color.text.primary};
+`
+
+const Stepper = styled.div`
+  display: flex;
+  align-items: center;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.sm}px;
+  overflow: hidden;
+`
+
+const StepBtn = styled.button`
   width: 34px;
   height: 34px;
-  border: 1px solid ${Color.border.medium};
-  border-radius: 4px;
-  background: #fff;
+  border: none;
+  background: ${Color.bg.card};
+  color: ${Color.text.primary};
+  font-size: 1rem;
   cursor: pointer;
-  font-size: 1.05rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background ${Transition.fast};
 
   &:hover:not(:disabled) {
-    border-color: #222;
+    background: ${Color.primaryLight};
   }
 
   &:disabled {
-    opacity: 0.4;
+    color: ${Color.border.dark};
     cursor: not-allowed;
   }
 `
 
 const QuantityDisplay = styled.span`
-  min-width: 28px;
+  ${Type.tnum}
+  min-width: 40px;
   text-align: center;
   font-weight: 600;
   font-size: ${FontSize.md}px;
+  border-left: 1px solid ${Color.border.light};
+  border-right: 1px solid ${Color.border.light};
+  line-height: 34px;
 `
 
 const FooterActions = styled.div`
@@ -450,10 +417,34 @@ const FooterActions = styled.div`
   @media (max-width: 768px) {
     position: sticky;
     bottom: 0;
-    background: linear-gradient(to top, #fff 70%, rgba(255,255,255,0.92));
-    padding-top: 12px;
+    background: ${Color.bg.card};
     padding-bottom: env(safe-area-inset-bottom, 0);
     z-index: 4;
+  }
+`
+
+const AddToCartButton = styled.button`
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: ${Color.primary};
+  color: ${Color.text.inverse};
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background ${Transition.fast}, box-shadow ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    background: ${Color.primaryHover};
+    box-shadow: 0 8px 20px -10px rgba(14, 16, 19, 0.6);
+  }
+
+  &:disabled {
+    background: ${Color.primaryLight};
+    color: ${Color.text.muted};
+    cursor: not-allowed;
   }
 `
 
@@ -463,20 +454,20 @@ const SecondaryRow = styled.div`
   gap: 8px;
 `
 
-const FavButton = styled.button<{ $active?: boolean }>`
+const GhostButton = styled.button<{ $active?: boolean }>`
   width: 100%;
-  padding: 10px;
-  border: 1px solid ${({ $active }) => ($active ? Color.primary : '#ddd')};
-  border-radius: 6px;
-  background: ${({ $active }) => ($active ? Color.primaryLight : '#fff')};
-  color: ${({ $active }) => ($active ? Color.primary : '#333')};
-  font-size: 0.85rem;
+  height: 38px;
+  border: 1px solid ${({ $active }) => ($active ? Color.text.primary : Color.border.medium)};
+  border-radius: 999px;
+  background: ${({ $active }) => ($active ? Color.primaryLight : Color.bg.card)};
+  color: ${Color.text.primary};
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  transition: border-color ${Transition.fast}, background ${Transition.fast};
 
-  &:hover {
-    border-color: #e74c3c;
-    color: #e74c3c;
+  &:hover:not(:disabled) {
+    border-color: ${Color.text.primary};
   }
 
   &:disabled {
@@ -485,58 +476,12 @@ const FavButton = styled.button<{ $active?: boolean }>`
   }
 `
 
-const AddToCartButton = styled.button`
-  width: 100%;
-  padding: 14px 16px;
-  border: none;
-  border-radius: 6px;
-  background: #111;
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 0.2s ease;
-
-  &:hover:not(:disabled) {
-    background: #000;
-  }
-
-  &:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-`
-
-const ViewDetailLink = styled.button`
-  width: 100%;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  color: #333;
-  font-size: 0.85rem;
-  cursor: pointer;
-
-  &:hover {
-    border-color: #999;
-  }
-`
-
 const StateBox = styled.div`
   padding: 48px 24px;
   text-align: center;
-  color: #888;
+  color: ${Color.text.muted};
   font-size: 0.9rem;
-  width: 100%;
-`
-
-const SuccessTip = styled.div`
-  margin-top: 8px;
-  font-size: 0.82rem;
-  color: #2e7d32;
-  font-weight: 600;
-  text-align: center;
+  grid-column: 1 / -1;
 `
 
 function isSkuSellable(sku: PublicSKU): boolean {
@@ -606,6 +551,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { isLoggedIn } = useUser()
+  const { format } = useCurrency()
   const [detail, setDetail] = useState<PublicSPUDetail | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -787,7 +733,6 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   }, [onClose])
 
   const handleOverlayClick = useCallback(
-
     (e: React.MouseEvent) => {
       if (e.target === e.currentTarget) onClose()
     },
@@ -839,7 +784,7 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     } finally {
       setFavLoading(false)
     }
-  }, [productId, isLoggedIn, isFavorited, onToggleFavorite, favLoading, redirectLogin])
+  }, [productId, isLoggedIn, isFavorited, favLoading, onToggleFavorite, redirectLogin])
 
   const handleAddToCart = useCallback(() => {
     if (!detail || !selectedSku || !canAddToCart || adding) return
@@ -878,66 +823,43 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
         {!loading && !error && detail && (
           <>
-            <Gallery>
+            {/* 左：紧凑单图 + 极小缩略图条（无大图画廊、无左右箭头） */}
+            <MediaCol>
+              <MainImageBox>
+                {selectedImageUrl ? (
+                  <MainImage src={selectedImageUrl} alt={detail.name} />
+                ) : null}
+              </MainImageBox>
               {images.length > 1 && (
-                <ThumbnailList>
-                  {images.map((img, index) => (
-                    <ThumbnailItem
+                <ThumbRow>
+                  {images.slice(0, 6).map((img, index) => (
+                    <ThumbItem
                       key={`${img}-${index}`}
                       $active={index === selectedImageIndex}
                       onClick={() => setSelectedImageIndex(index)}
                       type="button"
+                      aria-label={`${detail.name} ${index + 1}`}
                     >
-                      <ThumbnailImage src={img} alt={`${detail.name} ${index + 1}`} />
-                    </ThumbnailItem>
+                      <img src={img} alt="" />
+                    </ThumbItem>
                   ))}
-                </ThumbnailList>
+                </ThumbRow>
               )}
+            </MediaCol>
 
-              <MainImageContainer>
-                {images.length > 1 && (
-                  <NavBtn
-                    $side="left"
-                    type="button"
-                    disabled={selectedImageIndex <= 0}
-                    onClick={() => setSelectedImageIndex(i => Math.max(0, i - 1))}
-                    aria-label="Previous image"
-                  >
-                    ‹
-                  </NavBtn>
-                )}
-                {selectedImageUrl && (
-                  <MainImage
-                    src={selectedImageUrl}
-                    alt={detail.name}
-                  />
-                )}
-                {images.length > 1 && (
-                  <NavBtn
-                    $side="right"
-                    type="button"
-                    disabled={selectedImageIndex >= images.length - 1}
-                    onClick={() => setSelectedImageIndex(i => Math.min(images.length - 1, i + 1))}
-                    aria-label="Next image"
-                  >
-                    ›
-                  </NavBtn>
-                )}
-              </MainImageContainer>
-            </Gallery>
-
-            <InfoPanel>
+            {/* 右：参数面板 —— 弹窗的主体，只服务于「选规格 + 加购」 */}
+            <ParamCol>
               {detail.brand_name && <BrandTag>{detail.brand_name}</BrandTag>}
               <ProductName>{detail.name}</ProductName>
 
-              <ProductPrice>
+              <PriceRow>
                 <CurrentPrice>
-                  {selectedSku ? `$${displayPrice.toFixed(2)}` : `${t('store.productDetailModal.from')} $${displayPrice.toFixed(2)}`}
+                  {selectedSku ? format(displayPrice) : `${t('store.productDetailModal.from')} ${format(displayPrice)}`}
                 </CurrentPrice>
                 {originalPrice != null && originalPrice > displayPrice && (
-                  <OriginalPrice>${originalPrice.toFixed(2)}</OriginalPrice>
+                  <OriginalPrice>{format(originalPrice)}</OriginalPrice>
                 )}
-              </ProductPrice>
+              </PriceRow>
 
               {selectedSku && (
                 <SkuCode>
@@ -947,15 +869,11 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
 
               {specGroups.map(spec => (
-                <div key={spec.name}>
-                  <SectionTitle>
+                <SpecBlock key={spec.name}>
+                  <SpecTitle>
                     {spec.name}
-                    {!selectedSpecs[spec.name] && (
-                      <span style={{ color: '#e74c3c', marginLeft: 6, fontWeight: 500 }}>
-                        *
-                      </span>
-                    )}
-                  </SectionTitle>
+                    {!selectedSpecs[spec.name] && <RequiredMark>*</RequiredMark>}
+                  </SpecTitle>
                   <SpecOptions>
                     {spec.values.map(val => {
                       const available = isSpecValueAvailable(detail, selectedSpecs, spec.name, val)
@@ -986,60 +904,48 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       )
                     })}
                   </SpecOptions>
-                </div>
+                </SpecBlock>
               ))}
 
               {hasSpecs && !allSpecsSelected && (
-                <StockInfo $low style={{ marginTop: 10 }}>
-                  {t('store.productDetailModal.selectAllOptions')}
-                </StockInfo>
+                <HintText $tone="warn">{t('store.productDetailModal.selectAllOptions')}</HintText>
               )}
 
               {allSpecsSelected && (
-                <>
-                  <SectionTitle>{t('store.productDetailModal.stock')}</SectionTitle>
-                  {isOutOfStock ? (
-                    <StockInfo $low>{t('store.productDetailModal.outOfStock')}</StockInfo>
-                  ) : (
-                    <StockInfo $low={isLowStock}>
-                      {isLowStock
-                        ? t('store.productDetailModal.onlyLeft').replace('{count}', String(stock))
-                        : t('store.productDetailModal.available').replace('{count}', String(stock))}
-                    </StockInfo>
-                  )}
-                </>
+                <HintText $tone={isOutOfStock ? 'warn' : isLowStock ? 'warn' : 'ok'}>
+                  {isOutOfStock
+                    ? t('store.productDetailModal.outOfStock')
+                    : isLowStock
+                      ? t('store.productDetailModal.onlyLeft').replace('{count}', String(stock))
+                      : t('store.productDetailModal.available').replace('{count}', String(stock))}
+                </HintText>
               )}
 
-              {detail.description && (
-                <>
-                  <SectionTitle>{t('store.category.description')}</SectionTitle>
-                  <Description>{detail.description}</Description>
-                </>
-              )}
+              <Divider />
 
               <QuantityRow>
-                <SectionTitle style={{ margin: 0 }}>
-                  {t('store.product.quantity')}
-                </SectionTitle>
-                <QuantityButton
-                  type="button"
-                  onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                  disabled={quantity <= 1 || adding}
-                  aria-label={t('store.productDetailModal.decrease')}
-                >
-                  −
-                </QuantityButton>
-                <QuantityDisplay>{quantity}</QuantityDisplay>
-                <QuantityButton
-                  type="button"
-                  onClick={() =>
-                    setQuantity(q => Math.min(allSpecsSelected && stock > 0 ? stock : 99, q + 1))
-                  }
-                  disabled={adding || (allSpecsSelected && stock > 0 && quantity >= stock)}
-                  aria-label={t('store.productDetailModal.increase')}
-                >
-                  +
-                </QuantityButton>
+                <QuantityLabel>{t('store.product.quantity')}</QuantityLabel>
+                <Stepper>
+                  <StepBtn
+                    type="button"
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    disabled={quantity <= 1 || adding}
+                    aria-label={t('store.productDetailModal.decrease')}
+                  >
+                    −
+                  </StepBtn>
+                  <QuantityDisplay>{quantity}</QuantityDisplay>
+                  <StepBtn
+                    type="button"
+                    onClick={() =>
+                      setQuantity(q => Math.min(allSpecsSelected && stock > 0 ? stock : 99, q + 1))
+                    }
+                    disabled={adding || (allSpecsSelected && stock > 0 && quantity >= stock)}
+                    aria-label={t('store.productDetailModal.increase')}
+                  >
+                    +
+                  </StepBtn>
+                </Stepper>
               </QuantityRow>
 
               <FooterActions>
@@ -1057,15 +963,15 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         : t('store.productDetailModal.addToCart')}
                 </AddToCartButton>
                 <SecondaryRow>
-                  <FavButton
+                  <GhostButton
                     type="button"
                     $active={isFavorited}
                     disabled={favLoading}
                     onClick={handleToggleFavorite}
                   >
                     {isFavorited ? t('store.productDetailModal.favorited') : t('store.product.wishlist')}
-                  </FavButton>
-                  <ViewDetailLink
+                  </GhostButton>
+                  <GhostButton
                     type="button"
                     onClick={() => {
                       onClose()
@@ -1073,11 +979,11 @@ const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     }}
                   >
                     {t('store.product.productDetail')}
-                  </ViewDetailLink>
+                  </GhostButton>
                 </SecondaryRow>
-                {successMsg && <SuccessTip>{successMsg}</SuccessTip>}
+                {successMsg && <HintText $tone="ok">{successMsg}</HintText>}
               </FooterActions>
-            </InfoPanel>
+            </ParamCol>
           </>
         )}
       </ModalBody>

@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom'
 import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
 import styled from 'styled-components'
+import { Color, Radius, Shadow } from '../../../theme/tokens'
 
 const MenuBar = styled.div`
-  background-color: #fff;
-  border-bottom: 1px solid #eee;
+  background-color: ${Color.bg.card};
+  border-bottom: 1px solid ${Color.border.light};
   display: flex;
   align-items: center;
   padding: 0 2vw;
@@ -15,8 +16,8 @@ const MenuBar = styled.div`
 `
 
 const CategoryButton = styled.button`
-  background: #333;
-  color: white;
+  background: ${Color.primary};
+  color: ${Color.text.inverse};
   padding: 1.2vh 2.5vw;
   cursor: pointer;
   font-size: 1rem;
@@ -25,7 +26,7 @@ const CategoryButton = styled.button`
   border-radius: 0;
 
   &:hover {
-    background: #555;
+    background: ${Color.primaryHover};
   }
 `
 
@@ -42,17 +43,17 @@ const AlphabetNav = styled.div`
   }
 
   &::-webkit-scrollbar-thumb {
-    background: #ddd;
+    background: ${Color.border.medium};
     border-radius: 10px;
   }
 
   span {
     font-size: 1rem;
-    color: #666;
+    color: ${Color.text.body};
     cursor: pointer;
 
     &:hover {
-      color: #333;
+      color: ${Color.text.primary};
     }
   }
 `
@@ -63,14 +64,14 @@ const MegaMenuPanel = styled.div<{ $active?: boolean }>`
   left: 2vw;
   width: calc(100% - 4vw);
   max-width: 1200px;
-  background: white;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+  background: ${Color.bg.card};
+  box-shadow: ${Shadow.lg};
   display: ${props => props.$active ? 'grid' : 'none'};
   grid-template-columns: 200px 350px 1fr;
   height: auto;
   max-height: 450px;
   z-index: ${zIndex.dropdown};
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 ${Radius.md}px ${Radius.md}px;
 
   @media (max-width: 992px) {
     grid-template-columns: 1fr;
@@ -81,8 +82,8 @@ const MegaMenuPanel = styled.div<{ $active?: boolean }>`
 `
 
 const MenuSidebar = styled.div`
-  background: #f9f9f9;
-  border-right: 1px solid #eee;
+  background: ${Color.bg.sunken};
+  border-right: 1px solid ${Color.border.light};
   overflow-y: auto;
 `
 
@@ -94,15 +95,15 @@ const MenuLink = styled.div`
   justify-content: space-between;
 
   &:hover, &.active {
-    background: #fff;
-    color: #ff4646;
+    background: ${Color.bg.card};
+    color: ${Color.brand};
     font-weight: bold;
   }
 `
 
 const MenuSub = styled.div`
   padding: 2.5vh;
-  border-right: 1px solid #f0f0f0;
+  border-right: 1px solid ${Color.border.light};
   overflow-y: auto;
 `
 
@@ -120,7 +121,7 @@ const SubGridItem = styled.div`
 const SubThumb = styled.div`
   width: 60px;
   height: 60px;
-  background: #f0f0f0;
+  background: ${Color.primaryLight};
   border-radius: 50%;
   margin: 0 auto 0.8vh;
 `
@@ -128,7 +129,7 @@ const SubThumb = styled.div`
 const MenuDetail = styled.div`
   padding: 2.5vh;
   overflow-y: auto;
-  background: #fff;
+  background: ${Color.bg.card};
 `
 
 const MenuGroup = styled.div`
@@ -139,7 +140,7 @@ const MenuGroupTitle = styled.div`
   font-weight: bold;
   font-size: 1rem;
   margin-bottom: 1.5vh;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid ${Color.border.light};
 `
 
 const MenuTagList = styled.div`
@@ -156,7 +157,7 @@ const MenuTag = styled.div`
   .circle-img {
     width: 50px;
     height: 50px;
-    background: #f7f7f7;
+    background: ${Color.bg.sunken};
     border-radius: 50%;
     margin: 0 auto 0.5vh;
   }

@@ -13,7 +13,7 @@ const Hero = styled.div`
   grid-template-columns: 1.2fr 1fr;
   gap: 40px;
   align-items: center;
-  background: linear-gradient(135deg, ${Color.primaryLight}, #fff);
+  background: linear-gradient(135deg, ${Color.primaryLight}, ${Color.bg.card});
   border-radius: ${Radius.lg}px;
   padding: 40px;
   @media (max-width: 760px) { grid-template-columns: 1fr; }
@@ -44,7 +44,7 @@ const StoreBtn = styled.a`
   align-items: center;
   gap: 10px;
   background: ${Color.text.heading};
-  color: #fff;
+  color: ${Color.text.inverse};
   padding: 14px 22px;
   border-radius: ${Radius.md}px;
   font-size: ${FontSize.md}px;
@@ -55,7 +55,7 @@ const StoreBtn = styled.a`
 `
 
 const QRBox = styled.div`
-  background: #fff;
+  background: ${Color.bg.card};
   border-radius: ${Radius.lg}px;
   box-shadow: ${Shadow.card};
   padding: 24px;

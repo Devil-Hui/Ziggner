@@ -15,9 +15,10 @@ export default defineConfig(({ mode }) => {
     target: proxyTarget,
     changeOrigin: false,
     // 本地 django-app 跑 prod settings（SECURE_SSL_REDIRECT=True）：明文 HTTP 会被
-    // 301 跳 HTTPS，Vite 代理若直连 localhost:8000 会陷入重定向环。补 X-Forwarded-Proto:
-    // https 让 Django 视为安全连接（prod.py 已开 SECURE_PROXY_SSL_HEADER），与 nginx
-    // 反向代理行为一致。
+    // 301 跳 HTTPS。Vite 代理指向 nginx HTTPS（https://localhost），nginx 的
+    // X-Forwarded-Proto 为 https，Django 视为安全连接，不会重定向。
+    // secure:false 忽略 nginx 自签名证书（本地开发）。
+    secure: false,
     headers: { 'X-Forwarded-Proto': 'https' },
   }
 
@@ -71,6 +72,9 @@ export default defineConfig(({ mode }) => {
         target: wsProxyTarget,
         ws: true,
         changeOrigin: true,
+        // 本地 WS 代理指向 nginx HTTPS（https://localhost），nginx 用自签名证书，
+        // 需 secure:false 忽略证书校验（与 /api 代理一致），否则握手报 self-signed certificate。
+        secure: false,
         // channels 的 AllowedHostsOriginValidator 在「无 Origin 头」时一律拒绝
         // （除非 ALLOWED_HOSTS 含 "*"）。http-proxy 默认不转发浏览器 Origin，
         // 故在 WS 升级请求上补一个与允许主机匹配的 Origin，保证握手通过。

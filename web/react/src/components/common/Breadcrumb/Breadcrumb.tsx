@@ -1,6 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import styled from 'styled-components'
+import { Color } from '../../../theme/tokens'
 
 // ==================== 类型定义 ====================
 
@@ -24,32 +25,32 @@ const BreadcrumbWrapper = styled.nav`
   gap: 8px;
   padding: 12px 24px;
   font-size: 0.85rem;
-  background: #fafafa;
-  border-bottom: 1px solid #eee;
+  background: ${Color.bg.sunken};
+  border-bottom: 1px solid ${Color.border.light};
   flex-wrap: wrap;
 `
 
 /** 面包屑项 - 可点击 */
 const BreadcrumbLink = styled(Link)`
-  color: #666;
+  color: ${Color.text.body};
   text-decoration: none;
   transition: color 0.2s ease;
 
   &:hover {
-    color: #1a73e8;
+    color: ${Color.blue};
     text-decoration: underline;
   }
 `
 
 /** 面包屑当前项 - 不可点击，最后一项 */
 const BreadcrumbCurrent = styled.span`
-  color: #333;
+  color: ${Color.text.primary};
   font-weight: 600;
 `
 
 /** 分隔符 */
 const Separator = styled.span`
-  color: #ccc;
+  color: ${Color.border.dark};
   user-select: none;
 `
 

@@ -92,6 +92,9 @@ CSRF_TRUSTED_ORIGINS = [
     'https://shop.ziggner.com',
     'https://api.ziggner.com',
     'https://ziggner.huigeli666.workers.dev',
+    # 本地开发：Vite dev server 经代理访问后端时，Origin 为 localhost:12700
+    'http://localhost:12700',
+    'http://127.0.0.1:12700',
 ]
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 

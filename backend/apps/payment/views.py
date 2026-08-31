@@ -1,6 +1,7 @@
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiParameter, OpenApiTypes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework import status
 import logging
 
@@ -20,6 +21,8 @@ from .services import PaymentService
 class CreatePaymentView(BaseApiView):
     """发起支付，返回支付页 URL 或客户端密钥。"""
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'payment_create'
 
     @extend_schema(request=CreatePaymentSerializer, responses={200: OpenApiResponse(description='Payment info')})
     def post(self, request):
@@ -63,6 +66,8 @@ class CreatePaymentView(BaseApiView):
 class MockPaymentCompleteView(BaseApiView):
     """Development/staging-only authenticated payment simulator."""
     permission_classes = [IsAuthenticated]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'payment_mock'
 
     @extend_schema(
         request=MockPaymentScenarioSerializer,
@@ -86,6 +91,8 @@ class MockPaymentCompleteView(BaseApiView):
 
 class PaymentWebhookView(PublicApiView):
     """支付网关异步回调（公开，由网关调用）。验签依赖原始 body + HTTP headers。"""
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'payment_webhook'
 
     @extend_schema(request=OpenApiTypes.OBJECT, responses={200: OpenApiResponse(description='Webhook processed')})
     def post(self, request, gateway):

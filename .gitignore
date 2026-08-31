@@ -18,6 +18,12 @@ web/react/probe_chunk.js
 web/react/scripts_tmp_rm_pb.py
 web/react/overview-*.md
 web/react/dist_*/
+# 本地构建/测试辅助脚本与输出（不入库）
+web/react/run-build.cjs
+web/react/run-tests.cjs
+web/react/shot.mjs
+web/react/test-output.txt
+web/react/vitest-result.txt
 # 本地构建改名残留（sandbox safe-delete 规避用）
 web/react/dist-old/
 # git 仓库损坏备份目录（不入库）

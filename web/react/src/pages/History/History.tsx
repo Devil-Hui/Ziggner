@@ -3,6 +3,7 @@ import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
+import { useCurrency } from '../../store/CurrencyContext'
 import { Color, Radius, Shadow, FontSize, Layout } from '../../theme/tokens'
 import { publicAPI, type BrowseHistoryItem } from '../../api/public'
 
@@ -122,8 +123,8 @@ const Badge = styled.div`
   position: absolute;
   top: 10px;
   left: 10px;
-  background: #ff6b6b;
-  color: white;
+  background: ${Color.brand};
+  color: ${Color.text.inverse};
   padding: 3px 8px;
   border-radius: ${Radius.sm}px;
   font-size: 11px;
@@ -145,7 +146,7 @@ const ProductName = styled.div`
 const ProductPrice = styled.div`
   font-size: 16px;
   font-weight: bold;
-  color: #ff6b6b;
+  color: ${Color.brand};
 `
 
 const ViewDate = styled.div`
@@ -185,7 +186,7 @@ const LoadingState = styled.div`
 const ErrorState = styled.div`
   text-align: center;
   padding: 40px;
-  color: #e74c3c;
+  color: ${Color.status.error};
 `
 
 function formatDate(dateStr: string): string {
@@ -206,6 +207,7 @@ function formatDate(dateStr: string): string {
 export default function History() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { format } = useCurrency()
   const [historyItems, setHistoryItems] = useState<BrowseHistoryItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -284,7 +286,7 @@ export default function History() {
                     <ProductInfo>
                       <ProductName>{item.spu_name}</ProductName>
                       <ProductPrice>
-                        {item.spu_price ? `$${item.spu_price}` : '—'}
+                        {item.spu_price ? format(Number(item.spu_price)) : '—'}
                       </ProductPrice>
                       <ViewDate>{t('store.history.viewed')} {formatDate(item.viewed_at)}</ViewDate>
                     </ProductInfo>

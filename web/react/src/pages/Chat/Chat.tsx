@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useUser } from '../../store/UserContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { ChatBubble, SystemBubbleMessage, TypingIndicator } from '../../components/business/ChatBubble'
@@ -123,8 +124,8 @@ const EntryTextarea = styled.textarea`
 const EntryBtn = styled.button`
   width: 100%;
   padding: 12px;
-  background: #e74c3c;
-  color: #fff;
+  background: ${Color.status.error};
+  color: ${Color.text.inverse};
   border: none;
   border-radius: ${Radius.sm}px;
   font-size: ${FontSize.md}px;
@@ -176,9 +177,9 @@ const ChatStatus = styled.span<{ $status: string }>`
   font-size: 12px;
   font-weight: 400;
   color: ${props =>
-    props.$status === 'pending' ? '#e65100'
-      : props.$status === 'replied' ? '#059669'
-        : '#999'};
+    props.$status === 'pending' ? Color.status.warning
+      : props.$status === 'replied' ? Color.status.success
+        : Color.text.muted};
 
   &::before {
     content: '';
@@ -186,9 +187,9 @@ const ChatStatus = styled.span<{ $status: string }>`
     height: 6px;
     border-radius: 50%;
     background: ${props =>
-      props.$status === 'pending' ? '#e65100'
-        : props.$status === 'replied' ? '#059669'
-          : '#999'};
+      props.$status === 'pending' ? Color.status.warning
+        : props.$status === 'replied' ? Color.status.success
+          : Color.text.muted};
   }
 `
 
@@ -201,9 +202,9 @@ const WSIndicator = styled.span<{ $status: WSStatus }>`
   font-size: 11px;
   font-weight: 400;
   color: ${props =>
-    props.$status === 'connected' ? '#059669'
-      : props.$status === 'connecting' ? '#d97706'
-        : '#dc2626'};
+    props.$status === 'connected' ? Color.status.success
+      : props.$status === 'connecting' ? Color.status.warning
+        : Color.status.error};
 
   &::before {
     content: '';
@@ -211,9 +212,9 @@ const WSIndicator = styled.span<{ $status: WSStatus }>`
     height: 8px;
     border-radius: 50%;
     background: ${props =>
-      props.$status === 'connected' ? '#059669'
-        : props.$status === 'connecting' ? '#d97706'
-          : '#dc2626'};
+      props.$status === 'connected' ? Color.status.success
+        : props.$status === 'connecting' ? Color.status.warning
+          : Color.status.error};
     animation: ${props => props.$status === 'connecting' ? 'pulse 1.5s infinite' : 'none'};
 
     @keyframes pulse {
@@ -225,13 +226,13 @@ const WSIndicator = styled.span<{ $status: WSStatus }>`
 
 // ── 顶部上下文上悬窗：当前咨询商品（用户选定）+ 关联订单（参考拼多多买家端客服）──
 const ORDER_STATUS_COLOR: Record<string, { bg: string; color: string }> = {
-  pending_payment: { bg: '#fff7ed', color: '#f59e0b' },
-  paid: { bg: '#eff6ff', color: '#2563eb' },
-  shipped: { bg: '#ecfdf5', color: '#059669' },
-  delivered: { bg: '#ecfeff', color: '#0891b2' },
-  completed: { bg: '#ecfdf5', color: '#047857' },
-  cancelled: { bg: '#f3f4f6', color: '#9ca3af' },
-  refunding: { bg: '#fef2f2', color: '#e74c3c' },
+  pending_payment: { bg: `${Color.status.warning}1a`, color: Color.status.warning },
+  paid: { bg: Color.blueSoft, color: Color.blue },
+  shipped: { bg: Color.posSoft, color: Color.pos },
+  delivered: { bg: Color.posSoft, color: Color.pos },
+  completed: { bg: Color.posSoft, color: Color.pos },
+  cancelled: { bg: Color.bg.sunken, color: Color.text.muted },
+  refunding: { bg: `${Color.status.error}14`, color: Color.status.error },
 }
 
 const ProductContextBar = styled.div`
@@ -239,7 +240,7 @@ const ProductContextBar = styled.div`
   align-items: center;
   gap: 12px;
   padding: 10px ${Spacing.lg}px;
-  background: linear-gradient(180deg, #fcfcfc, ${Color.bg.card});
+  background: linear-gradient(180deg, ${Color.bg.sunken}, ${Color.bg.card});
   border-bottom: 1px solid ${Color.border.light};
 `
 
@@ -249,7 +250,7 @@ const PCtxImg = styled.img`
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
-  background: #eee;
+  background: ${Color.primaryLight};
   cursor: pointer;
 `
 
@@ -266,7 +267,7 @@ const PCtxLabel = styled.div`
 
 const PCtxName = styled.div`
   font-size: 13px;
-  color: #333;
+  color: ${Color.text.primary};
   max-width: 240px;
   white-space: nowrap;
   overflow: hidden;
@@ -276,14 +277,14 @@ const PCtxName = styled.div`
 const PCtxPrice = styled.div`
   font-size: 14px;
   font-weight: 600;
-  color: #e74c3c;
+  color: ${Color.brand};
   margin-left: 4px;
 `
 
 const PCtxSendBtn = styled.button`
   border: 1px solid #07c160;
   background: #07c160;
-  color: #fff;
+  color: ${Color.text.inverse};
   border-radius: ${Radius.sm}px;
   padding: 6px 14px;
   font-size: 13px;
@@ -302,7 +303,7 @@ const PCtxOrder = styled.button`
   align-items: center;
   gap: 10px;
   border: 1px solid ${Color.border.light};
-  background: #fff;
+  background: ${Color.bg.card};
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
@@ -314,12 +315,12 @@ const PCtxOrder = styled.button`
 
 const PCtxOrderMeta = styled.div`
   font-size: 12px;
-  color: #333;
+  color: ${Color.text.primary};
 `
 
 const PCtxOrderSub = styled.div`
   font-size: 11px;
-  color: #999;
+  color: ${Color.text.muted};
   margin-top: 2px;
 `
 
@@ -338,9 +339,9 @@ const FilterTabs = styled.div`
 const FilterTab = styled.button<{ $active: boolean }>`
   padding: 4px 12px;
   border-radius: ${Radius.full}px;
-  border: 1px solid ${props => props.$active ? '#e74c3c' : Color.border.light};
-  background: ${props => props.$active ? '#fef2f2' : 'transparent'};
-  color: ${props => props.$active ? '#e74c3c' : '#666'};
+  border: 1px solid ${props => props.$active ? Color.brand : Color.border.light};
+  background: ${props => props.$active ? `${Color.brand}14` : 'transparent'};
+  color: ${props => props.$active ? Color.brand : Color.text.body};
   font-size: 12px;
   font-weight: ${props => props.$active ? 600 : 400};
   cursor: pointer;
@@ -348,8 +349,8 @@ const FilterTab = styled.button<{ $active: boolean }>`
   transition: all ${Transition.fast};
 
   &:hover {
-    border-color: #e74c3c;
-    color: ${props => props.$active ? '#e74c3c' : '#333'};
+    border-color: ${Color.brand};
+    color: ${props => props.$active ? Color.brand : Color.text.primary};
   }
 `
 
@@ -413,29 +414,29 @@ const ScrollToBottomFab = styled.button<{ $visible: boolean }>`
   pointer-events: ${props => props.$visible ? 'auto' : 'none'};
   transition: all ${Transition.fast};
 
-  &:hover { background: #f5f5f5; }
+  &:hover { background: ${Color.bg.sunken}; }
 
-  svg { width: 18px; height: 18px; color: #666; }
+  svg { width: 18px; height: 18px; color: ${Color.text.body}; }
 `
 
 // ── Limit Warning ──
 
 const LimitWarning = styled.div`
   padding: 8px ${Spacing.lg}px;
-  background: #fff3e0;
-  color: #e65100;
+  background: ${Color.status.warning}1a;
+  color: ${Color.status.warning};
   font-size: 12px;
   text-align: center;
-  border-top: 1px solid #ffe0b2;
+  border-top: 1px solid ${Color.status.warning}33;
 `
 
 const SendErrorBar = styled.div`
   padding: 8px ${Spacing.lg}px;
-  background: #fef2f2;
-  color: #dc2626;
+  background: ${Color.status.error}14;
+  color: ${Color.status.error};
   font-size: 12px;
   text-align: center;
-  border-top: 1px solid #fecaca;
+  border-top: 1px solid ${Color.status.error}33;
 `
 
 // ── Input Area ──
@@ -469,8 +470,8 @@ const TextInput = styled.textarea`
   &:focus { border-color: ${Color.primary}; }
 
   &:disabled {
-    background: #f5f5f5;
-    color: #999;
+    background: ${Color.bg.sunken};
+    color: ${Color.text.muted};
     cursor: not-allowed;
   }
 `
@@ -488,15 +489,15 @@ const ToolBtn = styled.button`
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
-  color: #666;
+  color: ${Color.text.body};
   display: flex;
   align-items: center;
   gap: 4px;
   transition: all 0.15s;
 
   &:hover:not(:disabled) {
-    background: #f5f5f5;
-    color: #333;
+    background: ${Color.bg.sunken};
+    color: ${Color.text.primary};
   }
 
   &:disabled {
@@ -513,7 +514,7 @@ const HiddenInput = styled.input`
 
 const SendBtn = styled.button`
   background: ${Color.primaryHover};
-  color: #fff;
+  color: ${Color.text.inverse};
   border: none;
   border-radius: ${Radius.sm}px;
   padding: 10px 20px;
@@ -557,7 +558,7 @@ const PreviewRemove = styled.span`
   width: 18px;
   height: 18px;
   background: rgba(0,0,0,0.5);
-  color: #fff;
+  color: ${Color.text.inverse};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -695,6 +696,7 @@ export default function Chat() {
   const navigate = useNavigate()
   const { isLoggedIn } = useUser()
   const { t } = useTranslation()
+  const { format } = useCurrency()
 
   // Entry form state
   const [subject, setSubject] = useState('')
@@ -1276,7 +1278,7 @@ export default function Chat() {
                       <PCtxLabel>咨询商品</PCtxLabel>
                       <PCtxName>{activeConv.spu_info.name}</PCtxName>
                     </PCtxInfo>
-                    <PCtxPrice>${activeConv.spu_info.price}</PCtxPrice>
+                    <PCtxPrice>{format(Number(activeConv.spu_info.price))}</PCtxPrice>
                     <PCtxSendBtn onClick={() => handleSendProductCard(activeConv.spu_info!)} disabled={sending}>
                       发给客服
                     </PCtxSendBtn>
@@ -1285,13 +1287,13 @@ export default function Chat() {
 
                 {activeConv.order_info && activeConv.order_info.length > 0 && (() => {
                   const o = activeConv.order_info![0]
-                  const st = ORDER_STATUS_COLOR[o.status] || { bg: '#f3f4f6', color: '#666' }
+                  const st = ORDER_STATUS_COLOR[o.status] || { bg: Color.bg.sunken, color: Color.text.body }
                   return (
                     <PCtxOrder onClick={() => navigate(`/order/${o.order_no}`)}>
                       <div>
                         <PCtxOrderMeta>关联订单 {o.order_no}</PCtxOrderMeta>
                         <PCtxOrderSub>
-                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}${o.total_amount}
+                          {o.sku_name ? `${o.sku_name} ×${o.quantity} · ` : ''}{format(Number(o.total_amount))}
                         </PCtxOrderSub>
                       </div>
                       <span style={{ background: st.bg, color: st.color, fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 4 }}>
@@ -1324,7 +1326,7 @@ export default function Chat() {
                 style={{ flex: 1, overflowY: 'auto', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}
               >
                 {loading ? (
-                  <div style={{ textAlign: 'center', padding: '12px', color: '#999', fontSize: '13px' }}>
+                  <div style={{ textAlign: 'center', padding: '12px', color: Color.text.muted, fontSize: '13px' }}>
                     {t('store.chat.loading')}
                   </div>
                 ) : (
@@ -1436,7 +1438,7 @@ const TextBtn = styled.button`
   border-radius: ${Radius.xs}px;
 
   &:hover {
-    background: #f0f0f0;
-    color: #333;
+    background: ${Color.primaryLight};
+    color: ${Color.text.primary};
   }
 `

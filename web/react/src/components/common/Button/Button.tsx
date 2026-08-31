@@ -88,7 +88,7 @@ const ButtonBase = styled.button<{ $variant: ButtonProps['variant']; $size: Butt
         switch ($variant) {
           case 'outline': return Color.primaryLight;
           case 'secondary': return Color.border.light;
-          case 'danger': return '#b91c1c';
+          case 'danger': return Color.status.error;
           case 'ghost': return Color.border.light;
           default: return Color.primaryHover;
         }

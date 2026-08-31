@@ -31,8 +31,8 @@ const Icon = styled.div<{ $success: boolean }>`
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: ${p => p.$success ? '#e8f5e9' : '#fce4e4'};
-  color: ${p => p.$success ? '#2e7d32' : '#c62828'};
+  background: ${p => p.$success ? Color.posSoft : `${Color.status.error}14`};
+  color: ${p => p.$success ? Color.status.success : Color.status.error};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -42,7 +42,7 @@ const Icon = styled.div<{ $success: boolean }>`
 
 const Title = styled.h2<{ $success: boolean }>`
   font-size: 1.35rem;
-  color: ${p => p.$success ? '#2e7d32' : '#c62828'};
+  color: ${p => p.$success ? Color.status.success : Color.status.error};
   margin-bottom: 0.75rem;
 `
 

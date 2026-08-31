@@ -62,7 +62,7 @@ const RightPanel = styled.div`
 const BrandName = styled.h1`
   font-size: 2.5rem;
   font-weight: 800;
-  color: #111;
+  color: ${Color.text.primary};
   letter-spacing: -1px;
   margin-bottom: 16px;
 `
@@ -77,7 +77,7 @@ const BrandTagline = styled.p`
 const BrandDivider = styled.div`
   width: 40px;
   height: 3px;
-  background: #111;
+  background: ${Color.primary};
   margin: 20px auto;
 `
 
@@ -103,7 +103,7 @@ const ToggleItem = styled.button<{ $active: boolean }>`
   flex: 1;
   border: none;
   border-radius: 50px;
-  background: ${(props) => (props.$active ? '#111' : 'transparent')};
+  background: ${(props) => (props.$active ? Color.primary : 'transparent')};
   color: ${(props) => (props.$active ? Color.text.inverse : Color.text.muted)};
   font-size: 0.9rem;
   font-weight: 600;
@@ -120,7 +120,7 @@ const ToggleItem = styled.button<{ $active: boolean }>`
 const FormTitle = styled.h2`
   font-size: 1.3rem;
   font-weight: bold;
-  color: #111;
+  color: ${Color.text.primary};
   text-align: center;
   margin-bottom: 4px;
 `

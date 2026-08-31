@@ -5,6 +5,7 @@ import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import Button from '../../components/common/Button/Button'
 import { useCart } from '../../store/CartContext'
 import { useUser } from '../../store/UserContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { paymentAPI } from '../../api/payment'
 import { publicAPI, type UserCoupon } from '../../api/public'
 import { useTranslation } from '../../i18n'
@@ -18,23 +19,28 @@ import {
 import { safeHref } from '../../utils/sanitizeUrl'
 
 // ── SHEIN 设计令牌 ──────────────────────────────────
+// 取值全部来自 theme 令牌（like 的「墨黑 + 红点缀」色板），
+// 改令牌即整页联动；此处禁止再写十六进制字面量。
 const SHEIN = {
-  accent: '#1a56db',
-  accentHover: '#1e40af',
-  accentLight: '#dbeafe',
-  bg: '#f5f5f5',
-  card: '#ffffff',
-  border: '#e8e8e8',
-  borderActive: '#1a56db',
-  text: '#222222',
-  textSecondary: '#666666',
-  textMuted: '#999999',
-  success: '#27ae60',
-  warning: '#f39c12',
+  accent: Color.primary,
+  accentHover: Color.primaryHover,
+  accentLight: Color.primaryLight,
+  bg: Color.bg.page,
+  card: Color.bg.card,
+  border: Color.border.light,
+  borderActive: Color.text.primary,
+  text: Color.text.primary,
+  textSecondary: Color.text.body,
+  textMuted: Color.text.muted,
+  success: Color.status.success,
+  warning: Color.status.warning,
+  /** 选中态浅底 / 骨架屏底 */
+  surface: Color.bg.sunken,
+  selectedBg: Color.primaryLight,
   radius: '12px',
   radiusSm: '8px',
-  fontHeading: "'Playfair Display', Georgia, 'Times New Roman', serif",
-  fontBody: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+  fontHeading: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  fontBody: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
 } as const
 
 // ── 动画 ────────────────────────────────────────────
@@ -212,7 +218,7 @@ const FormGroup = styled.div`
     font-size: 14px;
     font-family: ${SHEIN.fontBody};
     color: ${SHEIN.text};
-    background: #fafafa;
+    background: ${SHEIN.surface};
     transition: border-color ${Transition.fast}, box-shadow ${Transition.fast};
     box-sizing: border-box;
 
@@ -222,7 +228,7 @@ const FormGroup = styled.div`
       outline: none;
       border-color: ${SHEIN.accent};
       box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1);
-      background: #fff;
+      background: ${SHEIN.card};
     }
   }
 `
@@ -235,7 +241,7 @@ const CouponOption = styled.button<{ $selected: boolean }>`
   border-radius: ${SHEIN.radiusSm};
   margin-bottom: 10px;
   cursor: pointer;
-  background: ${p => p.$selected ? '#fff5f5' : '#fafafa'};
+  background: ${p => p.$selected ? SHEIN.selectedBg : SHEIN.surface};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -244,7 +250,7 @@ const CouponOption = styled.button<{ $selected: boolean }>`
   transition: all ${Transition.fast};
 
   &:hover {
-    border-color: ${p => p.$selected ? SHEIN.borderActive : '#ccc'};
+    border-color: ${p => p.$selected ? SHEIN.borderActive : SHEIN.border};
   }
 
   &:last-child { margin-bottom: 0; }
@@ -271,7 +277,7 @@ const CouponDot = styled.div<{ $active: boolean }>`
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid ${p => p.$active ? SHEIN.accent : '#ccc'};
+  border: 2px solid ${p => p.$active ? SHEIN.accent : SHEIN.border};
   background: ${p => p.$active ? SHEIN.accent : 'transparent'};
   flex-shrink: 0;
   transition: all ${Transition.fast};
@@ -302,7 +308,7 @@ const PaymentCard = styled.button<PaymentCardProps>`
   padding: 16px;
   border: 2px solid ${p => p.$selected ? SHEIN.borderActive : SHEIN.border};
   border-radius: ${SHEIN.radiusSm};
-  background: ${p => p.$selected ? '#fff5f5' : '#fafafa'};
+  background: ${p => p.$selected ? SHEIN.selectedBg : SHEIN.surface};
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -312,7 +318,7 @@ const PaymentCard = styled.button<PaymentCardProps>`
   transition: all ${Transition.fast};
 
   &:hover {
-    border-color: ${p => p.$selected ? SHEIN.borderActive : '#ccc'};
+    border-color: ${p => p.$selected ? SHEIN.borderActive : SHEIN.border};
   }
 `
 
@@ -351,7 +357,7 @@ const PaymentCheck = styled.div<{ $active: boolean }>`
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid ${p => p.$active ? SHEIN.accent : '#ccc'};
+  border: 2px solid ${p => p.$active ? SHEIN.accent : SHEIN.border};
   background: ${p => p.$active ? SHEIN.accent : 'transparent'};
   flex-shrink: 0;
   display: flex;
@@ -373,7 +379,7 @@ const SummaryItemRow = styled.div`
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid ${SHEIN.selectedBg};
 
   &:last-of-type { border-bottom: none; }
 `
@@ -382,7 +388,7 @@ const SummaryItemThumb = styled.div<{ $src?: string }>`
   width: 48px;
   height: 48px;
   border-radius: 6px;
-  background: ${p => p.$src ? `url(${p.$src})` : '#f0f0f0'};
+  background: ${p => p.$src ? `url(${p.$src})` : '${SHEIN.selectedBg}'};
   background-size: cover;
   background-position: center;
   flex-shrink: 0;
@@ -531,7 +537,7 @@ const LoadingText = styled.p`
 const SkeletonBlock = styled.div`
   height: 16px;
   border-radius: 4px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, ${SHEIN.selectedBg} 25%, ${Color.border.medium} 50%, ${SHEIN.selectedBg} 75%);
   background-size: 200% 100%;
   animation: ${shimmer} 1.5s ease-in-out infinite;
   margin-bottom: 8px;
@@ -541,7 +547,7 @@ const RedButton = styled.button`
   width: 100%;
   padding: 16px 24px;
   background: ${SHEIN.accent};
-  color: #fff;
+  color: ${SHEIN.card};
   border: none;
   border-radius: ${SHEIN.radiusSm};
   font-size: 16px;
@@ -588,7 +594,7 @@ const GhostButton = styled.button`
 
   &:hover {
     color: ${SHEIN.text};
-    border-color: #ccc;
+    border-color: ${SHEIN.border};
   }
 `
 
@@ -598,8 +604,8 @@ const ErrorBanner = styled.div`
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background: #fff5f5;
-  border: 1px solid #fecaca;
+  background: ${Color.status.error}14;
+  border: 1px solid ${Color.status.error}33;
   border-radius: ${SHEIN.radiusSm};
   margin-bottom: 12px;
   font-size: 13px;
@@ -681,21 +687,6 @@ const IconPayPal = () => (
   </svg>
 )
 
-const IconBank = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 21 12 3 21 21"/>
-    <line x1="5.5" y1="13" x2="18.5" y2="13"/>
-    <line x1="8" y1="17" x2="16" y2="17"/>
-  </svg>
-)
-
-const IconAlipay = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor">
-    <circle cx="12" cy="12" r="10"/>
-    <text x="12" y="16" textAnchor="middle" fontSize="12" fontWeight="bold" fill="#fff">支</text>
-  </svg>
-)
-
 const IconCheck = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12"/>
@@ -742,14 +733,6 @@ interface PaymentMethodConfig {
 
 const PAYMENT_METHODS: PaymentMethodConfig[] = [
   {
-    value: 'mock',
-    label: 'Payment Simulator',
-    desc: 'Development and staging only',
-    icon: <IconShield />,
-    iconBg: '#111827',
-    iconColor: '#fff',
-  },
-  {
     value: 'paypal',
     label: 'PayPal',
     desc: 'Pay with your PayPal account or credit card via PayPal',
@@ -763,22 +746,6 @@ const PAYMENT_METHODS: PaymentMethodConfig[] = [
     desc: 'Visa, Mastercard, American Express, Discover & more',
     icon: <IconCreditCard />,
     iconBg: '#635bff',
-    iconColor: '#fff',
-  },
-  {
-    value: 'alipay',
-    label: 'Alipay',
-    desc: 'Pay with Alipay',
-    icon: <IconAlipay />,
-    iconBg: '#1677ff',
-    iconColor: '#fff',
-  },
-  {
-    value: 'bank_transfer',
-    label: 'Bank Transfer',
-    desc: 'Direct bank transfer — processing may take 1-3 business days',
-    icon: <IconBank />,
-    iconBg: '#2c3e50',
     iconColor: '#fff',
   },
 ]
@@ -796,6 +763,7 @@ export default function Checkout() {
   const { isLoggedIn, isLoading } = useUser()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { format } = useCurrency()
 
   // ── 状态 ──
   const [shippingName, setShippingName] = useState('')
@@ -895,7 +863,6 @@ export default function Checkout() {
 
       if (paymentResult.pay_url) {
         const payUrl = new URL(paymentResult.pay_url, window.location.origin)
-        if (paymentMethod === 'mock') payUrl.searchParams.set('order_no', orderNo)
         const safePayHref = safeHref(payUrl.toString())
         if (safePayHref) window.location.href = safePayHref
         else navigate(`/order/${orderNo}`)
@@ -993,11 +960,11 @@ export default function Checkout() {
                         <CouponCode>{c.code}</CouponCode>
                         <CouponMeta>
                           {c.discount_type === 'fixed'
-                            ? `$${c.amount} off · min $${parseFloat(c.min_amount || '0')}`
-                            : `${c.amount}% off · max $${parseFloat(c.max_discount || '0') || '∞'} discount`}
+                            ? `${format(Number(c.amount))} off · min ${format(parseFloat(c.min_amount || '0'))}`
+                            : `${c.amount}% off · max ${format(parseFloat(c.max_discount || '0') || 0)} discount`}
                         </CouponMeta>
                         <CouponMeta>
-                          {`Min $${parseFloat(c.min_amount || '0')} · ${c.max_discount ? `max $${parseFloat(c.max_discount)}` : 'no cap'} · ${status} · expires ${new Date(c.end_time).toLocaleDateString()}`}
+                          {`Min ${format(parseFloat(c.min_amount || '0'))} · ${c.max_discount ? `max ${format(parseFloat(c.max_discount))}` : 'no cap'} · ${status} · expires ${new Date(c.end_time).toLocaleDateString()}`}
                         </CouponMeta>
                       </CouponLeft>
                       <CouponDot $active={selectedCouponId === id} />
@@ -1102,15 +1069,15 @@ export default function Checkout() {
                         )}
                       </div>
                       <div className="unit-price">
-                        ${Number(item.price).toFixed(2)} {t('store.orderSummary.each')}
+                        {format(Number(item.price))} {t('store.orderSummary.each')}
                       </div>
                     </SummaryItemInfo>
                     <SummaryItemPrice>
                       <span className="subtotal">
-                        ${(Number(item.price) * item.quantity).toFixed(2)}
+                        {format(Number(item.price) * item.quantity)}
                       </span>
                       <span className="calc">
-                        ${Number(item.price).toFixed(2)} × {item.quantity}
+                        {format(Number(item.price))} × {item.quantity}
                       </span>
                     </SummaryItemPrice>
                   </SummaryItemRow>
@@ -1127,7 +1094,7 @@ export default function Checkout() {
 
                 <SummaryLine>
                   <span>{t('store.orderSummary.subtotalItems').replace('{count}', String(items.length))}</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{format(total)}</span>
                 </SummaryLine>
 
                 <SummaryLine>
@@ -1138,13 +1105,13 @@ export default function Checkout() {
                 {discount > 0 && (
                   <SummaryLine $discount>
                     <span>{t('store.checkout.discount')} ({coupon?.code})</span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span>-{format(discount)}</span>
                   </SummaryLine>
                 )}
 
                 <SummaryTotal $highlight>
                   <span>{t('store.checkout.total')}</span>
-                  <span>${actual.toFixed(2)}</span>
+                  <span>{format(actual)}</span>
                 </SummaryTotal>
 
                 {error && (
@@ -1158,7 +1125,7 @@ export default function Checkout() {
                 <RedButton onClick={handlePlaceOrder} disabled={loading} style={{ marginTop: 20 }}>
                   {loading
                     ? t('store.checkout.placingOrder')
-                    : t('store.orderSummary.placeOrder').replace('${amount}', actual.toFixed(2))}
+                    : t('store.orderSummary.placeOrder').replace('${amount}', format(actual))}
                 </RedButton>
 
                 <GhostButton onClick={() => navigate('/cart')}>

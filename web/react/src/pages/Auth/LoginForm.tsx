@@ -4,6 +4,7 @@ import Input from '../../components/common/Input/Input'
 import Button from '../../components/common/Button/Button'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
 import { useUser } from '../../store/UserContext'
+import { Color } from '../../theme/tokens'
 import { useLocation, useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { getSafeLoginRedirect } from './loginRedirect'
@@ -18,12 +19,12 @@ const Form = styled.form`
 
 const LinkText = styled(Link)`
   font-size: 0.9rem;
-  color: #666;
+  color: ${Color.text.body};
   text-align: right;
   text-decoration: none;
 
   &:hover {
-    color: #000;
+    color: ${Color.text.primary};
     text-decoration: underline;
   }
 `
@@ -38,12 +39,12 @@ const Divider = styled.div`
     content: '';
     flex: 1;
     height: 1px;
-    background-color: #ddd;
+    background-color: ${Color.border.medium};
   }
 
   span {
     padding: 0 1.5vw;
-    color: #999;
+    color: ${Color.text.muted};
     font-size: 0.85rem;
   }
 `
@@ -62,8 +63,8 @@ const SocialBtn = styled.button`
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 500;
-  border: 1px solid #ddd;
-  background: #fff;
+  border: 1px solid ${Color.border.medium};
+  background: ${Color.bg.card};
   height: 40px;
   padding: 0 14px;
   border-radius: 6px;
@@ -71,7 +72,7 @@ const SocialBtn = styled.button`
   transition: all 0.2s;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${Color.bg.sunken};
   }
 
   img {
@@ -87,7 +88,7 @@ const TermsRow = styled.div`
   gap: 8px;
   margin-bottom: 24px;
   font-size: 14px;
-  color: #666;
+  color: ${Color.text.body};
   cursor: default;
 
   input[type='checkbox'] {
@@ -96,11 +97,11 @@ const TermsRow = styled.div`
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: #000;
+    accent-color: ${Color.text.primary};
   }
 
   a {
-    color: #000;
+    color: ${Color.text.primary};
     text-decoration: none;
     &:hover {
       text-decoration: underline;
@@ -109,7 +110,7 @@ const TermsRow = styled.div`
 `;
 
 const ErrorMsg = styled.p`
-  color: #e74c3c;
+  color: ${Color.status.error};
   font-size: 0.85rem;
   text-align: center;
 `

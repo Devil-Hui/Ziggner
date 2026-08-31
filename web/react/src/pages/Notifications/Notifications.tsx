@@ -46,13 +46,13 @@ const MarkAllBtn = styled.button`
 `
 
 const NotificationCard = styled.div<{ $isRead: boolean }>`
-  background: ${p => p.$isRead ? Color.bg.card : '#f0f5ff'};
+  background: ${p => p.$isRead ? Color.bg.card : Color.blueSoft};
   border-radius: ${Radius.md}px;
   box-shadow: ${Shadow.card};
   padding: 20px;
   cursor: ${p => p.$isRead ? 'default' : 'pointer'};
   transition: background 0.2s;
-  &:hover { background: ${p => p.$isRead ? Color.bg.card : '#e6eeff'}; }
+  &:hover { background: ${p => p.$isRead ? Color.bg.card : Color.blueSoft}; }
 `
 
 const NotifTitle = styled.div`
@@ -79,7 +79,7 @@ const UnreadDot = styled.span`
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #e74c3c;
+  background: ${Color.brand};
   margin-right: 8px;
 `
 

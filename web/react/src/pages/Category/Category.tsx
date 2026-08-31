@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useProducts, useFlatCategories, useCategories } from '../../hooks/useProducts'
 import { useTranslation } from '../../i18n'
+import { useCurrency } from '../../store/CurrencyContext'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, FontSize } from '../../theme/tokens'
 import { zIndex } from '../../styles/zIndex'
@@ -35,7 +36,7 @@ const BreadcrumbLink = styled.span`
   cursor: pointer;
 
   &:hover {
-    color: #e74c3c;
+    color: ${Color.status.error};
     text-decoration: underline;
   }
 `
@@ -94,7 +95,7 @@ const SidebarTitle = styled.h3`
   font-size: 1.15rem;
   font-weight: bold;
   margin-bottom: 1.5vh;
-  color: #111;
+  color: ${Color.text.primary};
   padding-bottom: 0.6vh;
   border-bottom: 1px solid ${Color.border.light};
 `
@@ -146,7 +147,7 @@ const PriceRange = styled.input`
 const FilterButton = styled.button`
   display: block;
   width: 100%;
-  background: #111;
+  background: ${Color.primary};
   color: ${Color.bg.card};
   border: none;
   padding: 0.8vh 1.6vw;
@@ -163,7 +164,7 @@ const FilterButton = styled.button`
 const PriceLabel = styled.span`
   display: block;
   font-size: 1rem;
-  color: #555;
+  color: ${Color.text.body};
   margin-top: 0.5vh;
 `
 
@@ -178,7 +179,7 @@ const SizeButton = styled.button`
   height: 36px;
   border-radius: 50%;
   border: 2px solid ${Color.border.light};
-  background: #f8f8f8;
+  background: ${Color.bg.page};
   font-size: 0.85rem;
   cursor: pointer;
   display: flex;
@@ -186,7 +187,7 @@ const SizeButton = styled.button`
   justify-content: center;
 
   &:hover, &.active {
-    border-color: #111;
+    border-color: ${Color.text.primary};
     background: ${Color.bg.card};
   }
 `
@@ -205,7 +206,7 @@ const ColorButton = styled.button`
   cursor: pointer;
 
   &:hover, &.active {
-    border-color: #111;
+    border-color: ${Color.text.primary};
   }
 `
 
@@ -224,9 +225,9 @@ const TagButton = styled.button`
   background: ${Color.bg.card};
 
   &.active {
-    background: #111;
+    background: ${Color.primary};
     color: ${Color.text.inverse};
-    border-color: #111;
+    border-color: ${Color.text.primary};
   }
 `
 
@@ -276,7 +277,7 @@ const ViewButton = styled.button`
   }
 
   &.active {
-    background: #111;
+    background: ${Color.primary};
     color: ${Color.text.inverse};
   }
 `
@@ -316,7 +317,7 @@ const ProductBadge = styled.div`
   top: 8px;
   left: 8px;
   padding: 2px 8px;
-  background: #ff4444;
+  background: ${Color.status.error};
   border-radius: ${Radius.xs}px;
   z-index: ${zIndex.base};
 
@@ -369,7 +370,7 @@ const CardFooter = styled.div`
 const CardPrice = styled.div`
   font-size: clamp(0.85rem, 2vw, 1rem);
   font-weight: 600;
-  color: #111;
+  color: ${Color.text.primary};
   display: flex;
   align-items: baseline;
   gap: 4px;
@@ -412,7 +413,7 @@ const CardAction = styled.button`
 const CardBuyBtn = styled.button`
   width: 100%;
   margin-top: 6px;
-  background: #111;
+  background: ${Color.primary};
   color: ${Color.text.inverse};
   border: none;
   cursor: pointer;
@@ -540,6 +541,7 @@ export default function Category() {
   const { categories } = useFlatCategories()
   const { categories: categoryTree } = useCategories()
   const { t } = useTranslation()
+  const { format } = useCurrency()
   const [view, setView] = useState<'grid' | 'list'>('grid')
   const [minPrice, setMinPrice] = useState(priceMin ?? 0)
   const [maxPrice, setMaxPrice] = useState(priceMax ?? 500)
@@ -657,7 +659,7 @@ export default function Category() {
               <PriceRange type="range" min="0" max="500" value={minPrice} onChange={(e) => setMinPrice(Number(e.target.value))} />
               <PriceRange type="range" min="0" max="500" value={maxPrice} onChange={(e) => setMaxPrice(Number(e.target.value))} />
             </PriceTrack>
-            <PriceLabel>${minPrice} - ${maxPrice}</PriceLabel>
+            <PriceLabel>{format(minPrice)} - {format(maxPrice)}</PriceLabel>
           </SidebarSection>
         </Sidebar>
 
@@ -708,9 +710,9 @@ export default function Category() {
                   <ProductTitle>{product.name}</ProductTitle>
                   <CardFooter>
                     <CardPrice>
-                      ${product.price}
+                      {format(Number(product.price))}
                       {product.originalPrice && (
-                        <CardOldPrice>${product.originalPrice}</CardOldPrice>
+                        <CardOldPrice>{format(Number(product.originalPrice))}</CardOldPrice>
                       )}
                     </CardPrice>
                     <CardActions>
@@ -747,9 +749,9 @@ export default function Category() {
                 <ListItemInfo>
                   <ListItemTitle>{product.name}</ListItemTitle>
                   <ListItemPrice>
-                    ${product.price}
+                    {format(Number(product.price))}
                     {product.originalPrice && (
-                      <CardOldPrice>${product.originalPrice}</CardOldPrice>
+                      <CardOldPrice>{format(Number(product.originalPrice))}</CardOldPrice>
                     )}
                   </ListItemPrice>
                   <ListItemDesc>{product.description}</ListItemDesc>

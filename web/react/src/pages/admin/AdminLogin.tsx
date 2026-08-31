@@ -6,13 +6,14 @@ import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
 import { post, ensureCSRFCookie } from '../../api/request'
+import { Color, Shadow } from '../../theme/tokens'
 
-/* ── Lumiere editorial palette (aligned with storefront) ── */
-const CREAM = '#f7f4ef'
-const INK = '#1a1712'
-const MUTED = '#6b6459'
-const CLAY = '#1a56db'
-const LINE = 'rgba(26, 23, 18, 0.10)'
+/* ── 配色统一取自 theme 令牌（与商城 C 端同源，改令牌即联动）── */
+const CREAM = Color.bg.page
+const INK = Color.text.primary
+const MUTED = Color.text.muted
+const CLAY = Color.primary
+const LINE = Color.border.light
 
 const Container = styled.div`
   position: relative;
@@ -33,7 +34,7 @@ const Container = styled.div`
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 26rem;
     line-height: 1;
-    color: rgba(26, 23, 18, 0.035);
+    color: rgba(14, 16, 19, 0.035);
     pointer-events: none;
     user-select: none;
   }
@@ -44,10 +45,10 @@ const Card = styled.div`
   width: 100%;
   max-width: 420px;
   padding: 48px 40px 40px;
-  background: #fff;
+  background: ${Color.bg.card};
   border: 1px solid ${LINE};
   border-radius: 20px;
-  box-shadow: 0 18px 50px -24px rgba(26, 23, 18, 0.18);
+  box-shadow: 0 18px 50px -24px rgba(14, 16, 19, 0.18);
 `
 
 const Brand = styled.h1`
@@ -81,18 +82,18 @@ const Input = styled.input`
   border-radius: 10px;
   font-size: 0.938rem;
   color: ${INK};
-  background: #fff;
+  background: ${Color.bg.card};
   outline: none;
   box-sizing: border-box;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 
   &:focus {
     border-color: ${CLAY};
-    box-shadow: 0 0 0 3px rgba(26, 86, 219, 0.12);
+    box-shadow: ${Shadow.focus};
   }
 
   &::placeholder {
-    color: #a89f92;
+    color: ${Color.text.muted};
   }
 `
 
@@ -101,7 +102,7 @@ const Button = styled.button<{ $loading?: boolean }>`
   border: none;
   border-radius: 9999px;
   background: ${CLAY};
-  color: #fff;
+  color: ${Color.text.inverse};
   font-size: 0.938rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -111,7 +112,7 @@ const Button = styled.button<{ $loading?: boolean }>`
 
   &:hover:not(:disabled) {
     transform: translateY(-1px);
-    box-shadow: 0 10px 24px -10px rgba(26, 86, 219, 0.55);
+    box-shadow: 0 10px 24px -10px rgba(14, 16, 19, 0.5);
   }
 
   &:active:not(:disabled) {
@@ -130,14 +131,14 @@ const SendCodeBtn = styled.button<{ $disabled?: boolean }>`
   white-space: nowrap;
   border: 1px solid ${CLAY};
   border-radius: 10px;
-  background: ${({ $disabled }) => ($disabled ? '#f3efe7' : 'transparent')};
-  color: ${({ $disabled }) => ($disabled ? '#b5ab9d' : CLAY)};
+  background: ${({ $disabled }) => ($disabled ? Color.primaryLight : 'transparent')};
+  color: ${({ $disabled }) => ($disabled ? Color.text.muted : CLAY)};
   font-size: 0.875rem;
   cursor: ${({ $disabled }) => ($disabled ? 'not-allowed' : 'pointer')};
   transition: background 0.2s ease, color 0.2s ease;
 
   &:hover:not(:disabled) {
-    background: rgba(26, 86, 219, 0.08);
+    background: ${Color.primaryLight};
   }
 `
 
@@ -166,14 +167,14 @@ const Hint = styled.p`
 `
 
 const ErrorText = styled.p`
-  color: #c0392b;
+  color: ${Color.status.error};
   font-size: 0.813rem;
   text-align: center;
   margin: 0;
 `
 
 const SuccessText = styled.p`
-  color: #2e7d5b;
+  color: ${Color.status.success};
   font-size: 0.813rem;
   text-align: center;
   margin: 0;

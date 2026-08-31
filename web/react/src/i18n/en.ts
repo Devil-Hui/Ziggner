@@ -1606,6 +1606,8 @@ const en = {
       contactSupport: 'Contact Support',
       activityPrice: 'Activity Price',
       originalPrice: 'Original Price',
+      freeReturn: 'Easy 30-day returns',
+      securePay: 'Secure payment',
     },
     profile: {
       signIn: 'Please Sign In',

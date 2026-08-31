@@ -42,11 +42,23 @@ DOMAIN = os.getenv('DOMAIN', 'http://127.0.0.1:8000')
 APP_VERSION = os.getenv('APP_VERSION', 'dev')
 GIT_COMMIT = os.getenv('GIT_COMMIT', 'unknown')
 DJANGO_ENV = os.getenv('DJANGO_ENV', 'dev')
-ENABLE_MOCK_PAYMENT = os.getenv(
+
+# Mock 支付（开发/测试用支付模拟器）安全开关：
+# 1. 生产环境（prod）强制禁用，即使显式设置 ENABLE_MOCK_PAYMENT=true 也忽略，
+#    防止攻击者通过 Mock 支付端点伪造"已支付"状态。
+# 2. 非生产环境默认开启（dev/staging/local/test），便于本地联调。
+_ENABLE_MOCK_REQUESTED = os.getenv(
     'ENABLE_MOCK_PAYMENT',
     'true' if DJANGO_ENV in ('dev', 'staging', 'local', 'test') else 'false',
 ).lower() == 'true'
-MOCK_PAYMENT_SECRET = os.getenv('MOCK_PAYMENT_SECRET', SECRET_KEY)
+ENABLE_MOCK_PAYMENT = _ENABLE_MOCK_REQUESTED and DJANGO_ENV != 'prod'
+
+# Mock 支付签名密钥：必须显式配置独立密钥，绝不回退到 SECRET_KEY。
+# 若 SECRET_KEY 泄露，攻击者即可伪造 Mock 支付回调；独立密钥可隔离该风险。
+# 非生产环境未配置独立密钥时，禁用 Mock 支付（fail-closed）。
+MOCK_PAYMENT_SECRET = os.getenv('MOCK_PAYMENT_SECRET', '')
+if ENABLE_MOCK_PAYMENT and not MOCK_PAYMENT_SECRET:
+    ENABLE_MOCK_PAYMENT = False
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_VERIFY_TIMEOUT = float(os.getenv('TURNSTILE_VERIFY_TIMEOUT', '3.0'))
 
@@ -301,6 +313,10 @@ REST_FRAMEWORK = {
         'admin_login': '5/minute',
         'admin_write': '60/minute',
         'admin_batch': '10/minute',
+        # 支付接口专门限流（防刷单 / 防 DoS）
+        'payment_create': '30/minute',   # 发起支付：单用户每分钟最多 30 次
+        'payment_mock': '10/minute',     # Mock 支付模拟器：单用户每分钟最多 10 次
+        'payment_webhook': '300/minute', # 网关回调：公开接口，防 DoS 但需容纳真实回调
     }))),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     # 2C4G：默认 20 条/页，最大 100 条/页（上限防一次拉爆单 worker 内存）
@@ -824,6 +840,8 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 REFUND_RECONCILIATION_BATCH_SIZE = int(os.getenv('REFUND_RECONCILIATION_BATCH_SIZE', '20'))
+# UNKNOWN 退款对账最大重试次数：超过后标记为 FAILED，防止网关持续异常时无限重试（死循环）
+REFUND_RECONCILIATION_MAX_ATTEMPTS = int(os.getenv('REFUND_RECONCILIATION_MAX_ATTEMPTS', '5'))
 
 # ==================== Celery Worker 内存限制（2C4G：偏紧，防泄漏） ====================
 # 单位 KiB（Celery --max-memory-per-child）。120MB 子进程 + concurrency=1 适配 256m 容器。
@@ -892,6 +910,13 @@ STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
 # 支付默认币种
 DEFAULT_CURRENCY = os.getenv('DEFAULT_CURRENCY', 'USD')
+
+# 待支付订单有效期（分钟）：超过后允许用户重新发起支付（旧 pending 标记为取消）
+PAYMENT_PENDING_TTL_MINUTES = int(os.getenv('PAYMENT_PENDING_TTL_MINUTES', '15'))
+# 状态查询节流（秒）：同一支付在间隔内不重复调用网关查询，防 DoS / 防网关限流
+PAYMENT_GATEWAY_QUERY_INTERVAL = int(os.getenv('PAYMENT_GATEWAY_QUERY_INTERVAL', '30'))
+# 最大待支付时长（分钟）：超过后视为用户放弃，标记为 CANCELLED，避免无限轮询网关（防死循环）
+PAYMENT_MAX_PENDING_MINUTES = int(os.getenv('PAYMENT_MAX_PENDING_MINUTES', str(24 * 60)))
 
 # ==================== 订单缓存 TTL 配置 ====================
 ORDER_CACHE_TTL = {

@@ -6,6 +6,7 @@ import { Container, Wrapper, MainContent } from '../../components/layout/PageLay
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { useUser } from '../../store/UserContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { publicAPI, type PublicCoupon } from '../../api/public'
 
 // ─── Hero ───
@@ -49,7 +50,7 @@ const CenterCard = styled.div`
   height: 150px;
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: ${Color.bg.card};
   border: 1px solid ${Color.border};
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -68,7 +69,7 @@ const Left = styled.div`
   align-items: center;
   justify-content: center;
   padding: 12px;
-  color: #fff;
+  color: ${Color.text.inverse};
   background: linear-gradient(135deg, ${Color.primary}, ${Color.primaryDark || Color.primary});
   position: relative;
 
@@ -162,13 +163,13 @@ const ClaimBtn = styled.button<{ $claimed?: boolean; $loading?: boolean }>`
   border: none;
   border-radius: 20px;
   cursor: ${props => (props.$claimed ? 'default' : 'pointer')};
-  color: #fff;
-  background: ${props => (props.$claimed ? '#bdbdbd' : Color.primary)};
+  color: ${Color.text.inverse};
+  background: ${props => (props.$claimed ? Color.border.dark : Color.primary)};
   transition: all 0.2s ease;
   opacity: ${props => (props.$loading ? 0.7 : 1)};
 
   &:hover {
-    background: ${props => (props.$claimed ? '#bdbdbd' : Color.primaryDark || Color.primary)};
+    background: ${props => (props.$claimed ? Color.border.dark : Color.primaryDark || Color.primary)};
   }
   &:disabled {
     cursor: default;
@@ -212,8 +213,8 @@ const Toast = styled.div<{ $type: 'success' | 'error' }>`
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
-  color: #fff;
-  background: ${props => (props.$type === 'success' ? Color.primary : '#e53935')};
+  color: ${Color.text.inverse};
+  background: ${props => (props.$type === 'success' ? Color.primary : Color.status.error)};
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   animation: couponToastIn 0.25s ease;
 
@@ -227,6 +228,7 @@ export default function CouponCenter() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { isLoggedIn } = useUser()
+  const { format } = useCurrency()
 
   const [coupons, setCoupons] = useState<PublicCoupon[]>([])
   const [claimedCodes, setClaimedCodes] = useState<Set<string>>(new Set())
@@ -304,7 +306,7 @@ export default function CouponCenter() {
     return (
       <CenterCard key={c.code}>
         <Left>
-          <Amount>{isPercent ? `${c.amount}%` : `$${Number(c.amount).toFixed(0)}`}</Amount>
+          <Amount>{isPercent ? `${c.amount}%` : format(Number(c.amount))}</Amount>
           <AmountUnit>OFF</AmountUnit>
         </Left>
         <Right>

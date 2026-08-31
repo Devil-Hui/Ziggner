@@ -1,6 +1,7 @@
 // TypeScript strict mode enabled
 import { useEffect, useState } from 'react'
 import { useCart } from '../../../store/CartContext'
+import { useCurrency } from '../../../store/CurrencyContext'
 import { useNavigate } from 'react-router-dom'
 import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
@@ -111,7 +112,7 @@ const ItemRemove = styled.button`
   flex-shrink: 0;
 
   &:hover {
-    color: #c0392b;
+    color: ${Color.status.error};
   }
 `
 
@@ -144,7 +145,7 @@ const ViewCartBtn = styled.button`
   font-weight: 600;
 
   &:hover {
-    background: #f7f7f7;
+    background: ${Color.bg.sunken};
   }
 `
 
@@ -166,6 +167,7 @@ const CheckoutBtn = styled.button`
 export default function CartDropdownComponent() {
   const navigate = useNavigate()
   const { items, removeItem, total } = useCart()
+  const { format } = useCurrency()
   const { t } = useTranslation()
   const [forceOpen, setForceOpen] = useState(false)
 
@@ -235,7 +237,7 @@ export default function CartDropdownComponent() {
                   <ItemName title={item.spu_name}>{item.spu_name}</ItemName>
                   {specs ? <ItemSpecs title={specs}>{specs}</ItemSpecs> : null}
                   <ItemPrice>
-                    {item.quantity} × ${Number(item.price).toFixed(2)}
+                    {item.quantity} × {format(Number(item.price))}
                   </ItemPrice>
                 </ItemInfo>
                 <ItemRemove
@@ -257,7 +259,7 @@ export default function CartDropdownComponent() {
         <CartFooter>
           <Subtotal>
             <span>{t('store.cartDropdown.subtotal')}</span>
-            <span>${total.toFixed(2)}</span>
+            <span>{format(total)}</span>
           </Subtotal>
           <CartButtons>
             <ViewCartBtn type="button" onClick={handleViewCart}>

@@ -13,7 +13,7 @@ const SkeletonWrapper = styled.div`
 const SkeletonRow = styled.div<{ $width?: string }>`
   height: 14px;
   width: ${({ $width }) => $width || '100%'};
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, ${Color.primaryLight} 25%, ${Color.border.light} 50%, ${Color.primaryLight} 75%);
   background-size: 200px 100%;
   animation: ${shimmer} 1.5s ease-in-out infinite;
   border-radius: ${Radius.xs}px;
@@ -28,7 +28,7 @@ const TableHeader = styled.div`
   display: flex;
   gap: ${Spacing.lg}px;
   padding: ${Spacing.md}px ${Spacing.lg}px;
-  background: #fafafa;
+  background: ${Color.bg.sunken};
   border-bottom: 1px solid ${Color.border.light};
   margin-bottom: 0;
 `;
@@ -37,20 +37,20 @@ const TableRow = styled.div`
   display: flex;
   gap: ${Spacing.lg}px;
   padding: ${Spacing.lg}px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid ${Color.border.light};
 `;
 
 const HeaderCell = styled.div<{ $flex?: number }>`
   flex: ${({ $flex }) => $flex || 1};
   height: 12px;
-  background: #e8e8e8;
+  background: ${Color.border.light};
   border-radius: ${Radius.xs}px;
 `;
 
 const Cell = styled.div<{ $flex?: number }>`
   flex: ${({ $flex }) => $flex || 1};
   height: 14px;
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, ${Color.primaryLight} 25%, ${Color.border.light} 50%, ${Color.primaryLight} 75%);
   background-size: 200px 100%;
   animation: ${shimmer} 1.5s ease-in-out infinite;
   border-radius: ${Radius.xs}px;

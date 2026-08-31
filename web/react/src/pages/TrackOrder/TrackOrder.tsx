@@ -47,7 +47,7 @@ const Button = styled.button`
   height: 46px;
   padding: 0 28px;
   background: ${Color.primary};
-  color: #fff;
+  color: ${Color.text.inverse};
   border: none;
   border-radius: ${Radius.md}px;
   font-size: ${FontSize.md}px;
@@ -91,7 +91,7 @@ const Step = styled.div<{ $done: boolean; $active: boolean }>`
   border-radius: 999px;
   font-size: ${FontSize.sm}px;
   border: 1px solid ${({ $done, $active }) => ($active ? Color.primary : $done ? Color.status.success : Color.border.medium)};
-  color: ${({ $done, $active }) => ($active ? '#fff' : $done ? Color.status.success : Color.text.secondary)};
+  color: ${({ $done, $active }) => ($active ? Color.text.inverse : $done ? Color.status.success : Color.text.secondary)};
   background: ${({ $active }) => ($active ? Color.primary : 'transparent')};
   font-weight: ${({ $active }) => ($active ? 700 : 400)};
 `
@@ -107,7 +107,7 @@ const HistoryItem = styled.div`
 `
 
 const ErrorBox = styled.div`
-  background: #fff4f4;
+  background: ${Color.status.error}14;
   border: 1px solid ${Color.status.error};
   color: ${Color.status.error};
   border-radius: ${Radius.md}px;

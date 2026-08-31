@@ -11,6 +11,8 @@ import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
 import { useUser } from '../../../store/UserContext'
 import { useCart } from '../../../store/CartContext'
+import { useCurrency } from '../../../store/CurrencyContext'
+import { Color, Radius } from '../../../theme/tokens'
 import HeartIcon from '../../../assets/icons/heart.svg?react'
 import CartIcon from '../../../assets/icons/cart.svg?react'
 import ProductDetailModal from '../ProductDetailModal/ProductDetailModal'
@@ -52,7 +54,7 @@ const CardWrapper = styled.div`
   position: relative;
   width: 100%;
   aspect-ratio: 3 / 4;
-  border-radius: 8px;
+  border-radius: ${Radius.md}px;
   overflow: hidden;
   cursor: pointer;
   background: ${PROMO_COLORS.primary};
@@ -75,7 +77,7 @@ const ProductImage = styled.img`
 const ProductImagePlaceholder = styled.div`
   width: 100%;
   height: 100%;
-  background: #eef2f6;
+  background: ${Color.bg.sunken};
 `
 
 // ── 锦旗标签 (燕尾形, 右上角绝对定位) ──
@@ -127,7 +129,7 @@ const ToggleDot = styled.button<{ $active: boolean }>`
   outline: none;
 
   &:hover {
-    background: ${({ $active }) => ($active ? PROMO_COLORS.primary : 'rgba(79, 195, 247, 0.3)')};
+    background: ${({ $active }) => ($active ? PROMO_COLORS.primary : Color.primaryLight)};
   }
 `
 
@@ -140,13 +142,13 @@ const InfoBar = styled.div`
   left: 0;
   right: 0;
   height: 40px;
-  background: #fff;
+  background: ${Color.bg.card};
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #000;
+  color: ${Color.text.primary};
   z-index: ${zIndex.content};
 `
 
@@ -178,7 +180,7 @@ const ActionIcon = styled.button`
   svg {
     width: 14px;
     height: 14px;
-    fill: #fff;
+    fill: ${Color.text.inverse};
   }
 
   &:hover {
@@ -200,13 +202,16 @@ const ProductCard: React.FC<ProductCardProps> = ({
   const { t } = useTranslation()
   const { isLoggedIn: ctxLoggedIn } = useUser()
   const { addItem } = useCart()
+  const { format } = useCurrency()
   const isLoggedIn = isLoggedInProp ?? ctxLoggedIn
   const [tagVariant, setTagVariant] = useState(0) // 0=单标签, 1=双标签
   // 图片加载失败回退占位（URL 存在但 404/网络错误时避免裂图）
   const [imgFailed, setImgFailed] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
 
-  const openModal = useQuickAddModal ?? !onAddToCart
+  // 加入购物車一律先弹快览窗（SHEIN 规范：加购前必须确认规格）。
+  // 仅当调用方显式要求时才走「直接加购」回调。
+  const openModal = useQuickAddModal ?? true
   const productIdNum = Number(product.id)
 
   const requireLogin = useCallback(() => {
@@ -353,7 +358,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* 底部 info 栏 */}
         <InfoBar>
-          {typeof product.price === 'number' ? `$${product.price}` : 'info'}
+          {typeof product.price === 'number' ? format(product.price) : 'info'}
         </InfoBar>
       </CardWrapper>
 

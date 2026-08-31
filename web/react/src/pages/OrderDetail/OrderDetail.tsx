@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from '../../i18n';
+import { useCurrency } from '../../store/CurrencyContext';
 import { orderAPI, type Order } from '../../api/order';
 import { paymentAPI } from '../../api/payment';
 import { publicAPI } from '../../api/public';
@@ -14,6 +15,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
   const { order_no } = useParams<{ order_no: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { format } = useCurrency();
   const [order, setOrder] = useState<Order | null>(null);
   const [refunds, setRefunds] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,18 +99,19 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
     }
   };
 
+  /** 订单状态色一律取语义令牌（改令牌即全局联动） */
   const getStatusColor = (status: string) => {
     const map: Record<string, string> = {
-      pending: '#f39c12',
-      pending_payment: '#f39c12',
-      paid: '#3498db',
-      processing: '#9b59b6',
-      shipped: '#e67e22',
-      delivered: '#2ecc71',
-      completed: '#27ae60',
-      cancelled: '#e74c3c',
+      pending: Color.status.warning,
+      pending_payment: Color.status.warning,
+      paid: Color.status.info,
+      processing: Color.status.info,
+      shipped: Color.status.info,
+      delivered: Color.status.success,
+      completed: Color.status.success,
+      cancelled: Color.status.error,
     };
-    return map[status] || '#95a5a6';
+    return map[status] || Color.text.muted;
   };
 
   // Determine which actions are available
@@ -167,12 +170,12 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       <div className="order-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
           <h2 style={{ margin: 0 }}>{t('store.orderDetail.title')} #{order.order_no}</h2>
-          <span style={{ color: '#7f8c8d', fontSize: 14 }}>{new Date(order.created_at).toLocaleString()}</span>
+          <span style={{ color: Color.text.muted, fontSize: 14 }}>{new Date(order.created_at).toLocaleString()}</span>
         </div>
         <span
           style={{
             background: getStatusColor(order.status),
-            color: '#fff',
+            color: Color.bg.card,
             padding: '6px 16px',
             borderRadius: 20,
             fontSize: 14,
@@ -189,7 +192,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
           <Button
             variant="primary"
             onClick={() => navigate(`/chat?order=${order_no}`)}
-            style={{ background: '#3498db' }}
+            style={{ background: Color.status.info }}
           >
             {t('store.product.contactSupport')}
           </Button>
@@ -198,7 +201,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
           <Button
             variant="primary"
             onClick={() => { setCancelDialogOpen(true); setActionMsg(''); }}
-            style={{ background: '#e74c3c' }}
+            style={{ background: Color.status.error }}
           >
             {t('store.orderDetail.cancelOrder')}
           </Button>
@@ -207,7 +210,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
           <Button
             variant="primary"
             onClick={() => { setRefundDialogOpen(true); setActionMsg(''); }}
-            style={{ background: '#f39c12' }}
+            style={{ background: Color.status.warning }}
           >
             {t('store.orderDetail.requestRefund')}
           </Button>
@@ -217,12 +220,12 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       {/* Action message */}
       {actionMsg && (
         <div style={{
-          background: actionMsgType === 'success' ? '#eafaf1' : '#fdedec',
-          border: `1px solid ${actionMsgType === 'success' ? '#a3d9a5' : '#f5c6c6'}`,
+          background: actionMsgType === 'success' ? Color.posSoft : `${Color.status.error}14`,
+          border: `1px solid ${actionMsgType === 'success' ? Color.status.success : Color.status.error}`,
           borderRadius: 8,
           padding: '12px 16px',
           marginBottom: 16,
-          color: actionMsgType === 'success' ? '#2e7d32' : '#c0392b',
+          color: actionMsgType === 'success' ? Color.status.success : Color.status.error,
           fontSize: 14,
         }}>
           {actionMsg}
@@ -256,7 +259,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
                 variant="primary"
                 onClick={handleCancelOrder}
                 disabled={actionLoading || !cancelReason.trim()}
-                style={{ background: '#e74c3c' }}
+                style={{ background: Color.status.error }}
               >
                 {actionLoading ? t('common.submitting') : t('store.orderDetail.confirmCancel')}
               </Button>
@@ -302,18 +305,18 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
 
       {/* 退款状态 */}
       {orderRefunds.length > 0 && (
-        <div className="refund-section" style={{ background: '#fff5f5', border: '1px solid #f5c6c6', borderRadius: 8, padding: 16, marginBottom: 24 }}>
-          <h3 style={{ margin: '0 0 12px 0', color: '#c0392b' }}>{t('store.orderDetail.refundTitle')}</h3>
+        <div className="refund-section" style={{ background: `${Color.status.error}14`, border: `1px solid ${Color.status.error}`, borderRadius: 8, padding: 16, marginBottom: 24 }}>
+          <h3 style={{ margin: '0 0 12px 0', color: Color.status.error }}>{t('store.orderDetail.refundTitle')}</h3>
           {orderRefunds.map((refund: any) => (
             <div key={refund.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
               <div>
                 <span style={{ fontWeight: 600 }}>{t('store.orderDetail.refundStatus.' + refund.status)}</span>
-                <span style={{ color: '#7f8c8d', fontSize: 12, marginLeft: 8 }}>
+                <span style={{ color: Color.text.muted, fontSize: 12, marginLeft: 8 }}>
                   {new Date(refund.created_at).toLocaleString()}
                 </span>
               </div>
-              <span style={{ fontWeight: 600, color: '#c0392b' }}>
-                -${parseFloat(refund.amount).toFixed(2)}
+              <span style={{ fontWeight: 600, color: Color.status.error }}>
+                -{format(parseFloat(refund.amount))}
               </span>
             </div>
           ))}
@@ -321,7 +324,7 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       )}
 
       {/* 收货地址 */}
-      <div className="section" style={{ background: '#fff', border: '1px solid #ecf0f1', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+      <div className="section" style={{ background: Color.bg.card, border: `1px solid ${Color.border.light}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 12px 0' }}>{t('store.orderDetail.shippingAddress')}</h3>
         <p style={{ margin: 0, lineHeight: 1.6 }}>
           {order.shipping_name} {order.shipping_phone}<br />
@@ -331,10 +334,10 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       </div>
 
       {/* 商品列表 */}
-      <div className="section" style={{ background: '#fff', border: '1px solid #ecf0f1', borderRadius: 8, padding: 16, marginBottom: 16 }}>
+      <div className="section" style={{ background: Color.bg.card, border: `1px solid ${Color.border.light}`, borderRadius: 8, padding: 16, marginBottom: 16 }}>
         <h3 style={{ margin: '0 0 12px 0' }}>{t('store.orderDetail.items')}</h3>
         {order.items.map(item => (
-          <div key={item.id} style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: '1px solid #f0f0f0' }}>
+          <div key={item.id} style={{ display: 'flex', gap: 16, padding: '12px 0', borderBottom: `1px solid ${Color.border.light}` }}>
             {getOrderItemImage(item.image_url) && (
               <img
                 src={getOrderItemImage(item.image_url)}
@@ -345,13 +348,13 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
             <div style={{ flex: 1 }}>
               <div style={{ fontWeight: 600, marginBottom: 4 }}>{item.spu_name}</div>
               {item.spec_snapshot.length > 0 && (
-                <div style={{ color: '#7f8c8d', fontSize: 12 }}>
+                <div style={{ color: Color.text.muted, fontSize: 12 }}>
                   {item.spec_snapshot.map(spec => `${spec.spec_name}: ${spec.spec_value}`).join(' · ')}
                 </div>
               )}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8 }}>
-                <span>${parseFloat(item.price).toFixed(2)} × {item.quantity}</span>
-                <span style={{ fontWeight: 600 }}>${(parseFloat(item.price) * item.quantity).toFixed(2)}</span>
+                <span>{format(parseFloat(item.price))} × {item.quantity}</span>
+                <span style={{ fontWeight: 600 }}>{format(parseFloat(item.price) * item.quantity)}</span>
               </div>
             </div>
           </div>
@@ -359,20 +362,20 @@ const OrderDetail: React.FC<OrderDetailProps> = () => {
       </div>
 
       {/* 订单金额 */}
-      <div className="section" style={{ background: '#fff', border: '1px solid #ecf0f1', borderRadius: 8, padding: 16 }}>
+      <div className="section" style={{ background: Color.bg.card, border: `1px solid ${Color.border.light}`, borderRadius: 8, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
           <span>{t('store.orderDetail.subtotal')}</span>
-          <span>${amounts.subtotal.toFixed(2)}</span>
+          <span>{format(amounts.subtotal)}</span>
         </div>
         {amounts.discount > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: '#e74c3c' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, color: Color.status.error }}>
             <span>{t('store.orderDetail.discount')}</span>
-            <span>-${amounts.discount.toFixed(2)}</span>
+            <span>-{format(amounts.discount)}</span>
           </div>
         )}
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: '1px solid #ecf0f1', paddingTop: 12, marginTop: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 18, borderTop: `1px solid ${Color.border.light}`, paddingTop: 12, marginTop: 12 }}>
           <span>{t('store.orderDetail.total')}</span>
-          <span>${amounts.payable.toFixed(2)}</span>
+          <span>{format(amounts.payable)}</span>
         </div>
       </div>
     </div>

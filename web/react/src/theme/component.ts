@@ -18,10 +18,12 @@ export const Component = {
     fontSizes: { sm: FontSize.xs, md: FontSize.sm, lg: FontSize.base },
     variants: {
       primary: { bg: Semantic.interactive.default, fg: Semantic.interactive.onPrimary, hoverBg: Semantic.interactive.hover },
-      secondary: { bg: Semantic.interactive.onPrimary, fg: Semantic.interactive.default, border: Semantic.border.medium, hoverBg: '#f8fafc' },
+      secondary: { bg: Semantic.interactive.onPrimary, fg: Semantic.interactive.default, border: Semantic.border.medium, hoverBg: Semantic.surface.sunken },
       ghost: { bg: 'transparent', fg: Semantic.text.body, hoverBg: Semantic.surface.sunken },
-      danger: { bg: Semantic.status.danger.fg, fg: '#ffffff', hoverBg: '#b91c1c' },
+      danger: { bg: Semantic.status.danger.fg, fg: Color.text.inverse, hoverBg: '#b91c1c' },
       text: { bg: 'transparent', fg: Semantic.interactive.default, hoverBg: Color.primaryLight },
+      /** 品牌红 CTA（仅用于「立即抢购/领取」等正向转化动作） */
+      accent: { bg: Semantic.interactive.accent, fg: Color.text.inverse, hoverBg: Semantic.interactive.accentHover },
     },
     disabledOpacity: 0.5,
   },
@@ -33,18 +35,18 @@ export const Component = {
     radius: Radius.input,
     border: Semantic.border.medium,
     borderFocus: Semantic.border.focus,
-    bg: '#ffffff',
+    bg: Color.bg.card,
     errorBorder: Semantic.status.danger.fg,
   },
 
   /** 数据表格（SmartDataTable 基础） */
   Table: {
-    headerBg: '#f9fafb',
+    headerBg: Color.bg.sunken,
     headerFg: Semantic.text.secondary,
     headerFontSize: FontSize.xs, // 11–12px 大写表头
     rowFg: Semantic.text.body,
-    rowHoverBg: '#f8fafc',
-    border: 'rgba(17, 24, 39, 0.08)',
+    rowHoverBg: Color.bg.sunken,
+    border: 'rgba(14, 16, 19, 0.08)',
     selectedBg: Color.primaryLight,
     stickyHeaderShadow: Shadow.card,
     radius: Radius.md,
@@ -88,10 +90,10 @@ export const Component = {
    * 红色只表达 删除/错误/危险/失败。
    */
   Pagination: {
-    activeBg: Semantic.interactive.default, // #1a56db
-    activeFg: '#ffffff',
-    hoverBg: Color.primaryLight, // #dbeafe
-    disabledFg: Semantic.border.dark, // #9ca3af
+    activeBg: Semantic.interactive.default, // #0e1013
+    activeFg: Color.text.inverse,
+    hoverBg: Color.primaryLight, // #f1f2f4
+    disabledFg: Semantic.border.dark, // #9aa1a9
     radius: Radius.sm,
   },
 } as const

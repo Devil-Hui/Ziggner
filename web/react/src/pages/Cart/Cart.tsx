@@ -3,6 +3,7 @@ import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import Button from '../../components/common/Button/Button'
 import EmptyState from '../../components/common/EmptyState'
 import { useCart } from '../../store/CartContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Layout } from '../../theme/tokens'
@@ -13,8 +14,8 @@ const PLACEHOLDER_IMG =
   'data:image/svg+xml;utf8,' +
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">' +
-    '<rect width="100%" height="100%" fill="#f2f3f5"/>' +
-    '<text x="50%" y="50%" fill="#9aa0a6" font-size="15" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">暂无图片</text>' +
+    '<rect width="100%" height="100%" fill="#f1f2f4"/>' +
+    '<text x="50%" y="50%" fill="#9aa1a9" font-size="15" font-family="sans-serif" text-anchor="middle" dominant-baseline="middle">暂无图片</text>' +
     '</svg>',
   )
 
@@ -43,7 +44,7 @@ const CartHeader = styled.div`
 const Title = styled.h1`
   font-size: 1.75rem;
   font-weight: bold;
-  color: #111;
+  color: ${Color.text.primary};
 `
 
 const ContinueLink = styled(Link)`
@@ -111,7 +112,7 @@ const ItemInfo = styled.div`
 const ItemName = styled.h3`
   font-size: 1.15rem;
   font-weight: bold;
-  color: #111;
+  color: ${Color.text.primary};
   margin-bottom: 1vh;
 `
 
@@ -169,7 +170,7 @@ const RemoveButton = styled.button`
   cursor: pointer;
 
   &:hover {
-    color: #e74c3c;
+    color: ${Color.status.error};
   }
 `
 
@@ -190,7 +191,7 @@ const CartSummary = styled.div`
 const SummaryTitle = styled.h2`
   font-size: 1.15rem;
   font-weight: bold;
-  color: #111;
+  color: ${Color.text.primary};
   margin-bottom: 2vh;
   padding-bottom: 1vh;
   border-bottom: 1px solid ${Color.border.light};
@@ -221,6 +222,7 @@ export default function Cart() {
   const { items, updateQuantity, removeItem, clearCart, total, count } = useCart()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { format } = useCurrency()
 
   const handleCheckout = () => {
     navigate('/checkout')
@@ -264,7 +266,7 @@ export default function Cart() {
                     <ItemInfo>
                       <ItemName>{item.spu_name}</ItemName>
                       <ItemDesc>{t('store.cart.productDescription')}</ItemDesc>
-                      <ItemPrice>${item.price.toFixed(2)}</ItemPrice>
+                      <ItemPrice>{format(Number(item.price))}</ItemPrice>
                     </ItemInfo>
                     <ItemActions>
                       <QuantityControl>
@@ -282,7 +284,7 @@ export default function Cart() {
                 <SummaryTitle>{t('store.cart.orderSummary')}</SummaryTitle>
                 <SummaryRow>
                   <span>{t('store.cart.subtotal')}</span>
-                  <span>${total.toFixed(2)}</span>
+                  <span>{format(total)}</span>
                 </SummaryRow>
                 <SummaryRow>
                   <span>{t('store.cart.shipping')}</span>
@@ -290,11 +292,11 @@ export default function Cart() {
                 </SummaryRow>
                 <SummaryRow>
                   <span>{t('store.cart.tax')}</span>
-                  <span>${(total * 0.08).toFixed(2)}</span>
+                  <span>{format(total * 0.08)}</span>
                 </SummaryRow>
                 <SummaryTotal>
                   <span>{t('store.cart.total')}</span>
-                  <span>${(total * 1.08).toFixed(2)}</span>
+                  <span>{format(total * 1.08)}</span>
                 </SummaryTotal>
                 
                 <Button 

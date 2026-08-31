@@ -16,6 +16,8 @@ export type StatusTone =
   | 'warning'
   | 'danger'
   | 'purple'
+  /** 品牌红（促销/新品等非危险语义；危险语义仍用 danger） */
+  | 'brand'
 
 export const Semantic = {
   /** 表面：背景层级 */
@@ -25,9 +27,9 @@ export const Semantic = {
     sidebar: Color.bg.sidebar,
     header: Color.bg.header,
     /** 凹陷/次级表面（如输入框禁用底、表格斑马纹） */
-    sunken: '#f3f4f6',
+    sunken: Color.bg.sunken,
     /** 浮层遮罩（Modal/Drawer 共用，统一模糊前的底色） */
-    overlay: 'rgba(17, 24, 39, 0.45)',
+    overlay: 'rgba(14, 16, 19, 0.45)',
   },
 
   /** 文字语义 */
@@ -55,22 +57,29 @@ export const Semantic = {
     default: Color.primary,
     hover: Color.primaryHover,
     active: Color.primaryDark,
-    onPrimary: '#ffffff',
-    disabledBg: '#f3f4f6',
+    onPrimary: Color.text.inverse,
+    disabledBg: Color.primaryLight,
     disabledFg: Color.border.dark,
+    /** 强调色（品牌红）：eyebrow / 正向数据 / 徽章点缀 */
+    accent: Color.brand,
+    accentHover: Color.brandDeep,
+    accentSoft: Color.brandSoft,
   },
 
   /**
    * 状态语义：全站唯一的状态色事实源。
    * fg 取较深值保证在浅色 bg 上的 WCAG AA 对比度。
+   * ⚠️ 品牌红 #fe2c55 只用于「品牌/正向」语义，不得与 danger 红混用。
    */
   status: {
-    success: { fg: '#059669', bg: '#ecfdf5' },
-    warning: { fg: '#b45309', bg: '#fef3c7' },
-    danger: { fg: '#dc2626', bg: '#fef2f2' },
-    info: { fg: '#1d4ed8', bg: '#eff6ff' },
-    neutral: { fg: '#4b5563', bg: '#f3f4f6' },
+    success: { fg: Color.status.success, bg: Color.posSoft },
+    warning: { fg: Color.status.warning, bg: '#fef3c7' },
+    danger: { fg: Color.status.error, bg: '#fef2f2' },
+    info: { fg: Color.status.info, bg: Color.blueSoft },
+    neutral: { fg: Color.text.secondary, bg: Color.primaryLight },
     purple: { fg: '#7c3aed', bg: '#f5f3ff' },
+    /** 品牌红徽章（促销/新品等非危险语义） */
+    brand: { fg: Color.brand, bg: Color.brandSoft },
   },
 } as const
 

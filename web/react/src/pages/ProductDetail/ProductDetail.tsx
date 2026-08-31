@@ -4,271 +4,568 @@ import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import Button from '../../components/common/Button/Button'
 import { useCart } from '../../store/CartContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { showMiniCartToast } from '../../components/common/MiniCartToast'
 import { openCartDropdown } from '../../utils/cartEvents'
-// detail page keeps direct add (selected specs); toast + dropdown still shared
 import { useUser } from '../../store/UserContext'
 import { useTranslation } from '../../i18n'
-import { publicAPI, type PublicSPUDetail } from '../../api/public'
+import { publicAPI, type PublicSPUDetail, type PublicSKU } from '../../api/public'
 import { reviewAPI, type ReviewItem } from '../../api/review'
-import { Color, Radius, Shadow, Layout } from '../../theme/tokens'
+import { Color, Radius, Shadow, Type, FontSize, Transition } from '../../theme/tokens'
 import { addProductToCart } from './productCartAction'
 import { resolveMediaUrl } from '../../api/chat'
 
+/**
+ * 商品详情页 — SHEIN 三栏规范
+ * ─────────────────────────────────────────────────────────
+ *   [左] 缩略图列   [中] 主图（锁死 3:4）   [右] 参数面板（sticky）
+ *
+ * 比例铁律：图区一律用 aspect-ratio 控制，绝不用百分比高度嵌套，
+ * 因此无论视口怎么缩放，画幅始终保持 3:4 同比例、不变形不塌陷。
+ */
+
+const PAGE_MAX = 1240
+
 const Container = styled.div`
-  min-height: calc(100vh - ${Layout.headerHeight}px);
-  background-color: ${Color.bg.page};
-  padding: 5vh 5vw;
+  min-height: 60vh;
+  background: ${Color.bg.page};
+  padding: 24px 20px 64px;
 `
 
-const Wrapper = styled.div`
-  max-width: 1200px;
-  margin: 0 2vw 0 calc(7vw + 120px);
-  @media (max-width: 768px) { margin-left: 2vw; }
-`
-
-const Breadcrumb = styled.div`
-  display: flex;
-  gap: 0.5em;
-  font-size: 0.85rem;
-  color: #888;
-  margin-bottom: 3vh;
-  a { color: #888; text-decoration: none; &:hover { color: ${Color.primary}; }}
-`
-
-const ProductGrid = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3vw;
-  margin-bottom: 5vh;
-  @media (max-width: 768px) { grid-template-columns: 1fr; }
-`
-
-const ImageSection = styled.div`
+const Shell = styled.div`
   width: 100%;
-  aspect-ratio: 1;
-  border-radius: ${Radius.lg}px;
-  background: ${Color.bg.card};
+  max-width: ${PAGE_MAX}px;
+  margin-inline: auto;
+`
+
+const Breadcrumb = styled.nav`
   display: flex;
+  gap: 8px;
   align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  box-shadow: ${Shadow.card};
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+  font-size: 0.8rem;
+  color: ${Color.text.muted};
+  margin-bottom: 20px;
+
+  a {
+    color: ${Color.text.muted};
+    text-decoration: none;
+    transition: color ${Transition.fast};
+
+    &:hover {
+      color: ${Color.text.primary};
+    }
   }
 `
 
-const Placeholder = styled.div`
-  font-size: 3rem;
-  color: ${Color.text.muted};
+/* ── 三栏主体 ─────────────────────────────────────────────── */
+const PdpGrid = styled.div`
+  display: grid;
+  gap: 20px;
+  /* 左缩略图 / 中主图 / 右参数 */
+  grid-template-columns: 88px minmax(0, 1fr) 380px;
+
+  @media (max-width: 1199px) and (min-width: 900px) {
+    grid-template-columns: 72px minmax(0, 1fr) 340px;
+    gap: 16px;
+  }
+
+  /* 窄屏：缩略图转横向条，主图与参数各自占满一行；比例仍锁 3:4 */
+  @media (max-width: 899px) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
 `
 
-const InfoSection = styled.div`
+/* ── 左：缩略图列 ─────────────────────────────────────────── */
+const ThumbCol = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2vh;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: calc(100vh - 120px);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  @media (max-width: 899px) {
+    order: 2;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+  }
 `
 
-const ProductName = styled.h1`
-  font-size: 1.75rem;
-  font-weight: bold;
-  color: #111;
-  line-height: 1.4;
+const Thumb = styled.button<{ $active: boolean }>`
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: ${Radius.sm}px;
+  overflow: hidden;
+  cursor: pointer;
+  background: ${Color.bg.card};
+  border: 2px solid ${({ $active }) => ($active ? Color.text.primary : Color.border.light)};
+  transition: border-color ${Transition.fast};
+
+  &:hover {
+    border-color: ${Color.text.primary};
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  @media (max-width: 899px) {
+    width: 64px;
+  }
+`
+
+/* ── 中：主图 ─────────────────────────────────────────────── */
+const StageCol = styled.div`
+  min-width: 0;
+
+  @media (max-width: 899px) {
+    order: 1;
+  }
+`
+
+/** 锁死 3:4 —— 缩放时高度由宽度推导，比例恒定 */
+const Stage = styled.div`
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  max-height: calc(100vh - 120px);
+  margin-inline: auto;
+  border-radius: ${Radius.md}px;
+  border: 1px solid ${Color.border.light};
+  background: ${Color.bg.card};
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  @media (max-width: 899px) {
+    max-width: 520px;
+  }
+`
+
+const EmptyStage = styled(Stage)`
+  color: ${Color.text.muted};
+  font-size: 2.5rem;
+`
+
+/* ── 右：参数面板 ─────────────────────────────────────────── */
+const ParamCol = styled.div`
+  min-width: 0;
+
+  @media (min-width: 900px) {
+    position: sticky;
+    top: 96px;
+    align-self: start;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding-right: 2px;
+  }
+
+  @media (max-width: 899px) {
+    order: 3;
+  }
 `
 
 const BrandTag = styled.span`
   display: inline-block;
-  font-size: 0.8rem;
-  color: ${Color.primary};
-  background: ${Color.primary}10;
-  padding: 4px 10px;
-  border-radius: 4px;
+  ${Type.wideCaps}
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: ${Color.text.muted};
+  margin-bottom: 10px;
 `
 
-const PriceSection = styled.div`
+const ProductName = styled.h1`
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+  ${Type.tight}
+  color: ${Color.text.primary};
+  margin: 0 0 14px;
+`
+
+const PriceRow = styled.div`
   display: flex;
   align-items: baseline;
-  gap: 0.5em;
-  margin: 1vh 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid ${Color.border.light};
 `
 
 const PriceValue = styled.span`
-  font-size: 2rem;
-  font-weight: bold;
-  color: ${Color.primary};
+  ${Type.tnum}
+  ${Type.tighter}
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: ${Color.text.primary};
 `
 
 const ActivityBadge = styled.span`
   display: inline-block;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  color: #fff;
-  background: ${Color.primary};
-  padding: 3px 10px;
-  border-radius: 4px;
-  margin-right: 10px;
-  align-self: center;
+  color: ${Color.text.inverse};
+  background: ${Color.brand};
+  padding: 3px 8px;
+  border-radius: ${Radius.sm}px;
 `
 
 const OriginalPrice = styled.span`
+  ${Type.tnum}
   font-size: 0.95rem;
   color: ${Color.text.muted};
   text-decoration: line-through;
-  margin-left: 0.6em;
-  align-self: center;
 `
 
 const SpecSection = styled.div`
-  margin-top: 1vh;
+  margin-top: 18px;
 `
 
 const SpecLabel = styled.div`
-  font-size: 0.85rem;
-  color: #555;
-  margin-bottom: 0.5vh;
-  font-weight: bold;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: ${Color.text.primary};
+  margin-bottom: 10px;
 `
 
 const SpecOptions = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75vw;
+  gap: 8px;
 `
 
+/** SHEIN 式方形规格按钮：选中墨黑描边 + 反色 */
 const SpecOption = styled.button<{ $selected: boolean }>`
-  padding: 8px 18px;
-  border: 2px solid ${p => p.$selected ? Color.primary : Color.border.medium};
-  border-radius: ${Radius.md}px;
-  background: ${p => p.$selected ? Color.primary + '10' : Color.bg.card};
-  color: ${p => p.$selected ? Color.primary : Color.text.heading};
+  min-width: 56px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: ${Radius.sm}px;
+  border: ${({ $selected }) =>
+    $selected ? `2px solid ${Color.text.primary}` : `1px solid ${Color.border.medium}`};
+  background: ${({ $selected }) => ($selected ? Color.text.primary : Color.bg.card)};
+  color: ${({ $selected }) => ($selected ? Color.text.inverse : Color.text.primary)};
+  font-size: 0.85rem;
+  font-weight: ${({ $selected }) => ($selected ? 700 : 400)};
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: all 0.15s;
-  &:hover { border-color: ${Color.primary}; }
+  transition: border-color ${Transition.fast}, background ${Transition.fast};
+
+  &:hover {
+    border-color: ${Color.text.primary};
+  }
 `
 
 const QuantityRow = styled.div`
   display: flex;
   align-items: center;
-  gap: 1vw;
-  margin-top: 1vh;
+  gap: 12px;
+  margin-top: 20px;
 `
 
-const QtyBtn = styled.button`
-  width: 36px; height: 36px;
+const Stepper = styled.div`
+  display: flex;
+  align-items: center;
   border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.sm}px;
+  overflow: hidden;
+`
+
+const StepBtn = styled.button`
+  width: 34px;
+  height: 34px;
+  border: none;
   background: ${Color.bg.card};
-  font-size: 1.1rem;
+  color: ${Color.text.primary};
+  font-size: 1rem;
   cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  &:hover { border-color: ${Color.primary}; }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    background: ${Color.primaryLight};
+  }
+
+  &:disabled {
+    color: ${Color.border.dark};
+    cursor: not-allowed;
+  }
 `
 
-const QtyInput = styled.input`
-  width: 50px; height: 36px;
+const QtyValue = styled.span`
+  ${Type.tnum}
+  min-width: 40px;
   text-align: center;
-  border: 1px solid ${Color.border.medium};
-  border-radius: ${Radius.sm}px;
-  font-size: 0.95rem;
+  font-weight: 600;
+  font-size: ${FontSize.md}px;
+  line-height: 34px;
+  border-left: 1px solid ${Color.border.light};
+  border-right: 1px solid ${Color.border.light};
 `
 
 const StockLabel = styled.span`
+  ${Type.tnum}
+  font-size: 0.82rem;
+  color: ${Color.text.muted};
+`
+
+const ActionStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 22px;
+`
+
+const PrimaryBtn = styled.button`
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: 999px;
+  background: ${Color.primary};
+  color: ${Color.text.inverse};
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background ${Transition.fast}, box-shadow ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    background: ${Color.primaryHover};
+    box-shadow: 0 8px 20px -10px rgba(14, 16, 19, 0.6);
+  }
+
+  &:disabled {
+    background: ${Color.primaryLight};
+    color: ${Color.text.muted};
+    cursor: not-allowed;
+  }
+`
+
+const SecondaryBtn = styled.button<{ $active?: boolean }>`
+  width: 100%;
+  height: 40px;
+  border: 1px solid ${({ $active }) => ($active ? Color.text.primary : Color.border.medium)};
+  border-radius: 999px;
+  background: ${({ $active }) => ($active ? Color.primaryLight : Color.bg.card)};
+  color: ${Color.text.primary};
   font-size: 0.85rem;
-  color: ${Color.text.secondary};
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color ${Transition.fast}, background ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    border-color: ${Color.text.primary};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`
+
+const PromiseRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 18px;
+  font-size: 0.75rem;
+  color: ${Color.text.muted};
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+`
+
+const Msg = styled.p<{ $ok?: boolean }>`
+  font-size: 0.85rem;
+  color: ${p => (p.$ok ? Color.status.success : Color.status.error)};
+  margin-top: 10px;
+`
+
+/* ── 下方详情区 ───────────────────────────────────────────── */
+const DetailBlock = styled.section`
+  margin-top: 48px;
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.lg}px;
+  padding: 24px;
+  box-shadow: ${Shadow.card};
 `
 
 const SectionTitle = styled.h2`
-  font-size: 1.25rem;
-  font-weight: bold;
-  color: #111;
-  margin-bottom: 2vh;
-  padding-bottom: 1vh;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: ${Color.text.primary};
+  margin: 0 0 16px;
+  padding-bottom: 12px;
   border-bottom: 1px solid ${Color.border.light};
 `
 
 const DescriptionText = styled.p`
-  font-size: 0.95rem;
-  color: ${Color.text.secondary};
-  line-height: 1.8;
+  font-size: 0.9rem;
+  color: ${Color.text.body};
+  line-height: 1.75;
+  margin: 0;
 `
 
 const SpecTable = styled.table`
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
-  th, td {
+  font-size: 0.88rem;
+
+  th,
+  td {
     padding: 10px 14px;
     text-align: left;
     border-bottom: 1px solid ${Color.border.light};
   }
+
   th {
-    color: #888;
-    font-weight: normal;
-    width: 140px;
+    color: ${Color.text.muted};
+    font-weight: 400;
+    width: 160px;
   }
-  td { color: ${Color.text.heading}; }
+
+  td {
+    color: ${Color.text.primary};
+  }
 `
 
 const ReviewCard = styled.div`
-  padding: 16px;
+  padding: 14px 16px;
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
-  margin-bottom: 1vh;
+  margin-bottom: 10px;
 `
 
 const ReviewHeader = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-bottom: 0.5vh;
-  .name { font-weight: bold; font-size: 0.9rem; }
-  .date { font-size: 0.8rem; color: #888; }
+  gap: 12px;
+  margin-bottom: 6px;
+
+  .name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: ${Color.text.primary};
+  }
+
+  .date {
+    font-size: 0.78rem;
+    color: ${Color.text.muted};
+  }
 `
 
 const Stars = styled.div`
-  color: #f5a623;
-  font-size: 0.9rem;
-  margin-bottom: 0.5vh;
+  color: ${Color.status.warning};
+  font-size: 0.85rem;
+  margin-bottom: 6px;
 `
 
 const ReviewContent = styled.p`
-  font-size: 0.9rem;
-  color: ${Color.text.secondary};
-  line-height: 1.5;
+  font-size: 0.88rem;
+  color: ${Color.text.body};
+  line-height: 1.6;
+  margin: 0;
 `
 
 const ReviewForm = styled.div`
-  margin-top: 2vh;
+  margin-top: 20px;
   padding: 16px;
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
+  background: ${Color.bg.sunken};
 `
 
 const FormRow = styled.div`
-  margin-bottom: 1vh;
-  label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 0.3vh; }
-  input, textarea, select {
-    width: 100%; padding: 8px 12px;
-    border: 1px solid ${Color.border.medium};
-    border-radius: 6px; font-size: 0.9rem; box-sizing: border-box;
-    &:focus { outline: none; border-color: ${Color.primary}; }
+  margin-bottom: 12px;
+
+  label {
+    display: block;
+    font-size: 0.82rem;
+    color: ${Color.text.body};
+    margin-bottom: 6px;
   }
-  textarea { min-height: 80px; resize: vertical; }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid ${Color.border.medium};
+    border-radius: ${Radius.sm}px;
+    font-size: 0.88rem;
+    box-sizing: border-box;
+    background: ${Color.bg.card};
+    color: ${Color.text.primary};
+
+    &:focus {
+      outline: none;
+      border-color: ${Color.focus};
+      box-shadow: ${Shadow.focus};
+    }
+  }
+
+  textarea {
+    min-height: 80px;
+    resize: vertical;
+  }
 `
 
 const StarSelector = styled.div`
-  display: flex; gap: 4px; font-size: 1.4rem; cursor: pointer;
-  span { color: #ddd; &.active { color: #f5a623; } }
+  display: flex;
+  gap: 4px;
+  font-size: 1.35rem;
+  cursor: pointer;
+
+  span {
+    color: ${Color.border.medium};
+
+    &.active {
+      color: ${Color.status.warning};
+    }
+  }
 `
 
-const Msg = styled.p<{ $ok?: boolean }>`
-  font-size: 0.85rem;
-  color: ${p => p.$ok ? '#2e7d32' : '#e74c3c'};
-  margin-top: 0.5vh;
-`
+/** 收集图集：SKU 图 → media 列表 → 主图，去重 */
+function collectGallery(detail: PublicSPUDetail | null): string[] {
+  if (!detail) return []
+  const list: string[] = []
+  for (const m of detail.media || []) {
+    if (m.media_type === 'video') {
+      const thumb = m.video_large_url || m.video_list_url || m.video_thumb_url
+      if (thumb) list.push(resolveMediaUrl(thumb) || thumb)
+      continue
+    }
+    const url = m.large_url || m.original_url || m.list_url || m.thumb_url
+    if (url) list.push(resolveMediaUrl(url) || url)
+  }
+  if (detail.main_image) list.push(resolveMediaUrl(detail.main_image) || detail.main_image)
+  return Array.from(new Set(list.filter(Boolean)))
+}
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
@@ -276,12 +573,14 @@ export default function ProductDetail() {
   const { addItem } = useCart()
   const { isLoggedIn } = useUser()
   const { t } = useTranslation()
+  const { format } = useCurrency()
 
   const [product, setProduct] = useState<PublicSPUDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string>>({})
   const [qty, setQty] = useState(1)
   const [addedMsg, setAddedMsg] = useState('')
+  const [activeImage, setActiveImage] = useState(0)
 
   // Reviews
   const [reviews, setReviews] = useState<ReviewItem[]>([])
@@ -301,6 +600,9 @@ export default function ProductDetail() {
   // ── Derive dynamic spec groups from SKU specs ──
   const specGroups = useMemo(() => {
     if (!product?.skus) return []
+    if (Array.isArray(product.specs) && product.specs.length > 0) {
+      return product.specs.map(s => ({ name: s.name, values: s.values || [] }))
+    }
     const map: Record<string, Set<string>> = {}
     for (const sku of product.skus) {
       if (sku.spec_values) {
@@ -313,26 +615,34 @@ export default function ProductDetail() {
     return Object.entries(map).map(([name, values]) => ({ name, values: Array.from(values) }))
   }, [product])
 
+  const gallery = useMemo(() => collectGallery(product), [product])
+  const activeImageUrl = gallery[activeImage] || gallery[0] || ''
+
   // Fetch product
   useEffect(() => {
     const pid = Number(id)
     if (!pid) return
     setLoading(true)
-    publicAPI.getSPUDetail(pid).then(data => {
-      setProduct(data)
-      // Auto-select first spec value from derived spec groups
-      if (data.skus && data.skus.length > 0) {
-        const defaults: Record<string, string> = {}
-        for (const sku of data.skus) {
-          if (sku.spec_values) {
-            for (const [key, value] of Object.entries(sku.spec_values)) {
-              if (!(key in defaults)) defaults[key] = value
+    publicAPI
+      .getSPUDetail(pid)
+      .then(data => {
+        setProduct(data)
+        setActiveImage(0)
+        // Auto-select first spec value from derived spec groups
+        if (data.skus && data.skus.length > 0) {
+          const defaults: Record<string, string> = {}
+          for (const sku of data.skus) {
+            if (sku.spec_values) {
+              for (const [key, value] of Object.entries(sku.spec_values)) {
+                if (!(key in defaults)) defaults[key] = value
+              }
             }
           }
+          setSelectedSpecs(defaults)
         }
-        setSelectedSpecs(defaults)
-      }
-    }).catch(() => setProduct(null)).finally(() => setLoading(false))
+      })
+      .catch(() => setProduct(null))
+      .finally(() => setLoading(false))
   }, [id])
 
   // Record browse history (fire-and-forget, only for logged-in users)
@@ -346,11 +656,14 @@ export default function ProductDetail() {
   useEffect(() => {
     const pid = Number(id)
     if (!pid) return
-    reviewAPI.list(pid).then(data => {
-      setReviews(data.results || [])
-      setReviewTotal(data.count || 0)
-      setAvgRating(data.avg_rating || 0)
-    }).catch(() => {})
+    reviewAPI
+      .list(pid)
+      .then(data => {
+        setReviews(data.results || [])
+        setReviewTotal(data.count || 0)
+        setAvgRating(data.avg_rating || 0)
+      })
+      .catch(() => {})
   }, [id])
 
   // Fetch reviewable items
@@ -358,9 +671,12 @@ export default function ProductDetail() {
     if (!isLoggedIn) return
     const pid = Number(id)
     if (!pid) return
-    reviewAPI.getReviewableItems(pid).then(data => {
-      setReviewableItems(data.order_items || [])
-    }).catch(() => {})
+    reviewAPI
+      .getReviewableItems(pid)
+      .then(data => {
+        setReviewableItems(data.order_items || [])
+      })
+      .catch(() => {})
   }, [id, isLoggedIn])
 
   // Check favorite status
@@ -368,23 +684,28 @@ export default function ProductDetail() {
     if (!isLoggedIn) return
     const pid = Number(id)
     if (!pid) return
-    publicAPI.getFavorites({ page: 1, per_page: 100 }).then(data => {
-      const items = data.results || data.items || []
-      setIsFavorited(items.some((fav: any) => fav.spu_id === pid))
-    }).catch(() => {})
+    publicAPI
+      .getFavorites({ page: 1, per_page: 100 })
+      .then(data => {
+        const items = data.results || data.items || []
+        setIsFavorited(items.some((fav: { spu_id?: number }) => Number(fav.spu_id) === pid))
+      })
+      .catch(() => {})
   }, [id, isLoggedIn])
 
   // Find SKU by selected specs
-  const selectedSku = useMemo(() => {
+  const selectedSku: PublicSKU | null = useMemo(() => {
     if (!product?.skus) return null
     if (Object.keys(selectedSpecs).length === 0) return product.skus[0] || null
-    return product.skus.find(sku => {
-      if (!sku.spec_values) return false
-      for (const [name, value] of Object.entries(selectedSpecs)) {
-        if (sku.spec_values[name] !== value) return false
-      }
-      return true
-    }) || product.skus[0]
+    return (
+      product.skus.find(sku => {
+        if (!sku.spec_values) return false
+        for (const [name, value] of Object.entries(selectedSpecs)) {
+          if (sku.spec_values[name] !== value) return false
+        }
+        return true
+      }) || product.skus[0]
+    )
   }, [product, selectedSpecs])
 
   const price = selectedSku?.discount_price ?? selectedSku?.price ?? '0.00'
@@ -418,9 +739,16 @@ export default function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!selectedSku || !product) return
-    const img = resolveMediaUrl(selectedSku.image_url) || selectedSku.image_url || resolveMediaUrl(product.main_image) || product.main_image || ''
+    const img =
+      resolveMediaUrl(selectedSku.image_url) ||
+      selectedSku.image_url ||
+      resolveMediaUrl(product.main_image) ||
+      product.main_image ||
+      ''
     const specsText = selectedSku.spec_values
-      ? Object.entries(selectedSku.spec_values).map(([k, v]) => `${k}: ${v}`).join(' · ')
+      ? Object.entries(selectedSku.spec_values)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(' · ')
       : undefined
     try {
       await addProductToCart(addItem, selectedSku.id, qty, () => {
@@ -459,25 +787,36 @@ export default function ProductDetail() {
       setReviews(data.results || [])
       setReviewTotal(data.count || 0)
       setAvgRating(data.avg_rating || 0)
-    } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || t('store.product.reviewFailed')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { detail?: unknown } }; message?: string }
+      const msg = e?.response?.data?.detail || e?.message || t('store.product.reviewFailed')
       setReviewMsg(typeof msg === 'string' ? msg : JSON.stringify(msg))
       setReviewOk(false)
     }
   }
 
   if (loading) {
-    return <PageLayout><Container><Wrapper><p>{t('common.loading')}</p></Wrapper></Container></PageLayout>
+    return (
+      <PageLayout>
+        <Container>
+          <Shell>
+            <p>{t('common.loading')}</p>
+          </Shell>
+        </Container>
+      </PageLayout>
+    )
   }
 
   if (!product) {
     return (
       <PageLayout>
         <Container>
-          <Wrapper>
+          <Shell>
             <h1>{t('store.product.notFound')}</h1>
-            <Button variant="primary" onClick={() => navigate('/category')}>{t('store.product.backToShop')}</Button>
-          </Wrapper>
+            <Button variant="primary" onClick={() => navigate('/category')}>
+              {t('store.product.backToShop')}
+            </Button>
+          </Shell>
         </Container>
       </PageLayout>
     )
@@ -486,182 +825,247 @@ export default function ProductDetail() {
   return (
     <PageLayout>
       <Container>
-        <Wrapper>
+        <Shell>
           <Breadcrumb>
             <a href="/">{t('store.product.home')}</a> /
             <a href="/category">{t('store.product.allCategories')}</a> /
             <span>{product.name}</span>
           </Breadcrumb>
 
-          <ProductGrid>
-            {/* Image */}
-            <ImageSection>
-              {product.main_image
-                ? <img src={resolveMediaUrl(product.main_image) || product.main_image} alt={product.name} />
-                : <Placeholder>📦</Placeholder>
-              }
-            </ImageSection>
+          <PdpGrid>
+            {/* 左：缩略图列 */}
+            {gallery.length > 1 && (
+              <ThumbCol>
+                {gallery.map((src, i) => (
+                  <Thumb
+                    key={`${src}-${i}`}
+                    $active={i === activeImage}
+                    onClick={() => setActiveImage(i)}
+                    type="button"
+                    aria-label={`${product.name} ${i + 1}`}
+                  >
+                    <img src={src} alt="" loading="lazy" />
+                  </Thumb>
+                ))}
+              </ThumbCol>
+            )}
 
-            {/* Info */}
-            <InfoSection>
-              <div>
-                {product.brand_name && <BrandTag>{product.brand_name}</BrandTag>}
-                <ProductName>{product.name}</ProductName>
-              </div>
+            {/* 中：主图（锁死 3:4） */}
+            <StageCol>
+              {activeImageUrl ? (
+                <Stage>
+                  <img src={activeImageUrl} alt={product.name} />
+                </Stage>
+              ) : (
+                <EmptyStage aria-hidden="true">📦</EmptyStage>
+              )}
+            </StageCol>
 
-              <PriceSection>
+            {/* 右：参数面板 */}
+            <ParamCol>
+              {product.brand_name && <BrandTag>{product.brand_name}</BrandTag>}
+              <ProductName>{product.name}</ProductName>
+
+              <PriceRow>
                 {hasActivity && <ActivityBadge>{t('store.product.activityPrice')}</ActivityBadge>}
-                <PriceValue>${Number(price).toFixed(2)}</PriceValue>
+                <PriceValue>{format(Number(price))}</PriceValue>
                 {hasActivity && (
-                  <OriginalPrice>{t('store.product.originalPrice')}: ${Number(originalPrice).toFixed(2)}</OriginalPrice>
+                  <OriginalPrice>
+                    {t('store.product.originalPrice')}: {format(Number(originalPrice))}
+                  </OriginalPrice>
                 )}
-              </PriceSection>
+              </PriceRow>
 
-              {/* Dynamic Specs — derived from SKU specs */}
-              {specGroups.length > 0 && specGroups.map(spec => (
-                <SpecSection key={spec.name}>
-                  <SpecLabel>{spec.name}</SpecLabel>
-                  <SpecOptions>
-                    {spec.values.map((val: string) => (
-                      <SpecOption
-                        key={val}
-                        $selected={selectedSpecs[spec.name] === val}
-                        onClick={() => setSelectedSpecs(prev => ({ ...prev, [spec.name]: val }))}
-                      >
-                        {val}
-                      </SpecOption>
-                    ))}
-                  </SpecOptions>
-                </SpecSection>
-              ))}
+              {/* 规格组 */}
+              {specGroups.length > 0 &&
+                specGroups.map(spec => (
+                  <SpecSection key={spec.name}>
+                    <SpecLabel>{spec.name}</SpecLabel>
+                    <SpecOptions>
+                      {spec.values.map((val: string) => (
+                        <SpecOption
+                          key={val}
+                          $selected={selectedSpecs[spec.name] === val}
+                          onClick={() =>
+                            setSelectedSpecs(prev => ({ ...prev, [spec.name]: val }))
+                          }
+                        >
+                          {val}
+                        </SpecOption>
+                      ))}
+                    </SpecOptions>
+                  </SpecSection>
+                ))}
 
               <QuantityRow>
-                <SpecLabel>{t('store.product.quantity')}:</SpecLabel>
-                <QtyBtn onClick={() => setQty(Math.max(1, qty - 1))}>-</QtyBtn>
-                <QtyInput value={qty} onChange={e => setQty(Math.max(1, parseInt(e.target.value) || 1))} />
-                <QtyBtn onClick={() => setQty(Math.min(selectedSku?.stock || 99, qty + 1))}>+</QtyBtn>
-                {selectedSku && <StockLabel>{t('store.product.stock')}: {selectedSku.stock}</StockLabel>}
+                <SpecLabel style={{ margin: 0 }}>{t('store.product.quantity')}</SpecLabel>
+                <Stepper>
+                  <StepBtn
+                    type="button"
+                    onClick={() => setQty(Math.max(1, qty - 1))}
+                    disabled={qty <= 1}
+                    aria-label="-"
+                  >
+                    −
+                  </StepBtn>
+                  <QtyValue>{qty}</QtyValue>
+                  <StepBtn
+                    type="button"
+                    onClick={() => setQty(Math.min(selectedSku?.stock || 99, qty + 1))}
+                    disabled={qty >= (selectedSku?.stock || 99)}
+                    aria-label="+"
+                  >
+                    +
+                  </StepBtn>
+                </Stepper>
+                {selectedSku && (
+                  <StockLabel>
+                    {t('store.product.stock')}: {selectedSku.stock}
+                  </StockLabel>
+                )}
               </QuantityRow>
 
-              <Button
-                variant="primary"
-                size="lg"
-                style={{ marginTop: '2vh' }}
-                onClick={handleAddToCart}
-                disabled={!selectedSku || selectedSku.stock < 1}
-              >
-                {t('store.product.addToCart')}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                style={{ marginTop: '1vh' }}
-                onClick={handleToggleFavorite}
-                disabled={favLoading}
-              >
-                {favLoading ? '...' : isFavorited ? '♥ Favorited' : '♡ Add to Favorites'}
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                style={{ marginTop: '1vh' }}
-                onClick={() => navigate(`/support?spu_id=${product.id}&spu_name=${encodeURIComponent(product.name)}&spu_image=${encodeURIComponent(resolveMediaUrl(product.main_image) || product.main_image || '')}&spu_price=${price}`)}
-              >
-                {t('store.product.contactSupport')}
-              </Button>
-              {addedMsg && <Msg $ok>{addedMsg}</Msg>}
-            </InfoSection>
-          </ProductGrid>
-
-          {/* Description */}
-          <SectionTitle>{t('store.product.description')}</SectionTitle>
-          <DescriptionText>
-            {product.description || t('store.product.noDescription')}
-          </DescriptionText>
-
-          {/* Specifications */}
-          <SectionTitle>{t('store.product.specifications')}</SectionTitle>
-          {product.attributes && product.attributes.length > 0 ? (
-            <SpecTable>
-              <tbody>
-                {product.attributes.map((attr: any) => (
-                  <tr key={attr.name}>
-                    <th>{attr.name}</th>
-                    <td>{attr.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </SpecTable>
-          ) : (
-            <DescriptionText>{t('store.product.noSpecs')}</DescriptionText>
-          )}
-
-          {/* Reviews */}
-          <SectionTitle>
-            {t('store.product.reviews').replace('{count}', String(reviewTotal))}
-            {avgRating > 0 && ` — ${avgRating.toFixed(1)} ★`}
-          </SectionTitle>
-
-          {reviews.length === 0 && <DescriptionText>{t('store.product.noReviews')}</DescriptionText>}
-
-          {reviews.map(r => (
-            <ReviewCard key={r.id}>
-              <ReviewHeader>
-                <span className="name">{r.content}</span>
-                <span className="date">{new Date(r.created_at).toLocaleDateString()}</span>
-              </ReviewHeader>
-              <Stars>{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</Stars>
-              <ReviewContent>{r.content}</ReviewContent>
-            </ReviewCard>
-          ))}
-
-          {/* Review Form (only for logged-in users who purchased) */}
-          {isLoggedIn && reviewableItems.length > 0 && (
-            <ReviewForm>
-              <h3 style={{ marginBottom: '1vh', fontSize: '1rem' }}>{t('store.product.addReview')}</h3>
-              <FormRow>
-                <label>{t('store.product.reviewPlaceholder')}</label>
-                <StarSelector>
-                  {[1, 2, 3, 4, 5].map(n => (
-                    <span key={n} className={n <= reviewRating ? 'active' : ''} onClick={() => setReviewRating(n)}>
-                      {n <= reviewRating ? '★' : '☆'}
-                    </span>
-                  ))}
-                </StarSelector>
-              </FormRow>
-              <FormRow>
-                <select
-                  value={reviewOrderItemId ?? ''}
-                  onChange={e => setReviewOrderItemId(Number(e.target.value) || null)}
+              <ActionStack>
+                <PrimaryBtn
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={!selectedSku || (selectedSku.stock ?? 0) < 1}
                 >
-                  <option value="">{t('store.product.selectOrderItem')}</option>
-                  {reviewableItems.map(item => (
-                    <option key={item.id} value={item.id}>{item.order_no}</option>
-                  ))}
-                </select>
-              </FormRow>
-              <FormRow>
-                <textarea
-                  placeholder={t('store.product.reviewPlaceholder')}
-                  value={reviewContent}
-                  onChange={e => setReviewContent(e.target.value)}
-                />
-              </FormRow>
-              <Button
-                variant="primary"
-                onClick={handleSubmitReview}
-                disabled={!reviewOrderItemId || !reviewContent.trim()}
-              >
-                {t('store.product.reviewSubmit')}
-              </Button>
-              {reviewMsg && <Msg $ok={reviewOk}>{reviewMsg}</Msg>}
-            </ReviewForm>
-          )}
+                  {t('store.product.addToCart')}
+                </PrimaryBtn>
+                <SecondaryBtn
+                  type="button"
+                  $active={isFavorited}
+                  onClick={handleToggleFavorite}
+                  disabled={favLoading}
+                >
+                  {favLoading ? '...' : isFavorited ? '♥ Favorited' : '♡ Add to Favorites'}
+                </SecondaryBtn>
+                <SecondaryBtn
+                  type="button"
+                  onClick={() =>
+                    navigate(
+                      `/support?spu_id=${product.id}&spu_name=${encodeURIComponent(product.name)}&spu_image=${encodeURIComponent(resolveMediaUrl(product.main_image) || product.main_image || '')}&spu_price=${price}`,
+                    )
+                  }
+                >
+                  {t('store.product.contactSupport')}
+                </SecondaryBtn>
+                {addedMsg && <Msg $ok>{addedMsg}</Msg>}
+              </ActionStack>
 
-          {isLoggedIn && reviewableItems.length === 0 && (
-            <DescriptionText>{t('store.product.buyFirst')}</DescriptionText>
-          )}
-        </Wrapper>
+              <PromiseRow>
+                <span>✓ {t('store.product.freeReturn')}</span>
+                <span>✓ {t('store.product.securePay')}</span>
+              </PromiseRow>
+            </ParamCol>
+          </PdpGrid>
+
+          {/* 描述 */}
+          <DetailBlock>
+            <SectionTitle>{t('store.product.description')}</SectionTitle>
+            <DescriptionText>
+              {product.description || t('store.product.noDescription')}
+            </DescriptionText>
+          </DetailBlock>
+
+          {/* 规格参数 */}
+          <DetailBlock>
+            <SectionTitle>{t('store.product.specifications')}</SectionTitle>
+            {product.attributes && product.attributes.length > 0 ? (
+              <SpecTable>
+                <tbody>
+                  {product.attributes.map((attr: { name: string; value: string }) => (
+                    <tr key={attr.name}>
+                      <th>{attr.name}</th>
+                      <td>{attr.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </SpecTable>
+            ) : (
+              <DescriptionText>{t('store.product.noSpecs')}</DescriptionText>
+            )}
+          </DetailBlock>
+
+          {/* 评价 */}
+          <DetailBlock>
+            <SectionTitle>
+              {t('store.product.reviews').replace('{count}', String(reviewTotal))}
+              {avgRating > 0 && ` — ${avgRating.toFixed(1)} ★`}
+            </SectionTitle>
+
+            {reviews.length === 0 && <DescriptionText>{t('store.product.noReviews')}</DescriptionText>}
+
+            {reviews.map(r => (
+              <ReviewCard key={r.id}>
+                <ReviewHeader>
+                  <span className="name">{r.content}</span>
+                  <span className="date">{new Date(r.created_at).toLocaleDateString()}</span>
+                </ReviewHeader>
+                <Stars>
+                  {'★'.repeat(r.rating)}
+                  {'☆'.repeat(5 - r.rating)}
+                </Stars>
+                <ReviewContent>{r.content}</ReviewContent>
+              </ReviewCard>
+            ))}
+
+            {isLoggedIn && reviewableItems.length > 0 && (
+              <ReviewForm>
+                <h3 style={{ marginBottom: '12px', fontSize: '1rem' }}>
+                  {t('store.product.addReview')}
+                </h3>
+                <FormRow>
+                  <label>{t('store.product.reviewPlaceholder')}</label>
+                  <StarSelector>
+                    {[1, 2, 3, 4, 5].map(n => (
+                      <span
+                        key={n}
+                        className={n <= reviewRating ? 'active' : ''}
+                        onClick={() => setReviewRating(n)}
+                      >
+                        {n <= reviewRating ? '★' : '☆'}
+                      </span>
+                    ))}
+                  </StarSelector>
+                </FormRow>
+                <FormRow>
+                  <select
+                    value={reviewOrderItemId ?? ''}
+                    onChange={e => setReviewOrderItemId(Number(e.target.value) || null)}
+                  >
+                    <option value="">{t('store.product.selectOrderItem')}</option>
+                    {reviewableItems.map(item => (
+                      <option key={item.id} value={item.id}>
+                        {item.order_no}
+                      </option>
+                    ))}
+                  </select>
+                </FormRow>
+                <FormRow>
+                  <textarea
+                    placeholder={t('store.product.reviewPlaceholder')}
+                    value={reviewContent}
+                    onChange={e => setReviewContent(e.target.value)}
+                  />
+                </FormRow>
+                <Button
+                  variant="primary"
+                  onClick={handleSubmitReview}
+                  disabled={!reviewOrderItemId || !reviewContent.trim()}
+                >
+                  {t('store.product.reviewSubmit')}
+                </Button>
+                {reviewMsg && <Msg $ok={reviewOk}>{reviewMsg}</Msg>}
+              </ReviewForm>
+            )}
+
+            {isLoggedIn && reviewableItems.length === 0 && (
+              <DescriptionText>{t('store.product.buyFirst')}</DescriptionText>
+            )}
+          </DetailBlock>
+        </Shell>
       </Container>
     </PageLayout>
   )

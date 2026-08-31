@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { Container, Wrapper, Sidebar, MainContent } from '../../components/layout/PageLayout/shared'
 import { useCoupons, type DisplayCoupon } from '../../hooks/useCoupons'
+import { useCurrency } from '../../store/CurrencyContext'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 
@@ -26,7 +27,7 @@ const MenuItem = styled.div<{ active?: boolean }>`
   user-select: none;
 
   &:hover {
-    background: ${props => props.active ? Color.primaryLight : '#f7f7f7'};
+    background: ${props => props.active ? Color.primaryLight : Color.bg.page};
     color: ${Color.primary};
   }
 `
@@ -35,7 +36,7 @@ const MenuItem = styled.div<{ active?: boolean }>`
 const TabsRow = styled.div`
   display: flex;
   gap: 4px;
-  background: #ececec;
+  background: ${Color.primaryLight};
   padding: 4px;
   border-radius: 10px;
   margin-bottom: 20px;
@@ -47,7 +48,7 @@ const Tab = styled.button<{ $active?: boolean }>`
   font-size: 14px;
   font-weight: 600;
   color: ${props => (props.$active ? Color.primary : Color.text.muted)};
-  background: ${props => (props.$active ? '#fff' : 'transparent')};
+  background: ${props => (props.$active ? Color.bg.card : 'transparent')};
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -61,7 +62,7 @@ const Tab = styled.button<{ $active?: boolean }>`
 
 // ─── Coupon Area ───
 const CouponArea = styled.div`
-  background: #f7f7f7;
+  background: ${Color.bg.sunken};
   border-radius: 12px;
   padding: 24px;
 `
@@ -80,7 +81,7 @@ const CouponGrid = styled.div`
     height: 6px;
   }
   &::-webkit-scrollbar-thumb {
-    background: #d8d8d8;
+    background: ${Color.border.medium};
     border-radius: 3px;
   }
 
@@ -133,12 +134,12 @@ const LeftPanel = styled.div<{ $variant?: 'available' | 'used' | 'expired' }>`
   position: relative;
   background: ${props => {
     switch (props.$variant) {
-      case 'used': return '#9a9a9a'
-      case 'expired': return '#7d7d7d'
+      case 'used': return Color.text.muted
+      case 'expired': return Color.text.muted
       default: return Color.primary
     }
   }};
-  color: #fff;
+  color: ${Color.text.inverse};
 
   /* 右边缘半圆缺口（上） */
   &::after {
@@ -148,7 +149,7 @@ const LeftPanel = styled.div<{ $variant?: 'available' | 'used' | 'expired' }>`
     top: -1px;
     width: 20px;
     height: 20px;
-    background: #f7f7f7;
+    background: ${Color.bg.sunken};
     border-radius: 50%;
     z-index: 1;
   }
@@ -161,7 +162,7 @@ const LeftNotchBottom = styled.div`
   bottom: -1px;
   width: 20px;
   height: 20px;
-  background: #f7f7f7;
+  background: ${Color.bg.sunken};
   border-radius: 50%;
   z-index: 1;
 `
@@ -205,7 +206,7 @@ const RightPanel = styled.div`
   flex-direction: column;
   justify-content: center;
   padding: 16px 18px;
-  background: #fff;
+  background: ${Color.bg.card};
   position: relative;
 
   /* 左边缘半圆缺口（上） */
@@ -216,7 +217,7 @@ const RightPanel = styled.div`
     top: -1px;
     width: 20px;
     height: 20px;
-    background: #fff;
+    background: ${Color.bg.card};
     border-radius: 50%;
     z-index: 1;
   }
@@ -229,7 +230,7 @@ const RightNotchBottom = styled.div`
   bottom: -1px;
   width: 20px;
   height: 20px;
-  background: #fff;
+  background: ${Color.bg.card};
   border-radius: 50%;
   z-index: 1;
 `
@@ -241,14 +242,14 @@ const SeamLine = styled.div`
   top: 20px;
   bottom: 20px;
   width: 1px;
-  border-left: 2px dashed #e8e8e8;
+  border-left: 2px dashed ${Color.border.light};
   z-index: 0;
 `
 
 const ConditionText = styled.div`
   font-size: 16px;
   font-weight: 600;
-  color: #222;
+  color: ${Color.text.primary};
   margin-bottom: 10px;
   z-index: 2;
 `
@@ -272,22 +273,22 @@ const UseButton = styled.button<{ $variant?: 'primary' | 'disabled' | 'ghost' }>
   background: ${props => {
     switch (props.$variant) {
       case 'primary': return Color.primary
-      case 'disabled': return '#ddd'
+      case 'disabled': return Color.border.medium
       default: return 'transparent'
     }
   }};
-  color: ${props => (props.$variant === 'primary' || props.$variant === 'ghost') ? '#fff' : '#aaa'};
-  border: ${props => (props.$variant === 'ghost' ? '1px solid #ccc' : 'none')};
+  color: ${props => (props.$variant === 'primary' || props.$variant === 'ghost') ? Color.text.inverse : Color.text.muted};
+  border: ${props => (props.$variant === 'ghost' ? `1px solid ${Color.border.medium}` : 'none')};
 
   &:hover {
     background: ${props => {
       switch (props.$variant) {
         case 'primary': return Color.primaryHover
-        case 'ghost': return '#f5f5f5'
-        default: return '#ddd'
+        case 'ghost': return Color.bg.sunken
+        default: return Color.border.medium
       }
     }};
-    color: ${props => (props.$variant === 'ghost' ? Color.primary : '#fff')};
+    color: ${props => (props.$variant === 'ghost' ? Color.primary : Color.text.inverse)};
   }
 `
 
@@ -322,8 +323,8 @@ const CodeRow = styled.div`
 
 const CodeDisplay = styled.code`
   font-size: 10.5px;
-  color: #ccc;
-  background: #fafafa;
+  color: ${Color.border.dark};
+  background: ${Color.bg.sunken};
   padding: 2px 7px;
   border-radius: 4px;
   cursor: pointer;
@@ -352,7 +353,7 @@ const EmptyState = styled.div`
 const EmptyIcon = styled.div`
   width: 58px;
   height: 40px;
-  border: 2px dashed #d8d8d8;
+  border: 2px dashed ${Color.border.medium};
   border-radius: 6px;
   margin-bottom: 14px;
   opacity: 0.6;
@@ -383,6 +384,7 @@ const StatusStamp = styled.div`
 export default function Coupons() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { format } = useCurrency()
   const { coupons } = useCoupons()
 
   const [activeTab, setActiveTab] = useState<TabKey>('available')
@@ -450,8 +452,7 @@ export default function Coupons() {
         {/* 左：金额区 */}
         <LeftPanel $variant={variant}>
           <AmountRow>
-            <CurrencySymbol>$</CurrencySymbol>
-            <AmountValue>{coupon.amount}</AmountValue>
+            <AmountValue>{format(coupon.amount)}</AmountValue>
           </AmountRow>
           <LeftSub>{t('store.coupons.couponTag') || 'COUPON'}</LeftSub>
           <LeftNotchBottom />
@@ -464,7 +465,7 @@ export default function Coupons() {
 
           {/* 条件 */}
           <ConditionText>
-            {t('store.coupons.minSpendFormat', { amount: coupon.minSpend }) || `Min spend $${coupon.minSpend}`}
+            {t('store.coupons.minSpendFormat', { amount: format(coupon.minSpend) }) || `Min spend ${format(coupon.minSpend)}`}
           </ConditionText>
 
           {/* CTA 按钮 */}

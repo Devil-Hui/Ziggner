@@ -15,7 +15,7 @@ const Icon = styled.div`
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: #fef2f2;
+  background: ${Color.status.error}14;
   color: ${Color.status.error};
   display: flex;
   align-items: center;
@@ -48,7 +48,7 @@ const RetryButton = styled.button`
   transition: background 0.2s;
 
   &:hover {
-    background: #b91c1c;
+    background: ${Color.status.error};
   }
 `;
 

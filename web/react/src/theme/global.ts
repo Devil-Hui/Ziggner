@@ -5,7 +5,7 @@
  */
 
 import { createGlobalStyle } from 'styled-components'
-import { Color, FontSize, FocusRing, Transition } from './tokens'
+import { Color, FontFamily, FontSize, Type, Transition } from './tokens'
 
 export const GlobalStyles = createGlobalStyle`
   html {
@@ -15,11 +15,20 @@ export const GlobalStyles = createGlobalStyle`
   }
 
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-      'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+    font-family: ${FontFamily.sans};
     color: ${Color.text.body};
     background: ${Color.bg.page};
     line-height: 1.6;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: ${FontFamily.display};
+    ${Type.tight}
+  }
+
+  /* 价格/统计等数字统一等宽，防跳动 */
+  [data-num] {
+    ${Type.tnum}
   }
 
   a {

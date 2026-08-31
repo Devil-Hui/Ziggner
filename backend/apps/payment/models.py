@@ -13,10 +13,8 @@ def generate_payment_no():
 
 
 class PaymentMethod(models.TextChoices):
-    MOCK = 'mock', 'Mock (dev/staging only)'
     PAYPAL = 'paypal', 'PayPal'
     STRIPE = 'stripe', 'Stripe'
-    ALIPAY = 'alipay', 'Alipay'
 
 
 class PaymentStatus(models.TextChoices):
@@ -125,6 +123,10 @@ class RefundLog(models.Model):
     )
     gateway_refund_id = models.CharField(max_length=255, blank=True, default='', verbose_name='网关退款ID')
     gateway_data = models.JSONField(default=dict, verbose_name='网关原始数据')
+    reconcile_attempts = models.PositiveIntegerField(
+        default=0, verbose_name='对账重试次数',
+        help_text='UNKNOWN 退款被 reconcile_unknown_refunds 重试的次数，超过上限后标记为 FAILED，防止无限重试',
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')
 

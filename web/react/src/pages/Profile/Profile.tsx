@@ -5,6 +5,7 @@ import { Container } from '../../components/layout/PageLayout/shared'
 import { Color, Spacing, Radius, FontSize, Breakpoint, Shadow } from '../../theme/tokens'
 import Button from '../../components/common/Button/Button'
 import { useUser } from '../../store/UserContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { orderAPI, type OrderSummary } from '../../api/order'
@@ -263,7 +264,7 @@ const NavItem = styled.button<{ $active?: boolean }>`
   transition: all 0.15s;
 
   &:hover {
-    background: ${props => (props.$active ? BRAND.light : '#f7f7f7')};
+    background: ${props => (props.$active ? BRAND.light : Color.bg.page)};
     color: ${BRAND.red};
   }
 
@@ -291,12 +292,12 @@ const AddressCard = styled.div`
 
 const AddressText = styled.div`
   font-size: 13px;
-  color: #444;
+  color: ${Color.text.body};
 `
 
 const AddressSub = styled.div`
   font-size: 11px;
-  color: #aaa;
+  color: ${Color.text.muted};
   margin-top: 2px;
 `
 
@@ -320,14 +321,14 @@ const AddrItem = styled.div`
 
 const AddrInfo = styled.div`
   font-size: 13px;
-  color: #444;
+  color: ${Color.text.body};
   line-height: 1.7;
   min-width: 0;
 `
 
 const AddrName = styled.div`
   font-weight: 600;
-  color: #222;
+  color: ${Color.text.primary};
   display: flex;
   align-items: center;
   gap: 8px;
@@ -366,12 +367,12 @@ const AddrActionBtn = styled.button`
 `
 
 const AddrDeleteBtn = styled(AddrActionBtn)`
-  color: #c0392b;
-  border-color: #e8c9c4;
+  color: ${Color.status.error};
+  border-color: ${Color.status.error}33;
 
   &:hover {
-    border-color: #c0392b;
-    color: #c0392b;
+    border-color: ${Color.status.error};
+    color: ${Color.status.error};
   }
 `
 
@@ -396,8 +397,8 @@ const AddrInput = styled.input`
   border: 1px solid ${Color.border.medium};
   border-radius: 8px;
   font-size: 13px;
-  color: #333;
-  background: #fff;
+  color: ${Color.text.body};
+  background: ${Color.bg.card};
 
   &:focus {
     outline: none;
@@ -517,13 +518,13 @@ const Pill = styled.button<{ $active?: boolean }>`
   cursor: pointer;
   font-size: 12.5px;
   border: 1px solid ${props => (props.$active ? BRAND.red : Color.border.medium)};
-  background: ${props => (props.$active ? BRAND.red : '#fff')};
-  color: ${props => (props.$active ? '#fff' : Color.text.secondary)};
+  background: ${props => (props.$active ? BRAND.red : Color.text.inverse)};
+  color: ${props => (props.$active ? Color.text.inverse : Color.text.secondary)};
   transition: all 0.15s;
 
   &:hover {
     border-color: ${BRAND.red};
-    color: ${props => (props.$active ? '#fff' : BRAND.red)};
+    color: ${props => (props.$active ? Color.text.inverse : BRAND.red)};
   }
 `
 
@@ -532,7 +533,7 @@ const OrderItem = styled.div`
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border: 1px solid #eee;
+  border: 1px solid ${Color.border.light};
   border-radius: 12px;
   margin-bottom: 10px;
   cursor: pointer;
@@ -610,7 +611,7 @@ const BrowseGrid = styled.div`
 `
 
 const BrowseItem = styled.div`
-  border: 1px solid #eee;
+  border: 1px solid ${Color.border.light};
   border-radius: 12px;
   overflow: hidden;
   transition: all 0.15s;
@@ -623,7 +624,7 @@ const BrowseItem = styled.div`
 const ItemImg = styled.div`
   width: 100%;
   height: 120px;
-  background: #eee;
+  background: ${Color.bg.sunken};
 `
 
 const ItemName = styled.div`
@@ -651,10 +652,10 @@ const CouponGrid = styled.div`
 
 const CouponItem = styled.div`
   position: relative;
-  border: 1px solid #eee;
+  border: 1px solid ${Color.border.light};
   border-radius: 12px;
   padding: 16px 16px 16px 22px;
-  background: #fff;
+  background: ${Color.bg.card};
   overflow: hidden;
 
   &::before {
@@ -717,7 +718,7 @@ const SupportDesc = styled.div`
 `
 
 const LoginPrompt = styled.div`
-  background: #fff;
+  background: ${Color.bg.card};
   border-radius: ${Radius.md}px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
   padding: 5vh 5vw;
@@ -727,13 +728,13 @@ const LoginPrompt = styled.div`
 const LoginTitle = styled.h2`
   font-size: 1.5rem;
   font-weight: bold;
-  color: #111;
+  color: ${Color.text.primary};
   margin-bottom: 2vh;
 `
 
 const LoginDesc = styled.p`
   font-size: 1rem;
-  color: #666;
+  color: ${Color.text.body};
   margin-bottom: 3vh;
 `
 
@@ -746,6 +747,7 @@ type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'ad
 export default function Profile() {
   const { t } = useTranslation()
   const { user, logout, refreshUser } = useUser()
+  const { format } = useCurrency()
   const navigate = useNavigate()
 
   const [activeTab, setActiveTab] = useState<ProfileTab>('orders')
@@ -958,7 +960,7 @@ export default function Profile() {
               <OrderItemMeta>{new Date(order.created_at).toLocaleDateString()}</OrderItemMeta>
             </OrderItemLeft>
             <OrderItemRight>
-              <OrderItemAmount>${Number(order.total_amount).toFixed(2)}</OrderItemAmount>
+              <OrderItemAmount>{format(Number(order.total_amount))}</OrderItemAmount>
               <OrderItemProducts>
                 <span>{order.item_count} {order.item_count === 1 ? 'item' : 'items'}</span>
                 {order.payment_status && (
@@ -1004,7 +1006,7 @@ export default function Profile() {
             <BrowseItem key={index}>
               <ItemImg />
               <ItemName>{item.name}</ItemName>
-              <ItemPrice>${item.price?.toFixed(2)}</ItemPrice>
+              <ItemPrice>{item.price ? format(Number(item.price)) : ''}</ItemPrice>
             </BrowseItem>
           ))}
         </BrowseGrid>
@@ -1124,7 +1126,7 @@ export default function Profile() {
                 </AddrName>
                 <div>{addr.phone}</div>
                 <div>{[addr.region, addr.city, addr.address_line].filter(Boolean).join(', ')}</div>
-                {addr.postal_code && <div style={{ color: '#aaa', fontSize: 12 }}>{addr.postal_code}</div>}
+                {addr.postal_code && <div style={{ color: Color.text.muted, fontSize: 12 }}>{addr.postal_code}</div>}
               </AddrInfo>
               <AddrActions>
                 {!addr.is_default && (

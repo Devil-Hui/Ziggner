@@ -2,13 +2,11 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 
 // 货币上下文：驱动顶部 "$ USD" 切换器与价格格式化。
 // 注意：汇率为静态占位（以 USD 为基准），并非实时汇率；接真实汇率需后端 /settings 端点。
-export type CurrencyCode = 'USD' | 'EUR' | 'GBP' | 'CNY' | 'JPY'
+export type CurrencyCode = 'USD' | 'EUR' | 'JPY'
 
 const SYMBOLS: Record<CurrencyCode, string> = {
   USD: '$',
   EUR: '€',
-  GBP: '£',
-  CNY: '¥',
   JPY: '¥',
 }
 
@@ -16,12 +14,10 @@ const SYMBOLS: Record<CurrencyCode, string> = {
 const RATES: Record<CurrencyCode, number> = {
   USD: 1,
   EUR: 0.92,
-  GBP: 0.79,
-  CNY: 7.25,
   JPY: 150,
 }
 
-export const CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'CNY', 'JPY']
+export const CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'JPY']
 
 interface CurrencyContextValue {
   currency: CurrencyCode

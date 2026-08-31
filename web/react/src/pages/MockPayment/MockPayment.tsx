@@ -109,7 +109,7 @@ const Result = styled.p<{ $error?: boolean }>`
   margin: ${Spacing.xl}px 0 0;
   padding: ${Spacing.md}px ${Spacing.lg}px;
   border-radius: ${Radius.sm}px;
-  background: ${({ $error }) => $error ? '#fef2f2' : '#f0fdf4'};
+  background: ${({ $error }) => $error ? `${Color.status.error}14` : Color.posSoft};
   color: ${({ $error }) => $error ? Color.status.error : Color.status.success};
   line-height: 1.5;
 `

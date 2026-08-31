@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import Button from '../../components/common/Button/Button'
 import { useUser } from '../../store/UserContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { useTranslation } from '../../i18n'
 import { Color, Radius, Shadow, Spacing } from '../../theme/tokens'
 import { useHoneypot } from '../../components/common/Honeypot'
@@ -66,18 +67,18 @@ const ConvItem = styled.div<{ $active?: boolean }>`
   padding: 14px 16px;
   border-bottom: 1px solid ${Color.border.light};
   cursor: pointer;
-  background: ${props => props.$active ? '#f5f5f5' : 'transparent'};
+  background: ${props => props.$active ? Color.bg.sunken : 'transparent'};
   transition: background 0.15s;
 
   &:hover {
-    background: #f9f9f9;
+    background: ${Color.bg.sunken};
   }
 `
 
 const ConvSubject = styled.div`
   font-size: 14px;
   font-weight: 500;
-  color: #222;
+  color: ${Color.text.primary};
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
@@ -86,7 +87,7 @@ const ConvSubject = styled.div`
 
 const ConvLastMsg = styled.div`
   font-size: 12px;
-  color: #999;
+  color: ${Color.text.muted};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -96,8 +97,8 @@ const ConvLastMsg = styled.div`
 `
 
 const ConvBadge = styled.span`
-  background: #ff4646;
-  color: #fff;
+  background: ${Color.status.error};
+  color: ${Color.text.inverse};
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 10px;
@@ -109,7 +110,7 @@ const StatusDot = styled.span<{ $status: string }>`
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: ${props => props.$status === 'open' ? '#4caf50' : '#999'};
+  background: ${props => props.$status === 'open' ? Color.status.success : Color.text.muted};
   display: inline-block;
 `
 
@@ -156,8 +157,8 @@ const MessageBubble = styled.div<{ $from: 'user' | 'admin' | 'system' }>`
     if (props.$from === 'system') {
       return `
         align-self: center;
-        background: #f0f0f0;
-        color: #999;
+        background: ${Color.primaryLight};
+        color: ${Color.text.muted};
         padding: 6px 16px;
         border-radius: 12px;
         font-size: 12px;
@@ -167,7 +168,7 @@ const MessageBubble = styled.div<{ $from: 'user' | 'admin' | 'system' }>`
       return `
         align-self: flex-end;
         background: ${Color.primaryHover};
-        color: #fff;
+        color: ${Color.text.inverse};
         padding: 10px 16px;
         border-radius: 16px 16px 4px 16px;
         font-size: 14px;
@@ -175,8 +176,8 @@ const MessageBubble = styled.div<{ $from: 'user' | 'admin' | 'system' }>`
     }
     return `
       align-self: flex-start;
-      background: #f0f0f0;
-      color: #333;
+      background: ${Color.primaryLight};
+      color: ${Color.text.body};
       padding: 10px 16px;
       border-radius: 16px 16px 16px 4px;
       font-size: 14px;
@@ -188,7 +189,7 @@ const MessageBubble = styled.div<{ $from: 'user' | 'admin' | 'system' }>`
 
 const MsgTime = styled.div<{ $from: 'user' | 'admin' }>`
   font-size: 11px;
-  color: #bbb;
+  color: ${Color.border.dark};
   margin-top: 4px;
   text-align: ${props => props.$from === 'user' ? 'right' : 'left'};
 `
@@ -218,7 +219,7 @@ const ProductCard = styled.div`
   display: flex;
   gap: 10px;
   padding: 8px;
-  background: #fff;
+  background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.sm}px;
   margin-top: 8px;
@@ -245,7 +246,7 @@ const ProductCardInfo = styled.div`
 const ProductCardName = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: ${Color.text.body};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -253,7 +254,7 @@ const ProductCardName = styled.div`
 
 const ProductCardPrice = styled.div`
   font-size: 14px;
-  color: #ff4646;
+  color: ${Color.brand};
   font-weight: 600;
   margin-top: 4px;
 `
@@ -301,15 +302,15 @@ const ToolBtn = styled.button`
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
-  color: #666;
+  color: ${Color.text.body};
   display: flex;
   align-items: center;
   gap: 4px;
   transition: all 0.15s;
 
   &:hover {
-    background: #f5f5f5;
-    color: #333;
+    background: ${Color.bg.sunken};
+    color: ${Color.text.body};
   }
 `
 
@@ -319,7 +320,7 @@ const HiddenInput = styled.input`
 
 const SendBtn = styled.button`
   background: ${Color.primaryHover};
-  color: #fff;
+  color: ${Color.text.inverse};
   border: none;
   border-radius: ${Radius.sm}px;
   padding: 10px 20px;
@@ -344,7 +345,7 @@ const EmptyState = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #999;
+  color: ${Color.text.muted};
   gap: 16px;
 `
 
@@ -408,7 +409,7 @@ const PreviewRemove = styled.span`
   width: 18px;
   height: 18px;
   background: rgba(0,0,0,0.5);
-  color: #fff;
+  color: ${Color.text.inverse};
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -421,7 +422,7 @@ const PreviewRemove = styled.span`
 const LoadingMore = styled.div`
   text-align: center;
   padding: 12px;
-  color: #999;
+  color: ${Color.text.muted};
   font-size: 13px;
 `
 
@@ -432,6 +433,7 @@ export default function Support() {
   const [searchParams] = useSearchParams()
   const { isLoggedIn } = useUser()
   const { t, lang } = useTranslation()
+  const { format } = useCurrency()
 
   const [conversations, setConversations] = useState<SupportConversationSummary[]>([])
   const [activeConv, setActiveConv] = useState<SupportConversation | null>(null)
@@ -679,7 +681,7 @@ export default function Support() {
         <ProductCardImg src={resolveMediaUrl(snapshot.main_image) || snapshot.main_image} alt={snapshot.name} />
         <ProductCardInfo>
           <ProductCardName>{snapshot.name}</ProductCardName>
-          <ProductCardPrice>${snapshot.price}</ProductCardPrice>
+          <ProductCardPrice>{format(Number(snapshot.price))}</ProductCardPrice>
         </ProductCardInfo>
       </ProductCard>
     )

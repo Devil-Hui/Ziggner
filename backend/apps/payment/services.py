@@ -8,6 +8,7 @@ from decimal import Decimal
 
 from django.conf import settings
 from django.db import transaction as db_transaction
+from django.db import IntegrityError
 from django.db.models import Sum
 
 from apps.order.models import Order, OrderStatus, PaymentStatus as OrderPaymentStatus
@@ -39,7 +40,7 @@ class PaymentService:
         payment = PaymentLog.objects.filter(
             user=user,
             payment_no=payment_no,
-            method=PaymentMethod.MOCK,
+            method='mock',
         ).first()
         if not payment:
             raise ValueError('PAYMENT_NOT_FOUND')
@@ -95,15 +96,25 @@ class PaymentService:
                 raise ValueError('ORDER_STATUS_INVALID')
 
             # 防重复：同一订单已有 pending 支付，直接返回
+            # 但超过 PENDING_TTL 的 pending 视为过期，允许重新发起（避免用户永远无法重试）
+            from django.utils import timezone
+            pending_ttl = getattr(settings, 'PAYMENT_PENDING_TTL_MINUTES', 15)
             existing = PaymentLog.objects.filter(
                 order=order, status=PaymentStatus.PENDING,
             ).first()
             if existing:
-                return {
-                    'payment_no': existing.payment_no,
-                    'pay_url': existing.gateway_data.get('pay_url'),
-                    'client_secret': existing.gateway_data.get('client_secret'),
-                }
+                is_expired = (
+                    timezone.now() - existing.created_at
+                ) > timezone.timedelta(minutes=pending_ttl)
+                if not is_expired:
+                    return {
+                        'payment_no': existing.payment_no,
+                        'pay_url': existing.gateway_data.get('pay_url'),
+                        'client_secret': existing.gateway_data.get('client_secret'),
+                    }
+                # 过期：标记为过期，允许重新发起
+                existing.status = PaymentStatus.CANCELLED
+                existing.save(update_fields=['status'])
 
             payment = PaymentLog.objects.create(
                 user=user, order=order,
@@ -201,13 +212,23 @@ class PaymentService:
                     )
                     raise ValueError('AMOUNT_MISMATCH')
 
-            PaymentEvent.objects.create(
-                gateway=gateway,
-                event_id=event_id,
-                event_type=event_type,
-                payment=payment,
-                payload=payload,
-            )
+            # 幂等落库：并发下两个相同 event_id 的请求可能同时通过 exists() 检查，
+            # 靠 PaymentEvent 的 (gateway, event_id) 唯一约束兜底。
+            # 捕获 IntegrityError 并返回 duplicate，避免 500。
+            try:
+                PaymentEvent.objects.create(
+                    gateway=gateway,
+                    event_id=event_id,
+                    event_type=event_type,
+                    payment=payment,
+                    payload=payload,
+                )
+            except IntegrityError:
+                logger.warning(
+                    f'[{gateway}] Duplicate event_id={event_id} (concurrent) '
+                    f'for payment {payment.payment_no}'
+                )
+                return {'status': 'duplicate', 'gateway_payment_id': gateway_payment_id}
 
             # 6. 更新状态
             payment.gateway_data = {**payment.gateway_data, 'webhook': payload}
@@ -229,7 +250,10 @@ class PaymentService:
                     )
                     late_refund_id = late_refund.pk
                 else:
-                    payment.order.pay(payment_method=payment.method)
+                    payment.order.pay(
+                        payment_method=payment.method,
+                        payment_no=payment.payment_no,
+                    )
             elif event_type == 'payment_failed':
                 payment.status = PaymentStatus.FAILED
                 payment.save()
@@ -269,6 +293,35 @@ class PaymentService:
                 'method': None, 'payment_no': None,
                 'amount': None, 'currency': None,
             }
+        # 待支付状态时主动向网关查询最新状态（兼容 Webhook 未配置/延迟场景），
+        # 确保"收款到账后再返回状态"。
+        # 节流：同一支付在 GATEWAY_QUERY_INTERVAL 秒内不重复查询网关，
+        # 避免用户高频轮询状态时频繁消耗网关 API 配额（防 DoS / 防网关限流）。
+        if payment.status == PaymentStatus.PENDING and payment.gateway_payment_id:
+            query_interval = getattr(settings, 'PAYMENT_GATEWAY_QUERY_INTERVAL', 30)
+            last_query = payment.gateway_data.get('last_status_query_at')
+            should_query = True
+            if last_query:
+                from django.utils import timezone
+                try:
+                    from datetime import datetime
+                    last_dt = datetime.fromisoformat(last_query)
+                    if (timezone.now() - last_dt).total_seconds() < query_interval:
+                        should_query = False
+                except (ValueError, TypeError):
+                    should_query = True
+            if should_query:
+                try:
+                    PaymentService._query_gateway_status(payment)
+                    payment.refresh_from_db()
+                    # 记录本次查询时间，用于节流
+                    payment.gateway_data = {
+                        **payment.gateway_data,
+                        'last_status_query_at': timezone.now().isoformat(),
+                    }
+                    payment.save(update_fields=['gateway_data'])
+                except Exception:
+                    logger.exception(f'get_status: gateway query failed for {payment.payment_no}')
         return {
             'paid': payment.status == PaymentStatus.SUCCESS,
             'status': payment.status,
@@ -520,7 +573,16 @@ class PaymentService:
 
     @staticmethod
     def reconcile_unknown_refunds(batch_size: int = 20) -> int:
+        """对账 UNKNOWN 退款。
+
+        防死循环：UNKNOWN 退款若网关持续异常，会无限次被重试（每 5 分钟一次），
+        无限消耗网关 API 配额。因此用 reconcile_attempts 计数，超过
+        REFUND_RECONCILIATION_MAX_ATTEMPTS（默认 5 次）后标记为 FAILED 停止重试。
+        """
         batch_size = max(1, min(int(batch_size), 100))
+        max_attempts = getattr(
+            settings, 'REFUND_RECONCILIATION_MAX_ATTEMPTS', 5,
+        )
         refund_ids = list(
             RefundLog.objects.filter(status=RefundStatus.UNKNOWN)
             .order_by('created_at')
@@ -529,6 +591,18 @@ class PaymentService:
         finalized = 0
         for refund_id in refund_ids:
             refund = RefundLog.objects.select_related('payment').get(pk=refund_id)
+            # 超过重试上限：强制标记 FAILED，避免无限重试
+            if refund.reconcile_attempts >= max_attempts:
+                logger.error(
+                    'Refund %s exceeded %d reconciliation attempts, marking FAILED',
+                    refund.refund_no, max_attempts,
+                )
+                PaymentService._finalize_refund(
+                    refund.pk, RefundStatus.FAILED,
+                    {'error': 'RECONCILIATION_MAX_ATTEMPTS_EXCEEDED'},
+                )
+                finalized += 1
+                continue
             try:
                 gateway = PaymentGatewayFactory.get_gateway(refund.payment.method)
                 gateway_result = gateway.query_refund(
@@ -537,6 +611,10 @@ class PaymentService:
                 )
             except Exception:
                 logger.exception('Refund reconciliation query failed: %s', refund.refund_no)
+                # 查询失败：计数 +1，下次再试（有上限保护）
+                RefundLog.objects.filter(pk=refund.pk).update(
+                    reconcile_attempts=refund.reconcile_attempts + 1,
+                )
                 continue
 
             query_status = (
@@ -556,7 +634,7 @@ class PaymentService:
                 except GatewayRefundRejectedError as exc:
                     gateway_result = {'status': 'failed', 'error': str(exc)}
                 except Exception as exc:
-                    logger.exception('Refund reconciliation replay failed: %s', refund.refund_no)
+                    logger.error('Refund reconciliation replay failed: %s', refund.refund_no)
                     gateway_result = {'status': 'unknown', 'error': str(exc)}
 
             if not isinstance(gateway_result, dict):
@@ -568,6 +646,11 @@ class PaymentService:
             PaymentService._finalize_refund(refund.pk, status, gateway_result)
             if status in (RefundStatus.SUCCEEDED, RefundStatus.FAILED):
                 finalized += 1
+            elif status == RefundStatus.UNKNOWN:
+                # 仍未知：计入重试次数，下次调度再试（有上限保护）
+                RefundLog.objects.filter(pk=refund.pk).update(
+                    reconcile_attempts=refund.reconcile_attempts + 1,
+                )
         return finalized
 
     # ==================== 补偿任务 ====================
@@ -577,9 +660,18 @@ class PaymentService:
         """
         轮询超过 N 分钟仍未完成的支付，向网关查询最新状态。
         用于 webhook 丢失/延迟的补偿。由 Celery Beat 定时调用。
+
+        防死循环：超过 PAYMENT_MAX_PENDING_MINUTES（默认 24 小时）仍未完成的
+        pending 支付视为用户放弃，直接标记为 CANCELLED，避免无限轮询网关。
         """
         from django.utils import timezone
         cutoff = timezone.now() - timezone.timedelta(minutes=15)
+        max_pending_minutes = getattr(
+            settings, 'PAYMENT_MAX_PENDING_MINUTES', 24 * 60,
+        )
+        abandon_cutoff = timezone.now() - timezone.timedelta(
+            minutes=max_pending_minutes,
+        )
 
         pending = PaymentLog.objects.filter(
             status=PaymentStatus.PENDING,
@@ -587,6 +679,15 @@ class PaymentService:
         ).exclude(gateway_payment_id='')
 
         for payment in pending:
+            # 超过最大待支付时长：视为用户放弃，标记取消，不再轮询
+            if payment.created_at < abandon_cutoff:
+                payment.status = PaymentStatus.CANCELLED
+                payment.save(update_fields=['status'])
+                logger.info(
+                    'Payment %s abandoned (pending > %d min), cancelled',
+                    payment.payment_no, max_pending_minutes,
+                )
+                continue
             try:
                 PaymentService._query_gateway_status(payment)
             except Exception:
@@ -596,16 +697,42 @@ class PaymentService:
 
     @staticmethod
     def _query_gateway_status(payment):
-        """向网关查询支付状态并同步"""
+        """向网关查询支付状态并同步。
+
+        安全说明：主动轮询虽然走官方 API（已由网关侧签名/鉴权保证真实性），
+        但作为纵深防御，仍对网关返回的金额与币种做二次校验，
+        防止网关数据被篡改或返回异常值导致订单被错误标记为已支付。
+        """
         try:
             gateway = PaymentGatewayFactory.get_gateway(payment.method)
         except ValueError:
             return
         result = gateway.retrieve_payment(payment.gateway_payment_id)
         if result.get('status') == 'succeeded':
+            # 金额/币种二次校验：与订单应付金额不一致则拒绝标记为已支付
+            gateway_amount = result.get('amount')
+            gateway_currency = (result.get('currency') or '').upper()
+            if gateway_amount is not None and gateway_currency:
+                if gateway_currency != payment.currency.upper():
+                    logger.error(
+                        f'[{payment.method}] Sync currency mismatch: '
+                        f'gateway={gateway_currency}, order={payment.currency} '
+                        f'payment_no={payment.payment_no}'
+                    )
+                    return
+                if abs(float(gateway_amount) - float(payment.amount)) > 0.01:
+                    logger.error(
+                        f'[{payment.method}] Sync amount mismatch: '
+                        f'gateway={gateway_amount}, order={payment.amount} '
+                        f'payment_no={payment.payment_no}'
+                    )
+                    return
             payment.status = PaymentStatus.SUCCESS
             payment.save()
-            payment.order.pay(payment_method=payment.method)
+            payment.order.pay(
+                payment_method=payment.method,
+                payment_no=payment.payment_no,
+            )
         elif result.get('status') in ('cancelled', 'failed'):
             payment.status = PaymentStatus.FAILED
             payment.save()

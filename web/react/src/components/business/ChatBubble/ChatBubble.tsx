@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens'
+import { useCurrency } from '../../../store/CurrencyContext'
 import ProductCard from './ProductCard'
 import type { ProductCardData } from './ProductCard'
 import { resolveMediaUrl } from '../../../api/chat'
@@ -101,9 +102,9 @@ const Bubble = styled.div<{ $isMine: boolean }>`
   padding: 10px 16px;
   border-radius: ${props => props.$isMine ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
   /* 微信风格：自己发的绿色白字，对方白底深字 + 浅边框阴影，背景色强区分 */
-  background: ${props => props.$isMine ? '#07c160' : '#ffffff'};
-  color: ${props => props.$isMine ? '#ffffff' : '#1f1f1f'};
-  border: ${props => props.$isMine ? 'none' : '1px solid #e6e6e6'};
+  background: ${props => props.$isMine ? '#07c160' : Color.bg.card};
+  color: ${props => props.$isMine ? Color.text.inverse : Color.text.primary};
+  border: ${props => props.$isMine ? 'none' : `1px solid ${Color.border.light}`};
   box-shadow: ${props => props.$isMine ? '0 1px 2px rgba(7,193,96,0.25)' : '0 1px 2px rgba(0,0,0,0.05)'};
   font-size: ${FontSize.base}px;
   line-height: 1.5;
@@ -115,8 +116,8 @@ const SystemBubble = styled.div`
   align-self: center;
   max-width: 80%;
   padding: 6px 16px;
-  background: #f0f0f0;
-  color: #999;
+  background: ${Color.primaryLight};
+  color: ${Color.text.muted};
   border-radius: 12px;
   font-size: ${FontSize.xs}px;
   text-align: center;
@@ -133,18 +134,18 @@ const TimeRow = styled.div<{ $isMine: boolean }>`
 
 const TimeText = styled.span`
   font-size: 11px;
-  color: #bbb;
+  color: ${Color.border.dark};
 `
 
 const ReadStatus = styled.span`
-  color: #1a56db;
+  color: ${Color.blue};
   font-size: 12px;
   letter-spacing: -1px;
 `
 
 const ReceiptText = styled.span<{ $state: 'sending' | 'sent' | 'read' }>`
   font-size: 11px;
-  color: ${props => (props.$state === 'read' ? '#1a56db' : '#bbb')};
+  color: ${props => (props.$state === 'read' ? Color.blue : Color.border.dark)};
   margin-left: 2px;
 `
 
@@ -181,7 +182,7 @@ const ProductCardWrap = styled.div<{ $isMine: boolean }>`
   transition: border-color 0.15s;
 
   &:hover {
-    border-color: ${props => props.$isMine ? 'rgba(255,255,255,0.6)' : '#e74c3c'};
+    border-color: ${props => props.$isMine ? 'rgba(255,255,255,0.6)' : Color.brand};
   }
 `
 
@@ -205,7 +206,7 @@ const ProductCardInfo = styled.div`
 const ProductCardName = styled.div<{ $isMine: boolean }>`
   font-size: 13px;
   font-weight: 500;
-  color: ${props => props.$isMine ? 'rgba(255,255,255,0.9)' : '#333'};
+  color: ${props => props.$isMine ? 'rgba(255,255,255,0.9)' : Color.text.primary};
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -213,13 +214,13 @@ const ProductCardName = styled.div<{ $isMine: boolean }>`
 
 const ProductCardPrice = styled.div<{ $isMine: boolean }>`
   font-size: 14px;
-  color: ${props => props.$isMine ? '#ffd700' : '#e74c3c'};
+  color: ${props => props.$isMine ? '#ffd700' : Color.brand};
   font-weight: 600;
 `
 
 const ProductCardLink = styled.div<{ $isMine: boolean }>`
   font-size: 11px;
-  color: ${props => props.$isMine ? 'rgba(255,255,255,0.5)' : '#999'};
+  color: ${props => props.$isMine ? 'rgba(255,255,255,0.5)' : Color.text.muted};
 `
 
 // ── Cart Share ──
@@ -237,7 +238,7 @@ const CartShareHeader = styled.div<{ $isMine: boolean }>`
   padding: 8px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: ${props => props.$isMine ? 'rgba(255,255,255,0.9)' : '#333'};
+  color: ${props => props.$isMine ? 'rgba(255,255,255,0.9)' : Color.text.primary};
   border-bottom: 1px solid ${props => props.$isMine ? 'rgba(255,255,255,0.15)' : Color.border.light};
 `
 
@@ -255,16 +256,16 @@ const CartShareItem = styled.div<{ $isMine: boolean }>`
 `
 
 const CartItemSpec = styled.span<{ $isMine: boolean }>`
-  color: ${props => props.$isMine ? 'rgba(255,255,255,0.8)' : '#666'};
+  color: ${props => props.$isMine ? 'rgba(255,255,255,0.8)' : Color.text.body};
 `
 
 const CartItemQty = styled.span<{ $isMine: boolean }>`
-  color: ${props => props.$isMine ? 'rgba(255,255,255,0.5)' : '#999'};
+  color: ${props => props.$isMine ? 'rgba(255,255,255,0.5)' : Color.text.muted};
   margin-left: 6px;
 `
 
 const CartItemPrice = styled.span<{ $isMine: boolean }>`
-  color: ${props => props.$isMine ? '#ffd700' : '#e74c3c'};
+  color: ${props => props.$isMine ? '#ffd700' : Color.brand};
   font-weight: 500;
 `
 
@@ -278,10 +279,10 @@ const TypingBubble = styled.div`
   padding: 10px 16px;
   margin-bottom: ${Spacing.md}px;
   margin-left: ${Spacing.lg}px;
-  background: #f0f0f0;
+  background: ${Color.primaryLight};
   border-radius: 16px 16px 16px 4px;
   font-size: ${FontSize.xs}px;
-  color: #999;
+  color: ${Color.text.muted};
 `
 
 const TypingDots = styled.span`
@@ -293,7 +294,7 @@ const TypingDots = styled.span`
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #bbb;
+    background: ${Color.border.dark};
     animation: typingBounce 1.4s infinite ease-in-out both;
   }
   span:nth-child(1) { animation-delay: 0s; }
@@ -320,6 +321,7 @@ export default function ChatBubble({
   onProductClick,
   receipt,
 }: ChatBubbleProps) {
+  const { format } = useCurrency()
   const [previewSrc, setPreviewSrc] = useState<string | null>(null)
 
   const renderContent = () => {
@@ -373,7 +375,7 @@ export default function ChatBubble({
                 />
                 <ProductCardInfo>
                   <ProductCardName $isMine={isMine}>{productSnapshot.name}</ProductCardName>
-                  <ProductCardPrice $isMine={isMine}>${productSnapshot.price}</ProductCardPrice>
+                  <ProductCardPrice $isMine={isMine}>{format(Number(productSnapshot.price))}</ProductCardPrice>
                   <ProductCardLink $isMine={isMine}>
                     {isMine ? '点击查看详情' : '点击查看商品'}
                   </ProductCardLink>
@@ -413,7 +415,7 @@ export default function ChatBubble({
                       <CartItemSpec $isMine={isMine}>{item.spec}</CartItemSpec>
                       <CartItemQty $isMine={isMine}>x{item.quantity}</CartItemQty>
                     </span>
-                    <CartItemPrice $isMine={isMine}>${item.unit_price}</CartItemPrice>
+                    <CartItemPrice $isMine={isMine}>{format(Number(item.unit_price))}</CartItemPrice>
                   </CartShareItem>
                 ))}
               </CartShareWrap>

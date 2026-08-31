@@ -4,6 +4,7 @@ import Input from '../../components/common/Input/Input'
 import Button from '../../components/common/Button/Button'
 import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
 import { useUser } from '../../store/UserContext'
+import { Color } from '../../theme/tokens'
 import { useNavigate, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
 import { post, ensureCSRFCookie } from '../../api/request'
@@ -34,15 +35,15 @@ const CodeRow = styled.div`
 
 const CodeBtn = styled.button`
   padding: 0 14px;
-  border: 1px solid #000;
-  background: #fff;
+  border: 1px solid ${Color.text.primary};
+  background: ${Color.bg.card};
   border-radius: 4px;
   font-size: 0.85rem;
   cursor: pointer;
   white-space: nowrap;
 
   &:hover {
-    background: #f5f5f5;
+    background: ${Color.bg.sunken};
   }
 `
 
@@ -52,7 +53,7 @@ const TermsRow = styled.div`
   gap: 8px;
   margin-bottom: 24px;
   font-size: 14px;
-  color: #666;
+  color: ${Color.text.body};
   cursor: default;
 
   input[type='checkbox'] {
@@ -61,11 +62,11 @@ const TermsRow = styled.div`
     width: 16px;
     height: 16px;
     cursor: pointer;
-    accent-color: #000;
+    accent-color: ${Color.text.primary};
   }
 
   a {
-    color: #000;
+    color: ${Color.text.primary};
     text-decoration: none;
     &:hover {
       text-decoration: underline;
@@ -74,7 +75,7 @@ const TermsRow = styled.div`
 `
 
 const ErrorMsg = styled.p`
-  color: #e74c3c;
+  color: ${Color.status.error};
   font-size: 0.85rem;
   text-align: center;
 `

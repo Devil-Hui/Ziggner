@@ -16,13 +16,13 @@ const Fab = styled.button<{ $hidden: boolean }>`
   height: 56px;
   border-radius: 50%;
   border: none;
-  background: linear-gradient(135deg, #1a56db, #1e40af);
-  color: #fff;
+  background: linear-gradient(135deg, ${Color.primary}, ${Color.primaryHover});
+  color: ${Color.text.inverse};
   display: ${p => (p.$hidden ? 'none' : 'flex')};
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(26, 86, 219, 0.35);
+  box-shadow: 0 8px 24px rgba(14, 16, 19, 0.35);
   z-index: 999;
   transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s;
 

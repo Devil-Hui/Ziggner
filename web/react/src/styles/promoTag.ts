@@ -1,11 +1,13 @@
 import { css } from 'styled-components'
 
 // ── 颜色常量 ──
+// 对齐 like 色板：主标签墨黑（ink）、副标签品牌红（brand），
+// 去掉原先的天蓝 + 黄，与全局主色/强调色同源。
 export const PROMO_COLORS = {
-  primary: '#4FC3F7',   // 天蓝色
-  secondary: '#FDD835', // 黄色
+  primary: '#0e1013',   // 墨黑（主色）
+  secondary: '#fe2c55', // 品牌红（强调）
   text: '#fff',
-  textSecondary: '#333',
+  textSecondary: '#fff',
 } as const
 
 export type PromoTagType = 'primary' | 'secondary'

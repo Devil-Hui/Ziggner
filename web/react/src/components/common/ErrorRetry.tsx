@@ -14,7 +14,7 @@ const Icon = styled.div`
   width: 64px;
   height: 64px;
   border-radius: ${Radius.full};
-  background: #fde8e8;
+  background: ${Color.status.error}14;
   display: flex;
   align-items: center;
   justify-content: center;

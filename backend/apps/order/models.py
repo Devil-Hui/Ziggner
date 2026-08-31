@@ -44,9 +44,6 @@ class PaymentStatus(models.TextChoices):
 
 
 class PaymentMethod(models.TextChoices):
-    ALIPAY = 'alipay', 'Alipay'
-    WECHAT = 'wechat', 'WeChat Pay'
-    CARD = 'card', 'Bank Card'
     PAYPAL = 'paypal', 'PayPal'
     STRIPE = 'stripe', 'Credit/Debit Card (Stripe)'
 

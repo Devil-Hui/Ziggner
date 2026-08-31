@@ -35,7 +35,7 @@ const BackButton = styled.button`
 const PageTitle = styled.h1`
   font-size: 2rem;
   font-weight: 700;
-  color: #111;
+  color: ${Color.text.primary};
   margin-bottom: 32px;
   padding-bottom: 16px;
   border-bottom: 2px solid ${Color.border.light};
@@ -59,13 +59,13 @@ const Paragraph = styled.p`
 `
 
 const StyledAnchor = styled.a`
-  color: #1a73e8;
+  color: ${Color.blue};
   text-decoration: none;
   font-size: 1rem;
   transition: color ${Transition.normal};
 
   &:hover {
-    color: #1557b0;
+    color: ${Color.primary};
     text-decoration: underline;
   }
 `

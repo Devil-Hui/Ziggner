@@ -96,6 +96,8 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/2
       DJANGO_SECRET_KEY: test-only-secret-key-not-for-production
       ENABLE_MOCK_PAYMENT: "true"
+      # Mock 支付独立签名密钥（测试环境，绝不回退 SECRET_KEY）
+      MOCK_PAYMENT_SECRET: test-only-mock-payment-secret-not-for-production
       FILE_STORAGE: ${FILE_STORAGE:-local}
       # R2 本地模拟（可选）
       R2_ENDPOINT: ${R2_ENDPOINT:-http://r2:4569}

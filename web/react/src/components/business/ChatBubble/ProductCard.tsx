@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens'
+import { useCurrency } from '../../../store/CurrencyContext'
 import { resolveMediaUrl } from '../../../api/chat'
 
 // ── Types ──
@@ -33,19 +34,19 @@ export interface ProductCardProps {
 // ── Status config ──
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  not_ordered:       { label: '未下单', bg: '#f3f4f6', color: '#999' },
-  pending_pay:       { label: '待付款', bg: '#fff7ed', color: '#f59e0b' },
-  pending_payment:   { label: '待付款', bg: '#fff7ed', color: '#f59e0b' },
-  paid:              { label: '已付款', bg: '#eff6ff', color: '#2563eb' },
-  shipped:           { label: '已发货', bg: '#ecfdf5', color: '#059669' },
-  delivered:         { label: '已签收', bg: '#ecfeff', color: '#0891b2' },
-  received:          { label: '已签收', bg: '#ecfeff', color: '#0891b2' },
-  completed:         { label: '已完成', bg: '#ecfdf5', color: '#047857' },
-  cancelled:         { label: '已取消', bg: '#f3f4f6', color: '#9ca3af' },
-  refunding:         { label: '退款中', bg: '#fef2f2', color: '#e74c3c' },
+  not_ordered:       { label: '未下单', bg: Color.bg.sunken, color: Color.text.muted },
+  pending_pay:       { label: '待付款', bg: `${Color.status.warning}1a`, color: Color.status.warning },
+  pending_payment:   { label: '待付款', bg: `${Color.status.warning}1a`, color: Color.status.warning },
+  paid:              { label: '已付款', bg: Color.blueSoft, color: Color.blue },
+  shipped:           { label: '已发货', bg: Color.posSoft, color: Color.pos },
+  delivered:         { label: '已签收', bg: Color.posSoft, color: Color.pos },
+  received:          { label: '已签收', bg: Color.posSoft, color: Color.pos },
+  completed:         { label: '已完成', bg: Color.posSoft, color: Color.pos },
+  cancelled:         { label: '已取消', bg: Color.bg.sunken, color: Color.text.muted },
+  refunding:         { label: '退款中', bg: `${Color.status.error}14`, color: Color.status.error },
 }
 
-const DEFAULT_STATUS = { label: '订单', bg: '#f3f4f6', color: '#666' }
+const DEFAULT_STATUS = { label: '订单', bg: Color.bg.sunken, color: Color.text.body }
 
 // ── Animations ──
 
@@ -59,7 +60,7 @@ const shimmer = keyframes`
 const Card = styled.div`
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
   overflow: hidden;
@@ -80,7 +81,7 @@ const Thumb = styled.div`
   border-radius: ${Radius.sm}px;
   overflow: hidden;
   flex-shrink: 0;
-  background: #f5f5f5;
+  background: ${Color.primaryLight};
   display: flex;
   align-items: center;
   justify-content: center;
@@ -99,7 +100,7 @@ const BrokenImgPlaceholder = styled.div`
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: #ccc;
+  color: ${Color.border.dark};
   font-size: 11px;
   gap: 4px;
 
@@ -117,7 +118,7 @@ const Info = styled.div`
 const Name = styled.div`
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: ${Color.text.primary};
   line-height: 1.4;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -133,13 +134,13 @@ const PriceRow = styled.div`
 
 const PriceSymbol = styled.span`
   font-size: 12px;
-  color: #e74c3c;
+  color: ${Color.brand};
   font-weight: 600;
 `
 
 const PriceValue = styled.span`
   font-size: 16px;
-  color: #e74c3c;
+  color: ${Color.brand};
   font-weight: 700;
   line-height: 1;
 `
@@ -168,12 +169,12 @@ const ActionBtn = styled.button<{ $primary?: boolean }>`
   cursor: pointer;
   border: none;
   background: transparent;
-  color: ${p => p.$primary ? '#e74c3c' : '#666'};
+  color: ${p => p.$primary ? Color.brand : Color.text.body};
   transition: background 0.15s;
   position: relative;
 
   &:hover {
-    background: ${p => p.$primary ? '#fef2f2' : '#f5f5f5'};
+    background: ${p => p.$primary ? `${Color.brand}14` : Color.bg.sunken};
   }
 
   &:first-child::after {
@@ -191,7 +192,7 @@ const ActionBtn = styled.button<{ $primary?: boolean }>`
 // ── Skeleton ──
 
 const SkeletonBlock = styled.div`
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, ${Color.primaryLight} 25%, ${Color.border.light} 50%, ${Color.primaryLight} 75%);
   background-size: 200% 100%;
   animation: ${shimmer} 1.5s infinite;
   border-radius: 4px;
@@ -218,8 +219,8 @@ const SkeletonCard = () => (
       </Info>
     </Body>
     <Actions>
-      <ActionBtn disabled style={{ color: '#ccc' }}>查看商品</ActionBtn>
-      <ActionBtn disabled style={{ color: '#ccc' }}>查看订单</ActionBtn>
+      <ActionBtn disabled style={{ color: Color.border.dark }}>查看商品</ActionBtn>
+      <ActionBtn disabled style={{ color: Color.border.dark }}>查看订单</ActionBtn>
     </Actions>
   </Card>
 )
@@ -231,7 +232,7 @@ const BrokenImageIcon = () => (
     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
     <circle cx="8.5" cy="8.5" r="1.5" />
     <polyline points="21 15 16 10 5 21" />
-    <line x1="3" y1="3" x2="21" y2="21" stroke="#e74c3c" strokeWidth="1.5" />
+    <line x1="3" y1="3" x2="21" y2="21" stroke={Color.status.error} strokeWidth="1.5" />
   </svg>
 )
 
@@ -239,6 +240,7 @@ const BrokenImageIcon = () => (
 
 export default function ProductCard({ product, loading = false, imageError = false }: ProductCardProps) {
   const navigate = useNavigate()
+  const { format } = useCurrency()
   const statusCfg = product.order_status ? (STATUS_CONFIG[product.order_status] ?? DEFAULT_STATUS) : null
   const [imgErr, setImgErr] = useState(false)
 
@@ -267,8 +269,7 @@ export default function ProductCard({ product, loading = false, imageError = fal
         <Info>
           <Name>{product.name}</Name>
           <PriceRow>
-            <PriceSymbol>$</PriceSymbol>
-            <PriceValue>{product.price}</PriceValue>
+            <PriceValue>{format(Number(product.price))}</PriceValue>
             {statusCfg && (
               <StatusTag $bg={statusCfg.bg} $color={statusCfg.color}>
                 {statusCfg.label}

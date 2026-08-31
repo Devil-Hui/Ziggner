@@ -6,6 +6,7 @@ import Button from '../../components/common/Button/Button'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import { useTranslation } from '../../i18n'
 import { useUser } from '../../store/UserContext'
+import { Color } from '../../theme/tokens'
 
 type ShareCoupon = PublicCoupon & {
   promo_code?: string
@@ -92,18 +93,18 @@ export default function CouponShare() {
 
   return (
     <PageLayout>
-      <main style={{ minHeight: 'calc(100vh - 72px)', display: 'grid', placeItems: 'center', padding: '32px 20px', background: '#f5f5f2' }}>
-        <section aria-busy={loading} style={{ width: 'min(100%, 560px)', padding: 32, border: '1px solid #deded8', borderRadius: 8, background: '#fff' }}>
-          <p style={{ margin: '0 0 12px', color: '#555', fontSize: 13 }}>
+      <main style={{ minHeight: 'calc(100vh - 72px)', display: 'grid', placeItems: 'center', padding: '32px 20px', background: Color.bg.page }}>
+        <section aria-busy={loading} style={{ width: 'min(100%, 560px)', padding: 32, border: `1px solid ${Color.border.light}`, borderRadius: 8, background: Color.bg.card }}>
+          <p style={{ margin: '0 0 12px', color: Color.text.body, fontSize: 13 }}>
             {promoMode && coupon?.promo_name
               ? t('store.coupons.promoEyebrow').replace('{name}', coupon.promo_name)
               : t('store.coupons.shareEyebrow')}
           </p>
           <h1 style={{ margin: '0 0 12px', fontSize: 32, letterSpacing: 0 }}>{coupon?.name || coupon?.code || t('store.coupons.shareTitle')}</h1>
           {promoMode && coupon?.promo_note && (
-            <p style={{ margin: '0 0 16px', color: '#666', fontSize: 14 }}>{coupon.promo_note}</p>
+            <p style={{ margin: '0 0 16px', color: Color.text.body, fontSize: 14 }}>{coupon.promo_note}</p>
           )}
-          {coupon && <p style={{ margin: '0 0 20px', color: '#1248d8', fontSize: 28, fontWeight: 700 }}>{discountText}</p>}
+          {coupon && <p style={{ margin: '0 0 20px', color: Color.blue, fontSize: 28, fontWeight: 700 }}>{discountText}</p>}
           {coupon && (
             <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '10px 20px', margin: '0 0 28px' }}>
               <dt>{t('store.coupons.minSpend')}</dt><dd style={{ margin: 0, textAlign: 'right' }}>{coupon.min_amount} $</dd>
@@ -112,8 +113,8 @@ export default function CouponShare() {
             </dl>
           )}
           {loading && <p>{t('common.loading')}</p>}
-          {message && <p style={{ color: '#23653a' }}>{message}</p>}
-          {error && <p style={{ color: '#b42318' }}>{error}</p>}
+          {message && <p style={{ color: Color.status.success }}>{message}</p>}
+          {error && <p style={{ color: Color.status.error }}>{error}</p>}
           {coupon && (
             <Button type="button" variant="primary" size="lg" disabled={!coupon.claimable || claiming || Boolean(message)} onClick={claim}>
               {claiming ? t('store.coupons.claiming') : t('store.coupons.claimNow')}

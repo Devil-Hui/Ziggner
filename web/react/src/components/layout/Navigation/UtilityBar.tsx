@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Color, FontSize } from '../../../theme/tokens'
+import { Color, FontSize, Shadow } from '../../../theme/tokens'
 import { useTranslation } from '../../../i18n'
 import { useUser } from '../../../store/UserContext'
 import { useCurrency, CURRENCIES } from '../../../store/CurrencyContext'
@@ -60,15 +60,20 @@ const DropWrap = styled.div`
 const Menu = styled.div<{ $show: boolean }>`
   display: ${({ $show }) => ($show ? 'block' : 'none')};
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 8px);
   right: 0;
-  background: #fff;
+  background: ${Color.bg.card};
   border: 1px solid ${Color.border.light};
-  border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-  min-width: 140px;
-  padding: 6px 0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 150px;
+  padding: 6px;
   z-index: 1200;
+  animation: menuIn 0.18s ease;
+  @keyframes menuIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `
 
 const MenuItem = styled.button<{ $active?: boolean }>`
@@ -78,16 +83,19 @@ const MenuItem = styled.button<{ $active?: boolean }>`
   width: 100%;
   background: none;
   border: none;
-  padding: 8px 14px;
+  padding: 9px 12px;
+  border-radius: 7px;
   font-size: ${FontSize.sm}px;
   color: ${({ $active }) => ($active ? Color.text.primary : Color.text.body)};
   font-weight: ${({ $active }) => ($active ? 700 : 400)};
   cursor: pointer;
   text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
   &:hover { background: ${Color.bg.page}; }
+  ${({ $active }) => $active && `background: ${Color.primaryLight};`}
 `
 
-const SYMBOL: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', CNY: '¥', JPY: '¥' }
+const SYMBOL: Record<string, string> = { USD: '$', EUR: '€', JPY: '¥' }
 
 export default function UtilityBar() {
   const { t } = useTranslation()
@@ -128,8 +136,6 @@ export default function UtilityBar() {
 
         <Right>
           <LinkBtn onClick={() => navigate('/profile')}>{t('store.nav.ordersReturns')}</LinkBtn>
-          <Divider>|</Divider>
-          <LinkBtn onClick={() => navigate('/download')}>{t('store.nav.downloadApp')}</LinkBtn>
           <Divider>|</Divider>
           <LinkBtn onClick={() => navigate('/support')}>{t('store.nav.helpCenter')}</LinkBtn>
           <Divider>|</Divider>

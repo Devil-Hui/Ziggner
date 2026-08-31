@@ -1,13 +1,19 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { Color, FontSize, Radius } from '../../../theme/tokens'
+import { Color, FontSize, Radius, Shadow } from '../../../theme/tokens'
 import { useTranslation } from '../../../i18n'
 import { useCurrency, CURRENCIES } from '../../../store/CurrencyContext'
 
+/* 深色底上的文字层级（深色区不能用中性灰令牌，统一在此定义） */
+const ON_DARK = Color.text.inverse
+const ON_DARK_MUTED = 'rgba(255, 255, 255, 0.72)'
+const ON_DARK_FAINT = 'rgba(255, 255, 255, 0.55)'
+const ON_DARK_RULE = 'rgba(255, 255, 255, 0.14)'
+
 const Wrapper = styled.footer`
   background: ${Color.bg.dark};
-  color: #cfcfcf;
+  color: ${ON_DARK_MUTED};
   margin-top: 48px;
   padding: 40px 20px 24px;
   font-size: ${FontSize.sm}px;
@@ -28,7 +34,7 @@ const Inner = styled.div`
 `
 
 const ColTitle = styled.h4`
-  color: #fff;
+  color: ${ON_DARK};
   font-size: ${FontSize.md}px;
   margin: 0 0 14px;
   font-weight: 600;
@@ -39,24 +45,24 @@ const Link = styled.button`
   background: none;
   border: none;
   padding: 6px 0;
-  color: #cfcfcf;
+  color: ${ON_DARK_MUTED};
   font-size: ${FontSize.sm}px;
   cursor: pointer;
   text-align: left;
-  &:hover { color: #fff; }
+  &:hover { color: ${ON_DARK}; }
 `
 
 const Bottom = styled.div`
   max-width: 1200px;
   margin: 28px auto 0;
   padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 1px solid ${ON_DARK_RULE};
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
-  color: #9a9a9a;
+  color: ${ON_DARK_FAINT};
 `
 
 const SwitchRow = styled.div`
@@ -72,11 +78,11 @@ const Menu = styled.div<{ $show: boolean }>`
   position: absolute;
   bottom: calc(100% + 6px);
   left: 0;
-  background: #fff;
+  background: ${Color.bg.card};
   color: ${Color.text.body};
   border: 1px solid ${Color.border.light};
   border-radius: ${Radius.md}px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: ${Shadow.dropdown};
   min-width: 130px;
   padding: 6px 0;
   z-index: 1200;

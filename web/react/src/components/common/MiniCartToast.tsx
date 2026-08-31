@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled, { keyframes } from 'styled-components'
 import { useCart } from '../../store/CartContext'
+import { useCurrency } from '../../store/CurrencyContext'
 import { useTranslation } from '../../i18n'
 import { Color, FontSize, Radius, Shadow } from '../../theme/tokens'
 import { zIndex } from '../../styles/zIndex'
@@ -43,7 +44,7 @@ const Header = styled.div`
 const Title = styled.div`
   font-size: ${FontSize.sm}px;
   font-weight: 700;
-  color: #111;
+  color: ${Color.text.primary};
 `
 
 const CloseBtn = styled.button`
@@ -51,7 +52,7 @@ const CloseBtn = styled.button`
   background: transparent;
   cursor: pointer;
   font-size: 16px;
-  color: #888;
+  color: ${Color.text.muted};
   line-height: 1;
 `
 
@@ -84,7 +85,7 @@ const Meta = styled.div`
 
 const Name = styled.div`
   font-size: 0.85rem;
-  color: #222;
+  color: ${Color.text.primary};
   font-weight: 600;
   margin-bottom: 4px;
   overflow: hidden;
@@ -94,7 +95,7 @@ const Name = styled.div`
 
 const Specs = styled.div`
   font-size: 0.75rem;
-  color: #888;
+  color: ${Color.text.muted};
   margin-bottom: 4px;
 `
 
@@ -102,7 +103,7 @@ const PriceRow = styled.div`
   display: flex;
   justify-content: space-between;
   font-size: 0.8rem;
-  color: #444;
+  color: ${Color.text.body};
 `
 
 const Footer = styled.div`
@@ -115,9 +116,9 @@ const Footer = styled.div`
 const Btn = styled.button<{ $primary?: boolean }>`
   height: 36px;
   border-radius: 6px;
-  border: 1px solid ${({ $primary }) => ($primary ? '#111' : Color.border.medium)};
-  background: ${({ $primary }) => ($primary ? '#111' : '#fff')};
-  color: ${({ $primary }) => ($primary ? '#fff' : '#222')};
+  border: 1px solid ${({ $primary }) => ($primary ? Color.primary : Color.border.medium)};
+  background: ${({ $primary }) => ($primary ? Color.primary : Color.bg.card)};
+  color: ${({ $primary }) => ($primary ? Color.text.inverse : Color.text.primary)};
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -130,7 +131,7 @@ const Btn = styled.button<{ $primary?: boolean }>`
 const CartSummary = styled.div`
   padding: 0 14px 10px;
   font-size: 0.75rem;
-  color: #666;
+  color: ${Color.text.body};
 `
 
 export type MiniCartToastPayload = {
@@ -153,6 +154,7 @@ export default function MiniCartToast() {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { count, total } = useCart()
+  const { format } = useCurrency()
   const [visible, setVisible] = useState(false)
   const [payload, setPayload] = useState<MiniCartToastPayload | null>(null)
   const hideTimer = useRef<number | null>(null)
@@ -226,14 +228,14 @@ export default function MiniCartToast() {
           {payload.specsText ? <Specs>{payload.specsText}</Specs> : null}
           <PriceRow>
             <span>× {payload.quantity}</span>
-            <strong>${payload.price.toFixed(2)}</strong>
+            <strong>{format(payload.price)}</strong>
           </PriceRow>
         </Meta>
       </Body>
       <CartSummary>
         {t('store.miniCart.bagSummary')
           .replace('{count}', String(count))
-          .replace('{total}', total.toFixed(2))}
+          .replace('{total}', format(total))}
       </CartSummary>
       <Footer>
         <Btn type="button" onClick={() => { hide(); navigate('/cart') }}>

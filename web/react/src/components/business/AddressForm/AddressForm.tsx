@@ -24,7 +24,7 @@ const Error = styled.span` color: ${tokens.Color.status.error}; font-size: ${tok
 const Submit = styled.button`
   padding: 12px;
   background: ${tokens.Color.primary};
-  color: #fff;
+  color: ${tokens.Color.text.inverse};
   border: none;
   border-radius: ${tokens.Radius.md};
   font-size: ${tokens.FontSize.md};
