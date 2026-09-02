@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom'
 import styled from 'styled-components'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
+import Navigation from '../../components/layout/Navigation/Navigation'
 import { useTranslation } from '../../i18n'
-import { Color, Radius, Transition } from '../../theme/tokens'
+import { Color, Radius, Transition, Layout } from '../../theme/tokens'
 import { landingImages } from '../../assets/landing'
 
 // ==================== 类型 ====================
@@ -14,7 +15,7 @@ type AuthTab = 'login' | 'register'
 // ==================== 布局骨架 ====================
 
 const AuthShell = styled.div`
-  min-height: 100vh;
+  min-height: calc(100vh - ${Layout.headerHeight}px);
   display: grid;
   grid-template-columns: minmax(420px, 44%) 1fr;
   background: #fff;
@@ -251,7 +252,9 @@ export default function AuthPage() {
   }
 
   return (
-    <AuthShell>
+    <>
+      <Navigation />
+      <AuthShell>
       {/* 左侧：品牌 + 表单 */}
       <FormPane>
         <BrandMark to="/">Ziggner</BrandMark>
@@ -310,6 +313,7 @@ export default function AuthPage() {
           <SloganCaption>{t('store.auth.promoCaption')}</SloganCaption>
         </Slogan>
       </VisualPane>
-    </AuthShell>
+      </AuthShell>
+    </>
   )
 }
