@@ -1,12 +1,13 @@
-import { useSearchParams } from 'react-router-dom'
-import { Link } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import styled from 'styled-components'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 import Navigation from '../../components/layout/Navigation/Navigation'
 import { useTranslation } from '../../i18n'
-import { Color, Radius, Transition, Layout } from '../../theme/tokens'
+import { Color, Transition, Layout } from '../../theme/tokens'
 import { landingImages } from '../../assets/landing'
+// 复用落地页设计令牌，保证与 Home 落地页视觉完全一致
+import { Ink, Font, Type, Radius, Elevation, Ease } from '../Home/editorial'
 
 // ==================== 类型 ====================
 
@@ -19,7 +20,7 @@ const AuthShell = styled.div`
   display: grid;
   grid-template-columns: minmax(420px, 44%) 1fr;
   align-items: stretch;
-  background: #fff;
+  background: ${Ink.paper};
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
@@ -40,10 +41,11 @@ const FormPane = styled.div`
 `
 
 const BrandMark = styled(Link)`
+  font-family: ${Font.display};
   font-size: 1.35rem;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: ${Color.text.primary};
+  letter-spacing: -0.02em;
+  color: ${Ink.black};
   text-decoration: none;
   line-height: 1;
 `
@@ -62,29 +64,29 @@ const FormArea = styled.div`
 // ==================== 左侧文案 ====================
 
 const Eyebrow = styled.p`
+  ${Type.wideCaps}
   font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: ${Color.text.muted};
+  font-weight: 700;
+  color: ${Ink.brand};
   margin-bottom: 12px;
 `
 
 const Headline = styled.h1`
-  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-family: ${Font.display};
+  font-size: clamp(2rem, 3.6vw, 3.1rem);
   font-weight: 800;
-  letter-spacing: -1.5px;
-  line-height: 1.02;
-  color: ${Color.text.primary};
+  ${Type.tighter}
+  line-height: 1.05;
+  color: ${Ink.black};
   margin-bottom: 14px;
 `
 
 const Subline = styled.p`
   font-size: 0.95rem;
-  color: ${Color.text.secondary};
-  line-height: 1.55;
+  color: ${Ink.graphite};
+  line-height: 1.65;
   margin-bottom: 32px;
-  max-width: 40ch;
+  max-width: 44ch;
 `
 
 // ==================== 切换开关（Log in / Sign up 药丸） ====================
@@ -93,17 +95,18 @@ const ToggleBar = styled.div`
   position: relative;
   display: inline-flex;
   align-self: flex-start;
-  background: ${Color.border.light};
-  border-radius: 999px;
+  background: ${Ink.paperAlt};
+  border: 1px solid ${Ink.rule};
+  border-radius: ${Radius.full}px;
   padding: 4px;
   margin-bottom: 40px;
 `
 
 const ToggleItem = styled.button<{ $active: boolean }>`
   border: none;
-  border-radius: 999px;
-  background: ${(props) => (props.$active ? Color.text.primary : 'transparent')};
-  color: ${(props) => (props.$active ? '#fff' : Color.text.secondary)};
+  border-radius: ${Radius.full}px;
+  background: ${(props) => (props.$active ? Ink.black : 'transparent')};
+  color: ${(props) => (props.$active ? Ink.paper : Ink.graphite)};
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
@@ -111,7 +114,7 @@ const ToggleItem = styled.button<{ $active: boolean }>`
   padding: 8px 22px;
 
   &:hover {
-    color: ${(props) => (props.$active ? '#fff' : Color.text.primary)};
+    color: ${(props) => (props.$active ? Ink.paper : Ink.black)};
   }
 `
 
@@ -120,7 +123,7 @@ const ToggleItem = styled.button<{ $active: boolean }>`
 const VisualPane = styled.div`
   position: relative;
   overflow: hidden;
-  background: #1a1214;
+  background: ${Ink.near};
 
   @media (max-width: 900px) {
     display: none;
@@ -133,7 +136,7 @@ const BgImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
-  animation: authBgFade 0.5s ease;
+  animation: authBgFade 0.5s ${Ease.cinema};
 
   @keyframes authBgFade {
     from {
@@ -149,8 +152,8 @@ const Scrim = styled.div`
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(to top, rgba(10, 8, 9, 0.72) 0%, rgba(10, 8, 9, 0.18) 38%, rgba(10, 8, 9, 0) 60%),
-    linear-gradient(to bottom, rgba(10, 8, 9, 0.38) 0%, rgba(10, 8, 9, 0) 22%);
+    linear-gradient(to top, rgba(14, 16, 19, 0.74) 0%, rgba(14, 16, 19, 0.2) 38%, rgba(14, 16, 19, 0) 60%),
+    linear-gradient(to bottom, rgba(14, 16, 19, 0.4) 0%, rgba(14, 16, 19, 0) 22%);
 `
 
 const TopBar = styled.div`
@@ -163,43 +166,44 @@ const TopBar = styled.div`
   justify-content: space-between;
   padding: 24px 28px;
   color: rgba(255, 255, 255, 0.85);
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  ${Type.wideCaps}
+  font-size: 0.66rem;
+  font-weight: 700;
 `
 
 const MatchCard = styled.div`
   position: absolute;
   top: 72px;
   right: 28px;
-  width: 180px;
-  background: #fff;
-  border-radius: ${Radius.md}px;
+  width: 186px;
+  background: ${Ink.paper};
+  border: 1px solid ${Ink.rule};
+  border-radius: ${Radius.xl}px;
   padding: 16px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+  box-shadow: ${Elevation.float};
 `
 
 const MatchLabel = styled.p`
+  ${Type.wideCaps}
   font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: ${Color.text.muted};
+  font-weight: 700;
+  color: ${Ink.faint};
 `
 
 const MatchValue = styled.p`
-  font-size: 2rem;
+  ${Type.tnum}
+  font-family: ${Font.display};
+  font-size: 1.9rem;
   font-weight: 800;
-  letter-spacing: -1px;
-  color: ${Color.text.primary};
+  ${Type.tighter}
+  color: ${Ink.black};
   margin: 6px 0 10px;
 `
 
 const MatchBar = styled.div<{ $pct: number }>`
-  height: 3px;
-  background: ${Color.border.light};
-  border-radius: 999px;
+  height: 4px;
+  background: ${Ink.paperAlt};
+  border-radius: ${Radius.full}px;
   overflow: hidden;
 
   &::before {
@@ -207,17 +211,16 @@ const MatchBar = styled.div<{ $pct: number }>`
     display: block;
     height: 100%;
     width: ${(props) => props.$pct}%;
-    background: ${Color.text.primary};
+    background: ${Ink.brand};
   }
 `
 
 const MatchFoot = styled.p`
   margin-top: 8px;
+  ${Type.wideCaps}
   font-size: 0.6rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: ${Color.text.muted};
+  font-weight: 700;
+  color: ${Ink.faint};
 `
 
 const Slogan = styled.div`
@@ -225,27 +228,28 @@ const Slogan = styled.div`
   left: 28px;
   right: 28px;
   bottom: 26px;
-  color: #fff;
+  color: ${Ink.paper};
 `
 
 const SloganTitle = styled.p`
-  font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+  font-family: ${Font.display};
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
   font-weight: 800;
-  letter-spacing: -1.5px;
-  line-height: 1.02;
+  ${Type.tighter}
+  line-height: 1.04;
 
   em {
     display: block;
-    font-style: italic;
-    font-weight: 700;
+    font-style: normal;
+    color: rgba(255, 255, 255, 0.92);
   }
 `
 
 const SloganCaption = styled.p`
   margin-top: 12px;
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   color: rgba(255, 255, 255, 0.78);
-  max-width: 46ch;
+  max-width: 48ch;
 `
 
 // ==================== 组件 ====================
@@ -262,9 +266,11 @@ export default function AuthPage() {
     setSearchParams(next)
   }
 
-  // 登录/注册两个 tab 使用不同的背景图（复用落地页同款素材）与卖点文案
+  // 登录/注册两个 tab 使用不同的落地页同款背景图与卖点文案：
+  // 登录 → journey（六步旅程拍摄场景）+ Hero 的 AI 优化数据卡
+  // 注册 → creatorDesk（创作者工作台）+ Journey 30 天开店旅程卡
   const isLogin = activeTab === 'login'
-  const bg = isLogin ? landingImages.agentMarketing : landingImages.agentSite
+  const bg = isLogin ? landingImages.journey : landingImages.creatorDesk
   const promoTitle = isLogin ? t('store.auth.loginPromoTitle') : t('store.auth.registerPromoTitle')
   const promoAccent = isLogin
     ? t('store.auth.loginPromoAccent')
@@ -272,70 +278,72 @@ export default function AuthPage() {
   const promoCaption = isLogin
     ? t('store.auth.loginPromoCaption')
     : t('store.auth.registerPromoCaption')
-  const matchLabel = isLogin ? 'Your agent match quality' : 'New member signal'
-  const matchValue = isLogin ? '94%' : '01%'
+  // 浮动数据卡：登录呼应落地页 Hero「AI Optimizer +1,017% views」；
+  // 注册呼应 Journey「30-day store journey」第 1 步 Pick a Product
+  const matchLabel = isLogin ? 'AI Optimizer' : 'Your 30-day journey'
+  const matchValue = isLogin ? '+1,017%' : 'Day 01'
   const matchPct = isLogin ? 94 : 12
-  const matchFoot = isLogin ? 'Profile signal' : 'Profile building'
+  const matchFoot = isLogin ? 'Views after AI pass' : 'Step 1 — Pick a product'
 
   return (
     <>
       <Navigation />
       <AuthShell>
-      {/* 左侧：品牌 + 表单 */}
-      <FormPane>
-        <BrandMark to="/">Ziggner</BrandMark>
+        {/* 左侧：品牌 + 表单 */}
+        <FormPane>
+          <BrandMark to="/">Ziggner</BrandMark>
 
-        <FormArea>
-          <ToggleBar>
-            <ToggleItem
-              $active={activeTab === 'login'}
-              onClick={() => handleToggle('login')}
-            >
-              {t('store.auth.login')}
-            </ToggleItem>
-            <ToggleItem
-              $active={activeTab === 'register'}
-              onClick={() => handleToggle('register')}
-            >
-              {t('store.auth.signUp')}
-            </ToggleItem>
-          </ToggleBar>
+          <FormArea>
+            <ToggleBar>
+              <ToggleItem
+                $active={activeTab === 'login'}
+                onClick={() => handleToggle('login')}
+              >
+                {t('store.auth.login')}
+              </ToggleItem>
+              <ToggleItem
+                $active={activeTab === 'register'}
+                onClick={() => handleToggle('register')}
+              >
+                {t('store.auth.signUp')}
+              </ToggleItem>
+            </ToggleBar>
 
-          <Eyebrow>
-            {activeTab === 'login' ? t('store.auth.signIn') : t('store.auth.createAccount')}
-          </Eyebrow>
-          <Headline>{t('store.auth.signalTitle')}</Headline>
-          <Subline>{t('store.auth.signalDesc')}</Subline>
+            <Eyebrow>
+              {activeTab === 'login' ? t('store.auth.signIn') : t('store.auth.createAccount')}
+            </Eyebrow>
+            <Headline>{t('store.auth.signalTitle')}</Headline>
+            <Subline>{t('store.auth.signalDesc')}</Subline>
 
-          {activeTab === 'login' ? <LoginForm /> : <RegisterForm />}
-        </FormArea>
-      </FormPane>
+            {activeTab === 'login' ? <LoginForm /> : <RegisterForm />}
+          </FormArea>
+        </FormPane>
 
-      {/* 右侧：整块背景视觉 */}
-      <VisualPane>
-        <BgImage key={activeTab} src={bg.src} alt={bg.alt} />
-        <Scrim />
+        {/* 右侧：整块背景视觉（落地页同款素材与数据） */}
+        <VisualPane>
+          <BgImage key={activeTab} src={bg.src} alt={bg.alt} />
+          <Scrim />
 
-        <TopBar>
-          <span>Ziggner / Members</span>
-          <span>02 / 02</span>
-        </TopBar>
+          <TopBar>
+            <span>Ziggner / AI Creator Incubator</span>
+            <span>02 / 02</span>
+          </TopBar>
 
-        <MatchCard>
-          <MatchLabel>{matchLabel}</MatchLabel>
-          <MatchValue>{matchValue}</MatchValue>
-          <MatchBar $pct={matchPct} />
-          <MatchFoot>{matchFoot}</MatchFoot>
-        </MatchCard>
+          <MatchCard>
+            <MatchLabel>{matchLabel}</MatchLabel>
+            <MatchValue>{matchValue}</MatchValue>
+            <MatchBar $pct={matchPct} />
+            <MatchFoot>{matchFoot}</MatchFoot>
+          </MatchCard>
 
-        <Slogan>
-          <SloganTitle>
-            {promoTitle}
-            <em>{promoAccent}</em>
-          </SloganTitle>
-          <SloganCaption>{promoCaption}</SloganCaption>
-        </Slogan>
-      </VisualPane>
+          <Slogan>
+            <SloganTitle>
+              {promoTitle}
+              <em>{promoAccent}</em>
+            </SloganTitle>
+            <SloganCaption>{promoCaption}</SloganCaption>
+          </Slogan>
+        </VisualPane>
       </AuthShell>
     </>
   )
