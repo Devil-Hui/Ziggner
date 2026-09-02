@@ -18,6 +18,7 @@ const AuthShell = styled.div`
   min-height: calc(100vh - ${Layout.headerHeight}px);
   display: grid;
   grid-template-columns: minmax(420px, 44%) 1fr;
+  align-items: stretch;
   background: #fff;
 
   @media (max-width: 900px) {
@@ -132,6 +133,16 @@ const BgImage = styled.img`
   width: 100%;
   height: 100%;
   object-fit: cover;
+  animation: authBgFade 0.5s ease;
+
+  @keyframes authBgFade {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
 `
 
 const Scrim = styled.div`
@@ -185,7 +196,7 @@ const MatchValue = styled.p`
   margin: 6px 0 10px;
 `
 
-const MatchBar = styled.div`
+const MatchBar = styled.div<{ $pct: number }>`
   height: 3px;
   background: ${Color.border.light};
   border-radius: 999px;
@@ -195,7 +206,7 @@ const MatchBar = styled.div`
     content: '';
     display: block;
     height: 100%;
-    width: 94%;
+    width: ${(props) => props.$pct}%;
     background: ${Color.text.primary};
   }
 `
@@ -251,6 +262,21 @@ export default function AuthPage() {
     setSearchParams(next)
   }
 
+  // 登录/注册两个 tab 使用不同的背景图与卖点文案
+  const isLogin = activeTab === 'login'
+  const bg = isLogin ? landingImages.authLogin : landingImages.authRegister
+  const promoTitle = isLogin ? t('store.auth.loginPromoTitle') : t('store.auth.registerPromoTitle')
+  const promoAccent = isLogin
+    ? t('store.auth.loginPromoAccent')
+    : t('store.auth.registerPromoAccent')
+  const promoCaption = isLogin
+    ? t('store.auth.loginPromoCaption')
+    : t('store.auth.registerPromoCaption')
+  const matchLabel = isLogin ? 'Your agent match quality' : 'New member signal'
+  const matchValue = isLogin ? '94%' : '01%'
+  const matchPct = isLogin ? 94 : 12
+  const matchFoot = isLogin ? 'Profile signal' : 'Profile building'
+
   return (
     <>
       <Navigation />
@@ -287,10 +313,7 @@ export default function AuthPage() {
 
       {/* 右侧：整块背景视觉 */}
       <VisualPane>
-        <BgImage
-          src={landingImages.authBg.src}
-          alt={landingImages.authBg.alt}
-        />
+        <BgImage key={activeTab} src={bg.src} alt={bg.alt} />
         <Scrim />
 
         <TopBar>
@@ -299,18 +322,18 @@ export default function AuthPage() {
         </TopBar>
 
         <MatchCard>
-          <MatchLabel>Your agent match quality</MatchLabel>
-          <MatchValue>94%</MatchValue>
-          <MatchBar />
-          <MatchFoot>Profile signal</MatchFoot>
+          <MatchLabel>{matchLabel}</MatchLabel>
+          <MatchValue>{matchValue}</MatchValue>
+          <MatchBar $pct={matchPct} />
+          <MatchFoot>{matchFoot}</MatchFoot>
         </MatchCard>
 
         <Slogan>
           <SloganTitle>
-            {t('store.auth.promoTitle')}
-            <em>{t('store.auth.promoTitleAccent')}</em>
+            {promoTitle}
+            <em>{promoAccent}</em>
           </SloganTitle>
-          <SloganCaption>{t('store.auth.promoCaption')}</SloganCaption>
+          <SloganCaption>{promoCaption}</SloganCaption>
         </Slogan>
       </VisualPane>
       </AuthShell>
