@@ -2,8 +2,11 @@
 .env
 .env.*
 !.env.example
-!web/react/.env.production
 secrets.json
+# 项目说明文档（不入库）
+CLOUDFLARE.md
+DEPLOY-GUIDE.md
+START.md
 # 本机 tunnel 自签证书（敏感，不入库）
 deploy/nginx-certs/
 # 敏感证书（真实 TLS 私钥，严禁入库）
