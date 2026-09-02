@@ -14,6 +14,8 @@ from apps.users.views import (
     DeactivateView,
     EmailVerifyCheckView,
     EmailVerifySendView,
+    ForgotPasswordResetView,
+    ForgotPasswordSendView,
     LogoutView,
     RegisterView,
     SendEmailCodeView,
@@ -60,6 +62,8 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('username/', ChangeUsernameView.as_view(), name='user-change-username'),
     path('password/', ChangePasswordView.as_view(), name='user-change-password'),
+    path('password/forgot/send/', ForgotPasswordSendView.as_view(), name='user-forgot-password-send'),
+    path('password/forgot/reset/', ForgotPasswordResetView.as_view(), name='user-forgot-password-reset'),
     path('upload-avatar/', AvatarUploadView.as_view(), name='avatar-upload'),
 
     # 邮箱验证码

@@ -308,6 +308,21 @@ class ChangePasswordSerializer(serializers.Serializer):
         return attrs
 
 
+class ForgotPasswordSendSerializer(serializers.Serializer):
+    """忘记密码 —— 发送验证码到注册邮箱"""
+    email = serializers.EmailField(help_text='Registered email address.')
+
+
+class ForgotPasswordResetSerializer(serializers.Serializer):
+    """忘记密码 —— 校验验证码后重置为随机密码"""
+    verify_id = serializers.CharField(help_text='verify_id returned by send step.')
+    code = serializers.CharField(
+        min_length=_cfg.get('VERIFICATION_CODE_LENGTH', 6),
+        max_length=_cfg.get('VERIFICATION_CODE_LENGTH', 6),
+        help_text='6-digit code from email.',
+    )
+
+
 
 # ============================================================
 # 邮箱验证码

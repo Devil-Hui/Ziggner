@@ -16,6 +16,8 @@ from apps.users.email_service import EmailService, EmailVerifyService, EmailRate
 from apps.users.serializers import (
     ChangePasswordSerializer,
     ChangeUsernameSerializer,
+    ForgotPasswordResetSerializer,
+    ForgotPasswordSendSerializer,
     LogoutSerializer,
     RegisterSerializer,
     SendEmailCodeSerializer,
@@ -470,6 +472,120 @@ class ChangePasswordView(BaseApiView):
 
         return Response(
             {'detail': 'Password updated.'},
+            status=status.HTTP_200_OK,
+        )
+
+
+# ============================================================
+# 忘记密码 —— 发送验证码 + 重置为随机密码
+# ============================================================
+
+class ForgotPasswordSendView(PublicApiView):
+    """忘记密码 —— 发送验证码到注册邮箱。
+
+    POST /api/users/password/forgot/send/ —— 输入注册邮箱，发送6位验证码。
+
+    安全：无论邮箱是否存在都返回成功（避免枚举已注册邮箱），
+    但仅当邮箱存在时才真正发送邮件。
+    """
+
+    @extend_schema(
+        request=ForgotPasswordSendSerializer,
+        responses={
+            200: OpenApiResponse(description='Verification code sent'),
+            400: OpenApiResponse(description='Invalid email'),
+            429: OpenApiResponse(description='Rate limit exceeded'),
+        }
+    )
+    def post(self, request):
+        serializer = ForgotPasswordSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        email = serializer.validated_data['email'].strip().lower()
+
+        # 邮箱不存在时也返回成功（防枚举），但不发送验证码
+        if not User.objects.filter(email__iexact=email).exists():
+            return Response(
+                {'detail': 'If that email is registered, a verification code has been sent.'},
+                status=status.HTTP_200_OK,
+            )
+
+        try:
+            result = EmailVerifyService.send_verify_code(email)
+        except EmailRateLimitError as e:
+            return Response({'detail': str(e)}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except Exception as e:
+            _logger.error('发送忘记密码验证码失败 email=%s error=%s', email, e)
+            return Response({'detail': '发送失败，请稍后重试'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(result, status=status.HTTP_200_OK)
+
+
+class ForgotPasswordResetView(PublicApiView):
+    """忘记密码 —— 校验验证码后重置为随机密码。
+
+    POST /api/users/password/forgot/reset/ —— 校验验证码，生成10位随机密码并设置。
+
+    成功 → 返回 { detail, new_password }，前端展示给用户，提示用新密码登录。
+    """
+    @extend_schema(
+        request=ForgotPasswordResetSerializer,
+        responses={
+            200: OpenApiResponse(description='Password reset, returns new_password'),
+            400: OpenApiResponse(description='Invalid or expired code'),
+            404: OpenApiResponse(description='Email not found'),
+        }
+    )
+    def post(self, request):
+        serializer = ForgotPasswordResetSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        verify_id = serializer.validated_data['verify_id']
+        code = serializer.validated_data['code']
+
+        # 校验验证码（一次性，成功后销毁）
+        if not EmailVerifyService.verify_code(verify_id, code):
+            return Response(
+                {'detail': '验证码错误或已过期'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 从缓存取回发送验证码时的邮箱
+        email = EmailVerifyService.get_verify_email(verify_id)
+        if not email:
+            return Response(
+                {'detail': '验证码会话缺失，请重新发送验证码'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 找到对应用户
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            return Response(
+                {'detail': '该邮箱未注册'},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # 生成10位随机密码（含大小写字母与数字，满足密码强度校验）
+        import secrets
+        import string
+        alphabet = string.ascii_letters + string.digits
+        new_password = ''.join(secrets.choice(alphabet) for _ in range(10))
+
+        # 设置新密码
+        user.set_password(new_password)
+        user.save(update_fields=['password'])
+
+        # 安全戳旋转：使该用户所有旧会话立即失效
+        from apps.users.tokens import rotate_user_stamp
+        rotate_user_stamp(user.pk)
+
+        return Response(
+            {
+                'detail': 'Password has been reset.',
+                'new_password': new_password,
+            },
             status=status.HTTP_200_OK,
         )
 

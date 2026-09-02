@@ -12,6 +12,7 @@ const MockPayment = lazy(() => import('../pages/MockPayment/MockPayment'))
 const Profile = lazy(() => import('../pages/Profile/Profile'))
 const AuthPage = lazy(() => import('../pages/Auth/AuthPage'))
 const SetPasswordPage = lazy(() => import('../pages/Auth/SetPasswordPage'))
+const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage'))
 const Coupons = lazy(() => import('../pages/Coupons/Coupons'))
 const CouponCenter = lazy(() => import('../pages/CouponCenter/CouponCenter'))
 const CouponShare = lazy(() => import('../pages/CouponShare/CouponShare'))
@@ -80,6 +81,7 @@ export const routes: RouteObject[] = [
   { path: '/mock-payment/:paymentNo', element: <Suspense fallback={<PageLoading />}><MockPayment /></Suspense> },
   { path: '/profile', element: <Suspense fallback={<PageLoading />}><Profile /></Suspense> },
   { path: '/auth/set-password', element: <Suspense fallback={<PageLoading />}><SetPasswordPage /></Suspense> },
+  { path: '/forgot-password', element: <Suspense fallback={<PageLoading />}><ForgotPasswordPage /></Suspense> },
   { path: '/auth', element: <Suspense fallback={<PageLoading />}><AuthPage /></Suspense> },
   { path: '/login', element: <Navigate to="/auth?tab=login" replace /> },
   { path: '/register', element: <Navigate to="/auth?tab=register" replace /> },
