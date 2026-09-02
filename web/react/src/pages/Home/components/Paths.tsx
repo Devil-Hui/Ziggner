@@ -18,29 +18,29 @@ const PATHS: {
   {
     Icon: IconUser,
     tone: 'brand',
-    title: 'AI Twin',
-    desc: 'Generate a digital twin that presents for you — your voice, your style, zero camera time.',
-    badge: 'You, automated',
-    image: landingImages.pathTwin,
-    caption: 'Figure 02 — AI twin output',
+    title: 'How to analyze competitors fast?',
+    desc: 'The AI agent tracks competitor prices, sales and reviews in real time, then turns them into a one-click report.',
+    badge: 'Fast competitor analysis',
+    image: landingImages.agentCompetitor,
+    caption: 'Figure 02 — Competitor analysis',
   },
   {
     Icon: IconMoon,
     tone: 'ink',
-    title: 'Faceless Creator',
-    desc: 'Stay fully anonymous with stock b-roll, screen recordings and AI narration.',
-    badge: '100% anonymous',
-    image: landingImages.pathFaceless,
-    caption: 'Figure 03 — Faceless workflow',
+    title: 'How to build an e-commerce site fast?',
+    desc: 'The AI agent generates your store, product pages and landing pages in minutes — no code required.',
+    badge: 'Fast site builder',
+    image: landingImages.agentSite,
+    caption: 'Figure 03 — Site builder',
   },
   {
     Icon: IconZap,
     tone: 'blue',
-    title: 'AI Optimized Creator',
-    desc: 'Already filming? Let the AI rebuild your cuts for maximum retention and reach.',
-    badge: 'Boost your reach',
-    image: landingImages.pathOptimized,
-    caption: 'Figure 04 — Optimized workflow',
+    title: 'How to run marketing on autopilot?',
+    desc: 'The AI agent handles customer service, campaigns and user growth while you focus on the big picture.',
+    badge: 'AI marketing',
+    image: landingImages.agentMarketing,
+    caption: 'Figure 04 — AI marketing',
   },
 ]
 
@@ -134,9 +134,9 @@ export default function Paths() {
         <HeadRow>
           <Reveal>
             <SectionHead
-              eyebrow="Creator modes"
-              title="You don’t need to be on camera"
-              lead="Pick how you want to show up — or not. Every path ships the same AI engine behind your content."
+              eyebrow="AI e-commerce agents"
+              title="Level up your e-commerce with AI"
+              lead="Three AI agents every online store needs — analyze competitors, build your site, and run marketing on autopilot."
             />
           </Reveal>
         </HeadRow>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { Fragment, useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import PageLayout from '../../components/layout/PageLayout/PageLayout'
@@ -795,6 +795,15 @@ export default function ProductDetail() {
     }
   }
 
+  /** 面包屑分类链：category_path 形如 "Electronics / Phones"，拆成多级 */
+  const categoryTrail = useMemo(
+    () => (product?.category_path ? product.category_path.split(' / ').filter(Boolean) : []),
+    [product?.category_path],
+  )
+  const categoryHref = product?.category_id
+    ? `/category?cat_id=${product.category_id}`
+    : '/category'
+
   if (loading) {
     return (
       <PageLayout>
@@ -828,7 +837,18 @@ export default function ProductDetail() {
         <Shell>
           <Breadcrumb>
             <a href="/">{t('store.product.home')}</a> /
-            <a href="/category">{t('store.product.allCategories')}</a> /
+            <a href="/category">{t('store.product.allCategories')}</a>
+            {categoryTrail.map((seg, i) => (
+              <Fragment key={i}>
+                {' / '}
+                {i === categoryTrail.length - 1 ? (
+                  <a href={categoryHref}>{seg}</a>
+                ) : (
+                  <span>{seg}</span>
+                )}
+              </Fragment>
+            ))}
+            {' / '}
             <span>{product.name}</span>
           </Breadcrumb>
 

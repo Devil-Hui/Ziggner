@@ -9,7 +9,7 @@ import { useCart } from '../../../store/CartContext'
  * 滚动超过 40px 收窄并加毛玻璃，向下滚动隐藏、向上即时返回。
  *
  * 与全站 Navigation 统一规范：
- *  - 顶部分类项：Product / For Creators / How it works / For Brands
+ *  - 顶部分类项：Optimize / Automate / Launch
  *  - 锚点统一用 /# 绝对路径（任意路由下均可跳回首页锚点）
  *  - 购物车接入真实数量徽章（useCart）
  */
@@ -156,10 +156,9 @@ const CartBadge = styled.span`
 `
 
 const NAV_LINKS = [
-  { label: 'Product', href: '/#optimizer' },
-  { label: 'For Creators', href: '/#paths' },
-  { label: 'How it works', href: '/#journey' },
-  { label: 'For Brands', href: '/#monetize' },
+  { label: 'Optimize', href: '/#optimizer' },
+  { label: 'Automate', href: '/#paths' },
+  { label: 'Launch', href: '/#journey' },
 ]
 
 /** 商城入口：从品牌落地页进入实际购物流程 */

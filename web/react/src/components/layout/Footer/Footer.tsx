@@ -131,7 +131,6 @@ export default function Footer() {
           <ColTitle>{t('store.footer.shop')}</ColTitle>
           <Link onClick={go('/category')}>{t('store.footer.categories')}</Link>
           <Link onClick={go('/profile')}>{t('store.footer.ordersReturns')}</Link>
-          <Link onClick={go('/download')}>{t('store.footer.downloadApp')}</Link>
         </div>
         <div>
           <ColTitle>{t('store.footer.company')}</ColTitle>

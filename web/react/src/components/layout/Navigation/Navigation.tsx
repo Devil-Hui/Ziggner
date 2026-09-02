@@ -418,10 +418,10 @@ const UserMenu = styled.div`
   }
 `
 
-/** 主站导航项 —— 品牌锚点项（含子页面），未登录同样可见 */
+/** 主站导航项 —— 价值导向动词，与落地页各 section 覆盖内容对齐，未登录同样可见 */
 const NAV_ITEMS: { label: string; href: string; children: { label: string; href: string }[] }[] = [
   {
-    label: 'Product',
+    label: 'Optimize',
     href: '/#optimizer',
     children: [
       { label: 'AI Optimizer', href: '/#optimizer' },
@@ -429,27 +429,20 @@ const NAV_ITEMS: { label: string; href: string; children: { label: string; href:
     ],
   },
   {
-    label: 'For Creators',
+    label: 'Automate',
     href: '/#paths',
     children: [
-      { label: 'Creator Modes', href: '/#paths' },
-      { label: 'How it works', href: '/#journey' },
+      { label: 'Competitor Analysis', href: '/#paths' },
+      { label: 'Site Builder', href: '/#paths' },
+      { label: 'AI Marketing', href: '/#paths' },
     ],
   },
   {
-    label: 'How it works',
+    label: 'Launch',
     href: '/#journey',
     children: [
       { label: '30-day Workflow', href: '/#journey' },
-      { label: 'AI Agents', href: '/#journey' },
-    ],
-  },
-  {
-    label: 'For Brands',
-    href: '/#monetize',
-    children: [
-      { label: 'Marketplace', href: '/#monetize' },
-      { label: 'Brand Tasks', href: '/#monetize' },
+      { label: 'AI Agents', href: '/#paths' },
     ],
   },
 ]

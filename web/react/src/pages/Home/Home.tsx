@@ -5,7 +5,6 @@ import Hero from './components/Hero'
 import Optimizer from './components/Optimizer'
 import Paths from './components/Paths'
 import Journey from './components/Journey'
-import Monetize from './components/Monetize'
 import Closing from './components/Closing'
 
 /**
@@ -17,7 +16,6 @@ import Closing from './components/Closing'
  *   Optimizer   AI 優化前後對比 + 核心功能
  *   Paths       三條創作者路徑
  *   Journey     六步流程 + AI 智能體團隊
- *   Monetize    品牌任務 + 創作者榜單
  *   Closing     紫色 CTA 收尾
  */
 const Page = styled.div`
@@ -47,7 +45,6 @@ export default function Home() {
           <Optimizer />
           <Paths />
           <Journey />
-          <Monetize />
           <Closing />
         </main>
       </Page>

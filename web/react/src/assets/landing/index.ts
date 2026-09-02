@@ -6,6 +6,9 @@
  * 因此这里一律用 Vite import，禁止任何外链 URL。
  */
 
+import agentCompetitor from './agent-competitor.jpg'
+import agentMarketing from './agent-marketing.jpg'
+import agentSite from './agent-site.jpg'
 import brandProducts from './brand-products.jpg'
 import clipAi from './clip-ai.jpg'
 import clipRaw from './clip-raw.jpg'
@@ -22,6 +25,21 @@ export interface LandingImage {
 }
 
 export const landingImages = {
+  /** 电商智能体 —— 快速竞品分析 */
+  agentCompetitor: {
+    src: agentCompetitor,
+    alt: 'E-commerce competitor analysis dashboard with price and sales charts',
+  },
+  /** 电商智能体 —— 快速网站搭建 */
+  agentSite: {
+    src: agentSite,
+    alt: 'Drag-and-drop e-commerce website builder interface on a laptop',
+  },
+  /** 电商智能体 —— 智能运营营销 */
+  agentMarketing: {
+    src: agentMarketing,
+    alt: 'E-commerce marketing automation dashboard with chat and analytics',
+  },
   /** AI 优化后的竖版成片（明亮、主体居中） */
   clipAi: {
     src: clipAi,

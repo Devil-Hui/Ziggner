@@ -17,7 +17,6 @@ const CouponCenter = lazy(() => import('../pages/CouponCenter/CouponCenter'))
 const CouponShare = lazy(() => import('../pages/CouponShare/CouponShare'))
 const History = lazy(() => import('../pages/History/History'))
 const TrackOrder = lazy(() => import('../pages/TrackOrder/TrackOrder'))
-const DownloadApp = lazy(() => import('../pages/DownloadApp/DownloadApp'))
 const AboutPage = lazy(() => import('../pages/About/AboutPage'))
 const Support = lazy(() => import('../pages/Support/Support'))
 const Chat = lazy(() => import('../pages/Chat/Chat'))
@@ -96,7 +95,6 @@ export const routes: RouteObject[] = [
   { path: '/notifications', element: <Suspense fallback={<PageLoading />}><Notifications /></Suspense> },
   { path: '/favorites', element: <Suspense fallback={<PageLoading />}><Favorites /></Suspense> },
   { path: '/track', element: <Suspense fallback={<PageLoading />}><TrackOrder /></Suspense> },
-  { path: '/download', element: <Suspense fallback={<PageLoading />}><DownloadApp /></Suspense> },
 
   // ── Admin login (standalone, no layout) ──
   {
