@@ -129,6 +129,8 @@ api.interceptors.response.use(
     const originalRequest = error.config as InternalAxiosRequestConfig | undefined
     const isSessionEndpoint = originalRequest?.url?.includes('/users/session/')
     const isAuthEndpoint = isSessionEndpoint || originalRequest?.url?.includes('/users/login/') || originalRequest?.url?.includes('/users/register/')
+    // 未登录时 getMe 返回 401 是正常现象（用于探测登录态），不应触发「重新登录」弹窗
+    const isMeEndpoint = originalRequest?.url?.includes('/users/me/')
 
     // 权限/登录状态变更（后端旋转安全戳）：旧会话立即失效。
     // 直接弹出「请重新登录」模态框，不尝试静默刷新（刷新也无法恢复）。
@@ -143,8 +145,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true
       if (await refreshBrowserSession()) return api(originalRequest)
-      // 刷新 token 失败：会话已失效，统一弹出重新登录（避免静默卡死 / 反复 401）
-      if (typeof window !== 'undefined') {
+      // 刷新 token 失败：会话已失效，统一弹出重新登录（避免静默卡死 / 反复 401）。
+      // 但 getMe 是「探测登录态」的请求，未登录时 401 属正常，不弹窗打扰访客。
+      if (!isMeEndpoint && typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('auth:relogin-required'))
       }
     }
