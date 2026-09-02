@@ -7,8 +7,6 @@
  */
 
 import agentCompetitor from './agent-competitor.jpg'
-import authLogin from './auth-bg.jpg'
-import authRegister from './auth-register.jpg'
 import agentMarketing from './agent-marketing.jpg'
 import agentSite from './agent-site.jpg'
 import brandProducts from './brand-products.jpg'
@@ -31,16 +29,6 @@ export const landingImages = {
   agentCompetitor: {
     src: agentCompetitor,
     alt: 'E-commerce competitor analysis dashboard with price and sales charts',
-  },
-  /** 登录页 —— 服装零售店陈列场景 */
-  authLogin: {
-    src: authLogin,
-    alt: 'Retail boutique interior with curated garments on display',
-  },
-  /** 注册页 —— 时尚模特提购物袋 */
-  authRegister: {
-    src: authRegister,
-    alt: 'Fashion shopper in a burgundy coat carrying paper shopping bags',
   },
   /** 电商智能体 —— 快速网站搭建 */
   agentSite: {

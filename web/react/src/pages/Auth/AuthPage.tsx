@@ -262,9 +262,9 @@ export default function AuthPage() {
     setSearchParams(next)
   }
 
-  // 登录/注册两个 tab 使用不同的背景图与卖点文案
+  // 登录/注册两个 tab 使用不同的背景图（复用落地页同款素材）与卖点文案
   const isLogin = activeTab === 'login'
-  const bg = isLogin ? landingImages.authLogin : landingImages.authRegister
+  const bg = isLogin ? landingImages.agentMarketing : landingImages.agentSite
   const promoTitle = isLogin ? t('store.auth.loginPromoTitle') : t('store.auth.registerPromoTitle')
   const promoAccent = isLogin
     ? t('store.auth.loginPromoAccent')
