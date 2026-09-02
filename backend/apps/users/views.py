@@ -503,6 +503,9 @@ class ForgotPasswordSendView(PublicApiView):
 
         email = serializer.validated_data['email'].strip().lower()
 
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
         # 邮箱不存在时也返回成功（防枚举），但不发送验证码
         if not User.objects.filter(email__iexact=email).exists():
             return Response(
@@ -559,6 +562,8 @@ class ForgotPasswordResetView(PublicApiView):
             )
 
         # 找到对应用户
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
         try:
             user = User.objects.get(email__iexact=email)
         except User.DoesNotExist:
