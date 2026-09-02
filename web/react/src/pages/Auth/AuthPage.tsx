@@ -1,135 +1,239 @@
 import { useSearchParams } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import styled from 'styled-components'
-import PageLayout from '../../components/layout/PageLayout/PageLayout'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 import { useTranslation } from '../../i18n'
-import { Color, Radius, Transition, Layout } from '../../theme/tokens'
+import { Color, Radius, Transition } from '../../theme/tokens'
+import { landingImages } from '../../assets/landing'
 
 // ==================== 类型 ====================
 
 type AuthTab = 'login' | 'register'
 
-// ==================== 样式组件 ====================
+// ==================== 布局骨架 ====================
 
-const AuthContainer = styled.div`
-  min-height: calc(100vh - ${Layout.headerHeight}px);
-  background-color: ${Color.bg.page};
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5vh 2vw;
-`
-
-const AuthCard = styled.div`
-  width: 100%;
-  max-width: 960px;
-  background: ${Color.bg.card};
-  border-radius: ${Radius.md}px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+const AuthShell = styled.div`
+  min-height: 100vh;
   display: grid;
-  grid-template-columns: 40% 60%;
-  overflow: hidden;
-  min-height: 560px;
+  grid-template-columns: minmax(420px, 44%) 1fr;
+  background: #fff;
 
-  @media (max-width: 768px) {
+  @media (max-width: 900px) {
     grid-template-columns: 1fr;
-    max-width: 480px;
   }
 `
 
-const LeftPanel = styled.div`
-  padding: 40px 32px;
+const FormPane = styled.div`
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  padding: 40px 56px 48px;
+
+  @media (max-width: 1200px) {
+    padding: 32px 40px 40px;
+  }
+  @media (max-width: 520px) {
+    padding: 24px 20px 32px;
+  }
 `
 
-const RightPanel = styled.div`
-  background: ${Color.bg.page};
+const BrandMark = styled(Link)`
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: ${Color.text.primary};
+  text-decoration: none;
+  line-height: 1;
+`
+
+const FormArea = styled.div`
+  flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 60px 40px;
-  text-align: center;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 48px 0;
+`
 
-  @media (max-width: 768px) {
+// ==================== 左侧文案 ====================
+
+const Eyebrow = styled.p`
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: ${Color.text.muted};
+  margin-bottom: 12px;
+`
+
+const Headline = styled.h1`
+  font-size: clamp(2.2rem, 4vw, 3.4rem);
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.02;
+  color: ${Color.text.primary};
+  margin-bottom: 14px;
+`
+
+const Subline = styled.p`
+  font-size: 0.95rem;
+  color: ${Color.text.secondary};
+  line-height: 1.55;
+  margin-bottom: 32px;
+  max-width: 40ch;
+`
+
+// ==================== 切换开关（Log in / Sign up 药丸） ====================
+
+const ToggleBar = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-self: flex-start;
+  background: ${Color.border.light};
+  border-radius: 999px;
+  padding: 4px;
+  margin-bottom: 40px;
+`
+
+const ToggleItem = styled.button<{ $active: boolean }>`
+  border: none;
+  border-radius: 999px;
+  background: ${(props) => (props.$active ? Color.text.primary : 'transparent')};
+  color: ${(props) => (props.$active ? '#fff' : Color.text.secondary)};
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: ${Transition.slow};
+  padding: 8px 22px;
+
+  &:hover {
+    color: ${(props) => (props.$active ? '#fff' : Color.text.primary)};
+  }
+`
+
+// ==================== 右侧视觉面板 ====================
+
+const VisualPane = styled.div`
+  position: relative;
+  overflow: hidden;
+  background: #1a1214;
+
+  @media (max-width: 900px) {
     display: none;
   }
 `
 
-const BrandName = styled.h1`
-  font-size: 2.5rem;
-  font-weight: 800;
-  color: ${Color.text.primary};
-  letter-spacing: -1px;
-  margin-bottom: 16px;
+const BgImage = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 `
 
-const BrandTagline = styled.p`
-  font-size: 1.1rem;
-  color: ${Color.text.secondary};
-  line-height: 1.6;
-  max-width: 320px;
+const Scrim = styled.div`
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to top, rgba(10, 8, 9, 0.72) 0%, rgba(10, 8, 9, 0.18) 38%, rgba(10, 8, 9, 0) 60%),
+    linear-gradient(to bottom, rgba(10, 8, 9, 0.38) 0%, rgba(10, 8, 9, 0) 22%);
 `
 
-const BrandDivider = styled.div`
-  width: 40px;
-  height: 3px;
-  background: ${Color.primary};
-  margin: 20px auto;
-`
-
-// ==================== Switch 切换开关 ====================
-
-const ToggleWrapper = styled.div`
+const TopBar = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  justify-content: center;
-  margin-bottom: 32px;
-`
-
-const ToggleBar = styled.div`
-  position: relative;
-  display: flex;
-  background: ${Color.border.light};
-  border-radius: 50px;
-  padding: 4px;
-  width: 200px;
-  height: 40px;
-`
-
-const ToggleItem = styled.button<{ $active: boolean }>`
-  flex: 1;
-  border: none;
-  border-radius: 50px;
-  background: ${(props) => (props.$active ? Color.primary : 'transparent')};
-  color: ${(props) => (props.$active ? Color.text.inverse : Color.text.muted)};
-  font-size: 0.9rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.68rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: ${Transition.slow};
-  padding: 0;
-  z-index: 1;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+`
 
-  &:hover {
-    color: ${(props) => (props.$active ? Color.text.inverse : Color.text.secondary)};
+const MatchCard = styled.div`
+  position: absolute;
+  top: 72px;
+  right: 28px;
+  width: 180px;
+  background: #fff;
+  border-radius: ${Radius.md}px;
+  padding: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+`
+
+const MatchLabel = styled.p`
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: ${Color.text.muted};
+`
+
+const MatchValue = styled.p`
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: ${Color.text.primary};
+  margin: 6px 0 10px;
+`
+
+const MatchBar = styled.div`
+  height: 3px;
+  background: ${Color.border.light};
+  border-radius: 999px;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    display: block;
+    height: 100%;
+    width: 94%;
+    background: ${Color.text.primary};
   }
 `
 
-const FormTitle = styled.h2`
-  font-size: 1.3rem;
-  font-weight: bold;
-  color: ${Color.text.primary};
-  text-align: center;
-  margin-bottom: 4px;
+const MatchFoot = styled.p`
+  margin-top: 8px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: ${Color.text.muted};
 `
 
-const FormDesc = styled.p`
-  font-size: 0.9rem;
-  color: ${Color.text.secondary};
-  text-align: center;
-  margin-bottom: 24px;
+const Slogan = styled.div`
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 26px;
+  color: #fff;
+`
+
+const SloganTitle = styled.p`
+  font-size: clamp(2.4rem, 4.5vw, 3.6rem);
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.02;
+
+  em {
+    display: block;
+    font-style: italic;
+    font-weight: 700;
+  }
+`
+
+const SloganCaption = styled.p`
+  margin-top: 12px;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 46ch;
 `
 
 // ==================== 组件 ====================
@@ -147,53 +251,65 @@ export default function AuthPage() {
   }
 
   return (
-    <PageLayout>
-      <AuthContainer>
-        <AuthCard>
-          {/* 左侧：表单面板 */}
-          <LeftPanel>
-            <ToggleWrapper>
-              <ToggleBar>
-                <ToggleItem
-                  $active={activeTab === 'login'}
-                  onClick={() => handleToggle('login')}
-                >
-                  {t('store.auth.login')}
-                </ToggleItem>
-                <ToggleItem
-                  $active={activeTab === 'register'}
-                  onClick={() => handleToggle('register')}
-                >
-                  {t('store.auth.signUp')}
-                </ToggleItem>
-              </ToggleBar>
-            </ToggleWrapper>
+    <AuthShell>
+      {/* 左侧：品牌 + 表单 */}
+      <FormPane>
+        <BrandMark to="/">Ziggner</BrandMark>
 
-            {activeTab === 'login' ? (
-              <>
-                <FormTitle>{t('store.auth.signIn')}</FormTitle>
-                <FormDesc>{t('store.auth.welcomeBack')}</FormDesc>
-                <LoginForm />
-              </>
-            ) : (
-              <>
-                <FormTitle>{t('store.auth.createAccount')}</FormTitle>
-                <FormDesc>{t('store.auth.joinZiggner')}</FormDesc>
-                <RegisterForm />
-              </>
-            )}
-          </LeftPanel>
+        <FormArea>
+          <ToggleBar>
+            <ToggleItem
+              $active={activeTab === 'login'}
+              onClick={() => handleToggle('login')}
+            >
+              {t('store.auth.login')}
+            </ToggleItem>
+            <ToggleItem
+              $active={activeTab === 'register'}
+              onClick={() => handleToggle('register')}
+            >
+              {t('store.auth.signUp')}
+            </ToggleItem>
+          </ToggleBar>
 
-          {/* 右侧：品牌面板 */}
-          <RightPanel>
-            <BrandName>Ziggner</BrandName>
-            <BrandDivider />
-            <BrandTagline>
-              {t('store.auth.brandDesc')}
-            </BrandTagline>
-          </RightPanel>
-        </AuthCard>
-      </AuthContainer>
-    </PageLayout>
+          <Eyebrow>
+            {activeTab === 'login' ? t('store.auth.signIn') : t('store.auth.createAccount')}
+          </Eyebrow>
+          <Headline>{t('store.auth.signalTitle')}</Headline>
+          <Subline>{t('store.auth.signalDesc')}</Subline>
+
+          {activeTab === 'login' ? <LoginForm /> : <RegisterForm />}
+        </FormArea>
+      </FormPane>
+
+      {/* 右侧：整块背景视觉 */}
+      <VisualPane>
+        <BgImage
+          src={landingImages.authBg.src}
+          alt={landingImages.authBg.alt}
+        />
+        <Scrim />
+
+        <TopBar>
+          <span>Ziggner / Members</span>
+          <span>02 / 02</span>
+        </TopBar>
+
+        <MatchCard>
+          <MatchLabel>Your agent match quality</MatchLabel>
+          <MatchValue>94%</MatchValue>
+          <MatchBar />
+          <MatchFoot>Profile signal</MatchFoot>
+        </MatchCard>
+
+        <Slogan>
+          <SloganTitle>
+            {t('store.auth.promoTitle')}
+            <em>{t('store.auth.promoTitleAccent')}</em>
+          </SloganTitle>
+          <SloganCaption>{t('store.auth.promoCaption')}</SloganCaption>
+        </Slogan>
+      </VisualPane>
+    </AuthShell>
   )
 }

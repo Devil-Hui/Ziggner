@@ -52,7 +52,7 @@ class Conversation(models.Model):
             models.Index(fields=['status']),
             models.Index(fields=['admin', 'status']),
             models.Index(fields=['group', 'status']),
-            models.Index(fields=['spu', 'status']),
+            models.Index(fields=['spu', 'status'], name='customer_se_spu_st_8e2c1a_idx'),
         ]
 
     def __str__(self):
