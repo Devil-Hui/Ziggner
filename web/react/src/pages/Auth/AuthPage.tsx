@@ -59,6 +59,76 @@ const FormArea = styled.div`
   width: 100%;
   margin: 0 auto;
   padding: 48px 0;
+
+  /* ── 表单样式统一到落地页体系 ──────────────────────
+   * 全局 Input/Button 是旧后台风格（小圆角、蓝色 focus、彩色主按钮），
+   * 此处用后代选择器覆盖为 editorial 风格，不动全局组件。 */
+
+  /* 表单纵向节奏：固定 16px，替代旧 2vh 视口单位；
+   * 清零子元素自带 margin（旧 24px / 2vh），间距统一交给 gap */
+  & form {
+    gap: 16px;
+  }
+  & form > div {
+    margin-bottom: 0;
+  }
+
+  /* 输入框：白底 + 1px 细线 + 12px 圆角 + 墨黑 focus */
+  & form input {
+    border-radius: ${Radius.md}px;
+    border-color: ${Ink.ruleStrong};
+    background: ${Ink.paper};
+    color: ${Ink.black};
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+  }
+  & form input::placeholder {
+    color: ${Ink.faint};
+  }
+  & form input:focus,
+  & form input:focus-visible {
+    outline: none;
+    border-color: ${Ink.black};
+    box-shadow: none;
+  }
+
+  /* 条款复选框：墨黑勾选 */
+  & form input[type='checkbox'] {
+    accent-color: ${Ink.black};
+  }
+
+  /* 验证码等次级按钮：细线 + 圆角 + hover 墨黑描边 */
+  & form button[type='button'] {
+    border-radius: ${Radius.md}px;
+    border: 1px solid ${Ink.ruleStrong};
+    background: ${Ink.paper};
+    color: ${Ink.black};
+    font-weight: 600;
+    white-space: nowrap;
+    transition: border-color 0.2s ease;
+  }
+  & form button[type='button']:hover:not(:disabled) {
+    border-color: ${Ink.black};
+    background: ${Ink.paper};
+  }
+
+  /* 主提交按钮：全宽墨黑大按钮（参考图样式） */
+  & form button[type='submit'] {
+    width: 100%;
+    background: ${Ink.black};
+    color: ${Ink.paper};
+    border-radius: ${Radius.md}px;
+    padding: 14px 20px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    box-shadow: ${Elevation.ink};
+    transition: background 0.3s ${Ease.cinema}, transform 0.3s ${Ease.cinema};
+  }
+  & form button[type='submit']:hover:not(:disabled) {
+    background: #000;
+    transform: translateY(-2px);
+  }
 `
 
 // ==================== 左侧文案 ====================
@@ -99,7 +169,7 @@ const ToggleBar = styled.div`
   border: 1px solid ${Ink.rule};
   border-radius: ${Radius.full}px;
   padding: 4px;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
 `
 
 const ToggleItem = styled.button<{ $active: boolean }>`
