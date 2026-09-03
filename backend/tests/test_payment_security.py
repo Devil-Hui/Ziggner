@@ -162,17 +162,20 @@ class RefundAfterSaleGateTests(TestCase):
         self.user = User.objects.create_user(username='buyer2', password='Passw0rd!123')
         self.payment = _make_order_payment(self.user, status=PaymentStatus.SUCCESS)
 
-    def _refund(self):
+    def _refund(self, idempotency_key='itest-1'):
+        # CreateRefundSerializer.idempotency_key 为必填（RegexField 无 default）
         self.client.force_authenticate(self.user)
         return self.client.post(
-            REFUND_URL, {'order_no': self.payment.order.order_no}, format='json',
+            REFUND_URL,
+            {'order_no': self.payment.order.order_no, 'idempotency_key': idempotency_key},
+            format='json',
         )
 
     def test_refund_blocked_without_after_sale(self):
         """收货后想绕过售后审核直接自退全款 → 403。"""
         res = self._refund()
         self.assertEqual(res.status_code, 403)
-        self.assertIn('approved after-sale', str(res.data.get('detail', '')))
+        self.assertIn('approved after-sale', res.content.decode())
 
     def test_refund_rejected_after_sale_still_pending(self):
         """售后单还在待审核 → 同样不允许退款。"""
@@ -202,7 +205,9 @@ class RefundAfterSaleGateTests(TestCase):
                                               email='boss@example.com')
         self.client.force_authenticate(admin)
         res = self.client.post(
-            REFUND_URL, {'order_no': self.payment.order.order_no}, format='json',
+            REFUND_URL,
+            {'order_no': self.payment.order.order_no, 'idempotency_key': 'itest-admin'},
+            format='json',
         )
         self.assertEqual(res.status_code, 200)
         self.payment.order.refresh_from_db()
@@ -213,6 +218,8 @@ class RefundAfterSaleGateTests(TestCase):
         other = User.objects.create_user(username='other', password='Passw0rd!123')
         self.client.force_authenticate(other)
         res = self.client.post(
-            REFUND_URL, {'order_no': self.payment.order.order_no}, format='json',
+            REFUND_URL,
+            {'order_no': self.payment.order.order_no, 'idempotency_key': 'itest-idor'},
+            format='json',
         )
         self.assertEqual(res.status_code, 404)

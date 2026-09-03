@@ -377,11 +377,16 @@ class PaymentService:
         """
         idempotency_key = PaymentService._normalize_refund_idempotency_key(idempotency_key)
         with db_transaction.atomic():
-            payment = PaymentLog.objects.select_for_update().select_related('order').filter(
-                user=user,
+            # 归属过滤：普通用户只能退自己的支付单（IDOR 防护）；
+            # 管理员豁免（线下协商退款），可按订单号定位任意支付单。
+            is_admin = PaymentService._is_admin_user(user)
+            payment_q = PaymentLog.objects.select_for_update().select_related('order').filter(
                 order__order_no=order_no,
                 status__in=(PaymentStatus.SUCCESS, PaymentStatus.REFUNDED),
-            ).first()
+            )
+            if not is_admin:
+                payment_q = payment_q.filter(user=user)
+            payment = payment_q.first()
             if not payment:
                 raise ValueError('PAYMENT_NOT_FOUND_OR_NOT_PAID')
 
@@ -389,7 +394,7 @@ class PaymentService:
             # 真实退款必须先有已批准/已完成的售后单（管理员审核通过），
             # 防止买家收货后绕过售后审核直接自退全款（退钱不退货）。
             # 管理角色豁免，覆盖线下协商退款场景。
-            if not PaymentService._is_admin_user(user):
+            if not is_admin:
                 has_approved_after_sale = AfterSale.objects.filter(
                     order=payment.order,
                     status__in=(AfterSaleStatus.APPROVED, AfterSaleStatus.COMPLETED),

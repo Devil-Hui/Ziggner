@@ -24,7 +24,9 @@
 
 services:
   db:
-    image: mysql:8.0
+    # 对齐生产 mysql/Dockerfile 的 debian 变体（oracle 变体在 Windows Docker Desktop 上
+    # --daemonize 初始化会报 "Inappropriate ioctl for device" 无法启动）
+    image: docker.m.daocloud.io/library/mysql:8.0.36-debian
     restart: "no"
     environment:
       MYSQL_ROOT_PASSWORD: root
@@ -37,8 +39,10 @@ services:
       - --slow-query-log=1
       - --long_query_time=0.5
     expose: ["3306"]
-    mem_limit: 320m
-    memswap_limit: 320m
+    # 640m 对齐 prod：320m 下 MySQL 8 初始化临时实例会被 OOM Killed
+    # （表现为 --daemonize 阶段 "Unable to determine if daemon ... Inappropriate ioctl" + Killed）
+    mem_limit: 640m
+    memswap_limit: 640m
     cpus: 0.4
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot --silent"]
@@ -84,7 +88,8 @@ services:
       - ../../../test/backend:/backend/../../../test/backend
     environment:
       DJANGO_SETTINGS_MODULE: project.config.settings.dev
-      DJANGO_ENV: test
+      # runtime_env.ALLOWED_ENVS 仅允许 dev/staging/prod（无 test 配置模块），dev 即测试用途
+      DJANGO_ENV: dev
       DB_ENGINE: django.db.backends.mysql
       DB_HOST: db
       DB_PORT: "3306"
