@@ -28,7 +28,7 @@ const Sidebar = styled.aside<{ $collapsed: boolean }>`
   position: sticky;
   top: 0;
   height: 100vh;
-  width: ${({ $collapsed }) => ($collapsed ? '64px' : '200px')};
+  width: ${({ $collapsed }) => ($collapsed ? '64px' : '125px')};
   flex-shrink: 0;
   z-index: ${ZIndex.sidebar};
   background: #1a1a2e;
@@ -44,9 +44,9 @@ const Sidebar = styled.aside<{ $collapsed: boolean }>`
 `
 
 const SidebarLogo = styled.div`
-  padding: 20px 16px;
+  padding: 16px 14px;
   font-family: 'Playfair Display', serif;
-  font-size: 1.25rem;
+  font-size: 1rem;
   color: ${Color.text.inverse};
   border-bottom: 1px solid #16213e;
   white-space: nowrap;
@@ -59,30 +59,28 @@ const SidebarNav = styled.nav`
 `
 
 const SidebarSection = styled.div`
-  padding: 12px 16px 4px;
-  font-size: 0.688rem;
+  padding: 12px 14px 4px;
+  font-size: 0.625rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: ${Color.text.secondary};
   white-space: nowrap;
 `
 
-// 双行菜单项：图标 24px 居中 + 文字 14px 居下
+// 单行菜单项：图标 + 文字并排，左对齐
 const SidebarLink = styled(NavLink)`
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 10px 8px;
+  gap: 8px;
+  padding: 8px 12px;
   margin: 2px 8px;
   border-radius: ${Radius.md}px;
   color: #a0aec0;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 13px;
   transition: background ${Transition.fast};
   border-left: 3px solid transparent;
-  text-align: center;
+  text-align: left;
 
   &:hover {
     background: rgba(0, 0, 0, 0.04);
@@ -96,7 +94,7 @@ const SidebarLink = styled(NavLink)`
     font-weight: ${FontWeight.medium};
   }
 
-  svg { width: 24px; height: 24px; flex-shrink: 0; }
+  svg { width: 18px; height: 18px; flex-shrink: 0; }
   .lbl { line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 `
 
@@ -108,7 +106,8 @@ const SidebarToggle = styled.button`
   color: #a0aec0;
   font-size: 0.75rem;
   cursor: pointer;
-  text-align: center;
+  text-align: left;
+  padding-left: 12px;
   flex-shrink: 0;
   transition: color 0.15s;
 
@@ -833,7 +832,7 @@ export default function AdminLayout() {
           {!isCollapsed && <SidebarSection>{group.section}</SidebarSection>}
           {group.items.map(item => (
             <SidebarLink key={item.to} to={item.to} title={isCollapsed ? item.label : undefined} onClick={onNavigate}>
-              <Icon name={item.icon as never} size={24} />
+              <Icon name={item.icon as never} size={18} />
               {!isCollapsed && <span className="lbl">{item.label}</span>}
             </SidebarLink>
           ))}
