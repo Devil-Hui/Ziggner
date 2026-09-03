@@ -71,10 +71,8 @@ urlpatterns = [
     path("health/", HealthCheckView.as_view(), name="health"),
     path('', include('django_prometheus.urls')),
     path("admin/", admin.site.urls),
-    # OpenAPI 3 schema
-    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # OpenAPI 文档（/api/schema/ 等）只在 DEBUG 下注册（见文件末尾）：
+    # 生产环境不向外网暴露完整接口地图，收敛攻击者侦察面。
     # R2 异步上传结果轮询
     path('api/v1/media/status/<str:upload_id>/', media_upload_status, name='media-upload-status'),
 ]
@@ -96,6 +94,12 @@ urlpatterns += [
 ]
 
 if settings.DEBUG:
+    urlpatterns += [
+        # OpenAPI 3 schema 与交互文档 —— 仅开发环境注册
+        path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+        path("api/swagger-ui/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+        path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    ]
     urlpatterns += staticfiles_urlpatterns()
     if settings.FILE_STORAGE == 'local' and settings.MEDIA_URL.strip('/'):
         urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
