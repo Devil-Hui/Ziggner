@@ -27,6 +27,9 @@ web/react/run-tests.cjs
 web/react/shot.mjs
 web/react/test-output.txt
 web/react/vitest-result.txt
+# PayPal 沙箱冒烟测试（读取 .env.production 凭据，不入库）
+backend/tests/sandbox_paypal.py
+scripts/run_sandbox_paypal.ps1
 # 本地构建改名残留（sandbox safe-delete 规避用）
 web/react/dist-old/
 # git 仓库损坏备份目录（不入库）
