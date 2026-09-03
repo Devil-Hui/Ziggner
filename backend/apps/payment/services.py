@@ -10,6 +10,7 @@ from django.conf import settings
 from django.db import transaction as db_transaction
 from django.db import IntegrityError
 from django.db.models import Sum
+from django.utils import timezone
 
 from apps.order.models import (
     AfterSale,
