@@ -9,6 +9,7 @@ import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import Modal from './Modal'
 import { Color, FontSize, FontWeight, Spacing } from '../../../theme/tokens'
+import { useTranslation } from '@/i18n'
 
 const Msg = styled.div`
   font-size: ${FontSize.base}px;
@@ -34,36 +35,37 @@ export interface DeleteConfirmDialogProps {
 
 export default function DeleteConfirmDialog({
   open,
-  title = '确认删除',
+  title,
   itemName,
   onClose,
   onConfirm,
   loading = false,
 }: DeleteConfirmDialogProps) {
+  const { t } = useTranslation()
   return (
     <Modal
       open={open}
-      title={title}
+      title={title ?? t('admin.deleteConfirm.title')}
       width="420px"
       maskClosable={false}
-      okText="确认删除"
-      okLoadingText="删除中..."
+      okText={t('admin.deleteConfirm.confirm')}
+      okLoadingText={t('admin.deleteConfirm.deleting')}
       okDanger
       confirmLoading={loading}
-      cancelText="取消"
+      cancelText={t('common.cancel')}
       onOk={onConfirm}
       onClose={onClose}
     >
       <Msg>
-        确定要删除
+        {t('admin.deleteConfirm.messagePrefix')}
         {itemName ? (
           <>
-            优惠券 <Highlight>{itemName}</Highlight>
+            {t('admin.deleteConfirm.coupon')} <Highlight>{itemName}</Highlight>
           </>
         ) : (
-          '该优惠券'
+          t('admin.deleteConfirm.thisCoupon')
         )}
-        吗？此操作不可撤销。
+        {t('admin.deleteConfirm.messageSuffix')}
       </Msg>
     </Modal>
   )

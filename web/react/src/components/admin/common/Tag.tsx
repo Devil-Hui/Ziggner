@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import { Color, FontSize, FontWeight, Radius, Transition } from '../../../theme/tokens'
+import { useTranslation } from '@/i18n'
 
 export type TagTone = 'success' | 'warning' | 'error' | 'info' | 'neutral'
 
@@ -57,11 +58,12 @@ export interface TagProps {
 }
 
 export default function Tag({ tone = 'neutral', closable = false, onClose, children, className }: TagProps) {
+  const { t } = useTranslation()
   return (
     <StyledTag $tone={tone} $closable={closable} className={className}>
       {children}
       {closable && (
-        <button className="close" onClick={onClose} aria-label="移除">✕</button>
+        <button className="close" onClick={onClose} aria-label={t('common.remove')}>✕</button>
       )}
     </StyledTag>
   )

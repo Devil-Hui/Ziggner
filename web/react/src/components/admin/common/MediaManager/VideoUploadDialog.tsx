@@ -5,6 +5,7 @@ import { extractVideoFrames } from '../../../../utils/videoFrameExtractor'
 import type { VideoFrameResult } from '../../../../utils/videoFrameExtractor'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import * as S from './MediaManager.styles'
+import { useTranslation } from '@/i18n'
 
 interface Props {
   open: boolean
@@ -13,6 +14,7 @@ interface Props {
 }
 
 export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
+  const { t } = useTranslation()
   const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [processing, setProcessing] = useState(false)
@@ -32,7 +34,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
     const file = e.target.files?.[0]
     if (file) {
       if (!file.type.startsWith('video/')) {
-        showToast('请选择视频文件', 'warning')
+        showToast(t('admin.mediaManager.selectVideo'), 'warning')
         return
       }
       setSelectedFile(file)
@@ -48,7 +50,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
       frameResultRef.current = result
       setProcessing(false)
     } catch (err) {
-      showToast('视频头帧提取失败: ' + (err instanceof Error ? err.message : '未知错误'))
+      showToast(t('admin.mediaManager.frameExtractFailed') + ': ' + (err instanceof Error ? err.message : t('admin.mediaManager.unknownError')))
       setProcessing(false)
       setSelectedFile(null)
     }
@@ -81,17 +83,17 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
       <S.DialogBox onClick={(e) => e.stopPropagation()}>
         {processing ? (
           <>
-            <S.DialogTitle>处理视频</S.DialogTitle>
-            <S.ProcessingText>正在提取视频头帧...</S.ProcessingText>
+            <S.DialogTitle>{t('admin.mediaManager.processingVideo')}</S.DialogTitle>
+            <S.ProcessingText>{t('admin.mediaManager.extractingFrames')}</S.ProcessingText>
           </>
         ) : selectedFile ? (
           <>
-            <S.DialogTitle>预览视频头帧</S.DialogTitle>
+            <S.DialogTitle>{t('admin.mediaManager.previewFrame')}</S.DialogTitle>
             <div style={{ textAlign: 'center' }}>
               {previewUrl && (
                 <img
                   src={previewUrl}
-                  alt="视频头帧"
+                  alt={t('admin.mediaManager.videoFrame')}
                   style={{ maxWidth: '100%', maxHeight: 300, borderRadius: 8 }}
                 />
               )}
@@ -100,7 +102,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
               </div>
             </div>
             <S.DialogActions>
-              <S.ActionBtn onClick={onClose}>取消</S.ActionBtn>
+              <S.ActionBtn onClick={onClose}>{t('common.cancel')}</S.ActionBtn>
               <S.ActionBtn $primary onClick={handleConfirm}>
                 确认添加
               </S.ActionBtn>
@@ -108,9 +110,9 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
           </>
         ) : (
           <>
-            <S.DialogTitle>添加视频</S.DialogTitle>
+            <S.DialogTitle>{t('admin.mediaManager.addVideo')}</S.DialogTitle>
             <S.UploadZone onClick={() => fileInputRef.current?.click()}>
-              <div>点击选择视频文件</div>
+              <div>{t('admin.mediaManager.clickSelectVideo')}</div>
               <div style={{ fontSize: 12, marginTop: 8 }}>
                 支持 MP4 / WebM / MOV，最大 200MB，仅提取头帧预览
               </div>
@@ -123,7 +125,7 @@ export default function VideoUploadDialog({ open, onClose, onConfirm }: Props) {
               style={{ display: 'none' }}
             />
             <S.DialogActions>
-              <S.ActionBtn onClick={onClose}>取消</S.ActionBtn>
+              <S.ActionBtn onClick={onClose}>{t('common.cancel')}</S.ActionBtn>
             </S.DialogActions>
           </>
         )}

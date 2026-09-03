@@ -4,6 +4,7 @@
 import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import { Color, FontSize, FontWeight, Radius, Spacing, Transition } from '../../../theme/tokens'
+import { useTranslation } from '@/i18n'
 
 const Wrap = styled.div`
   display: flex;
@@ -85,15 +86,16 @@ export default function Result({
   onBack,
   className,
 }: ResultProps) {
+  const { t } = useTranslation()
   const m = MAP[status]
   return (
     <Wrap className={className}>
       <IconBox $tone={m.tone}>{m.icon}</IconBox>
-      <Title>{title ?? (status === '403' ? '无权限访问' : status === '500' ? '服务异常' : '页面不存在')}</Title>
+      <Title>{title ?? (status === '403' ? t('admin.result.forbidden') : status === '500' ? t('admin.result.serverError') : t('admin.result.notFound'))}</Title>
       {subTitle && <SubTitle>{subTitle}</SubTitle>}
       <Extra>
         {extra}
-        {onBack && <BackBtn onClick={onBack}>返回</BackBtn>}
+        {onBack && <BackBtn onClick={onBack}>{t('common.back')}</BackBtn>}
       </Extra>
     </Wrap>
   )

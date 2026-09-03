@@ -150,7 +150,7 @@ export default function AdminPromoCodes() {
       const data = await adminAPI.getPromoDashboard(cid)
       setList(Array.isArray(data) ? data : [])
     } catch (e: any) {
-      setError(e?.message || '加载失败')
+      setError(e?.message || t('admin.promoCodes.loadFailed'))
     } finally {
       setLoading(false)
     }
@@ -165,9 +165,9 @@ export default function AdminPromoCodes() {
   const copyLink = async (code: string) => {
     try {
       await navigator.clipboard.writeText(shareUrl(code))
-      toast.success('直达链接已复制')
+      toast.success(t('admin.promoCodes.linkCopied'))
     } catch {
-      toast.error('复制失败，请手动复制')
+      toast.error(t('admin.promoCodes.copyFailed'))
     }
   }
 
@@ -175,10 +175,10 @@ export default function AdminPromoCodes() {
     setBusyId(item.id)
     try {
       await adminAPI.updatePromoCode(item.id, { is_active: !item.is_active })
-      toast.success(item.is_active ? '已停用' : '已启用')
+      toast.success(item.is_active ? t('admin.promoCodes.disabled') : t('admin.promoCodes.enabled'))
       fetchList()
     } catch {
-      toast.error('操作失败')
+      toast.error(t('admin.promoCodes.operationFailed'))
     } finally {
       setBusyId(null)
     }
@@ -188,11 +188,11 @@ export default function AdminPromoCodes() {
     if (!deleteTarget) return
     try {
       await adminAPI.deletePromoCode(deleteTarget.id)
-      toast.success('已删除')
+      toast.success(t('admin.promoCodes.deleted'))
       setDeleteTarget(null)
       fetchList()
     } catch {
-      toast.error('删除失败')
+      toast.error(t('admin.promoCodes.deleteFailed'))
     }
   }
 
@@ -202,12 +202,12 @@ export default function AdminPromoCodes() {
     setGenBusy(true)
     try {
       await adminAPI.createPromoCodes(cid, { count, prefix, name: genForm.name, note: genForm.note })
-      toast.success(`已生成 ${count} 个推广码`)
+      toast.success(t('admin.promoCodes.generated', { count: String(count) }))
       setShowGenerate(false)
       setGenForm({ count: 1, prefix: '', name: '', note: '' })
       fetchList()
     } catch (e: any) {
-      toast.error(e?.message || '生成失败')
+      toast.error(e?.message || t('admin.promoCodes.generateFailed'))
     } finally {
       setGenBusy(false)
     }
@@ -220,10 +220,10 @@ export default function AdminPromoCodes() {
     return (
       <div>
         <PageHeader
-          title="代言人券 · 推广码看板"
-          actions={<RowBtn onClick={() => navigate('/admin/coupons')}>返回优惠券</RowBtn>}
+          title={t('admin.promoCodes.dashboardTitle')}
+          actions={<RowBtn onClick={() => navigate('/admin/coupons')}>{t('admin.promoCodes.backToCoupons')}</RowBtn>}
         />
-        <EmptyBox>推广码参数缺失或无效（couponId），请从优惠券列表的「推广码」按钮进入。</EmptyBox>
+        <EmptyBox>{t('admin.promoCodes.invalidParams')}</EmptyBox>
       </div>
     )
   }
@@ -233,12 +233,12 @@ export default function AdminPromoCodes() {
   return (
     <div>
       <PageHeader
-        title="代言人券 · 推广码看板"
-        breadcrumb={[{ label: t('admin.coupons.title'), path: '/admin/coupons' }, { label: `推广码 · 优惠券 ${couponCode ?? `#${cid}`}` }]}
+        title={t('admin.promoCodes.dashboardTitle')}
+        breadcrumb={[{ label: t('admin.coupons.title'), path: '/admin/coupons' }, { label: t('admin.promoCodes.breadcrumb', { code: couponCode ?? `#${cid}` }) }]}
         actions={
           <>
-            <RowBtn onClick={() => navigate('/admin/coupons')}>返回优惠券</RowBtn>
-            <RowBtn $tone="blue" onClick={() => setShowGenerate(true)}>生成推广码</RowBtn>
+            <RowBtn onClick={() => navigate('/admin/coupons')}>{t('admin.promoCodes.backToCoupons')}</RowBtn>
+            <RowBtn $tone="blue" onClick={() => setShowGenerate(true)}>{t('admin.promoCodes.generate')}</RowBtn>
           </>
         }
       />
@@ -246,7 +246,7 @@ export default function AdminPromoCodes() {
       {error ? (
         <EmptyBox>{error}
           <div style={{ marginTop: 8 }}>
-            <RowBtn onClick={fetchList}>重试</RowBtn>
+            <RowBtn onClick={fetchList}>{t('common.retry')}</RowBtn>
           </div>
         </EmptyBox>
       ) : loading ? (
@@ -256,38 +256,38 @@ export default function AdminPromoCodes() {
           ))}
         </div>
       ) : list.length === 0 ? (
-        <EmptyBox>暂无推广码，点击右上角「生成推广码」创建</EmptyBox>
+        <EmptyBox>{t('admin.promoCodes.empty')}</EmptyBox>
       ) : (
         <TableScroll>
           <Table>
             <thead>
               <tr>
-                <th>券码</th>
-                <th>状态</th>
-                <th style={{ textAlign: 'right' }}>领取数</th>
-                <th style={{ textAlign: 'right' }}>去重用户</th>
-                <th style={{ textAlign: 'right' }}>已支付订单</th>
+                <th>{t('admin.promoCodes.colCode')}</th>
+                <th>{t('admin.promoCodes.colStatus')}</th>
+                <th style={{ textAlign: 'right' }}>{t('admin.promoCodes.colClaims')}</th>
+                <th style={{ textAlign: 'right' }}>{t('admin.promoCodes.colUsers')}</th>
+                <th style={{ textAlign: 'right' }}>{t('admin.promoCodes.colPaid')}</th>
                 <th style={{ textAlign: 'right' }}>GMV</th>
-                <th>操作</th>
+                <th>{t('admin.promoCodes.colActions')}</th>
               </tr>
             </thead>
             <tbody>
               {list.map(item => (
                 <tr key={item.id}>
                   <td><Mono>{item.code}</Mono></td>
-                  <td><StatusBadge tone={item.is_active ? 'success' : 'neutral'}>{item.is_active ? '启用' : '停用'}</StatusBadge></td>
+                  <td><StatusBadge tone={item.is_active ? 'success' : 'neutral'}>{item.is_active ? t('admin.promoCodes.enabled') : t('admin.promoCodes.disabled')}</StatusBadge></td>
                   <td style={{ textAlign: 'right' }}>{item.claim_count ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.unique_users ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>{item.paid_order_count ?? 0}</td>
                   <td style={{ textAlign: 'right' }}>${Number(item.gmv ?? 0).toLocaleString('zh-CN', { minimumFractionDigits: 2 })}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <RowBtn onClick={() => setQrTarget(item)}>二维码</RowBtn>
-                      <RowBtn onClick={() => copyLink(item.code)}>复制链接</RowBtn>
+                      <RowBtn onClick={() => setQrTarget(item)}>{t('admin.promoCodes.qr')}</RowBtn>
+                      <RowBtn onClick={() => copyLink(item.code)}>{t('admin.promoCodes.copyLink')}</RowBtn>
                       <RowBtn disabled={busyId === item.id} onClick={() => handleToggle(item)}>
-                        {item.is_active ? '停用' : '启用'}
+                        {item.is_active ? t('admin.promoCodes.disable') : t('admin.promoCodes.enable')}
                       </RowBtn>
-                      <RowBtn $tone="danger" onClick={() => setDeleteTarget(item)}>删除</RowBtn>
+                      <RowBtn $tone="danger" onClick={() => setDeleteTarget(item)}>{t('common.delete')}</RowBtn>
                     </div>
                   </td>
                 </tr>
@@ -295,7 +295,7 @@ export default function AdminPromoCodes() {
             </tbody>
             <tfoot>
               <tr>
-                <td>合计</td>
+                <td>{t('admin.promoCodes.total')}</td>
                 <td></td>
                 <td style={{ textAlign: 'right' }}>{sum(i => i.claim_count ?? 0)}</td>
                 <td style={{ textAlign: 'right' }}>{sum(i => i.unique_users ?? 0)}</td>
@@ -311,16 +311,16 @@ export default function AdminPromoCodes() {
       {/* 生成推广码 */}
       <FormDialog
         open={showGenerate}
-        title="生成推广码"
+        title={t('admin.promoCodes.generateTitle')}
         size="md"
-        okText="生成"
+        okText={t('admin.promoCodes.generate')}
         onOk={handleGenerate}
         onCancel={() => setShowGenerate(false)}
         loading={genBusy}
       >
         <GenerateForm>
           <Field>
-            <label>生成数量（1–200）</label>
+            <label>{t('admin.promoCodes.countLabel')}</label>
             <input
               type="number"
               min={1}
@@ -330,26 +330,26 @@ export default function AdminPromoCodes() {
             />
           </Field>
           <Field>
-            <label>前缀（≤8 位大写，选填）</label>
+            <label>{t('admin.promoCodes.prefixLabel')}</label>
             <input
               value={genForm.prefix}
               onChange={e => setGenForm(f => ({ ...f, prefix: e.target.value.toUpperCase() }))}
-              placeholder="如 TB"
+              placeholder={t('admin.promoCodes.prefixPlaceholder')}
             />
           </Field>
           <Field>
-            <label>名称（选填）</label>
+            <label>{t('admin.promoCodes.nameLabel')}</label>
             <input value={genForm.name} onChange={e => setGenForm(f => ({ ...f, name: e.target.value }))} />
           </Field>
           <Field>
-            <label>备注（选填）</label>
+            <label>{t('admin.promoCodes.noteLabel')}</label>
             <input value={genForm.note} onChange={e => setGenForm(f => ({ ...f, note: e.target.value }))} />
           </Field>
         </GenerateForm>
       </FormDialog>
 
       {/* 二维码 */}
-      <Dialog open={!!qrTarget} title="推广码二维码" size="sm" footer={null} onClose={() => setQrTarget(null)}>
+      <Dialog open={!!qrTarget} title={t('admin.promoCodes.qrTitle')} size="sm" footer={null} onClose={() => setQrTarget(null)}>
         {qrTarget && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
             <QRCodeSVG value={shareUrl(qrTarget.code)} size={200} />
@@ -363,9 +363,9 @@ export default function AdminPromoCodes() {
       {deleteTarget && (
         <ConfirmDialog
           open
-          title="删除推广码"
-          message={`确定删除推广码 ${deleteTarget.code} 吗？此操作不可撤销。`}
-          confirmLabel="确认删除"
+          title={t('admin.promoCodes.deleteTitle')}
+          message={t('admin.promoCodes.deleteMessage', { code: deleteTarget.code })}
+          confirmLabel={t('admin.promoCodes.confirmDelete')}
           tone="danger"
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}

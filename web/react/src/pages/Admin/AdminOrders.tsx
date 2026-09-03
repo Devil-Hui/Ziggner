@@ -277,12 +277,12 @@ function orderNoFromAfterSale(row: AfterSaleRow): string {
   return '-'
 }
 
-const STEP_LABEL: Record<string, string> = {
-  pending_payment: '待支付',
-  paid: '已支付',
-  shipped: '已发货',
-  delivered: '已签收',
-  completed: '已完成',
+const STEP_LABEL_KEY: Record<string, string> = {
+  pending_payment: 'admin.orders.stepPendingPayment',
+  paid: 'admin.orders.stepPaid',
+  shipped: 'admin.orders.stepShipped',
+  delivered: 'admin.orders.stepDelivered',
+  completed: 'admin.orders.stepCompleted',
 }
 
 const PAGE_SIZE = 20
@@ -769,7 +769,7 @@ export default function AdminOrders() {
                 {ORDER_STEPS.map((s, i) => (
                   <Step key={s} $state={i < stepIndex ? 'done' : i === stepIndex ? 'current' : 'todo'}>
                     <span className="dot">{i < stepIndex ? '✓' : i + 1}</span>
-                    {STEP_LABEL[s] ?? s}
+                    {STEP_LABEL_KEY[s] ? t(STEP_LABEL_KEY[s]) : s}
                     {i < ORDER_STEPS.length - 1 && <span className="line" />}
                   </Step>
                 ))}
@@ -863,10 +863,10 @@ export default function AdminOrders() {
       {/* 商品参数预览（点击订单商品名弹出，不跳转前台） */}
       <Dialog
         open={!!itemPreview}
-        title={t('admin.orders.itemPreviewTitle') || '商品参数'}
+        title={t('admin.orders.itemPreviewTitle')}
         size="md"
         footer={
-          <Button variant="secondary" onClick={() => setItemPreview(null)}>{t('common.close') || '关闭'}</Button>
+          <Button variant="secondary" onClick={() => setItemPreview(null)}>{t('common.close')}</Button>
         }
         onClose={() => setItemPreview(null)}
       >
@@ -884,9 +884,9 @@ export default function AdminOrders() {
               <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: '96px 1fr', gap: '6px 12px', fontSize: 13 }}>
                 {[
                   ['SKU', itemPreview.sku_code],
-                  ['单价', money(itemPreview.price)],
-                  ['数量', itemPreview.quantity],
-                  ['小计', money(itemPreview.subtotal)],
+                  [t('admin.orders.unitPrice'), money(itemPreview.price)],
+                  [t('admin.orders.quantity'), itemPreview.quantity],
+                  [t('admin.orders.subtotal'), money(itemPreview.subtotal)],
                   ...(itemPreview.specs && Array.isArray(itemPreview.specs) && itemPreview.specs.length
                     ? itemPreview.specs.map((s: any) => [String(s.name || ''), Array.isArray(s.values) ? s.values.join(' / ') : ''])
                     : []),

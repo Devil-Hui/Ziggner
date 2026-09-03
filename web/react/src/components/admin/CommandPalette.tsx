@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import styled from 'styled-components'
 import { Semantic } from '@/theme'
 import { ZIndex } from '@/theme/zIndex'
+import { useTranslation } from '@/i18n'
 
 export interface PaletteItem {
   id: string
@@ -154,7 +155,8 @@ const Empty = styled.div`
   color: ${Semantic.text.muted};
 `
 
-export function CommandPalette({ open, onClose, sections, placeholder = '搜索 Ziggner…' }: CommandPaletteProps) {
+export function CommandPalette({ open, onClose, sections, placeholder }: CommandPaletteProps) {
+  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [active, setActive] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -214,7 +216,7 @@ export function CommandPalette({ open, onClose, sections, placeholder = '搜索 
   if (!open) return null
 
   return (
-    <Overlay onClick={onClose} role="dialog" aria-modal="true" aria-label="命令面板">
+    <Overlay onClick={onClose} role="dialog" aria-modal="true" aria-label={t('admin.commandPalette.title')}>
       <Panel onClick={(e) => e.stopPropagation()}>
         <InputRow>
           <span style={{ fontSize: 16 }}>⌕</span>
@@ -223,13 +225,13 @@ export function CommandPalette({ open, onClose, sections, placeholder = '搜索 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('admin.commandPalette.placeholder')}
           />
           <Kbd>Esc</Kbd>
         </InputRow>
         <ResultList>
           {flat.length === 0 ? (
-            <Empty>没有找到匹配项</Empty>
+            <Empty>{t('admin.commandPalette.noResults')}</Empty>
           ) : (
             filtered.map((section) => (
               <div key={section.title}>

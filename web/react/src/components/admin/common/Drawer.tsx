@@ -13,6 +13,7 @@ import { useEffect, type ReactNode, type CSSProperties } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, FontWeight, Transition } from '../../../theme/tokens'
 import { ZIndex } from '../../../theme/zIndex'
+import { useTranslation } from '@/i18n'
 
 const slideIn = keyframes`
   from { transform: translateX(100%); }
@@ -110,6 +111,7 @@ export default function Drawer({
   style,
   children,
 }: DrawerProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -132,7 +134,7 @@ export default function Drawer({
       <Panel $width={width} className={className} style={style} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
         <Header>
           <Title>{title}</Title>
-          <CloseBtn onClick={onClose} aria-label="关闭">&times;</CloseBtn>
+          <CloseBtn onClick={onClose} aria-label={t('common.close')}>&times;</CloseBtn>
         </Header>
         <Body>{children}</Body>
         {footer && <Footer>{footer}</Footer>}

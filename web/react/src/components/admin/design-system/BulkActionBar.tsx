@@ -11,6 +11,7 @@ import styled from 'styled-components'
 import { Semantic } from '@/theme'
 import { Button } from './Button'
 import { ConfirmDialog } from './Dialog'
+import { useTranslation } from '@/i18n'
 
 export interface BulkAction {
   key: string
@@ -50,6 +51,7 @@ const Count = styled.span`
 `
 
 export function BulkActionBar({ selectedCount, actions, onClear, summary }: BulkActionBarProps) {
+  const { t } = useTranslation()
   const [pending, setPending] = useState<BulkAction | null>(null)
 
   if (selectedCount === 0) return null
@@ -57,7 +59,7 @@ export function BulkActionBar({ selectedCount, actions, onClear, summary }: Bulk
   return (
     <>
       <Bar>
-        <Count>已选择 {selectedCount} 项</Count>
+        <Count>{t('admin.bulk.selected', { count: String(selectedCount) })}</Count>
         {summary}
         {actions.map((a) => (
           <Button
@@ -71,16 +73,16 @@ export function BulkActionBar({ selectedCount, actions, onClear, summary }: Bulk
           </Button>
         ))}
         <Button variant="text" size="sm" onClick={onClear}>
-          取消选择
+          {t('admin.bulk.clearSelection')}
         </Button>
       </Bar>
       <ConfirmDialog
         open={!!pending}
-        title={pending?.confirmTitle ?? '确认批量操作？'}
-        message={pending?.confirmMessage ?? `即将对选中的 ${selectedCount} 项执行「${pending?.label}」，是否继续？`}
+        title={pending?.confirmTitle ?? t('admin.bulk.confirmTitle')}
+        message={pending?.confirmMessage ?? t('admin.bulk.confirmMessage', { count: String(selectedCount), label: pending?.label ?? '' })}
         tone={pending?.variant === 'danger' ? 'danger' : 'warning'}
-        confirmLabel="确认执行"
-        cancelLabel="取消"
+        confirmLabel={t('admin.bulk.confirmExecute')}
+        cancelLabel={t('common.cancel')}
         onConfirm={() => {
           pending?.onClick()
           setPending(null)

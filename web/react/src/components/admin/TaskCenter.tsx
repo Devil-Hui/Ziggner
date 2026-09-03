@@ -13,13 +13,14 @@ import styled from 'styled-components'
 import { adminAPI, type TaskItem } from '../../api/admin'
 import { Business, Semantic } from '@/theme'
 import { ZIndex } from '@/theme/zIndex'
+import { useTranslation } from '@/i18n'
 
-const TYPE_LABEL: Record<string, string> = {
-  import: '商品批量导入',
-  audit: '商品批量审核',
-  'promo-code': '推广码生成',
-  export: '数据导出',
-  cleanup: '数据清理',
+const TYPE_LABEL_KEY: Record<string, string> = {
+  import: 'admin.taskCenter.typeImport',
+  audit: 'admin.taskCenter.typeAudit',
+  'promo-code': 'admin.taskCenter.typePromoCode',
+  export: 'admin.taskCenter.typeExport',
+  cleanup: 'admin.taskCenter.typeCleanup',
 }
 
 const STATE_KEY: Record<TaskItem['state'], keyof typeof Business.TaskStatus> = {
@@ -172,9 +173,13 @@ const Footer = styled.button`
   }
 `
 
-const taskLabel = (type: string): string => TYPE_LABEL[type] ?? type.replace(/[-_]/g, ' ')
+const taskLabel = (t: (k: string) => string, type: string): string => {
+  const key = TYPE_LABEL_KEY[type]
+  return key ? t(key) : type.replace(/[-_]/g, ' ')
+}
 
 export function TaskCenter() {
+  const { t: translate } = useTranslation()
   const [open, setOpen] = useState(false)
   const [tasks, setTasks] = useState<TaskItem[]>([])
   const navigate = useNavigate()
@@ -198,16 +203,16 @@ export function TaskCenter() {
 
   return (
     <Wrapper>
-      <Trigger onClick={() => setOpen((v) => !v)} aria-label="异步任务">
-        ↻ 任务
+      <Trigger onClick={() => setOpen((v) => !v)} aria-label={translate('admin.taskCenter.title')}>
+        ↻ {translate('admin.taskCenter.title')}
         {running > 0 && <Badge>{running > 99 ? '99+' : running}</Badge>}
       </Trigger>
       {open && (
         <Panel role="menu">
-          <PanelHeader>异步任务</PanelHeader>
+          <PanelHeader>{translate('admin.taskCenter.title')}</PanelHeader>
           <List>
             {tasks.length === 0 ? (
-              <Empty>暂无任务</Empty>
+              <Empty>{translate('admin.taskCenter.empty')}</Empty>
             ) : (
               tasks.slice(0, 6).map((t) => {
                 const stateKey = STATE_KEY[t.state]
@@ -218,7 +223,7 @@ export function TaskCenter() {
                 return (
                   <TaskRow key={t.task_id}>
                     <RowTop>
-                      <TaskName title={t.task_id}>{taskLabel(t.type)}</TaskName>
+                      <TaskName title={t.task_id}>{taskLabel(translate, t.type)}</TaskName>
                       <StatePill $color={color} $bg={bg}>
                         {t.state === 'PROCESSING' ? '处理中' : t.state === 'SUCCESS' ? '已完成' : t.state === 'FAILURE' ? '失败' : '等待中'}
                       </StatePill>

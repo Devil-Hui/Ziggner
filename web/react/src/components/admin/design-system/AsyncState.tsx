@@ -11,6 +11,7 @@ import type { ReactNode } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { Semantic } from '@/theme'
 import { Button } from './Button'
+import { useTranslation } from '@/i18n'
 
 const shimmer = keyframes`
   0%   { background-position: -400px 0; }
@@ -68,8 +69,9 @@ export interface LoadingStateProps {
 }
 
 export function LoadingState({ rows = 5 }: LoadingStateProps) {
+  const { t } = useTranslation()
   return (
-    <div aria-busy="true" aria-label="加载中">
+    <div aria-busy="true" aria-label={t('common.loading')}>
       {Array.from({ length: rows }, (_, i) => (
         <SkeletonRow key={i} />
       ))}
@@ -87,15 +89,16 @@ export interface EmptyStateProps {
 
 export function EmptyState({
   icon = '🗂',
-  title = '暂无数据',
+  title,
   description,
   actionLabel,
   onAction,
 }: EmptyStateProps) {
+  const { t } = useTranslation()
   return (
     <Box>
       <Icon $color={Semantic.text.muted}>{icon}</Icon>
-      <Title>{title}</Title>
+      <Title>{title ?? t('common.noData')}</Title>
       {description && <Desc>{description}</Desc>}
       {actionLabel && onAction && (
         <Button variant="secondary" size="sm" onClick={onAction}>
@@ -111,15 +114,16 @@ export interface ErrorStateProps {
   onRetry?: () => void
 }
 
-export function ErrorState({ message = '加载失败，请稍后重试', onRetry }: ErrorStateProps) {
+export function ErrorState({ message, onRetry }: ErrorStateProps) {
+  const { t } = useTranslation()
   return (
     <Box>
       <Icon $color={Semantic.status.danger.fg}>!</Icon>
-      <Title>出错了</Title>
-      <Desc>{message}</Desc>
+      <Title>{t('admin.asyncState.errorTitle')}</Title>
+      <Desc>{message ?? t('admin.asyncState.errorMessage')}</Desc>
       {onRetry && (
         <Button variant="secondary" size="sm" onClick={onRetry}>
-          重试
+          {t('common.retry')}
         </Button>
       )}
     </Box>

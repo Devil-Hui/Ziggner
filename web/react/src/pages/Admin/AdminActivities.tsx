@@ -1396,7 +1396,7 @@ const AdminActivities: React.FC = () => {
       <ConfirmDialog
         open={!!deleteTarget}
         title={t('admin.activities.confirmDelete')}
-        message={`确定要删除活动「${deleteTarget?.name ?? ''}」吗？此操作不可撤销。`}
+        message={t('admin.activities.confirmDeleteMessage', { name: deleteTarget?.name ?? '' })}
         tone="danger"
         onCancel={() => setDeleteTarget(null)}
         onConfirm={handleDeleteConfirm}

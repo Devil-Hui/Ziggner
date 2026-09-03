@@ -13,6 +13,7 @@
 import type { ReactNode } from 'react'
 import styled from 'styled-components'
 import { Semantic } from '@/theme'
+import { useTranslation } from '@/i18n'
 
 export type ApprovalAction = 'submit' | 'approve' | 'reject' | 'pending'
 
@@ -28,11 +29,11 @@ export interface ApprovalStep {
   isCurrent?: boolean
 }
 
-const ACTION_META: Record<ApprovalAction, { color: string; defaultLabel: string }> = {
-  submit: { color: Semantic.status.info.fg, defaultLabel: '提交' },
-  approve: { color: Semantic.status.success.fg, defaultLabel: '通过' },
-  reject: { color: Semantic.status.danger.fg, defaultLabel: '驳回' },
-  pending: { color: Semantic.status.warning.fg, defaultLabel: '待处理' },
+const ACTION_META: Record<ApprovalAction, { color: string; labelKey: string }> = {
+  submit: { color: Semantic.status.info.fg, labelKey: 'admin.approval.submit' },
+  approve: { color: Semantic.status.success.fg, labelKey: 'admin.approval.approve' },
+  reject: { color: Semantic.status.danger.fg, labelKey: 'admin.approval.reject' },
+  pending: { color: Semantic.status.warning.fg, labelKey: 'admin.approval.pending' },
 }
 
 const List = styled.ol`
@@ -117,6 +118,7 @@ const Note = styled.p`
 `
 
 export function ApprovalTimeline({ steps }: { steps: ApprovalStep[] }) {
+  const { t } = useTranslation()
   return (
     <List>
       {steps.map((s, i) => {
@@ -132,8 +134,8 @@ export function ApprovalTimeline({ steps }: { steps: ApprovalStep[] }) {
               <Row>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Actor>{s.actor}</Actor>
-                  <ActionLabel $color={meta.color}>{s.actionLabel ?? meta.defaultLabel}</ActionLabel>
-                  {s.isCurrent && <span style={{ fontSize: 12, color: Semantic.status.warning.fg }}>· 当前处理人</span>}
+                  <ActionLabel $color={meta.color}>{s.actionLabel ?? t(meta.labelKey)}</ActionLabel>
+                  {s.isCurrent && <span style={{ fontSize: 12, color: Semantic.status.warning.fg }}>· {t('admin.approval.currentHandler')}</span>}
                 </div>
                 {s.at && <Time>{s.at}</Time>}
               </Row>

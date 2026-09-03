@@ -10,6 +10,7 @@
 import { useRef, useState, type CSSProperties } from 'react'
 import styled from 'styled-components'
 import { Color, FontSize, FontWeight, Radius, Spacing, Transition } from '../../../theme/tokens'
+import { useTranslation } from '@/i18n'
 
 const MAX_SIZE_MB = 5
 const MAX_EDGE = 2048
@@ -165,10 +166,11 @@ export default function Upload({
   multiple = true,
   maxFiles = 20,
   accept = 'image/*',
-  placeholder = '拖拽图片至此或点击上传',
+  placeholder,
   className,
   style,
 }: UploadProps) {
+  const { t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
   const [busy, setBusy] = useState<Record<string, CardState>>({})
@@ -177,7 +179,7 @@ export default function Upload({
   const compressToWebP = (file: File): Promise<File> =>
     new Promise((resolve, reject) => {
       if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-        reject(new Error(`文件 ${file.name} 超过 ${MAX_SIZE_MB}MB，已拒绝`))
+        reject(new Error(t('admin.upload.fileTooLarge', { name: file.name, size: String(MAX_SIZE_MB) })))
         return
       }
       const img = new Image()
@@ -191,14 +193,14 @@ export default function Upload({
         canvas.width = w
         canvas.height = h
         const ctx = canvas.getContext('2d')
-        if (!ctx) { reject(new Error('压缩失败')); return }
+        if (!ctx) { reject(new Error(t('admin.upload.compressFailed'))); return }
         ctx.drawImage(img, 0, 0, w, h)
         canvas.toBlob(blob => {
-          if (!blob) { reject(new Error('WebP 压缩失败')); return }
+          if (!blob) { reject(new Error(t('admin.upload.webpFailed'))); return }
           resolve(new File([blob], file.name.replace(/\.\w+$/, '.webp'), { type: 'image/webp' }))
         }, 'image/webp', WEBP_QUALITY)
       }
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`文件 ${file.name} 无法解析为图片`)) }
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(t('admin.upload.invalidImage', { name: file.name }))) }
       img.src = url
     })
 
@@ -220,7 +222,7 @@ export default function Upload({
         onChange([...value, url])
         setTimeout(() => setBusy(prev => { const next = { ...prev }; delete next[key]; return next }), 400)
       } catch (e: any) {
-        setBusy(prev => ({ ...prev, [key]: { url: '', progress: 0, error: e?.message || '上传失败' } }))
+        setBusy(prev => ({ ...prev, [key]: { url: '', progress: 0, error: e?.message || t('admin.upload.uploadFailed') } }))
       }
     }))
   }
@@ -258,8 +260,8 @@ export default function Upload({
         onDrop={e => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files) }}
       >
         <span className="icon">🖼️</span>
-        <span>{placeholder}</span>
-        <span className="hint">{multiple ? '支持多选（Ctrl/Shift）· 自动压缩 WebP' : '点击选择图片'}</span>
+        <span>{placeholder ?? t('admin.upload.placeholder')}</span>
+        <span className="hint">{multiple ? t('admin.upload.multiHint') : t('admin.upload.clickHint')}</span>
       </DropZone>
       <input
         ref={inputRef}
@@ -280,23 +282,23 @@ export default function Upload({
               onDragOver={e => e.preventDefault()}
               onDrop={() => handleDrop(i)}
             >
-              <StarBtn $main={i === 0} title={i === 0 ? '主图' : '设为主图'} onClick={() => setMain(i)}>★</StarBtn>
+              <StarBtn $main={i === 0} title={i === 0 ? t('admin.upload.mainImage') : t('admin.upload.setMain')} onClick={() => setMain(i)}>★</StarBtn>
               <img src={url} alt="" loading="lazy" />
               <CardMain>
                 <div className="name">{url.split('/').pop()?.slice(0, 40) || 'image'}</div>
                 <Track><Fill $percent={100} /></Track>
               </CardMain>
-              <IconBtn title="删除" onClick={() => remove(i)}>🗑</IconBtn>
+              <IconBtn title={t('common.delete')} onClick={() => remove(i)}>🗑</IconBtn>
             </Card>
           ))}
           {Object.entries(busy).map(([key, st]) => (
             <Card key={key} $dragging={st.progress > 0 && st.progress < 100}>
               <CardMain>
-                <div className="name">{st.error ? st.error : st.progress >= 100 ? '上传完成' : '上传中…'}</div>
+                <div className="name">{st.error ? st.error : st.progress >= 100 ? t('admin.upload.done') : t('admin.upload.uploading')}</div>
                 <Track><Fill $percent={st.progress} /></Track>
               </CardMain>
               <Percent>{st.progress}%</Percent>
-              <IconBtn title="取消" onClick={() => setBusy(prev => { const next = { ...prev }; delete next[key]; return next })}>✕</IconBtn>
+              <IconBtn title={t('common.cancel')} onClick={() => setBusy(prev => { const next = { ...prev }; delete next[key]; return next })}>✕</IconBtn>
             </Card>
           ))}
         </CardList>

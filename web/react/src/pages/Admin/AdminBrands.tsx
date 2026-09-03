@@ -135,7 +135,7 @@ export default function AdminBrands() {
     formData.append('file', file);
     const data = await postWithProgress<{ url?: string; detail?: string }>('/goods/upload/image', formData);
     if (data && data.url) return resolveMediaUrl(data.url) ?? data.url;
-    throw new Error(data?.detail || '上传失败');
+    throw new Error(data?.detail || t('admin.brands.uploadFailed'));
   };
 
   const openCreate = () => {
@@ -318,7 +318,7 @@ export default function AdminBrands() {
             upload={uploadBrandLogo}
             multiple={false}
             maxFiles={1}
-            placeholder="拖拽 Logo 至此或点击上传"
+            placeholder={t('admin.brands.logoUploadPlaceholder')}
           />
         </FormGroup>
         <FormGroup>

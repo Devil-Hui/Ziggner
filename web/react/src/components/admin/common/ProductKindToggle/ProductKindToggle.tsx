@@ -5,6 +5,7 @@
  * 视觉为 Toggle Switch（滑块动画 + 选中态高亮）。
  */
 import * as S from './ProductKindToggle.styles'
+import { useTranslation } from '@/i18n'
 
 export interface ProductKindToggleProps {
   /** 当前值 */
@@ -14,6 +15,7 @@ export interface ProductKindToggleProps {
 }
 
 export default function ProductKindToggle({ value, onChange }: ProductKindToggleProps) {
+  const { t } = useTranslation()
   const isVirtual = value === 'virtual'
 
   const toggle = () => {
@@ -23,7 +25,7 @@ export default function ProductKindToggle({ value, onChange }: ProductKindToggle
   return (
     <S.Wrap>
       <S.Label $active={!isVirtual} onClick={toggle}>
-        实体商品
+        {t('admin.productKind.physical')}
       </S.Label>
       <S.Switch
         type="button"
@@ -31,14 +33,14 @@ export default function ProductKindToggle({ value, onChange }: ProductKindToggle
         onClick={toggle}
         role="switch"
         aria-checked={isVirtual}
-        aria-label="商品类型开关"
+        aria-label={t('admin.productKind.toggle')}
       >
         <S.Knob $isVirtual={isVirtual} />
       </S.Switch>
       <S.Label $active={isVirtual} onClick={toggle}>
-        虚拟商品
+        {t('admin.productKind.virtual')}
       </S.Label>
-      {isVirtual && <S.Hint>（虚拟商品无需上传图片）</S.Hint>}
+      {isVirtual && <S.Hint>{t('admin.productKind.virtualHint')}</S.Hint>}
     </S.Wrap>
   )
 }

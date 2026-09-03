@@ -77,16 +77,16 @@ interface TaskItem {
 // ── Component ──
 
 /** 任务状态 → StatusBadge tone（业务只声明 tone，颜色由 design-system 解析） */
-function taskStateMeta(state: TaskItem['state']): { tone: StatusBadgeProps['tone']; label: string } {
+function taskStateMeta(t: (k: string) => string, state: TaskItem['state']): { tone: StatusBadgeProps['tone']; label: string } {
   switch (state) {
     case 'SUCCESS':
-      return { tone: 'success', label: '已完成' }
+      return { tone: 'success', label: t('admin.asyncTasks.stateSuccess') }
     case 'FAILURE':
-      return { tone: 'danger', label: '失败' }
+      return { tone: 'danger', label: t('admin.asyncTasks.stateFailure') }
     case 'PENDING':
-      return { tone: 'info', label: '等待中' }
+      return { tone: 'info', label: t('admin.asyncTasks.statePending') }
     case 'PROCESSING':
-      return { tone: 'info', label: '处理中' }
+      return { tone: 'info', label: t('admin.asyncTasks.stateProcessing') }
     default:
       return { tone: 'neutral', label: String(state) }
   }
@@ -196,7 +196,7 @@ export default function AdminTasks() {
       title: t('admin.asyncTasks.columnStatus'),
       width: '100px',
       render: (val: unknown) => {
-        const meta = taskStateMeta(val as TaskItem['state'])
+        const meta = taskStateMeta(t, val as TaskItem['state'])
         return <StatusBadge tone={meta.tone}>{meta.label}</StatusBadge>
       },
     },

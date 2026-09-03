@@ -4,18 +4,20 @@ import * as S from './MediaManager.styles'
 import type { PreviewTab } from './MediaManager.types'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import { optionalMediaUrl } from '../../../../utils/mediaUrl'
+import { useTranslation } from '@/i18n'
 
 interface Props {
   items: StagedMediaItem[]
 }
 
-const TAB_CONFIG: { key: PreviewTab; label: string }[] = [
-  { key: 1, label: '缩略图预览' },
-  { key: 2, label: '列表图预览' },
-  { key: 3, label: '原图/视频预览' },
+const TAB_CONFIG: { key: PreviewTab; labelKey: string }[] = [
+  { key: 1, labelKey: 'admin.mediaManager.tabThumb' },
+  { key: 2, labelKey: 'admin.mediaManager.tabList' },
+  { key: 3, labelKey: 'admin.mediaManager.tabOriginal' },
 ]
 
 export default function MediaPreviewTabs({ items }: Props) {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<PreviewTab>(1)
   const [selectedIndex, setSelectedIndex] = useState(0)
 
@@ -23,7 +25,7 @@ export default function MediaPreviewTabs({ items }: Props) {
   const videos = items.filter((i) => i.mediaType === 'video')
 
   if (items.length === 0) {
-    return <S.EmptyHint>暂无媒体</S.EmptyHint>
+    return <S.EmptyHint>{t('admin.mediaManager.noMedia')}</S.EmptyHint>
   }
 
   return (
@@ -31,7 +33,7 @@ export default function MediaPreviewTabs({ items }: Props) {
       <S.TabBar>
         {TAB_CONFIG.map((tab) => (
           <S.TabBtn key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
-            {tab.label}
+            {t(tab.labelKey)}
           </S.TabBtn>
         ))}
       </S.TabBar>

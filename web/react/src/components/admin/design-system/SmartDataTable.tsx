@@ -16,6 +16,7 @@ import styled from 'styled-components'
 import { Component, Semantic } from '@/theme'
 import { Button } from './Button'
 import { LoadingState } from './AsyncState'
+import { useTranslation } from '@/i18n'
 
 export type TableDensity = 'compact' | 'normal' | 'comfortable'
 export type SortOrder = 'asc' | 'desc' | null
@@ -257,10 +258,11 @@ export function SmartDataTable<T extends Record<string, any>>({
   density: densityProp,
   onDensityChange,
   onExport,
-  exportLabel = '导出',
+  exportLabel,
   bulkBar,
   stickyHeader = false,
 }: SmartDataTableProps<T>) {
+  const { t } = useTranslation()
   const source = (dataSource ?? data ?? []) as T[]
 
   /* 排序：受控（onSortChange）走服务端；否则客户端 */
@@ -363,7 +365,7 @@ export function SmartDataTable<T extends Record<string, any>>({
     return (
       <ErrorWrap>
         <span>{error}</span>
-        {onRetry && <Button variant="secondary" size="sm" onClick={onRetry}>重试</Button>}
+        {onRetry && <Button variant="secondary" size="sm" onClick={onRetry}>{t('common.retry')}</Button>}
       </ErrorWrap>
     )
   }
@@ -376,7 +378,7 @@ export function SmartDataTable<T extends Record<string, any>>({
         <Toolbar>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             {selectionEnabled && selectedCount > 0 && (
-              <SelectionInfo>已选择 {selectedCount} 项</SelectionInfo>
+              <SelectionInfo>{t('admin.bulk.selected', { count: String(selectedCount) })}</SelectionInfo>
             )}
             {bulkBar}
           </div>
@@ -384,7 +386,7 @@ export function SmartDataTable<T extends Record<string, any>>({
             {columns.some((c) => c.hideable !== false) && (
               <Dropdown>
                 <Button variant="ghost" size="sm" onClick={() => { setShowCols((v) => !v); setShowDensity(false) }}>
-                  列设置 ▾
+                  {t('admin.table.columnSettings')} ▾
                 </Button>
                 {showCols && (
                   <DropdownPanel>
@@ -407,7 +409,7 @@ export function SmartDataTable<T extends Record<string, any>>({
             )}
             <Dropdown>
               <Button variant="ghost" size="sm" onClick={() => { setShowDensity((v) => !v); setShowCols(false) }}>
-                密度 ▾
+                {t('admin.table.density')} ▾
               </Button>
               {showDensity && (
                 <DropdownPanel>
@@ -420,7 +422,7 @@ export function SmartDataTable<T extends Record<string, any>>({
                         onChange={() => setDensity(d)}
                         style={{ accentColor: Semantic.interactive.default }}
                       />
-                      {d === 'compact' ? '紧凑' : d === 'normal' ? '默认' : '宽松'}
+                      {d === 'compact' ? t('admin.table.densityCompact') : d === 'normal' ? t('admin.table.densityNormal') : t('admin.table.densityComfortable')}
                     </DropdownItem>
                   ))}
                 </DropdownPanel>
@@ -428,7 +430,7 @@ export function SmartDataTable<T extends Record<string, any>>({
             </Dropdown>
             {onExport && (
               <Button variant="secondary" size="sm" onClick={onExport}>
-                {exportLabel}
+                {exportLabel ?? t('common.export')}
               </Button>
             )}
           </ToolbarRight>
@@ -445,7 +447,7 @@ export function SmartDataTable<T extends Record<string, any>>({
                     checked={allVisibleSelected}
                     onChange={toggleSelectAll}
                     disabled={sorted.length === 0}
-                    aria-label="全选"
+                    aria-label={t('admin.table.selectAll')}
                   />
                 </Th>
               )}

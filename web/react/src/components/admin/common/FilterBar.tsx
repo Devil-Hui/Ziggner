@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 import { Color, Radius, Spacing, FontSize } from '../../../theme/tokens';
 import { Select, SecondaryBtn as ResetButton } from './ui';
+import { useTranslation } from '@/i18n';
 
 const Container = styled.div`
   display: flex;
@@ -30,6 +31,7 @@ export default function FilterBar({
   onReset,
   children,
 }: FilterBarProps) {
+  const { t } = useTranslation();
   return (
     <Container>
       {statusFilter.length > 0 && currentStatus !== undefined && onStatusChange && (
@@ -44,7 +46,7 @@ export default function FilterBar({
           ))}
         </Select>
       )}
-      {onReset && <ResetButton onClick={onReset}>重置</ResetButton>}
+      {onReset && <ResetButton onClick={onReset}>{t('common.reset')}</ResetButton>}
       {children}
     </Container>
   );

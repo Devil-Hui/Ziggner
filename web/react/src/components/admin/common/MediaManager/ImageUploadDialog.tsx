@@ -8,6 +8,7 @@ import ImageCropper, { matchBestRatio } from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
 import { prepareImageForUpload } from '../../../../utils/imageCompression'
 import * as S from './MediaManager.styles'
+import { useTranslation } from '@/i18n'
 
 interface Props {
   open: boolean
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSkip }: Props) {
+  const { t } = useTranslation()
   const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [compressing, setCompressing] = useState(false)
@@ -110,7 +112,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
       <S.DialogBox onClick={(e) => e.stopPropagation()}>
         {selectedFile ? (
           <>
-            <S.DialogTitle>裁剪图片 — {selectedFile.name}</S.DialogTitle>
+            <S.DialogTitle>{t('admin.mediaManager.cropImage', { name: selectedFile.name })}</S.DialogTitle>
             <ImageCropper
               file={selectedFile}
               onCrop={handleCropConfirm}
@@ -127,23 +129,23 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
             />
             {file && onSkip && (
               <S.DialogActions>
-                <S.ActionBtn onClick={() => { setSelectedFile(null); onSkip() }}>跳过此张</S.ActionBtn>
+                <S.ActionBtn onClick={() => { setSelectedFile(null); onSkip() }}>{t('admin.mediaManager.skipThis')}</S.ActionBtn>
               </S.DialogActions>
             )}
           </>
         ) : (
           <>
-            <S.DialogTitle>添加图片</S.DialogTitle>
+            <S.DialogTitle>{t('admin.mediaManager.addImage')}</S.DialogTitle>
             <S.UploadZone onClick={() => !compressing && fileInputRef.current?.click()} style={{ opacity: compressing ? 0.6 : 1 }}>
               {compressing ? (
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
-                  <div>正在压缩图片...</div>
-                  <div style={{ fontSize: 12, marginTop: 8, color: '#999' }}>大图自动压缩（保真优先，最长边≤2560px）</div>
+                  <div>{t('admin.mediaManager.compressing')}</div>
+                  <div style={{ fontSize: 12, marginTop: 8, color: '#999' }}>{t('admin.mediaManager.compressHint')}</div>
                 </div>
               ) : (
                 <>
-                  <div>点击或拖拽选择图片</div>
+                  <div>{t('admin.mediaManager.clickOrDrag')}</div>
                   <div style={{ fontSize: 12, marginTop: 8 }}>
                     支持 JPG / PNG / WebP，最大 10MB（自动压缩）
                   </div>
@@ -159,7 +161,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
               style={{ display: 'none' }}
             />
             <S.DialogActions>
-              <S.ActionBtn onClick={handleCancel}>取消</S.ActionBtn>
+              <S.ActionBtn onClick={handleCancel}>{t('common.cancel')}</S.ActionBtn>
             </S.DialogActions>
           </>
         )}

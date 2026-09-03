@@ -265,10 +265,10 @@ const LoadingBox = styled.div`
   color: ${Color.text.muted};
 `
 
-const TEMPLATE_LABELS: Record<string, string> = {
-  verify_code: '邮箱验证码',
-  order_notice: '订单通知',
-  reset_password: '密码重置',
+const TEMPLATE_LABEL_KEY: Record<string, string> = {
+  verify_code: 'admin.emailTemplates.typeVerifyCode',
+  order_notice: 'admin.emailTemplates.typeOrderNotice',
+  reset_password: 'admin.emailTemplates.typeResetPassword',
 }
 
 // 公众号风格调色板：克制、邮件友好的配色
@@ -344,7 +344,7 @@ const AdminEmailTemplates: React.FC = () => {
         text_body: textBody,
         is_active: isActive,
       })
-      setNotice({ msg: `Saved "${TEMPLATE_LABELS[activeType] || activeType}"`, ok: true })
+      setNotice({ msg: `Saved "${TEMPLATE_LABEL_KEY[activeType] ? t(TEMPLATE_LABEL_KEY[activeType]) : activeType}"`, ok: true })
     } catch {
       setNotice({ msg: 'Save failed', ok: false })
     } finally {
@@ -364,7 +364,7 @@ const AdminEmailTemplates: React.FC = () => {
 
   if (loading) return <LoadingBox>Loading...</LoadingBox>
 
-  const activeLabel = activeType ? (TEMPLATE_LABELS[activeType] || activeType) : ''
+  const activeLabel = activeType ? (TEMPLATE_LABEL_KEY[activeType] ? t(TEMPLATE_LABEL_KEY[activeType]) : activeType) : ''
 
   return (
     <Wrap>
@@ -377,7 +377,7 @@ const AdminEmailTemplates: React.FC = () => {
             $active={tpl.template_type === activeType}
             onClick={() => selectTemplate(tpl.template_type)}
           >
-            {TEMPLATE_LABELS[tpl.template_type] || tpl.template_type}
+            {TEMPLATE_LABEL_KEY[tpl.template_type] ? t(TEMPLATE_LABEL_KEY[tpl.template_type]) : tpl.template_type}
           </TplItem>
         ))}
       </Sidebar>
@@ -474,7 +474,7 @@ const AdminEmailTemplates: React.FC = () => {
               type="color"
               onChange={e => exec('foreColor', e.target.value)}
               style={{ width: 38, height: 34, border: 'none', background: 'none', cursor: 'pointer' }}
-              title="自定义颜色"
+              title={t('admin.emailTemplates.customColor')}
             />
           </BtnRow>
         </Group>
@@ -496,7 +496,7 @@ const AdminEmailTemplates: React.FC = () => {
               if (url) exec('insertImage', url)
             }}>{t('admin.emailTemplates.insertImage')}</ToolBtn>
             <ToolBtn onClick={() => {
-              const txt = window.prompt(t('admin.emailTemplates.buttonTextPrompt'), '查看详情')
+              const txt = window.prompt(t('admin.emailTemplates.buttonTextPrompt'), t('admin.emailTemplates.viewDetails'))
               if (!txt) return
               const url = window.prompt(t('admin.emailTemplates.buttonUrlPrompt'), 'https://shop.ziggner.com')
               if (!url) return

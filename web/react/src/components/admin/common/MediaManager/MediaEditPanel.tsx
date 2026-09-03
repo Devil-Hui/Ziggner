@@ -5,8 +5,10 @@ import { useState } from 'react'
 import * as S from './MediaManager.styles'
 import type { MediaEditPanelProps } from './MediaManager.types'
 import { resolveMediaUrl } from '../../../../api/chat'
+import { useTranslation } from '@/i18n'
 
 export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPanelProps) {
+  const { t } = useTranslation()
   const [altText, setAltText] = useState(media.alt_text || '')
   const [sortOrder, setSortOrder] = useState(media.sort_order ?? 0)
   const [saving, setSaving] = useState(false)
@@ -26,7 +28,7 @@ export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPane
   return (
     <S.DialogOverlay onClick={onClose}>
       <S.DialogBox onClick={(e) => e.stopPropagation()}>
-        <S.DialogTitle>编辑图片信息</S.DialogTitle>
+        <S.DialogTitle>{t('admin.mediaManager.editImageInfo')}</S.DialogTitle>
         <S.EditPanelWrap>
           {/* 预览 */}
           {previewSrc && (
@@ -47,20 +49,20 @@ export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPane
 
           {/* alt_text */}
           <S.FieldGroup>
-            <S.FieldLabel>Alt 替代文本</S.FieldLabel>
+            <S.FieldLabel>{t('admin.mediaManager.altText')}</S.FieldLabel>
             <S.FieldInput
               type="text"
               maxLength={200}
               value={altText}
               onChange={(e) => setAltText(e.target.value)}
-              placeholder="用于 SEO 和屏幕阅读器，如：红色 T 恤正面图"
+              placeholder={t('admin.mediaManager.altPlaceholder')}
             />
             <S.FieldHint>{altText.length}/200</S.FieldHint>
           </S.FieldGroup>
 
           {/* sort_order */}
           <S.FieldGroup>
-            <S.FieldLabel>排序值</S.FieldLabel>
+            <S.FieldLabel>{t('admin.mediaManager.sortOrder')}</S.FieldLabel>
             <S.FieldInput
               type="number"
               min={0}
@@ -68,14 +70,14 @@ export default function MediaEditPanel({ media, onSave, onClose }: MediaEditPane
               onChange={(e) => setSortOrder(Number(e.target.value))}
               placeholder="0"
             />
-            <S.FieldHint>数值越小越靠前</S.FieldHint>
+            <S.FieldHint>{t('admin.mediaManager.sortHint')}</S.FieldHint>
           </S.FieldGroup>
         </S.EditPanelWrap>
 
         <S.DialogActions>
-          <S.ActionBtn onClick={onClose}>取消</S.ActionBtn>
+          <S.ActionBtn onClick={onClose}>{t('common.cancel')}</S.ActionBtn>
           <S.ActionBtn $primary onClick={handleSave} disabled={saving}>
-            {saving ? '保存中…' : '保存'}
+            {saving ? t('common.saving') : t('common.save')}
           </S.ActionBtn>
         </S.DialogActions>
       </S.DialogBox>

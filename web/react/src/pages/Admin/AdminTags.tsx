@@ -196,7 +196,7 @@ export default function AdminTags() {
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <span style={{ fontWeight: 600, color: '#1a1a2e' }}>#{record.name}</span>
           <StatusBadge tone={record.tag_type === 'activity' ? 'warning' : 'info'}>
-            {record.tag_type === 'activity' ? '活动标签' : '产品标签'}
+            {record.tag_type === 'activity' ? t('admin.tags.activityTag') : t('admin.tags.productTag')}
           </StatusBadge>
         </span>
       ),
@@ -302,10 +302,10 @@ export default function AdminTags() {
           <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder={t('admin.tags.namePlaceholder')} />
         </FormGroup>
         <FormGroup>
-          <Label>标签类型（话题式标签）</Label>
+          <Label>{t('admin.tags.typeLabel')}</Label>
           <Select value={formType} onChange={(e) => setFormType(e.target.value as 'product' | 'activity')}>
-            <option value="product">产品标签（如 #上新、#热卖）</option>
-            <option value="activity">活动标签（如 #双十一、#周年庆）</option>
+            <option value="product">{t('admin.tags.productOption')}</option>
+            <option value="activity">{t('admin.tags.activityOption')}</option>
           </Select>
         </FormGroup>
         <FormGroup>

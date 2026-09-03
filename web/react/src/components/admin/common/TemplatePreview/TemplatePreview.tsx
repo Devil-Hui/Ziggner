@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, FontSize } from '../../../../theme/tokens'
+import { useTranslation } from '@/i18n'
 
 // ── 模板数据 ──
 export interface TemplateSection {
@@ -92,6 +93,7 @@ interface TemplatePreviewProps {
 }
 
 export default function TemplatePreview({ config, style }: TemplatePreviewProps) {
+  const { t } = useTranslation()
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [html, setHtml] = useState('')
 
@@ -109,7 +111,7 @@ export default function TemplatePreview({ config, style }: TemplatePreviewProps)
     doc.close()
   }, [html])
 
-  return <Iframe ref={iframeRef} style={style} title="页面预览" />
+  return <Iframe ref={iframeRef} style={style} title={t('admin.templatePreview.pagePreview')} />
 }
 
 export { generatePreviewHTML }

@@ -7,6 +7,7 @@ import * as S from './MediaManager.styles'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import type { ProductMediaItem } from '../../../../api/admin'
 import { resolveMediaUrl } from '../../../../api/chat'
+import { useTranslation } from '@/i18n'
 
 interface Props {
   item: StagedMediaItem | ProductMediaItem
@@ -27,6 +28,7 @@ function isSavedMedia(item: StagedMediaItem | ProductMediaItem): item is Product
 }
 
 export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dragActive, onDragHandleDown }: Props) {
+  const { t } = useTranslation()
   const saved = isSavedMedia(item)
   const mediaType = saved ? item.media_type : (item as StagedMediaItem).mediaType
   const id = saved ? item.id : (item as StagedMediaItem).id
@@ -84,7 +86,7 @@ export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dr
 
       {/* 视频点击提示（首次上传后点击即可直接播放观看） */}
       {mediaType === 'video' && (
-        <S.VideoPlayBadge title="点击播放">
+        <S.VideoPlayBadge title={t('admin.mediaManager.play')}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" aria-hidden>
             <path d="M8 5v14l11-7z" />
           </svg>
@@ -96,7 +98,7 @@ export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dr
         {saved && onEdit && (
           <S.OverlayBtn
             type="button"
-            title="编辑"
+            title={t('common.edit')}
             onClick={(e) => {
               e.stopPropagation()
               onEdit(item as ProductMediaItem)
@@ -107,7 +109,7 @@ export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dr
         )}
         <S.OverlayBtn
           type="button"
-          title="删除"
+          title={t('common.delete')}
           onClick={(e) => {
             e.stopPropagation()
             if (id != null) onRemove(id)

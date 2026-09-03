@@ -14,6 +14,7 @@ import styled from 'styled-components'
 import { Component, Semantic } from '@/theme'
 import { ZIndex } from '@/theme/zIndex'
 import { Button } from './Button'
+import { useTranslation } from '@/i18n'
 
 export type DialogSize = 'sm' | 'md' | 'lg' | 'xl'
 export type DialogTone = 'danger' | 'warning' | 'info'
@@ -129,8 +130,8 @@ export function Dialog({
   title,
   size = 'md',
   footer,
-  okText = '确认',
-  cancelText = '取消',
+  okText,
+  cancelText,
   okDanger = false,
   loading = false,
   onOk,
@@ -140,6 +141,9 @@ export function Dialog({
   style,
   children,
 }: DialogProps) {
+  const { t } = useTranslation()
+  const resolvedOkText = okText ?? t('common.confirm')
+  const resolvedCancelText = cancelText ?? t('common.cancel')
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -169,7 +173,7 @@ export function Dialog({
       >
         <Header>
           <Title>{title}</Title>
-          <CloseBtn onClick={onClose} aria-label="关闭">
+          <CloseBtn onClick={onClose} aria-label={t('common.close')}>
             &times;
           </CloseBtn>
         </Header>
@@ -178,14 +182,14 @@ export function Dialog({
           {footer ?? (
             <>
               <Button variant="secondary" onClick={onClose} disabled={loading}>
-                {cancelText}
+                {resolvedCancelText}
               </Button>
               <Button
                 variant={okDanger ? 'danger' : 'primary'}
                 onClick={onOk}
                 disabled={loading}
               >
-                {loading ? '处理中…' : okText}
+                {loading ? t('common.processing') : resolvedOkText}
               </Button>
             </>
           )}
@@ -214,20 +218,21 @@ export function ConfirmDialog({
   title,
   message,
   tone = 'danger',
-  confirmLabel = '确认',
-  cancelLabel = '取消',
+  confirmLabel,
+  cancelLabel,
   loading = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation()
   return (
     <Dialog
       open={open}
       title={title}
       size="sm"
       onClose={onCancel}
-      okText={confirmLabel}
-      cancelText={cancelLabel}
+      okText={confirmLabel ?? t('common.confirm')}
+      cancelText={cancelLabel ?? t('common.cancel')}
       okDanger={tone === 'danger'}
       loading={loading}
       onOk={onConfirm}
@@ -255,7 +260,7 @@ export function ConfirmDialog({
           }}
         >
           <span style={{ width: 6, height: 6, borderRadius: 999, background: TONE_COLOR.warning, display: 'inline-block' }} />
-          此操作存在业务影响，请确认影响范围后再继续
+          {t('admin.dialog.warningImpact')}
         </p>
       )}
     </Dialog>
@@ -277,14 +282,15 @@ export function FormDialog({
   open,
   title,
   size = 'md',
-  okText = '保存',
-  cancelText = '取消',
+  okText,
+  cancelText,
   dirty = false,
   onOk,
   onCancel,
   children,
   ...rest
 }: FormDialogProps) {
+  const { t } = useTranslation()
   const [showLeave, setShowLeave] = useState(false)
 
   useEffect(() => {
@@ -302,8 +308,8 @@ export function FormDialog({
         open={open}
         title={title}
         size={size}
-        okText={okText}
-        cancelText={cancelText}
+        okText={okText ?? t('common.save')}
+        cancelText={cancelText ?? t('common.cancel')}
         onOk={onOk}
         onClose={requestClose}
         {...rest}
@@ -312,11 +318,11 @@ export function FormDialog({
       </Dialog>
       <ConfirmDialog
         open={showLeave}
-        title="确定离开？"
-        message={'当前表单存在未保存的修改。\n离开后将丢失这些修改。'}
+        title={t('admin.dialog.leaveTitle')}
+        message={t('admin.dialog.leaveMessage')}
         tone="warning"
-        confirmLabel="放弃修改"
-        cancelLabel="继续编辑"
+        confirmLabel={t('admin.dialog.discardChanges')}
+        cancelLabel={t('admin.dialog.keepEditing')}
         onConfirm={() => {
           setShowLeave(false)
           onCancel()

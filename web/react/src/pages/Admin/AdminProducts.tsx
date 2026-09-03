@@ -561,7 +561,7 @@ export default function AdminProducts() {
               <Checkbox
                 checked={selected.length > 0 && selected.length === items.length}
                 onChange={(e) => setSelected(e.target.checked ? items.map((i) => i.id) : [])}
-                title="全选本页"
+                title={t('admin.products.selectAllPage')}
               />
               <BulkActionBar
                 selectedCount={selected.length}

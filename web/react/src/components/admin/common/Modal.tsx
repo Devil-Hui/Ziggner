@@ -10,6 +10,7 @@ import { useEffect, type ReactNode, type CSSProperties } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, FontWeight, Transition } from '../../../theme/tokens'
 import { ZIndex } from '../../../theme/zIndex'
+import { useTranslation } from '@/i18n'
 
 const Overlay = styled.div`
   position: fixed;
@@ -130,9 +131,9 @@ export default function Modal({
   title,
   width = '720px',
   footer,
-  okText = '确认',
-  cancelText = '取消',
-  okLoadingText = '处理中…',
+  okText,
+  cancelText,
+  okLoadingText,
   onOk,
   onClose,
   confirmLoading = false,
@@ -143,6 +144,10 @@ export default function Modal({
   style,
   children,
 }: ModalProps) {
+  const { t } = useTranslation()
+  const resolvedOkText = okText ?? t('common.confirm')
+  const resolvedCancelText = cancelText ?? t('common.cancel')
+  const resolvedOkLoadingText = okLoadingText ?? t('common.processing')
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -167,15 +172,15 @@ export default function Modal({
       <Dialog $width={width} onClick={e => e.stopPropagation()} className={className} style={style} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}>
         <Header>
           <Title>{title}</Title>
-          <CloseBtn onClick={onClose} aria-label="关闭">&times;</CloseBtn>
+          <CloseBtn onClick={onClose} aria-label={t('common.close')}>&times;</CloseBtn>
         </Header>
         <Body>{children}</Body>
         <Footer>
           {footer ?? (
             <>
-              <Btn onClick={onClose} disabled={confirmLoading}>{cancelText}</Btn>
+              <Btn onClick={onClose} disabled={confirmLoading}>{resolvedCancelText}</Btn>
               <Btn $kind={okDanger ? 'danger' : 'primary'} onClick={onOk} disabled={confirmLoading}>
-                {confirmLoading ? okLoadingText : okText}
+                {confirmLoading ? resolvedOkLoadingText : resolvedOkText}
               </Btn>
             </>
           )}

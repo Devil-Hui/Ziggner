@@ -1497,7 +1497,7 @@ export default function AdminChatDetail() {
               <CtxUser>
                 <CtxAvatar>{(activeConv.user?.username || '?').slice(0, 1)}</CtxAvatar>
                 <div>
-                  <CtxLabel>咨询客户</CtxLabel>
+                  <CtxLabel>{t('admin.chatDetail.ctxCustomer')}</CtxLabel>
                   <CtxUserName>{activeConv.user?.username}</CtxUserName>
                 </div>
               </CtxUser>
@@ -1510,7 +1510,7 @@ export default function AdminChatDetail() {
                     onError={(e) => { (e.target as HTMLImageElement).style.visibility = 'hidden' }}
                   />
                   <div>
-                    <CtxLabel>咨询商品</CtxLabel>
+                    <CtxLabel>{t('admin.chatDetail.ctxProduct')}</CtxLabel>
                     <CtxProductName>{activeConv.spu_info.name}</CtxProductName>
                   </div>
                   <CtxProductPrice>${activeConv.spu_info.price}</CtxProductPrice>
@@ -1580,7 +1580,7 @@ export default function AdminChatDetail() {
                     {activeConv.has_more_older && activeConv.messages.length > 0 && (
                       <LoadingMore>
                         <LoadOlderBtn onClick={handleLoadOlder} disabled={loadingOlder}>
-                          {loadingOlder ? t('store.chatDetail.loading') : '加载更早消息'}
+                          {loadingOlder ? t('store.chatDetail.loading') : t('admin.chatDetail.loadOlder')}
                         </LoadOlderBtn>
                       </LoadingMore>
                     )}
@@ -1672,8 +1672,8 @@ export default function AdminChatDetail() {
       {hasOrders && !ordersCollapsed && (
         <OrdersPanel>
           <OrdersHeader>
-            <span>订单信息（{activeConv!.order_info!.length}）</span>
-            <CollapseBtn onClick={() => setOrdersCollapsed(true)} title="收起订单面板">»</CollapseBtn>
+            <span>{t('admin.chatDetail.orderInfo', { count: String(activeConv!.order_info!.length) })}</span>
+            <CollapseBtn onClick={() => setOrdersCollapsed(true)} title={t('admin.chatDetail.collapseOrders')}>»</CollapseBtn>
           </OrdersHeader>
           <OrdersBody>
             {activeConv!.order_info!.map((o) => {
@@ -1702,9 +1702,9 @@ export default function AdminChatDetail() {
 
       {/* 收起后的按钮：点击展开订单面板 */}
       {hasOrders && ordersCollapsed && (
-        <OrdersCollapsedBar onClick={() => setOrdersCollapsed(false)} title="展开订单面板">
+        <OrdersCollapsedBar onClick={() => setOrdersCollapsed(false)} title={t('admin.chatDetail.expandOrders')}>
           <CollapseBtn as="div">«</CollapseBtn>
-          <span>订单</span>
+          <span>{t('admin.chatDetail.orders')}</span>
         </OrdersCollapsedBar>
       )}
 

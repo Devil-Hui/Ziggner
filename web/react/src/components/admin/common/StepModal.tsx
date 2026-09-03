@@ -10,6 +10,7 @@ import { type ReactNode } from 'react'
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, FontWeight, Transition } from '../../../theme/tokens'
 import { ZIndex } from '../../../theme/zIndex'
+import { useTranslation } from '@/i18n'
 
 const Overlay = styled.div`
   position: fixed;
@@ -180,13 +181,14 @@ export default function StepModal({
   onPrev,
   onNext,
   onFinish,
-  nextLabel = '下一步',
-  finishLabel = '提交',
+  nextLabel,
+  finishLabel,
   finishLoading = false,
   finishKind = 'primary',
   onClose,
   children,
 }: StepModalProps) {
+  const { t } = useTranslation()
   if (!open) return null
   const total = steps.length
   const isFirst = current === 0
@@ -197,7 +199,7 @@ export default function StepModal({
       <Dialog $width={width} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={title}>
         <Header>
           <Title>{title}</Title>
-          <CloseBtn onClick={onClose} aria-label="关闭">&times;</CloseBtn>
+          <CloseBtn onClick={onClose} aria-label={t('common.close')}>&times;</CloseBtn>
         </Header>
 
         <StepBar>
@@ -217,12 +219,12 @@ export default function StepModal({
         <Body>{children}</Body>
 
         <Footer>
-          {!isFirst && <Btn onClick={onPrev}>上一步</Btn>}
+          {!isFirst && <Btn onClick={onPrev}>{t('common.previous')}</Btn>}
           {!isLast ? (
-            <Btn $kind="primary" onClick={onNext}>{nextLabel}</Btn>
+            <Btn $kind="primary" onClick={onNext}>{nextLabel ?? t('common.next')}</Btn>
           ) : (
             <Btn $kind={finishKind} onClick={onFinish} disabled={finishLoading}>
-              {finishLoading ? '处理中…' : finishLabel}
+              {finishLoading ? t('common.processing') : finishLabel ?? t('common.submit')}
             </Btn>
           )}
         </Footer>

@@ -40,15 +40,15 @@ interface SPUDetail {
 type Tone = NonNullable<StatusBadgeProps['tone']>
 
 // SPU 状态 → semantic tone（业务只声明 tone，颜色由 design-system 解析）
-function spuStatusMeta(status: string): { tone: Tone; label: string } {
+function spuStatusMeta(t: (k: string) => string, status: string): { tone: Tone; label: string } {
   switch (status) {
-    case 'draft': return { tone: 'neutral', label: '草稿' }
-    case 'submitted': return { tone: 'warning', label: '待审核' }
-    case 'approved': return { tone: 'success', label: '已通过' }
-    case 'rejected': return { tone: 'danger', label: '已驳回' }
-    case 'on_sale': return { tone: 'success', label: '已上架' }
-    case 'suspended': return { tone: 'warning', label: '已挂起' }
-    case 'off_sale': return { tone: 'neutral', label: '已下架' }
+    case 'draft': return { tone: 'neutral', label: t('admin.products.statusDraft') }
+    case 'submitted': return { tone: 'warning', label: t('admin.products.statusSubmitted') }
+    case 'approved': return { tone: 'success', label: t('admin.products.statusApproved') }
+    case 'rejected': return { tone: 'danger', label: t('admin.products.statusRejected') }
+    case 'on_sale': return { tone: 'success', label: t('admin.products.statusOnSale') }
+    case 'suspended': return { tone: 'warning', label: t('admin.products.statusSuspended') }
+    case 'off_sale': return { tone: 'neutral', label: t('admin.products.statusOffSale') }
     default: return { tone: 'neutral', label: status }
   }
 }
@@ -485,7 +485,7 @@ export default function AdminProductAudit() {
                 </ChatPopup>
               </ChatPopupWrapper>
             )}
-            <StatusBadge tone={spuStatusMeta(spu.status).tone}>{spuStatusMeta(spu.status).label}</StatusBadge>
+            <StatusBadge tone={spuStatusMeta(t, spu.status).tone}>{spuStatusMeta(t, spu.status).label}</StatusBadge>
           </div>
         </CardHeader>
 

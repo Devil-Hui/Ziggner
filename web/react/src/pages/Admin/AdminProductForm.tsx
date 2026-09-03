@@ -1650,17 +1650,17 @@ export default function AdminProductForm() {
               </Field>
               <SubHead>{t('admin.productForm.skuManagement')}</SubHead>
               <SectionDesc style={{ marginTop: 6, marginBottom: 10 }}>
-                SKU 参数：每个规格组合（变体）独立定价与库存，价格为该变体的「销售单价（元）」，支持两位小数。上方已填写的为商品基本信息，此处仅填写变体级参数。
+                {t('admin.productForm.skuDesc')}
               </SectionDesc>
               {specs.map((spec, idx) => (
                 <SpecGroup key={idx}>
                   <SpecGroupHeader>
-                    <SpecGroupName>规格 {idx + 1}</SpecGroupName>
-                    <SmallBtn type="button" onClick={() => removeSpec(idx)}>删除</SmallBtn>
+                    <SpecGroupName>{t('admin.productForm.specGroup', { index: String(idx + 1) })}</SpecGroupName>
+                    <SmallBtn type="button" onClick={() => removeSpec(idx)}>{t('common.delete')}</SmallBtn>
                   </SpecGroupHeader>
                   <SpecConfigRow>
                     <SpecNameInput
-                      placeholder="规格名称（如：颜色）"
+                      placeholder={t('admin.productForm.specNamePlaceholder')}
                       value={spec.name}
                       onChange={(e) => updateSpecName(idx, e.target.value)}
                     />
@@ -1673,7 +1673,7 @@ export default function AdminProductForm() {
                           </SpecValueChip>
                         ))}
                         <SpecValueInput
-                          placeholder="添加规格值"
+                          placeholder={t('admin.productForm.addSpecValue')}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault()
@@ -1689,7 +1689,7 @@ export default function AdminProductForm() {
               ))}
 
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <SmallBtn type="button" onClick={addSpec}>+ 添加规格维度</SmallBtn>
+                <SmallBtn type="button" onClick={addSpec}>+ {t('admin.productForm.addSpecDimension')}</SmallBtn>
               </div>
 
               <VariantCardList>
@@ -1704,7 +1704,7 @@ export default function AdminProductForm() {
                           type="button"
                           disabled={skus.length <= 1}
                           onClick={() => removeSKU(idx)}
-                          title="移除变体"
+                          title={t('admin.productForm.removeVariant')}
                         >
                           <Icon name="x" size={14} />
                         </VariantRemoveBtn>
@@ -1712,7 +1712,7 @@ export default function AdminProductForm() {
 
                       <VariantMainRow>
                         <VariantField>
-                          <VariantFieldLabel title="该变体的销售单价，支持两位小数">单价（元） *</VariantFieldLabel>
+                          <VariantFieldLabel title={t('admin.productForm.unitPriceTitle')}>{t('admin.productForm.unitPrice')} *</VariantFieldLabel>
                           <VariantPriceInput
                             type="number"
                             min="0"
@@ -1750,7 +1750,7 @@ export default function AdminProductForm() {
                                 onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, -1) }}
                                 onMouseUp={stopStockAdjust}
                                 onMouseLeave={stopStockAdjust}
-                                aria-label="减少库存"
+                                aria-label={t('admin.productForm.decreaseStock')}
                               >
                                 −
                               </VariantStockBtn>
@@ -1775,7 +1775,7 @@ export default function AdminProductForm() {
                                 onMouseDown={(e) => { e.preventDefault(); startStockAdjust(idx, 1) }}
                                 onMouseUp={stopStockAdjust}
                                 onMouseLeave={stopStockAdjust}
-                                aria-label="增加库存"
+                                aria-label={t('admin.productForm.increaseStock')}
                               >
                                 +
                               </VariantStockBtn>

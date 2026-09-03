@@ -12,6 +12,7 @@ import styled, { keyframes } from 'styled-components'
 import { Component, Semantic } from '@/theme'
 import { ZIndex } from '@/theme/zIndex'
 import { ConfirmDialog } from './Dialog'
+import { useTranslation } from '@/i18n'
 
 export type DrawerSize = 'sm' | 'md' | 'lg'
 
@@ -120,6 +121,7 @@ export function Drawer({
   style,
   children,
 }: DrawerProps) {
+  const { t } = useTranslation()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -149,7 +151,7 @@ export function Drawer({
       >
         <Header>
           <Title>{title}</Title>
-          <CloseBtn onClick={onClose} aria-label="关闭">
+          <CloseBtn onClick={onClose} aria-label={t('common.close')}>
             &times;
           </CloseBtn>
         </Header>
@@ -176,6 +178,7 @@ export interface FormDrawerProps extends Omit<DrawerProps, 'maskClosable'> {
 }
 
 export function FormDrawer({ dirty = false, onClose, children, ...rest }: FormDrawerProps) {
+  const { t } = useTranslation()
   const [showLeave, setShowLeave] = useState(false)
 
   useEffect(() => {
@@ -194,11 +197,11 @@ export function FormDrawer({ dirty = false, onClose, children, ...rest }: FormDr
       </Drawer>
       <ConfirmDialog
         open={showLeave}
-        title="确定离开？"
-        message={'当前表单存在未保存的修改。\n离开后将丢失这些修改。'}
+        title={t('admin.dialog.leaveTitle')}
+        message={t('admin.dialog.leaveMessage')}
         tone="warning"
-        confirmLabel="放弃修改"
-        cancelLabel="继续编辑"
+        confirmLabel={t('admin.dialog.discardChanges')}
+        cancelLabel={t('admin.dialog.keepEditing')}
         onConfirm={() => {
           setShowLeave(false)
           onClose()

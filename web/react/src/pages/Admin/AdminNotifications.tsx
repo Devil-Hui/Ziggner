@@ -173,8 +173,8 @@ export default function AdminNotifications() {
       notification: t('admin.notifications.tabNotification'),
       security: t('admin.notifications.tabSecurity'),
       error: t('admin.notifications.tabError'),
-      cs_new_message: '客服',
-      cs_new_conversation: '客服',
+      cs_new_message: t('admin.notifications.typeCs'),
+      cs_new_conversation: t('admin.notifications.typeCs'),
     }
     return labels[type] || type
   }

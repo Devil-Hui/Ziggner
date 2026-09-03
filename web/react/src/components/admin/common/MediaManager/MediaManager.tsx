@@ -567,7 +567,7 @@ export default function MediaManager({
             // 1.2 编辑模式：直接上传原视频到后端（MP4/WebM/MOV，≤200MB）
             const videoFile = item.videoBlob ? new File([item.videoBlob], item.fileName, { type: item.videoBlob.type || 'video/mp4' }) : null
             if (!videoFile) {
-              showToast('未获取到视频文件', 'warning')
+              showToast(t('admin.mediaManager.noVideoFile'), 'warning')
               setShowVideoDialog(false)
               return
             }
@@ -580,10 +580,10 @@ export default function MediaManager({
               // 刷新已保存媒体列表（视频默认置于队列首位）
               const fresh = await adminAPI.getMediaBySPU(spuId)
               if (Array.isArray(fresh)) setSavedItems(sortVideoFirst(fresh))
-              showToast(t('admin.mediaManager.videoUploadSuccess') || '视频上传成功', 'success')
+              showToast(t('admin.mediaManager.videoUploadSuccess'), 'success')
             } catch (err: unknown) {
               setUploadQueue(INITIAL_QUEUE)
-              showToast(err instanceof Error ? err.message : t('admin.mediaManager.videoUploadFailed') || '视频上传失败', 'error')
+              showToast(err instanceof Error ? err.message : t('admin.mediaManager.videoUploadFailed'), 'error')
             }
           } else {
             const stagedId = await addStagedItem(item)
@@ -640,7 +640,7 @@ export default function MediaManager({
               <div style={{ fontSize: 13, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {preview.name}
               </div>
-              <S.ActionBtn onClick={() => setPreview(null)}>关闭</S.ActionBtn>
+              <S.ActionBtn onClick={() => setPreview(null)}>{t('common.close')}</S.ActionBtn>
             </div>
           </S.DialogBox>
         </S.DialogOverlay>

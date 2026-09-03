@@ -12,6 +12,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import styled, { keyframes } from 'styled-components'
 import { Color, Radius, Shadow, FontSize, FontWeight, Transition, FluidSpace } from '../../../theme/tokens'
 import { ZIndex } from '../../../theme/zIndex'
+import { useTranslation } from '@/i18n'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -123,6 +124,7 @@ const Item = styled.div<{ $type: ToastType }>`
 `
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t: translate } = useTranslation()
   const [items, setItems] = useState<ToastItem[]>([])
   const timers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
@@ -153,7 +155,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           <Item key={t.id} $type={t.type}>
             <span className="ti">{IconChar[t.type]}</span>
             <span>{t.message}</span>
-            <button className="close" onClick={() => dismiss(t.id)} aria-label="关闭">✕</button>
+            <button className="close" onClick={() => dismiss(t.id)} aria-label={translate('common.close')}>✕</button>
           </Item>
         ))}
       </Container>

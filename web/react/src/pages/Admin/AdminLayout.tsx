@@ -613,16 +613,16 @@ function useActionBar() {
       match: /^\/admin\/products/,
       moduleKey: 'products',
       left: [
-        { label: '新建商品', to: '/admin/products/create', primary: true },
-        { label: '批量导入', to: '/admin/import' },
-        { label: '回收站', to: '/admin/recycle-bin' },
+        { label: t('admin.layout.action.newProduct'), to: '/admin/products/create', primary: true },
+        { label: t('admin.layout.action.bulkImport'), to: '/admin/import' },
+        { label: t('admin.layout.action.recycleBin'), to: '/admin/recycle-bin' },
       ],
     },
     {
       match: /^\/admin\/orders/,
       moduleKey: 'orders',
       left: [
-        { label: '订单', to: '/admin/orders', primary: true },
+        { label: t('admin.layout.action.orders'), to: '/admin/orders', primary: true },
       ],
     },
     {
@@ -633,7 +633,7 @@ function useActionBar() {
     {
       match: /^\/admin\/chat/,
       moduleKey: 'chat',
-      left: [{ label: '刷新会话', action: () => window.dispatchEvent(new CustomEvent('admin:chat-refresh')) }],
+      left: [{ label: t('admin.layout.action.refreshChat'), action: () => window.dispatchEvent(new CustomEvent('admin:chat-refresh')) }],
     },
     {
       match: /^\/admin\/rbac/,
@@ -647,8 +647,8 @@ function useActionBar() {
   return {
     left: found?.left ?? [],
     right: [
-      { label: '最近更新', to: '/admin/tasks' },
-      { label: '帮助文档', action: () => toast.info('帮助文档开发中') },
+      { label: t('admin.layout.action.recentUpdates'), to: '/admin/tasks' },
+      { label: t('admin.layout.action.helpDocs'), action: () => toast.info(t('admin.layout.action.helpDocsWip')) },
     ],
   }
 }
@@ -773,7 +773,7 @@ export default function AdminLayout() {
   // 命令面板（⌘K）：导航 + 常用操作（不抢现有头部搜索的 Ctrl+K）
   const paletteSections: PaletteSection[] = [
     {
-      title: '导航',
+      title: t('admin.layout.palette.nav'),
       items: menuItems.flatMap(g => g.items.map(m => ({
         id: m.to,
         label: m.label,
@@ -783,13 +783,13 @@ export default function AdminLayout() {
       }))),
     },
     {
-      title: '操作',
+      title: t('admin.layout.palette.actions'),
       items: [
-        { id: 'act-product', label: '新建商品', icon: '🛍️', keywords: 'create product', onSelect: () => { setPaletteOpen(false); navigate('/admin/products/create') } },
-        { id: 'act-coupon', label: '创建优惠券', icon: '🎟️', keywords: 'coupon create', onSelect: () => { setPaletteOpen(false); navigate('/admin/coupons') } },
-        { id: 'act-order', label: '查看订单', icon: '📦', keywords: 'orders', onSelect: () => { setPaletteOpen(false); navigate('/admin/orders') } },
-        { id: 'act-chat', label: '客服工作台', icon: '💬', keywords: 'chat support', onSelect: () => { setPaletteOpen(false); navigate('/admin/chat') } },
-        { id: 'act-recycle', label: '回收站', icon: '🗑️', keywords: 'trash recycle', onSelect: () => { setPaletteOpen(false); navigate('/admin/recycle-bin') } },
+        { id: 'act-product', label: t('admin.layout.action.newProduct'), icon: '🛍️', keywords: 'create product', onSelect: () => { setPaletteOpen(false); navigate('/admin/products/create') } },
+        { id: 'act-coupon', label: t('admin.layout.action.createCoupon'), icon: '🎟️', keywords: 'coupon create', onSelect: () => { setPaletteOpen(false); navigate('/admin/coupons') } },
+        { id: 'act-order', label: t('admin.layout.action.viewOrders'), icon: '📦', keywords: 'orders', onSelect: () => { setPaletteOpen(false); navigate('/admin/orders') } },
+        { id: 'act-chat', label: t('admin.layout.action.chatWorkbench'), icon: '💬', keywords: 'chat support', onSelect: () => { setPaletteOpen(false); navigate('/admin/chat') } },
+        { id: 'act-recycle', label: t('admin.layout.action.recycleBin'), icon: '🗑️', keywords: 'trash recycle', onSelect: () => { setPaletteOpen(false); navigate('/admin/recycle-bin') } },
       ],
     },
   ]
@@ -870,7 +870,7 @@ export default function AdminLayout() {
         <MainArea>
           <Header>
             <HeaderLeft>
-              <Hamburger onClick={() => setMobileNavOpen(true)} aria-label="打开菜单">
+              <Hamburger onClick={() => setMobileNavOpen(true)} aria-label={t('admin.layout.header.openMenu')}>
                 <Icon name="menu" size={20} />
               </Hamburger>
               <Breadcrumb>{breadcrumb}</Breadcrumb>
@@ -882,7 +882,7 @@ export default function AdminLayout() {
                 <SearchIconWrap><Icon name="search" size={16} /></SearchIconWrap>
                 <SearchInput
                   ref={searchRef}
-                  placeholder={searchText ? '' : '搜索商品 / 订单  (Ctrl+K)'}
+                  placeholder={searchText ? '' : t('admin.layout.search.placeholder')}
                   value={searchText}
                   onChange={e => { setSearchText(e.target.value); setSearchOpen(true) }}
                   onFocus={() => setSearchOpen(true)}
@@ -893,13 +893,13 @@ export default function AdminLayout() {
                 />
                 {searchOpen && (searchText.trim().length >= 2 || searchLoading) && (
                   <SearchDropdown>
-                    {searchLoading && <BellEmpty>搜索中…</BellEmpty>}
+                    {searchLoading && <BellEmpty>{t('admin.layout.search.searching')}</BellEmpty>}
                     {!searchLoading && searchProducts.length === 0 && searchOrders.length === 0 && (
-                      <BellEmpty>未找到匹配结果</BellEmpty>
+                      <BellEmpty>{t('admin.layout.search.noResults')}</BellEmpty>
                     )}
                     {!searchLoading && searchProducts.length > 0 && (
                       <>
-                        <GroupTitle>商品</GroupTitle>
+                        <GroupTitle>{t('admin.layout.search.products')}</GroupTitle>
                         {searchProducts.map(p => (
                           <SearchItem key={p.id} onClick={() => { navigate('/admin/products'); setSearchOpen(false) }}>
                             {p.main_image ? <img src={p.main_image} alt="" loading="lazy" /> : <span className="s">📦</span>}
@@ -913,7 +913,7 @@ export default function AdminLayout() {
                     )}
                     {!searchLoading && searchOrders.length > 0 && (
                       <>
-                        <GroupTitle>订单</GroupTitle>
+                        <GroupTitle>{t('admin.layout.search.orders')}</GroupTitle>
                         {searchOrders.map(o => (
                           <SearchItem key={o.order_no} onClick={() => { navigate('/admin/orders'); setSearchOpen(false) }}>
                             <span className="s" style={{ fontSize: 13 }}>🧾</span>
@@ -937,7 +937,7 @@ export default function AdminLayout() {
               {/* 命令面板入口（⌘K） */}
               <button
                 onClick={() => setPaletteOpen(true)}
-                aria-label="命令面板"
+                aria-label={t('admin.commandPalette.title')}
                 style={{ height: 32, padding: '0 10px', borderRadius: 6, border: '1px solid #d1d5db', background: '#fff', color: '#374151', fontSize: 13, cursor: 'pointer' }}
               >
                 ⌘K
@@ -945,7 +945,7 @@ export default function AdminLayout() {
 
               {/* 通知铃（聚合未读） */}
               <BellWrap>
-                <BellBtn onClick={() => setBellOpen(v => !v)} aria-label="通知">
+                <BellBtn onClick={() => setBellOpen(v => !v)} aria-label={t('admin.layout.notifications.title')}>
                   <Badge count={unreadCount} max={99}>
                     <Icon name="bell" size={20} />
                   </Badge>
@@ -955,11 +955,11 @@ export default function AdminLayout() {
                     <DropdownBackdrop onClick={() => setBellOpen(false)} />
                     <BellDropdown>
                       <BellHeader>
-                        <span>通知</span>
-                        <span style={{ fontSize: 12, color: Color.text.muted }}>未读 {unreadCount}</span>
+                        <span>{t('admin.layout.notifications.title')}</span>
+                        <span style={{ fontSize: 12, color: Color.text.muted }}>{t('admin.layout.notifications.unread', { count: String(unreadCount) })}</span>
                       </BellHeader>
                       {notifications.length === 0 ? (
-                        <BellEmpty>暂无通知</BellEmpty>
+                        <BellEmpty>{t('admin.layout.notifications.empty')}</BellEmpty>
                       ) : (
                         notifications.map(n => (
                           <BellItem key={n.id} $unread={!n.is_read} onClick={() => { adminAPI.markRead(n.id).catch(() => {}); navigate('/admin/notifications'); setBellOpen(false) }}>
@@ -969,7 +969,7 @@ export default function AdminLayout() {
                         ))
                       )}
                       <BellFooter>
-                        <a onClick={() => { navigate('/admin/notifications'); setBellOpen(false) }}>查看全部</a>
+                        <a onClick={() => { navigate('/admin/notifications'); setBellOpen(false) }}>{t('admin.layout.notifications.viewAll')}</a>
                       </BellFooter>
                     </BellDropdown>
                   </>

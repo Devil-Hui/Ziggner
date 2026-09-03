@@ -13,6 +13,7 @@ import { Button } from '../../components/admin/design-system'
 import { Semantic } from '@/theme'
 import { useDashboardStats } from '../../hooks/useDashboardStats'
 import { useAdminAuth } from '../../store/AdminAuthContext'
+import { useTranslation } from '../../i18n'
 
 const Grid = styled.div`
   display: grid;
@@ -145,15 +146,16 @@ const Sub = styled.div`
   margin-top: 4px;
 `
 
-function timeGreeting(): string {
+function timeGreeting(t: (k: string) => string): string {
   const h = new Date().getHours()
-  if (h < 6) return '夜深了'
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
+  if (h < 6) return t('admin.dashboard.greeting.night')
+  if (h < 12) return t('admin.dashboard.greeting.morning')
+  if (h < 18) return t('admin.dashboard.greeting.afternoon')
+  return t('admin.dashboard.greeting.evening')
 }
 
 export default function AdminDashboard() {
+  const { t } = useTranslation()
   const stats = useDashboardStats()
   const { adminUser } = useAdminAuth()
   const navigate = useNavigate()
@@ -164,58 +166,58 @@ export default function AdminDashboard() {
   )
 
   const pendingItems = [
-    { key: 'products', label: '待审核商品', count: stats.pendingProducts, to: '/admin/products?status=pending' },
-    { key: 'applications', label: '待审核申请', count: stats.pendingApplications, to: '/admin/applications' },
-    { key: 'aftersales', label: '待处理售后', count: stats.pendingAfterSales, to: '/admin/orders?tab=aftersale&status=pending' },
-    { key: 'notifications', label: '未读通知', count: stats.unreadNotifications, to: '/admin/notifications' },
+    { key: 'products', label: t('admin.dashboard.pending.products'), count: stats.pendingProducts, to: '/admin/products?status=pending' },
+    { key: 'applications', label: t('admin.dashboard.pending.applications'), count: stats.pendingApplications, to: '/admin/applications' },
+    { key: 'aftersales', label: t('admin.dashboard.pending.aftersales'), count: stats.pendingAfterSales, to: '/admin/orders?tab=aftersale&status=pending' },
+    { key: 'notifications', label: t('admin.dashboard.pending.notifications'), count: stats.unreadNotifications, to: '/admin/notifications' },
   ]
   const pendingTotal = pendingItems.reduce((s, i) => s + i.count, 0)
 
   const statsCards = [
-    { label: '商品总数', value: stats.productCount },
-    { label: '订单总数', value: stats.orderCount },
-    { label: '进行中任务', value: stats.runningTasks },
-    { label: '待办事项', value: pendingTotal, hot: pendingTotal > 0 },
+    { label: t('admin.dashboard.stats.products'), value: stats.productCount },
+    { label: t('admin.dashboard.stats.orders'), value: stats.orderCount },
+    { label: t('admin.dashboard.stats.runningTasks'), value: stats.runningTasks },
+    { label: t('admin.dashboard.stats.todos'), value: pendingTotal, hot: pendingTotal > 0 },
   ]
 
   const quickActions = [
-    { icon: '🛍️', label: '新建商品', to: '/admin/products/create' },
-    { icon: '📦', label: '查看订单', to: '/admin/orders' },
-    { icon: '🎟️', label: '创建优惠券', to: '/admin/coupons' },
-    { icon: '💬', label: '客服工作台', to: '/admin/chat' },
-    { icon: '🗑️', label: '回收站', to: '/admin/recycle-bin' },
+    { icon: '🛍️', label: t('admin.layout.action.newProduct'), to: '/admin/products/create' },
+    { icon: '📦', label: t('admin.layout.action.viewOrders'), to: '/admin/orders' },
+    { icon: '🎟️', label: t('admin.layout.action.createCoupon'), to: '/admin/coupons' },
+    { icon: '💬', label: t('admin.layout.action.chatWorkbench'), to: '/admin/chat' },
+    { icon: '🗑️', label: t('admin.layout.action.recycleBin'), to: '/admin/recycle-bin' },
   ]
 
   return (
     <div style={{ padding: 24, maxWidth: 1200 }}>
-      <PageHeader title="工作台" breadcrumb={[{ label: '控制台' }, { label: '工作台' }]} />
+      <PageHeader title={t('admin.dashboard.title')} breadcrumb={[{ label: t('admin.dashboard.console') }, { label: t('admin.dashboard.title') }]} />
 
       <Greeting>
-        {timeGreeting()}, {adminUser?.username ?? 'Admin'} 👋
+        {timeGreeting(t)}, {adminUser?.username ?? 'Admin'} 👋
       </Greeting>
       <Sub>
-        {today} · 共 {pendingTotal} 项待办
+        {today} · {t('admin.dashboard.todoSummary', { count: String(pendingTotal) })}
         <Button variant="text" size="sm" onClick={() => void stats.refresh()} style={{ marginLeft: 8 }}>
-          {stats.loading ? '刷新中…' : '刷新'}
+          {stats.loading ? t('admin.dashboard.refreshing') : t('admin.dashboard.refresh')}
         </Button>
       </Sub>
 
       {/* 待办事项（优先于统计） */}
-      <SectionTitle>待办事项</SectionTitle>
+      <SectionTitle>{t('admin.dashboard.section.todos')}</SectionTitle>
       <PendingList>
         {pendingItems.map((item) => (
           <PendingItem key={item.key} onClick={() => navigate(item.to)}>
             <PendingLabel>{item.label}</PendingLabel>
             <PendingRight>
               <Badge $hot={item.count > 0}>{item.count}</Badge>
-              查看 →
+              {t('admin.dashboard.view')} →
             </PendingRight>
           </PendingItem>
         ))}
       </PendingList>
 
       {/* 业务状态 */}
-      <SectionTitle>业务状态</SectionTitle>
+      <SectionTitle>{t('admin.dashboard.section.stats')}</SectionTitle>
       <Grid>
         {statsCards.map((c) => (
           <Card key={c.label}>
@@ -226,7 +228,7 @@ export default function AdminDashboard() {
       </Grid>
 
       {/* 快捷入口 */}
-      <SectionTitle>快捷入口</SectionTitle>
+      <SectionTitle>{t('admin.dashboard.section.quickActions')}</SectionTitle>
       <QuickGrid>
         {quickActions.map((q) => (
           <QuickItem key={q.to} onClick={() => navigate(q.to)}>

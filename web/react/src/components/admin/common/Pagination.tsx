@@ -1,5 +1,6 @@
 import styled from 'styled-components';
 import { Color, Radius, Spacing, FontSize, Transition } from '../../../theme/tokens';
+import { useTranslation } from '@/i18n';
 
 const Container = styled.div`
   display: flex;
@@ -43,6 +44,7 @@ interface PaginationProps {
 }
 
 export default function Pagination({ current, total, pageSize = 20, onChange }: PaginationProps) {
+  const { t } = useTranslation();
   const totalPages = Math.ceil(total / pageSize);
   if (totalPages <= 1) return null;
 
@@ -90,7 +92,7 @@ export default function Pagination({ current, total, pageSize = 20, onChange }: 
       >
         ›
       </PageButton>
-      <Info>共 {total} 条</Info>
+      <Info>{t('admin.pagination.total', { count: String(total) })}</Info>
     </Container>
   );
 }
