@@ -51,6 +51,7 @@ _patch_gmail_proxy()
 
 
 from apps.users.models import EmailTemplate
+from utils.html_sanitize import sanitize_email_html
 
 
 def _get_template(template_type: str):
@@ -68,7 +69,10 @@ def _render_template(template_type: str, context: dict) -> dict:
     """渲染邮件内容：优先数据库模板，回退内置默认"""
     tpl = _get_template(template_type)
     if tpl:
-        return tpl.render(context)
+        rendered = tpl.render(context)
+        # 出口消毒：兜底历史遗留的未消毒模板数据（入库消毒仅覆盖新增/修改）
+        rendered['html'] = sanitize_email_html(rendered.get('html') or '')
+        return rendered
     # 内置默认（数据库模板未配置时）
     if template_type == 'admin_welcome':
         platform_name = context.get('platform_name', 'Ziggner')

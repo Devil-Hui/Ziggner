@@ -24,6 +24,8 @@ boto3
 django-storages>=1.14.2
 stripe>=9.0.0,<10.0.0
 python-magic>=0.4.27
+# 邮件 HTML 白名单消毒（ammonia Rust 绑定），见 utils/html_sanitize.py
+nh3>=0.2.18
 channels[daphne]==4.2.0
 channels_redis==4.2.0
 SQLAlchemy>=2.0,<3

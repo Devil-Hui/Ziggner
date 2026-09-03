@@ -494,7 +494,7 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,  # 刷新后将旧的刷新令牌加入黑名单
     'UPDATE_LAST_LOGIN': True,  # 更新用户最后登录时间
     'ALGORITHM': 'HS256',  # 使用的加密算法
-    'SIGNING_KEY': SECRET_KEY,  # 签名密钥，使用Django的SECRET_KEY
+    'SIGNING_KEY': os.getenv('JWT_SIGNING_KEY') or SECRET_KEY,  # 签名密钥：优先独立 JWT_SIGNING_KEY（与 SECRET_KEY 隔离爆炸半径），未配置时回退 SECRET_KEY
     'VERIFYING_KEY': None,  # 验证密钥，使用对称加密时为None
     'AUTH_HEADER_TYPES': ('Bearer',),  # 认证头类型
     'AUTH_HEADER_NAME': 'Authorization',  # 认证头名称

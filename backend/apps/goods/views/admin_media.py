@@ -97,7 +97,12 @@ def _delete_storage_file(url: str) -> None:
         key = key[len('/media/'):]
     elif key.startswith('/'):
         key = key.lstrip('/')
-    local_path = os.path.join(getattr(settings, 'MEDIA_ROOT', ''), key)
+    # 路径穿越防护：key 归一化后必须仍位于 MEDIA_ROOT 内才允许删除
+    media_root = os.path.realpath(getattr(settings, 'MEDIA_ROOT', ''))
+    local_path = os.path.realpath(os.path.join(media_root, key))
+    if not local_path.startswith(media_root + os.sep):
+        _logger.warning('拒绝删除 MEDIA_ROOT 之外的文件: key=%s', key)
+        return
     if os.path.exists(local_path):
         try:
             os.remove(local_path)

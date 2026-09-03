@@ -34,7 +34,7 @@ MEDIA_URL = f"/{MEDIA_PATH.strip('/')}/"
 MEDIA_ROOT = os.path.join(BASE_DIR, MEDIA_PATH)
 # 公网媒体域名（本地存储时上传返回公网 URL，根治回环地址 Mixed Content；R2 模式下用 R2_PUBLIC_URL）
 PUBLIC_MEDIA_URL = os.getenv('PUBLIC_MEDIA_URL', '')
-FILE_STORAGE_MAX_SIZE = os.getenv('FILE_STORAGE_MAX_SIZE', 5)  # 5MB
+FILE_STORAGE_MAX_SIZE = int(os.getenv('FILE_STORAGE_MAX_SIZE', '5'))  # 5MB
 FILE_STORAGE_ALLOWED_TYPES = os.getenv('FILE_STORAGE_ALLOWED_TYPES', ["image/jpeg", "image/png", "image/webp"])
 
 # Cloudflare R2 configuration (fill in after creating R2 bucket)

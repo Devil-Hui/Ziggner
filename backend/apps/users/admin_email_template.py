@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from apps.rbac.permissions import HasPerm
 from apps.users.models import EmailTemplate
 from utils.api_base_view import BaseApiView
+from utils.html_sanitize import sanitize_email_html
 
 
 class EmailTemplateListView(BaseApiView):
@@ -30,7 +31,9 @@ class EmailTemplateUpdateView(BaseApiView):
 
     def post(self, request, template_type):
         subject = (request.data.get('subject') or '').strip()
-        html_body = request.data.get('html_body') or ''
+        # 入库消毒：富文本编辑器产出的 HTML 经白名单清洗后再落库，
+        # 防止被劫持的管理员会话注入脚本随邮件批量送达用户（出口消毒见 email_service）
+        html_body = sanitize_email_html(request.data.get('html_body') or '')
         text_body = request.data.get('text_body') or ''
         is_active = request.data.get('is_active', True)
         if not subject:
