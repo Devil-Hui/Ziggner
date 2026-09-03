@@ -186,6 +186,9 @@ class RefundView(BaseApiView):
                 'PAYMENT_NOT_FOUND_OR_NOT_PAID': (Messages.PAYMENT_NOT_FOUND, 404),
                 'ORDER_ALREADY_REFUNDED': ('Order has already been refunded or is being refunded.', 400),
                 'REFUND_AMOUNT_EXCEEDED': ('Refund amount exceeds the original payment amount.', 400),
+                'REFUND_REQUIRES_APPROVED_AFTER_SALE': (
+                    'Refund requires an approved after-sale request first.', 403,
+                ),
             }
             msg, code = error_map.get(str(e), (None, None))
             if str(e).startswith('UNSUPPORTED_REFUND_METHOD'):

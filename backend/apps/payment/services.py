@@ -11,7 +11,13 @@ from django.db import transaction as db_transaction
 from django.db import IntegrityError
 from django.db.models import Sum
 
-from apps.order.models import Order, OrderStatus, PaymentStatus as OrderPaymentStatus
+from apps.order.models import (
+    AfterSale,
+    AfterSaleStatus,
+    Order,
+    OrderStatus,
+    PaymentStatus as OrderPaymentStatus,
+)
 from payment.gateways.base import GatewayRefundRejectedError, PaymentGatewayFactory
 
 from .models import (
@@ -205,7 +211,13 @@ class PaymentService:
                         f'gateway={gateway_currency}, order={payment.currency}'
                     )
                     raise ValueError('CURRENCY_MISMATCH')
-                if abs(float(gateway_amount) - float(payment.amount)) > 0.01:
+                # 金额比较用 Decimal：float 二进制误差（0.1+0.2≠0.3）可能造成临界金额误判
+                try:
+                    gateway_amount_dec = Decimal(str(gateway_amount))
+                except ArithmeticError:
+                    logger.error('Unparseable gateway amount: %s', gateway_amount)
+                    raise ValueError('AMOUNT_MISMATCH')
+                if abs(gateway_amount_dec - payment.amount) > Decimal('0.01'):
                     logger.error(
                         f'[{gateway}] Amount mismatch: '
                         f'gateway={gateway_amount}, order={payment.amount}'
@@ -334,6 +346,21 @@ class PaymentService:
     # ==================== 退款 ====================
 
     @staticmethod
+    def _is_admin_user(user) -> bool:
+        """管理角色判断：超管/管理组长/组员可豁免售后门控（线下协商退款等场景）。"""
+        if getattr(user, 'is_superuser', False):
+            return True
+        try:
+            from apps.rbac.constants import Role
+            from apps.rbac.services import has_role
+        except Exception:  # pragma: no cover - rbac 不可用时退化为超管判断
+            return False
+        return any(
+            has_role(user, r)
+            for r in (Role.SUPERADMIN.value, Role.ADMIN_LEADER.value, Role.ADMIN_MEMBER.value)
+        )
+
+    @staticmethod
     def create_refund(
         user,
         order_no: str,
@@ -357,6 +384,22 @@ class PaymentService:
             ).first()
             if not payment:
                 raise ValueError('PAYMENT_NOT_FOUND_OR_NOT_PAID')
+
+            # ── 退款安全门控（与"真收款才发货"同一严谨级别）──
+            # 真实退款必须先有已批准/已完成的售后单（管理员审核通过），
+            # 防止买家收货后绕过售后审核直接自退全款（退钱不退货）。
+            # 管理角色豁免，覆盖线下协商退款场景。
+            if not PaymentService._is_admin_user(user):
+                has_approved_after_sale = AfterSale.objects.filter(
+                    order=payment.order,
+                    status__in=(AfterSaleStatus.APPROVED, AfterSaleStatus.COMPLETED),
+                ).exists()
+                if not has_approved_after_sale:
+                    logger.warning(
+                        'Refund blocked: no approved after-sale for order=%s user=%s',
+                        payment.order.order_no, getattr(user, 'pk', None),
+                    )
+                    raise ValueError('REFUND_REQUIRES_APPROVED_AFTER_SALE')
 
             order = payment.order
             existing = RefundLog.objects.filter(
@@ -720,7 +763,16 @@ class PaymentService:
                         f'payment_no={payment.payment_no}'
                     )
                     return
-                if abs(float(gateway_amount) - float(payment.amount)) > 0.01:
+                # 金额比较用 Decimal：float 二进制误差（0.1+0.2≠0.3）可能造成临界金额误判
+                try:
+                    gateway_amount_dec = Decimal(str(gateway_amount))
+                except ArithmeticError:
+                    logger.error(
+                        f'[{payment.method}] Unparseable gateway amount: {gateway_amount} '
+                        f'payment_no={payment.payment_no}'
+                    )
+                    return
+                if abs(gateway_amount_dec - payment.amount) > Decimal('0.01'):
                     logger.error(
                         f'[{payment.method}] Sync amount mismatch: '
                         f'gateway={gateway_amount}, order={payment.amount} '
@@ -781,32 +833,59 @@ class PaymentService:
             return payload.get('event_id', '')
         return ''
 
+    # 各网关事件类型 → 内部事件的严格白名单映射。
+    # ⚠️ 历史实现用子串模糊匹配（'succeeded'/'capture'/'refund' 等），存在真实误判：
+    #   PayPal 'PAYMENT.CAPTURE.DENIED' / '.FAILED' / '.REFUNDED' / '.REVERSED'
+    #   均含 'capture' → 被误判为 payment_completed（未收款/已退款被标记为支付成功）；
+    #   Stripe 'refund.failed' / 'refund.updated' 含 'refund' → 被误判为退款成功。
+    # 改为精确白名单：未命中事件一律原样返回（视为通知类，仅存档 gateway_data，
+    # 不推进支付状态）；万一漏标成功事件，由 sync_expired_payments 轮询网关补偿。
+    _WEBHOOK_EVENT_MAP = {
+        'stripe': {
+            'checkout.session.completed': 'payment_completed',
+            'checkout.session.async_payment_succeeded': 'payment_completed',
+            'payment_intent.succeeded': 'payment_completed',
+            'payment_intent.payment_failed': 'payment_failed',
+            'charge.refunded': 'refund_completed',
+            'charge.dispute.created': 'dispute_created',
+        },
+        'paypal': {
+            'PAYMENT.CAPTURE.COMPLETED': 'payment_completed',
+            'PAYMENT.CAPTURE.DENIED': 'payment_failed',
+            'PAYMENT.CAPTURE.DECLINED': 'payment_failed',
+            'PAYMENT.CAPTURE.REFUNDED': 'refund_completed',
+            'PAYMENT.CAPTURE.REVERSED': 'refund_completed',
+            'CUSTOMER.DISPUTE.CREATED': 'dispute_created',
+        },
+        'alipay': {
+            'TRADE_SUCCESS': 'payment_completed',
+            'TRADE_FINISHED': 'payment_completed',
+            'TRADE_CLOSED': 'payment_cancelled',
+        },
+        'mock': {
+            'success': 'payment_completed',
+            'failure': 'payment_failed',
+            'cancel': 'payment_cancelled',
+            'timeout': 'payment_timeout',
+            'refund': 'refund_completed',
+        },
+    }
+
     @staticmethod
     def _extract_event(gateway: str, payload: dict) -> str:
         if gateway == 'mock':
             scenario = payload.get('scenario', '')
-            return {
-                'success': 'payment_completed',
-                'failure': 'payment_failed',
-                'cancel': 'payment_cancelled',
-                'timeout': 'payment_timeout',
-                'refund': 'refund_completed',
-            }.get(scenario, scenario)
+            return PaymentService._WEBHOOK_EVENT_MAP['mock'].get(scenario, scenario)
         event = {
             'stripe': payload.get('type', ''),
             'paypal': payload.get('event_type', ''),
             'alipay': payload.get('trade_status', ''),
         }.get(gateway, '')
-
-        e = event.lower()
-        if any(s in e for s in ('succeeded', 'completed', 'success', 'capture')):
-            return 'payment_completed'
-        if any(s in e for s in ('cancelled', 'canceled')):
-            return 'payment_cancelled'
-        if any(s in e for s in ('failed', 'denied')):
-            return 'payment_failed'
-        if any(s in e for s in ('refund', 'reversed')):
-            return 'refund_completed'
+        mapped = PaymentService._WEBHOOK_EVENT_MAP.get(gateway, {}).get(event)
+        if mapped:
+            return mapped
+        # 白名单外事件（expired / refund.updated / dispute.updated 等）：
+        # 不推断状态，原样返回交由 handle_webhook 走「仅存档 gateway_data」分支
         return event
 
     @staticmethod
