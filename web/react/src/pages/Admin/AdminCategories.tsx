@@ -374,7 +374,7 @@ export default function AdminCategories() {
         <LoadingState rows={8} />
       ) : error ? (
         <ErrorState message={`${t('admin.categories.loadError')}${error ? `: ${error}` : ''}`} onRetry={fetchTree} />
-      ) : tree.length === 0 ? (
+      ) : tree.length === 0 && mode !== 'create' ? (
         <EmptyState title={t('admin.categories.noCategories')} icon="categories" />
       ) : (
         <Container>
