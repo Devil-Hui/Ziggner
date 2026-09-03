@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components'
 import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens';
 import { Input, Select, SecondaryBtn, DangerBtn, PrimaryBtn } from '../../components/admin/common/ui';
@@ -179,6 +179,8 @@ export default function AdminCategories() {
   const [migrateFromId, setMigrateFromId] = useState<number | null>(null);
   const [migrateToId, setMigrateToId] = useState<number | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // 标记「用户正在新建」，防止 URL 回放选中 effect 把 mode 重置回 view
+  const creatingRef = useRef(false);
 
   const fetchTree = useCallback(async () => {
     try {
@@ -219,6 +221,7 @@ export default function AdminCategories() {
   };
 
   const selectNode = (node: CategoryNode & { admin_group_id?: number }) => {
+    creatingRef.current = false;
     setSelected(node);
     setMode('view');
     setFormName(node.name);
@@ -230,6 +233,7 @@ export default function AdminCategories() {
   };
 
   const handleCreate = () => {
+    creatingRef.current = true;
     setSelected(null);
     setMode('create');
     setFormName('');
@@ -237,6 +241,8 @@ export default function AdminCategories() {
     setFormLevel(1);
     setFormActive(true);
     setFormAdminGroupId(null);
+    // 清除 URL 中的 id，避免「回放选中」effect 把 mode 重置回 view，导致新建表单一闪而过
+    setSelectedId('');
   };
 
   const handleSave = async () => {
@@ -345,6 +351,8 @@ export default function AdminCategories() {
   useEffect(() => {
     const id = Number(selectedId);
     if (!id || selected?.id === id) return;
+    // 用户正在新建分类时，不回放选中（否则会把 mode 重置回 view，新建表单一闪而过）
+    if (creatingRef.current) return;
     const target = allNodes.find((n) => n.id === id);
     if (target) selectNode(target);
     // eslint-disable-next-line react-hooks/exhaustive-deps
