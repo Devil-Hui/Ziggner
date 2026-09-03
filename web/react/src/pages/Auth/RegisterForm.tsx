@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import styled from 'styled-components'
 import Input from '../../components/common/Input/Input'
 import Button from '../../components/common/Button/Button'
-import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
+import TurnstileWidget, { type TurnstileWidgetHandle } from '../../components/business/TurnstileWidget/TurnstileWidget'
 import { useUser } from '../../store/UserContext'
 import { Color } from '../../theme/tokens'
 import { useNavigate, Link } from 'react-router-dom'
@@ -196,6 +196,7 @@ export default function RegisterForm() {
     code: '',
   })
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null)
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [error, setError] = useState('')
   const [codeCooldown, setCodeCooldown] = useState(0)
@@ -281,6 +282,9 @@ export default function RegisterForm() {
     } else {
       setError(result.error || t('store.auth.registrationFailed'))
     }
+    // Turnstile token 一次性：提交后已消费/失效，必须重置，否则重试会报「安全认证错误」
+    turnstileRef.current?.reset()
+    setTurnstileToken(null)
   }
 
   return (
@@ -359,6 +363,7 @@ export default function RegisterForm() {
       </Grid>
 
       <TurnstileWidget
+        ref={turnstileRef}
         siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
         onVerify={(token) => setTurnstileToken(token)}
       />

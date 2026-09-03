@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 import styled from 'styled-components'
 
 // ==================== 类型定义 ====================
 
 /** TurnstileWidget 组件 Props */
 export interface TurnstileWidgetProps {
-  /** Cloudflare Turnstile site key */
+  /** 站点 key */
   siteKey: string
   /** 验证成功回调，接收 token */
   onVerify: (token: string) => void
@@ -17,6 +17,12 @@ export interface TurnstileWidgetProps {
   theme?: 'light' | 'dark' | 'auto'
   /** 自定义尺寸 */
   size?: 'normal' | 'compact'
+}
+
+/** 通过 ref 暴露的实例方法 */
+export interface TurnstileWidgetHandle {
+  /** 重置 widget 并清空当前 token（Turnstile token 一次性，登录失败后必须重置才能重试） */
+  reset: () => void
 }
 
 // ==================== 全局类型扩展 ====================
@@ -70,14 +76,17 @@ const TURNSTILE_DUMMY_TEST_TOKEN = 'XXXX.DUMMY.TOKEN.XXXX'
  * - 支持验证成功、错误、过期回调
  * - 组件卸载时自动清理 widget
  */
-const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
-  siteKey,
-  onVerify,
-  onError,
-  onExpire,
-  theme = 'auto',
-  size = 'normal',
-}) => {
+const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidgetProps>(function TurnstileWidget(
+  {
+    siteKey,
+    onVerify,
+    onError,
+    onExpire,
+    theme = 'auto',
+    size = 'normal',
+  },
+  ref,
+) {
   const containerRef = useRef<HTMLDivElement | null>(null)
   const widgetIdRef = useRef<string>('')
   const scriptLoadedRef = useRef<boolean>(false)
@@ -213,7 +222,20 @@ const TurnstileWidget: React.FC<TurnstileWidgetProps> = ({
     }
   }, [loadTurnstileScript, renderWidget, siteKey])
 
+  // 暴露 reset 方法：Turnstile token 一次性，登录失败后父组件调用以重置 widget 并清空 token
+  useImperativeHandle(ref, () => ({
+    reset: () => {
+      if (widgetIdRef.current && window.turnstile) {
+        try {
+          window.turnstile.reset(widgetIdRef.current)
+        } catch {
+          // 忽略重置错误
+        }
+      }
+    },
+  }), [])
+
   return <WidgetContainer ref={containerRef} data-testid="turnstile-widget" />
-}
+})
 
 export default TurnstileWidget

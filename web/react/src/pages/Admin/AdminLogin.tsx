@@ -1,10 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useState, useRef, type FormEvent } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { useAdminAuth } from '../../store/AdminAuthContext'
 import { useTranslation, LanguageSwitch } from '../../i18n'
 import { CONFIG } from '../../config/constants'
-import TurnstileWidget from '../../components/business/TurnstileWidget/TurnstileWidget'
+import TurnstileWidget, { type TurnstileWidgetHandle } from '../../components/business/TurnstileWidget/TurnstileWidget'
 import { post, ensureCSRFCookie } from '../../api/request'
 import { Color, Shadow } from '../../theme/tokens'
 
@@ -195,6 +195,7 @@ export default function AdminLogin() {
   const [verifyId, setVerifyId] = useState('')
   const [verifyCode, setVerifyCode] = useState('')
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null)
 
   const sendVerifyCode = async () => {
     if (!email || sendingCode || countdown > 0) return
@@ -256,17 +257,19 @@ export default function AdminLogin() {
       if (ok) {
         navigate('/admin/products', { replace: true })
       } else {
-        // 保留验证码与 Turnstile token，允许用户修正后直接重试（验证码 10 分钟有效）
         setError(t('admin.login.invalidCredentials'))
       }
     } catch (err: unknown) {
       // 展示后端具体失败原因（验证码错误/过期、安全验证失败、非管理员等）
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setError(detail || t('admin.login.invalidCredentials'))
-      // 不清空 verifyCode/turnstileToken：仅输错一点（如漏一位）时可直接修正重试
     } finally {
       setLoading(false)
     }
+    // Turnstile token 是一次性的：无论成功与否，本次提交后 token 已消费/失效。
+    // 必须重置 widget 并清空 token，否则用户修正后重试会因 token 失效而报「安全认证错误」。
+    turnstileRef.current?.reset()
+    setTurnstileToken(null)
   }
 
   return (
@@ -315,6 +318,7 @@ export default function AdminLogin() {
             onChange={(e) => setPassword(e.target.value)}
           />
           <TurnstileWidget
+            ref={turnstileRef}
             siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
             onVerify={(token) => setTurnstileToken(token)}
             onError={() => setTurnstileToken(null)}
