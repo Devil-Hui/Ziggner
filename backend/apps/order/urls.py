@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (
-    AfterSaleApplyView, AfterSaleDetailView,
+    AfterSaleApplyView, AfterSaleDetailView, AfterSaleMyListView,
     OrderCancelView, OrderCheckoutView, OrderConfirmView,
     OrderDetailView, OrderListView,
 )
@@ -24,6 +24,8 @@ urlpatterns = [
 
     # Public / user
     path('checkout/', OrderCheckoutView.as_view(), name='order-checkout'),
+    # 「我的售后单」固定路径，必须排在 <str:order_no> 之前，否则被订单号路由吞掉
+    path('aftersale/mine/', AfterSaleMyListView.as_view(), name='order-aftersale-mine'),
     path('', OrderListView.as_view(), name='order-list'),
     path('<str:order_no>/', OrderDetailView.as_view(), name='order-detail'),
     path('<str:order_no>/cancel/', OrderCancelView.as_view(), name='order-cancel'),

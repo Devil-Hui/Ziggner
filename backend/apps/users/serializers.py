@@ -292,7 +292,13 @@ class ChangeUsernameSerializer(serializers.Serializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
-    """修改密码 —— 需旧密码校验，新密码需确认"""
+    """修改密码 —— 旧密码 + 邮箱验证码双重校验，新密码需确认
+
+    安全设计：仅凭旧密码不足以改密（会话劫持/共用电脑场景），
+    必须叠加一次「邮箱验证码」二次确认（verify_id + code）。
+    验证码归属邮箱由视图层强制比对 request.user.email，
+    避免攻击者拿自己邮箱的 verify_id 改他人密码。
+    """
     old_password = serializers.CharField(write_only=True, help_text='Current password.')
     new_password = serializers.CharField(
         write_only=True,
@@ -301,6 +307,13 @@ class ChangePasswordSerializer(serializers.Serializer):
         help_text='New password, 8-128 chars.',
     )
     confirm_password = serializers.CharField(write_only=True, help_text='Repeat new password.')
+    verify_id = serializers.CharField(write_only=True, help_text='verify_id from the email code send step.')
+    code = serializers.CharField(
+        write_only=True,
+        min_length=_cfg.get('VERIFICATION_CODE_LENGTH', 6),
+        max_length=_cfg.get('VERIFICATION_CODE_LENGTH', 6),
+        help_text='6-digit code sent to the account email.',
+    )
 
     def validate(self, attrs):
         if attrs['new_password'] != attrs['confirm_password']:

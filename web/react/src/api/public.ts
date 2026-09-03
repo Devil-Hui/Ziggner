@@ -222,9 +222,21 @@ export const publicAPI = {
 
   logout: () => post<void>('/users/session/logout/', {}),
 
-  /** 修改密码（需旧密码） */
-  changePassword: (data: { old_password: string; new_password: string; confirm_password: string }) =>
-    post<{ detail: string }>('/users/password/', data),
+  /** 修改密码（旧密码 + 邮箱验证码双重校验） */
+  changePassword: (data: {
+    old_password: string
+    new_password: string
+    confirm_password: string
+    verify_id: string
+    code: string
+  }) => post<{ detail: string }>('/users/password/', data),
+
+  /** 修改密码二次确认：向当前登录账号邮箱发送验证码，返回 verify_id */
+  sendPasswordEmailCode: () =>
+    post<{ verify_id: string; expire_seconds: number; email_masked: string; code?: string }>(
+      '/users/password/email-code/send/',
+      {},
+    ),
 
   /** 用户注册 */
   register: (data: {

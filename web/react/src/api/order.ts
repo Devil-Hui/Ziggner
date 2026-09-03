@@ -71,7 +71,29 @@ export interface AfterSaleReviewPayload {
   admin_remark?: string
 }
 
+/** 售后单（退款/退货/换货）—— 独立于订单状态的另一数据源 */
+export interface AfterSaleItem {
+  id: number
+  after_sale_no: string
+  order_no: string
+  type: 'return' | 'exchange' | 'reship'
+  reason: string
+  amount: string
+  status: 'pending_review' | 'approved' | 'rejected' | 'processing' | 'completed'
+  evidence: string[]
+  admin_remark: string
+  refunded_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export const orderAPI = {
+  /** 我的售后单列表（用户端）—— 供 Refund & Aftersale 页签使用 */
+  myAfterSales: (page = 1, perPage = 20) =>
+    get<{ count: number; results: AfterSaleItem[] }>(
+      `/order/aftersale/mine/?page=${page}&per_page=${perPage}`,
+    ),
+
   /** 获取订单列表，支持按状态和支付状态筛选 */
   list: (status?: string, page = 1, paymentStatus?: string) => {
     const statusParam = status ? `status=${status}` : ''

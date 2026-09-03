@@ -6,12 +6,14 @@ import { Color, Spacing, Radius, FontSize, Breakpoint, Shadow } from '../../them
 import Button from '../../components/common/Button/Button'
 import { useUser } from '../../store/UserContext'
 import { useCurrency } from '../../store/CurrencyContext'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from '../../i18n'
-import { orderAPI, type OrderSummary } from '../../api/order'
+import { orderAPI, type OrderSummary, type AfterSaleItem } from '../../api/order'
 import { reviewAPI, type ReviewItem } from '../../api/review'
 import { publicAPI } from '../../api/public'
 import { patch } from '../../api/request'
+import CouponsPanel from './components/CouponsPanel'
+import SupportPanel from './components/SupportPanel'
 
 // 配色对齐商城设计令牌（Ziggner Blue）
 const BRAND = {
@@ -108,6 +110,14 @@ const LogoutIcon = () => (
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <path d="M16 17l5-5-5-5" />
     <path d="M21 12H9" />
+  </svg>
+)
+
+const RefundIcon = () => (
+  <svg {...iconProps}>
+    <path d="M3 10h14a4 4 0 0 1 0 8h-3" />
+    <path d="M7 6l-4 4 4 4" />
+    <path d="M21 18v-1a5 5 0 0 0-5-5" />
   </svg>
 )
 
@@ -406,6 +416,29 @@ const AddrInput = styled.input`
   }
 `
 
+// 邮箱验证码：输入框 + 发送按钮同一行
+const CodeRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`
+
+const CodeHint = styled.div`
+  margin-top: 6px;
+  font-size: 12px;
+  color: ${Color.text.muted};
+`
+
+const SecurityHint = styled.p`
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: ${Color.bg.sunken};
+  font-size: 12px;
+  line-height: 1.6;
+  color: ${Color.text.secondary};
+`
+
 const AddrRow2 = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -640,83 +673,6 @@ const ItemPrice = styled.div`
   font-weight: 500;
 `
 
-const CouponGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: ${Spacing.lg}px;
-
-  @media (max-width: ${Breakpoint.mobile}px) {
-    grid-template-columns: 1fr;
-  }
-`
-
-const CouponItem = styled.div`
-  position: relative;
-  border: 1px solid ${Color.border.light};
-  border-radius: 12px;
-  padding: 16px 16px 16px 22px;
-  background: ${Color.bg.card};
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: ${BRAND.red};
-  }
-`
-
-const CouponPrice = styled.div`
-  font-size: ${FontSize.xxl}px;
-  font-weight: 700;
-  color: ${BRAND.red};
-  margin-bottom: ${Spacing.sm}px;
-`
-
-const CouponDesc = styled.div`
-  font-size: ${FontSize.xs}px;
-  color: ${Color.text.secondary};
-  margin-bottom: ${Spacing.sm}px;
-`
-
-const CouponTime = styled.div`
-  font-size: ${FontSize.xs - 1}px;
-  color: ${Color.text.muted};
-`
-
-const SupportSection = styled.div`
-  text-align: center;
-  padding: ${Spacing.xxl}px 0;
-`
-
-const SupportIconBox = styled.div`
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: ${BRAND.light};
-  margin: 0 auto ${Spacing.lg}px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: ${BRAND.red};
-`
-
-const SupportTitle = styled.div`
-  font-size: ${FontSize.lg}px;
-  font-weight: 600;
-  color: ${Color.text.heading};
-  margin-bottom: ${Spacing.sm}px;
-`
-
-const SupportDesc = styled.div`
-  font-size: ${FontSize.base}px;
-  color: ${Color.text.secondary};
-  margin-bottom: ${Spacing.xl}px;
-`
-
 const LoginPrompt = styled.div`
   background: ${Color.bg.card};
   border-radius: ${Radius.md}px;
@@ -740,21 +696,28 @@ const LoginDesc = styled.p`
 
 // 模拟数据（后续对接 API）
 const browseHistory: any[] = []
-const coupons: any[] = []
 
-type ProfileTab = 'orders' | 'coupons' | 'history' | 'support' | 'reviews' | 'addresses' | 'notifications' | 'favorites' | 'profile' | 'password' | 'security'
+type ProfileTab = 'orders' | 'aftersale' | 'coupons' | 'history' | 'support' | 'reviews' | 'addresses' | 'notifications' | 'favorites' | 'profile' | 'password'
 
 export default function Profile() {
   const { t } = useTranslation()
   const { user, logout, refreshUser } = useUser()
   const { format } = useCurrency()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
-  const [activeTab, setActiveTab] = useState<ProfileTab>('orders')
-  const [activeOrder, setActiveOrder] = useState('pending_payment')
-  const [paymentFilter, setPaymentFilter] = useState<string>('')
+  // 支持从 URL 参数 ?tab=xxx 定位页签（导航/其他页面可深链到具体页签）
+  const urlTab = searchParams.get('tab') as ProfileTab | null
+  const [activeTab, setActiveTab] = useState<ProfileTab>(urlTab && urlTab in {
+    orders: 1, aftersale: 1, coupons: 1, history: 1, support: 1,
+    reviews: 1, addresses: 1, notifications: 1, favorites: 1, profile: 1, password: 1,
+  } ? urlTab : 'orders')
+  // 订单状态筛选：'' = 全部。售后单是独立数据源（AfterSale），走 aftersale tab 而非此处。
+  const [activeOrder, setActiveOrder] = useState('')
   const [orders, setOrders] = useState<OrderSummary[]>([])
   const [ordersLoading, setOrdersLoading] = useState(false)
+  const [afterSales, setAfterSales] = useState<AfterSaleItem[]>([])
+  const [afterSalesLoading, setAfterSalesLoading] = useState(false)
   const [reviews, setReviews] = useState<ReviewItem[]>([])
   const [reviewsLoading, setReviewsLoading] = useState(false)
 
@@ -774,6 +737,19 @@ export default function Profile() {
   const [pwNew, setPwNew] = useState('')
   const [pwConfirm, setPwConfirm] = useState('')
   const [savingPw, setSavingPw] = useState(false)
+  // 邮箱验证码二次确认
+  const [pwVerifyId, setPwVerifyId] = useState('')
+  const [pwCode, setPwCode] = useState('')
+  const [pwCodeSending, setPwCodeSending] = useState(false)
+  const [pwCodeCountdown, setPwCodeCountdown] = useState(0)
+  const [pwEmailMasked, setPwEmailMasked] = useState('')
+
+  // 发送验证码冷却倒计时
+  useEffect(() => {
+    if (pwCodeCountdown <= 0) return
+    const timer = window.setTimeout(() => setPwCodeCountdown(c => c - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [pwCodeCountdown])
 
   const fetchAddresses = useCallback(async () => {
     setAddressesLoading(true)
@@ -831,11 +807,20 @@ export default function Profile() {
   useEffect(() => {
     if (!user || activeTab !== 'orders') return
     setOrdersLoading(true)
-    const status = (activeOrder === 'refund' || activeOrder === 'all') ? '' : activeOrder
-    orderAPI.list(status, 1, paymentFilter).then(data => {
+    // activeOrder 已是合法状态值或 ''（全部），直接透传；不再有 refund/all 特例
+    orderAPI.list(activeOrder || undefined, 1).then(data => {
       setOrders(data.results || [])
     }).catch(() => setOrders([])).finally(() => setOrdersLoading(false))
-  }, [activeOrder, paymentFilter, user, activeTab])
+  }, [activeOrder, user, activeTab])
+
+  // 售后单（Refund & Aftersale）：独立数据源，与订单状态互不重叠
+  useEffect(() => {
+    if (!user || activeTab !== 'aftersale') return
+    setAfterSalesLoading(true)
+    orderAPI.myAfterSales().then(data => {
+      setAfterSales(data.results || [])
+    }).catch(() => setAfterSales([])).finally(() => setAfterSalesLoading(false))
+  }, [user, activeTab])
 
   useEffect(() => {
     if (!user || activeTab !== 'reviews') return
@@ -868,29 +853,24 @@ export default function Profile() {
   const displayName = user.nickname || user.name
   const initial = (displayName || user.email || '?').charAt(0).toUpperCase()
 
+  // 订单状态页签：单一维度（订单 status）。「退款/售后」是独立数据源，不在此列。
   const orderTabs = [
+    { key: '', label: t('store.profile.allOrders') },
     { key: 'pending_payment', label: t('store.profile.pendingPayment') },
     { key: 'paid', label: t('store.profile.paid') },
     { key: 'shipped', label: t('store.profile.pendingShipment') },
     { key: 'delivered', label: t('store.profile.pendingReceipt') },
-    { key: 'refund', label: t('store.profile.refund') },
   ]
 
-  const paymentTabs = [
-    { key: '', label: t('store.profile.allPayments') },
-    { key: 'paid', label: t('store.profile.paid') },
-    { key: 'unpaid', label: t('store.profile.unpaid') },
-  ]
-
-  type NavItemDef = { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string; orderKey?: string }
+  type NavItemDef = { key: string; label: string; icon: ReactElement; tab?: ProfileTab; route?: string }
   const navGroups: { title: string; items: NavItemDef[] }[] = [
     {
       title: t('store.profile.groupOrders'),
       items: [
-        { key: 'all_orders', label: t('store.profile.allOrders'), icon: <OrderIcon />, orderKey: 'all' },
-        { key: 'pending_payment', label: t('store.profile.pendingPayment'), icon: <OrderIcon />, orderKey: 'pending_payment' },
-        { key: 'delivered', label: t('store.profile.pendingReceipt'), icon: <OrderIcon />, orderKey: 'delivered' },
-        { key: 'refund', label: t('store.profile.refund'), icon: <OrderIcon />, orderKey: 'refund' },
+        // 只保留两个入口：订单（内部再按状态切）与售后（独立数据源）。
+        // 旧版在此重复列出 4 个订单状态且共用同一图标，与右侧状态页签构成重复 UI，已移除。
+        { key: 'orders', label: t('store.profile.myOrders'), icon: <OrderIcon />, tab: 'orders' },
+        { key: 'aftersale', label: t('store.profile.refund'), icon: <RefundIcon />, tab: 'aftersale' },
       ],
     },
     {
@@ -917,29 +897,11 @@ export default function Profile() {
         { key: 'support', label: t('store.profile.supportTab'), icon: <SupportIcon />, tab: 'support' },
       ],
     },
-    {
-      title: t('store.profile.groupSecurity'),
-      items: [
-        { key: 'security', label: t('store.profile.securityPrivacy'), icon: <LockIcon />, tab: 'security' },
-      ],
-    },
   ]
 
   const renderOrders = () => (
     <ContentCard>
       <ModuleTitle>{t('store.profile.myOrders')}</ModuleTitle>
-
-      <PillGroup>
-        {paymentTabs.map(tab => (
-          <Pill
-            key={tab.key}
-            $active={paymentFilter === tab.key}
-            onClick={() => setPaymentFilter(tab.key)}
-          >
-            {tab.label}
-          </Pill>
-        ))}
-      </PillGroup>
 
       {ordersLoading ? (
         <EmptyState>{t('common.loading')}</EmptyState>
@@ -949,7 +911,7 @@ export default function Profile() {
            activeOrder === 'paid' ? t('store.profile.noPaid') :
            activeOrder === 'shipped' ? t('store.profile.noPendingShipment') :
            activeOrder === 'delivered' ? t('store.profile.noPendingReceipt') :
-           t('store.profile.noRefund')}
+           t('store.profile.noOrders')}
         </EmptyState>
       ) : (
         orders.map(order => (
@@ -976,22 +938,60 @@ export default function Profile() {
     </ContentCard>
   )
 
+  const renderAfterSales = () => {
+    const statusMeta = (status: string) => ({
+      pending_review: { label: t('store.profile.afterSalePendingReview'), color: Color.status.warning },
+      approved: { label: t('store.profile.afterSaleApproved'), color: Color.status.success },
+      rejected: { label: t('store.profile.afterSaleRejected'), color: Color.status.error },
+      processing: { label: t('store.profile.afterSaleProcessing'), color: Color.status.warning },
+      completed: { label: t('store.profile.afterSaleCompleted'), color: Color.status.success },
+    }[status] ?? { label: status, color: Color.text.muted })
+
+    const typeLabel = (type: string) => ({
+      return: t('store.profile.afterSaleTypeReturn'),
+      exchange: t('store.profile.afterSaleTypeExchange'),
+      reship: t('store.profile.afterSaleTypeReship'),
+    }[type] ?? type)
+
+    return (
+      <ContentCard>
+        <ModuleTitle>{t('store.profile.refund')}</ModuleTitle>
+
+        {afterSalesLoading ? (
+          <EmptyState>{t('common.loading')}</EmptyState>
+        ) : afterSales.length === 0 ? (
+          <EmptyState>{t('store.profile.noAfterSales')}</EmptyState>
+        ) : (
+          afterSales.map(item => {
+            const meta = statusMeta(item.status)
+            return (
+              <OrderItem key={item.id} onClick={() => navigate(`/order/${item.order_no}`)}>
+                <OrderItemLeft>
+                  <OrderItemNo>{item.after_sale_no}</OrderItemNo>
+                  <OrderItemStatus style={{ color: meta.color }}>{meta.label}</OrderItemStatus>
+                  <OrderItemMeta>
+                    {typeLabel(item.type)} · {t('store.profile.orderNo')} {item.order_no}
+                  </OrderItemMeta>
+                  <OrderItemMeta>{new Date(item.created_at).toLocaleDateString()}</OrderItemMeta>
+                  {item.admin_remark && (
+                    <OrderItemMeta>{t('store.profile.adminRemark')}: {item.admin_remark}</OrderItemMeta>
+                  )}
+                </OrderItemLeft>
+                <OrderItemRight>
+                  <OrderItemAmount>{format(Number(item.amount))}</OrderItemAmount>
+                </OrderItemRight>
+              </OrderItem>
+            )
+          })
+        )}
+      </ContentCard>
+    )
+  }
+
   const renderCoupons = () => (
     <ContentCard>
       <ModuleTitle>{t('store.profile.myCoupons')}</ModuleTitle>
-      {coupons.length === 0 ? (
-        <EmptyState>{t('store.coupons.noAvailable')}</EmptyState>
-      ) : (
-        <CouponGrid>
-          {coupons.map((coupon: any, index: number) => (
-            <CouponItem key={index}>
-              <CouponPrice>{coupon.price}</CouponPrice>
-              <CouponDesc>{coupon.desc}</CouponDesc>
-              <CouponTime>{coupon.time}</CouponTime>
-            </CouponItem>
-          ))}
-        </CouponGrid>
-      )}
+      <CouponsPanel />
     </ContentCard>
   )
 
@@ -1017,16 +1017,7 @@ export default function Profile() {
   const renderSupport = () => (
     <ContentCard>
       <ModuleTitle>{t('store.profile.support')}</ModuleTitle>
-      <SupportSection>
-        <SupportIconBox>
-          <SupportIcon />
-        </SupportIconBox>
-        <SupportTitle>{t('store.profile.support')}</SupportTitle>
-        <SupportDesc>{t('store.profile.supportDesc')}</SupportDesc>
-        <Button variant="primary" onClick={() => navigate('/support')}>
-          {t('store.nav.support')}
-        </Button>
-      </SupportSection>
+      <SupportPanel />
     </ContentCard>
   )
 
@@ -1142,10 +1133,7 @@ export default function Profile() {
   )
 
   const goTab = (item: NavItemDef) => {
-    if (item.orderKey) {
-      setActiveTab('orders')
-      setActiveOrder(item.orderKey)
-    } else if (item.tab) {
+    if (item.tab) {
       setActiveTab(item.tab)
     } else if (item.route) {
       navigate(item.route)
@@ -1190,6 +1178,23 @@ export default function Profile() {
   }
 
   const renderPassword = () => {
+    const handleSendCode = async () => {
+      if (pwCodeCountdown > 0 || pwCodeSending) return
+      setPwCodeSending(true)
+      try {
+        const res = await publicAPI.sendPasswordEmailCode()
+        setPwVerifyId(res.verify_id)
+        setPwEmailMasked(res.email_masked || user?.email || '')
+        setPwCodeCountdown(60)
+        alert(t('store.profile.codeSent'))
+      } catch (err: unknown) {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        alert(detail || t('store.profile.codeSendFailed'))
+      } finally {
+        setPwCodeSending(false)
+      }
+    }
+
     const handleChangePw = async () => {
       if (!pwOld || !pwNew || !pwConfirm) {
         alert(t('store.profile.fillPasswordFields'))
@@ -1199,15 +1204,29 @@ export default function Profile() {
         alert(t('store.profile.passwordMismatch'))
         return
       }
+      if (!pwVerifyId || !pwCode) {
+        alert(t('store.profile.needEmailCode'))
+        return
+      }
       setSavingPw(true)
       try {
-        await publicAPI.changePassword({ old_password: pwOld, new_password: pwNew, confirm_password: pwConfirm })
+        await publicAPI.changePassword({
+          old_password: pwOld,
+          new_password: pwNew,
+          confirm_password: pwConfirm,
+          verify_id: pwVerifyId,
+          code: pwCode,
+        })
         setPwOld('')
         setPwNew('')
         setPwConfirm('')
+        setPwCode('')
+        setPwVerifyId('')
+        setPwEmailMasked('')
         alert(t('store.profile.changePasswordSuccess'))
-      } catch {
-        alert(t('store.profile.changePasswordFailed'))
+      } catch (err: unknown) {
+        const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+        alert(detail || t('store.profile.changePasswordFailed'))
       } finally {
         setSavingPw(false)
       }
@@ -1215,9 +1234,39 @@ export default function Profile() {
     return (
       <ContentCard>
         <ModuleTitle>{t('store.profile.changePassword')}</ModuleTitle>
+        <SecurityHint>{t('store.profile.passwordSecurityHint')}</SecurityHint>
         <AddrField>{t('store.profile.oldPassword')}<AddrInput type="password" value={pwOld} onChange={(e) => setPwOld(e.target.value)} /></AddrField>
         <AddrField>{t('store.profile.newPassword')}<AddrInput type="password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} /></AddrField>
         <AddrField>{t('store.profile.confirmPassword')}<AddrInput type="password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} /></AddrField>
+
+        {/* 邮箱验证码二次确认：仅凭旧密码不足以改密，需邮箱持有者二次确认 */}
+        <AddrField>
+          {t('store.profile.emailCode')}
+          <CodeRow>
+            <AddrInput
+              value={pwCode}
+              onChange={(e) => setPwCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder={t('store.profile.emailCodePlaceholder')}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              style={{ flex: 1 }}
+            />
+            <Button
+              variant={pwVerifyId ? 'secondary' : 'primary'}
+              size="sm"
+              disabled={pwCodeSending || pwCodeCountdown > 0}
+              onClick={handleSendCode}
+            >
+              {pwCodeCountdown > 0
+                ? `${pwCodeCountdown}s`
+                : pwVerifyId ? t('store.profile.resendCode') : t('store.profile.sendCode')}
+            </Button>
+          </CodeRow>
+        </AddrField>
+        {pwEmailMasked && (
+          <CodeHint>{t('store.profile.codeSentTo').replace('{email}', pwEmailMasked)}</CodeHint>
+        )}
+
         <div style={{ marginTop: 12 }}>
           <Button variant="primary" size="sm" disabled={savingPw} onClick={handleChangePw}>
             {savingPw ? t('common.loading') : t('store.profile.changePassword')}
@@ -1226,17 +1275,6 @@ export default function Profile() {
       </ContentCard>
     )
   }
-
-  const renderSecurity = () => (
-    <ContentCard>
-      <ModuleTitle>{t('store.profile.securityPrivacy')}</ModuleTitle>
-      <SupportDesc style={{ marginBottom: 16 }}>{t('store.profile.accountSecurityDesc')}</SupportDesc>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
-        <Button variant="primary" size="sm" onClick={() => setActiveTab('password')}>{t('store.profile.changePassword')}</Button>
-        <Button size="sm" onClick={() => { logout(); navigate('/') }}>{t('store.profile.logout')}</Button>
-      </div>
-    </ContentCard>
-  )
 
   return (
     <PageLayout>
@@ -1267,9 +1305,7 @@ export default function Profile() {
                   {group.items.map(item => (
                     <NavItem
                       key={item.key}
-                      $active={item.orderKey
-                        ? (activeTab === 'orders' && activeOrder === item.orderKey)
-                        : item.tab ? activeTab === item.tab : false}
+                      $active={item.tab ? activeTab === item.tab : false}
                       onClick={() => goTab(item)}
                     >
                       {item.icon}
@@ -1310,6 +1346,7 @@ export default function Profile() {
             )}
 
             {activeTab === 'orders' && renderOrders()}
+            {activeTab === 'aftersale' && renderAfterSales()}
             {activeTab === 'coupons' && renderCoupons()}
             {activeTab === 'history' && renderHistory()}
             {activeTab === 'support' && renderSupport()}
@@ -1317,7 +1354,6 @@ export default function Profile() {
             {activeTab === 'addresses' && renderAddresses()}
             {activeTab === 'profile' && renderProfile()}
             {activeTab === 'password' && renderPassword()}
-            {activeTab === 'security' && renderSecurity()}
           </Right>
         </Shell>
       </Container>

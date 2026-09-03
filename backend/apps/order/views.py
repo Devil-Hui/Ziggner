@@ -11,6 +11,7 @@ from .serializers import (
     CheckoutSerializer, OrderDetailSerializer, OrderListSerializer,
     AfterSaleSerializer,
 )
+from .models import AfterSale
 from .services import OrderService
 
 
@@ -154,3 +155,31 @@ class AfterSaleDetailView(BaseApiView):
         if not after_sale:
             return api_error_response(ErrorCodes.AFTER_SALE_NOT_FOUND, Messages.AFTER_SALE_NOT_FOUND)
         return Response(AfterSaleSerializer(after_sale).data)
+
+
+class AfterSaleMyListView(BaseApiView):
+    """我的售后单列表（用户端）。
+
+    GET /api/v1/order/aftersale/mine/ —— 列出当前登录用户发起的全部售后单。
+
+    售后单是独立的 AfterSale 模型（退货退款 / 换货 / 补发），并非订单 status，
+    因此与「订单状态」分开成独立数据源，供前端 Refund & Aftersale 页签使用。
+    旧实现把 refund 当作订单 status 传给订单列表，后端不支持该值（会退回查全部），
+    导致「退款/售后」页签实际展示的是所有订单——此接口用于根治该问题。
+    """
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='page', type=int, required=False, default=1),
+            OpenApiParameter(name='per_page', type=int, required=False, default=20),
+        ],
+        responses={200: AfterSaleSerializer(many=True)},
+    )
+    def get(self, request):
+        page, per_page = parse_pagination(request)
+        qs = AfterSale.objects.filter(order__user=request.user).select_related('order')
+        total = qs.count()
+        start = (page - 1) * per_page
+        results = list(qs[start:start + per_page])
+        data = AfterSaleSerializer(results, many=True).data
+        return Response({'count': total, 'results': data})

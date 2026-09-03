@@ -17,7 +17,7 @@ export type IconName =
   | 'chevron-down' | 'chevron-up' | 'chevron-left' | 'chevron-right'
   | 'star' | 'more-h' | 'bell' | 'message-circle' | 'external-link'
   | 'send' | 'cart' | 'lock' | 'box' | 'file' | 'users' | 'shield' | 'mail' | 'trending' | 'card'
-  | 'menu'
+  | 'gift' | 'log-out' | 'menu'
 
 interface IconProps {
   name: IconName
@@ -73,6 +73,8 @@ const icons: Partial<Record<IconName, React.ReactNode>> = {
   'mail': <><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></>,
   'trending': <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>,
   'card': <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+  'gift': <><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></>,
+  'log-out': <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></>,
 }
 
 export const Icon: React.FC<IconProps> = ({ name, size = 16, color, className, title }) => {

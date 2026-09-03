@@ -31,6 +31,11 @@ api.interceptors.request.use((config) => {
   )
   const method = (config.method || 'get').toLowerCase()
   if (method === 'get' || method === 'head' || method === 'options') return config
+  // FormData（文件上传）必须让浏览器自动生成 multipart/form-data; boundary=xxx，
+  // 否则实例默认的 application/json 会覆盖，导致后端 request.FILES 解析为空 → 400。
+  if (config.data instanceof FormData) {
+    config.headers.delete('Content-Type')
+  }
   const token = readCSRFCookie()
   if (token) config.headers.set('X-CSRFToken', token)
   return config

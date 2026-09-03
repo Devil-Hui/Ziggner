@@ -67,7 +67,7 @@ export default function CustomerServiceFAB() {
   return (
     <Fab
       $hidden={hidden}
-      onClick={() => navigate('/support')}
+      onClick={() => navigate('/profile?tab=support')}
       aria-label={t('store.product.contactSupport')}
     >
       <Tooltip>{t('store.product.contactSupport')}</Tooltip>

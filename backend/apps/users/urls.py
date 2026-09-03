@@ -11,6 +11,7 @@ from apps.users.views import (
     AvatarUploadView,
     ChangeUsernameView,
     ChangePasswordView,
+    PasswordVerifyCodeSendView,
     DeactivateView,
     EmailVerifyCheckView,
     EmailVerifySendView,
@@ -62,6 +63,8 @@ urlpatterns = [
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('username/', ChangeUsernameView.as_view(), name='user-change-username'),
     path('password/', ChangePasswordView.as_view(), name='user-change-password'),
+    # 修改密码二次确认：向当前登录账号邮箱发验证码（须在 password/ 之后无冲突，固定路径优先）
+    path('password/email-code/send/', PasswordVerifyCodeSendView.as_view(), name='user-password-email-code-send'),
     path('password/forgot/send/', ForgotPasswordSendView.as_view(), name='user-forgot-password-send'),
     path('password/forgot/reset/', ForgotPasswordResetView.as_view(), name='user-forgot-password-reset'),
     path('upload-avatar/', AvatarUploadView.as_view(), name='avatar-upload'),

@@ -963,11 +963,7 @@ export default function ProductDetail() {
                 </SecondaryBtn>
                 <SecondaryBtn
                   type="button"
-                  onClick={() =>
-                    navigate(
-                      `/support?spu_id=${product.id}&spu_name=${encodeURIComponent(product.name)}&spu_image=${encodeURIComponent(resolveMediaUrl(product.main_image) || product.main_image || '')}&spu_price=${price}`,
-                    )
-                  }
+                  onClick={() => navigate('/profile?tab=support')}
                 >
                   {t('store.product.contactSupport')}
                 </SecondaryBtn>

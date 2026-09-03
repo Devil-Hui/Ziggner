@@ -6,6 +6,8 @@ interface InputProps {
   placeholder?: string
   value?: string
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void
+  onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void
   disabled?: boolean
   required?: boolean
   label?: string
@@ -62,7 +64,7 @@ const HelperText = styled.span`
   color: ${Color.text.muted};
 `
 
-export default function Input({ type = 'text', placeholder, value, onChange, disabled, required, label, error, helperText }: InputProps) {
+export default function Input({ type = 'text', placeholder, value, onChange, onFocus, onBlur, disabled, required, label, error, helperText }: InputProps) {
   return (
     <div>
       {label && <Label>{label}{required && ' *'}</Label>}
@@ -71,6 +73,8 @@ export default function Input({ type = 'text', placeholder, value, onChange, dis
         placeholder={placeholder}
         value={value}
         onChange={onChange}
+        onFocus={onFocus}
+        onBlur={onBlur}
         disabled={disabled}
         required={required}
         $hasError={!!error}

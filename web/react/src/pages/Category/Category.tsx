@@ -700,7 +700,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
-                <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
+                <PromoTags tags={product.promo_tags} onClick={() => navigate('/profile?tab=coupons')} />
                 <ProductImage>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} loading="lazy" decoding="async" />
@@ -740,7 +740,7 @@ export default function Category() {
                     <span>{product.badge}</span>
                   </ProductBadge>
                 )}
-                <PromoTags tags={product.promo_tags} onClick={() => navigate('/coupons/center')} />
+                <PromoTags tags={product.promo_tags} onClick={() => navigate('/profile?tab=coupons')} />
                 <ProductImage style={{ width: 200, height: 200, flexShrink: 0 }}>
                   {optionalMediaUrl(product.image) && (
                     <img src={optionalMediaUrl(product.image)} alt={product.name} loading="lazy" decoding="async" />

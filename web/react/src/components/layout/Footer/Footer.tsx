@@ -138,8 +138,8 @@ export default function Footer() {
         </div>
         <div>
           <ColTitle>{t('store.footer.support')}</ColTitle>
-          <Link onClick={go('/support')}>{t('store.footer.helpCenter')}</Link>
-          <Link onClick={go('/support')}>{t('store.footer.contact')}</Link>
+          <Link onClick={go('/profile?tab=support')}>{t('store.footer.helpCenter')}</Link>
+          <Link onClick={go('/profile?tab=support')}>{t('store.footer.contact')}</Link>
         </div>
         <div>
           <ColTitle>{t('store.footer.legal')}</ColTitle>

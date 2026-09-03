@@ -319,7 +319,7 @@ export default function Cart() {
                 <Button 
                   variant="outline" 
                   style={{ width: '100%', marginTop: '1vh' }}
-                  onClick={() => navigate('/support')}
+                  onClick={() => navigate('/profile?tab=support')}
                 >
                   {t('store.product.contactSupport')}
                 </Button>

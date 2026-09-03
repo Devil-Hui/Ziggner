@@ -11,6 +11,7 @@ import { zIndex } from '../../../styles/zIndex'
 import { useTranslation } from '../../../i18n'
 import { patch, post as apiPost } from '../../../api/request'
 import styled, { css, keyframes } from 'styled-components'
+import { Icon } from '../../../components/admin/common/Icon'
 import {
   OPEN_CART_DROPDOWN_EVENT,
   type OpenCartDropdownDetail,
@@ -392,8 +393,8 @@ const UserMenu = styled.div`
   border: 1px solid ${Color.border.light};
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   min-width: 15vw;
-  border-radius: 10px;
-  padding: 6px;
+  border-radius: 14px;
+  padding: 8px;
   z-index: ${zIndex.dropdownContent};
   opacity: 0;
   visibility: hidden;
@@ -401,20 +402,93 @@ const UserMenu = styled.div`
   transition: all 0.3s ease;
 
   .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
     padding: 10px 12px;
     border-bottom: 1px solid ${Color.border.light};
-    font-weight: bold;
-    font-size: 1rem;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
 
-  .dropdown-divider {
-    border-bottom: 1px solid ${Color.border.light};
-    margin: 4px 0;
+  .user-info-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: ${Color.primaryLight};
+    color: ${Color.primary};
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+    overflow: hidden;
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
   }
 
-  .dropdown-logout {
+  .user-info-text {
+    min-width: 0;
+  }
+
+  .user-info-name {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: ${Color.text.heading};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .user-info-email {
+    font-size: 0.75rem;
+    color: ${Color.text.muted};
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .menu-group-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: ${Color.text.muted};
+    padding: 10px 12px 4px;
+  }
+
+  .menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: ${Color.text.secondary};
+    transition: background 0.15s ease, color 0.15s ease;
+
+    svg {
+      flex-shrink: 0;
+    }
+
+    &:hover {
+      background: ${Color.primaryLight};
+      color: ${Color.primary};
+    }
+  }
+
+  .menu-item-logout {
     color: ${Color.status.error};
+
+    &:hover {
+      background: ${Color.status.error}14;
+      color: ${Color.status.error};
+    }
   }
 `
 
@@ -658,16 +732,29 @@ export default function Navigation() {
                 {user?.nickname || user?.name || t('store.nav.user')} <ArrowDown />
               </DropButton>
               <UserMenu className="user-dropdown">
-                <div className="user-info">{user?.nickname || user?.name || t('store.nav.user')}</div>
-                <DropdownItem onClick={handleProfileClick}>{t('store.nav.profile')}</DropdownItem>
-                <DropdownItem onClick={handleOpenNicknameModal}>{t('store.nav.changeNickname')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/profile')}>{t('store.nav.myOrders')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/coupons')}>{t('store.nav.myCoupons')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/coupons/center')}>{t('store.nav.couponCenter')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/history')}>{t('store.nav.recentlyViewed')}</DropdownItem>
-                <DropdownItem onClick={() => navigate('/support')}>{t('store.nav.support')}</DropdownItem>
-                <div className="dropdown-divider"></div>
-                <DropdownItem className="dropdown-logout" onClick={handleLogout}>{t('store.nav.logout')}</DropdownItem>
+                <div className="user-info">
+                  <div className="user-info-avatar">
+                    {user?.avatar ? <img src={user.avatar} alt={user?.name || ''} /> : (user?.nickname || user?.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div className="user-info-text">
+                    <div className="user-info-name">{user?.nickname || user?.name || t('store.nav.user')}</div>
+                    {user?.email && <div className="user-info-email">{user.email}</div>}
+                  </div>
+                </div>
+
+                <div className="menu-group-title">{t('store.nav.groupAccount')}</div>
+                <div className="menu-item" onClick={handleProfileClick}><Icon name="users" size={16} />{t('store.nav.profile')}</div>
+                <div className="menu-item" onClick={handleOpenNicknameModal}><Icon name="edit" size={16} />{t('store.nav.changeNickname')}</div>
+
+                <div className="menu-group-title">{t('store.nav.groupOrders')}</div>
+                <div className="menu-item" onClick={() => navigate('/profile')}><Icon name="package" size={16} />{t('store.nav.myOrders')}</div>
+                <div className="menu-item" onClick={() => navigate('/profile?tab=coupons')}><Icon name="card" size={16} />{t('store.nav.myCoupons')}</div>
+                <div className="menu-item" onClick={() => navigate('/profile?tab=history')}><Icon name="clock" size={16} />{t('store.nav.recentlyViewed')}</div>
+
+                <div className="menu-group-title">{t('store.nav.groupMore')}</div>
+                <div className="menu-item" onClick={() => navigate('/profile?tab=support')}><Icon name="message-circle" size={16} />{t('store.nav.support')}</div>
+
+                <div className="menu-item menu-item-logout" onClick={handleLogout}><Icon name="log-out" size={16} />{t('store.nav.logout')}</div>
               </UserMenu>
             </Dropdown>
           ) : (

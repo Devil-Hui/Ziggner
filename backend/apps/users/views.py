@@ -34,6 +34,18 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
+def _mask_email(email: str) -> str:
+    """邮箱脱敏：a****b@example.com —— 用于前端提示「验证码已发送至 …」"""
+    if not email or '@' not in email:
+        return ''
+    local, _, domain = email.partition('@')
+    if len(local) <= 2:
+        masked_local = (local[:1] or '*') + '***'
+    else:
+        masked_local = f'{local[0]}***{local[-1]}'
+    return f'{masked_local}@{domain}'
+
+
 # ============================================================
 # Admin 登录
 # ============================================================
@@ -432,20 +444,76 @@ class ChangeUsernameView(BaseApiView):
         )
 
 
+class PasswordVerifyCodeSendView(BaseApiView):
+    """修改密码二次确认 —— 向当前登录账号的注册邮箱发送验证码。
+
+    POST /api/users/password/email-code/send/ —— 返回 verify_id（+ 脱敏邮箱）。
+
+    安全要点：邮箱一律取 request.user.email，忽略请求体传入的任何 email，
+    杜绝「用自己的邮箱收码、改别人的账号密码」。
+    """
+
+    @extend_schema(
+        request=None,
+        responses={
+            200: OpenApiResponse(description='Email code sent'),
+            400: OpenApiResponse(description='Account has no email'),
+            429: OpenApiResponse(description='Rate limit exceeded'),
+            500: OpenApiResponse(description='Send failed'),
+        }
+    )
+    def post(self, request):
+        email = (request.user.email or '').strip()
+        if not email:
+            return Response({'detail': '账号未绑定邮箱，无法进行邮箱验证'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            result = EmailVerifyService.send_verify_code(email)
+        except EmailRateLimitError as e:
+            return Response({'detail': str(e), 'retry_after': e.retry_after}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        except Exception as e:
+            _logger.error('修改密码验证码发送失败 user=%s error=%s', request.user.pk, e)
+            return Response({'detail': '发送失败，请稍后重试'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        result['email_masked'] = _mask_email(email)
+        return Response(result, status=status.HTTP_200_OK)
+
+
 class ChangePasswordView(BaseApiView):
-    """修改密码 —— 校验旧密码后设置新密码"""
+    """修改密码 —— 旧密码 + 邮箱验证码双重校验后设置新密码"""
     """POST /api/users/password/ —— Change account password"""
 
     @extend_schema(
         request=ChangePasswordSerializer,
         responses={
             200: OpenApiResponse(description='Password updated'),
-            400: OpenApiResponse(description='Invalid old password / mismatch'),
+            400: OpenApiResponse(description='Invalid old password / code / mismatch'),
         }
     )
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+
+        # ── 邮箱验证码二次确认 ──
+        verify_id = serializer.validated_data['verify_id']
+        code = serializer.validated_data['code']
+
+        # 校验验证码归属：必须是发给当前登录用户邮箱的码
+        code_email = (EmailVerifyService.get_verify_email(verify_id) or '').strip().lower()
+        if not code_email or code_email != (request.user.email or '').strip().lower():
+            return Response(
+                {'detail': '验证码无效或与当前账号邮箱不匹配，请重新获取'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # consume=False：先仅校验不销毁，改密成功后再显式消费。
+        # 这样旧密码输错时验证码仍有效，用户不必因 60s 发码冷却而重等一轮；
+        # 验证码本身仍有 10 分钟过期 + 每 verify_id 5 次试错上限的保护。
+        if not EmailVerifyService.verify_code(verify_id, code, consume=False):
+            return Response(
+                {'detail': '验证码错误或已过期'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         try:
             UserService.change_password(
@@ -465,6 +533,9 @@ class ChangePasswordView(BaseApiView):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             raise
+
+        # 改密成功 → 显式消费验证码，杜绝同一验证码被重放再次改密
+        EmailVerifyService.consume_code(verify_id)
 
         # 安全戳旋转：密码变更使该用户所有旧会话立即失效，需重新登录
         from apps.users.tokens import rotate_user_stamp

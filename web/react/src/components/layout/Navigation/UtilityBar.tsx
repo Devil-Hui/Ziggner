@@ -137,7 +137,7 @@ export default function UtilityBar() {
         <Right>
           <LinkBtn onClick={() => navigate('/profile')}>{t('store.nav.ordersReturns')}</LinkBtn>
           <Divider>|</Divider>
-          <LinkBtn onClick={() => navigate('/support')}>{t('store.nav.helpCenter')}</LinkBtn>
+          <LinkBtn onClick={() => navigate('/profile?tab=support')}>{t('store.nav.helpCenter')}</LinkBtn>
           <Divider>|</Divider>
           <DropWrap ref={currencyRef}>
             <LinkBtn onClick={() => setShowCurrency((v) => !v)}>

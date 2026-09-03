@@ -13,13 +13,9 @@ const Profile = lazy(() => import('../pages/Profile/Profile'))
 const AuthPage = lazy(() => import('../pages/Auth/AuthPage'))
 const SetPasswordPage = lazy(() => import('../pages/Auth/SetPasswordPage'))
 const ForgotPasswordPage = lazy(() => import('../pages/Auth/ForgotPasswordPage'))
-const Coupons = lazy(() => import('../pages/Coupons/Coupons'))
-const CouponCenter = lazy(() => import('../pages/CouponCenter/CouponCenter'))
 const CouponShare = lazy(() => import('../pages/CouponShare/CouponShare'))
-const History = lazy(() => import('../pages/History/History'))
 const TrackOrder = lazy(() => import('../pages/TrackOrder/TrackOrder'))
 const AboutPage = lazy(() => import('../pages/About/AboutPage'))
-const Support = lazy(() => import('../pages/Support/Support'))
 const Chat = lazy(() => import('../pages/Chat/Chat'))
 const OrderDetail = lazy(() => import('../pages/OrderDetail/OrderDetail'))
 const Notifications = lazy(() => import('../pages/Notifications/Notifications'))
@@ -85,13 +81,9 @@ export const routes: RouteObject[] = [
   { path: '/auth', element: <Suspense fallback={<PageLoading />}><AuthPage /></Suspense> },
   { path: '/login', element: <Navigate to="/auth?tab=login" replace /> },
   { path: '/register', element: <Navigate to="/auth?tab=register" replace /> },
-  { path: '/coupons', element: <Suspense fallback={<PageLoading />}><Coupons /></Suspense> },
-  { path: '/coupons/center', element: <Suspense fallback={<PageLoading />}><CouponCenter /></Suspense> },
   { path: '/coupon/:code', element: <Suspense fallback={<PageLoading />}><CouponShare /></Suspense> },
-  { path: '/coupon', element: <Navigate to="/coupons" replace /> },
-  { path: '/history', element: <Suspense fallback={<PageLoading />}><History /></Suspense> },
+  { path: '/coupon', element: <Navigate to="/profile?tab=coupons" replace /> },
   { path: '/about', element: <Suspense fallback={<PageLoading />}><AboutPage /></Suspense> },
-  { path: '/support', element: <Suspense fallback={<PageLoading />}><Support /></Suspense> },
   { path: '/chat', element: <Suspense fallback={<PageLoading />}><Chat /></Suspense> },
   { path: '/order/:order_no', element: <Suspense fallback={<PageLoading />}><OrderDetail /></Suspense> },
   { path: '/notifications', element: <Suspense fallback={<PageLoading />}><Notifications /></Suspense> },
