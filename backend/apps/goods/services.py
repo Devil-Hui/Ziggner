@@ -358,6 +358,16 @@ class GoodsQueryService:
                 for p in price_data:
                     sku_prices[p['spu_id']] = p
 
+            # 批量取每个 SPU 首图（sort_order=0）的 list(400px) 缩略图，避免列表页加载 2560px 大图
+            from .models import ProductMedia
+            main_thumb_map = {}
+            if spu_ids:
+                first_media = ProductMedia.objects.filter(
+                    spu_id__in=spu_ids, media_type='image', status='active', sort_order=0
+                ).values('spu_id', 'list_url', 'large_url', 'thumb_url')
+                for fm in first_media:
+                    main_thumb_map[fm['spu_id']] = fm['list_url'] or fm['large_url'] or fm['thumb_url'] or ''
+
             results = []
             for spu in spus:
                 prices = sku_prices.get(spu.id, {})
@@ -365,6 +375,8 @@ class GoodsQueryService:
                     'id': spu.id,
                     'name': spu.name,
                     'main_image': spu.main_image,
+                    # 列表/卡片用 400px 缩略图（快），详情用 main_image(2560px) 高清
+                    'main_image_thumb': main_thumb_map.get(spu.id, ''),
                     'status': spu.status,
                     'brand_name': spu.brand.name if spu.brand_id else '',
                     'category_name': spu.category.name if spu.category_id else '',

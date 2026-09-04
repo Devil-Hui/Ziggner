@@ -4,7 +4,7 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAppContext } from '../../../../store/AppContext'
-import ImageCropper, { matchBestRatio } from '../ImageCropper/ImageCropper'
+import ImageCropper from '../ImageCropper/ImageCropper'
 import type { MultiSizeCropResult } from '../ImageCropper/ImageCropper.types'
 import { prepareImageForUpload } from '../../../../utils/imageCompression'
 import * as S from './MediaManager.styles'
@@ -14,6 +14,8 @@ interface Props {
   open: boolean
   /** 预选文件（来自 dropzone 队列），存在时直接进入裁剪 */
   file?: File | null
+  /** 是否为队列首图（主图/海报）。首图默认 3:4 竖版海报，正文图默认 1:1 方形 */
+  isFirst?: boolean
   onClose: () => void
   /** 裁剪完成回调，返回四尺寸结果 + 源文件 */
   onConfirm: (result: MultiSizeCropResult, sourceFile: File) => void
@@ -21,29 +23,19 @@ interface Props {
   onSkip?: () => void
 }
 
-export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSkip }: Props) {
+export default function ImageUploadDialog({ open, file, isFirst = true, onClose, onConfirm, onSkip }: Props) {
   const { t } = useTranslation()
   const { showToast } = useAppContext()
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [compressing, setCompressing] = useState(false)
-  // 依据源图尺寸自动匹配的初次裁切比例（问题修复：不同图片自动匹配最合适标准比例）
-  const [initialRatio, setInitialRatio] = useState<number>(1)
+  // 初次裁切比例：首图（主图/海报）固定 3:4 竖版，正文图固定 1:1 方形（微信公众号风格，仅两档）
+  const [initialRatio, setInitialRatio] = useState<number>(isFirst ? 3 / 4 : 1)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // 读取图片实际尺寸并自动匹配最佳初次裁切比例
-  const applyBestRatio = useCallback((file: File) => {
-    const url = URL.createObjectURL(file)
-    const img = new Image()
-    img.onload = () => {
-      setInitialRatio(matchBestRatio(img.naturalWidth, img.naturalHeight))
-      URL.revokeObjectURL(url)
-    }
-    img.onerror = () => {
-      URL.revokeObjectURL(url)
-      setInitialRatio(1)
-    }
-    img.src = url
-  }, [])
+  // 依据「是否首图」设定初次裁切比例（首图 3:4 海报，正文 1:1）
+  const applyBestRatio = useCallback(() => {
+    setInitialRatio(isFirst ? 3 / 4 : 1)
+  }, [isFirst])
 
   // 队列模式：外部传入 file 时，先校验+压缩再进入裁剪
   // 修复：原先直接 setSelectedFile(file) 绕过了尺寸/压缩防护，导致大图进裁剪器 OOM 闪退
@@ -66,7 +58,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
       if (res.ok && res.file) {
         preparedRef.current = file // 仅在成功后才标记，兼容 StrictMode 双调用
         setSelectedFile(res.file)
-        applyBestRatio(res.file)
+        applyBestRatio()
       } else if (onSkip) {
         preparedRef.current = file
         onSkip() // 被拒绝的文件在队列中跳过，避免整批卡死
@@ -90,7 +82,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
       showToast(`图片已压缩 (-${res.ratio}%)`, 'success')
     }
     setSelectedFile(res.file)
-    applyBestRatio(res.file)
+    applyBestRatio()
   }
 
   const handleCropConfirm = (results: MultiSizeCropResult) => {
@@ -125,7 +117,7 @@ export default function ImageUploadDialog({ open, file, onClose, onConfirm, onSk
               }}
               maxWidth={2560}
               aspectRatio={initialRatio}
-              aspectRatioOptions={[1, 4 / 5, 3 / 4, 4 / 3, 3 / 2, 16 / 9, 0]}
+              aspectRatioOptions={[3 / 4, 1]}
             />
             {file && onSkip && (
               <S.DialogActions>

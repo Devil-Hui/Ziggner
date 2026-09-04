@@ -50,6 +50,8 @@ export default function MediaManager({
   const [items, setItems] = useState<StagedMediaItem[]>([])
   // 编辑模式已保存媒体
   const [savedItems, setSavedItems] = useState<ProductMediaItem[]>([])
+  // 编辑模式新裁剪、尚未提交上传的暂存项（IndexedDB）
+  const [pendingItems, setPendingItems] = useState<StagedMediaItem[]>([])
   const [showImageDialog, setShowImageDialog] = useState(false)
   const [showVideoDialog, setShowVideoDialog] = useState(false)
 
@@ -97,6 +99,10 @@ export default function MediaManager({
           .then((data) => setSavedItems(sortVideoFirst(Array.isArray(data) ? data : [])))
           .catch(() => {})
       }
+      // 编辑模式：加载尚未提交上传的暂存项（IndexedDB）
+      getAllStagedItems().then((data) => {
+        setPendingItems(sortVideoFirst(data.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))))
+      })
     } else {
       // 创建模式：从 IndexedDB 加载（视频默认置队首）
       getAllStagedItems().then((data) => {
@@ -181,43 +187,30 @@ export default function MediaManager({
   const handleCropConfirm = useCallback(
     async (result: MultiSizeCropResult, sourceFile: File) => {
       try {
+        // 创建模式与编辑模式统一：裁剪后先暂存 IndexedDB，点「保存/提交」才真正上传 R2。
+        // 这样用户裁剪后若删除，不会产生 R2 存储（减少无效上传）。
+        const staged: StagedMediaItem = {
+          mediaType: 'image',
+          thumbBlob: result.thumb.blob,
+          listBlob: result.list.blob,
+          largeBlob: result.large.blob,
+          originalBlob: result.original.blob,
+          previewDataUrl: result.thumb.dataUrl,
+          fileName: sourceFile.name,
+          fileSize: sourceFile.size,
+          createdAt: Date.now(),
+        }
+        const stagedId = await addStagedItem(staged)
         if (isEditMode && spuId) {
-          // 编辑模式：构建 FormData 上传到已有 SPU（XHR 进度）
-          const formData = new FormData()
-          // 裁剪器输出恒为 WebP（见 ImageCropper），文件名必须带 .webp 扩展名，
-          // 否则后端 validate_image_upload 会因「扩展名≠真实格式」拒绝（WebP 化改造遗漏）。
-          const base = sourceFile.name.replace(/\.[^.]+$/, '')
-          formData.append('thumb', result.thumb.blob, `thumb_${base}.webp`)
-          formData.append('list', result.list.blob, `list_${base}.webp`)
-          formData.append('large', result.large.blob, `large_${base}.webp`)
-          formData.append('original', result.original.blob, `original_${base}.webp`)
-          formData.append('alt_text', '')
-          setUploadQueue((q) => ({ ...q, percent: 0, currentFileName: sourceFile.name }))
-          const newMedia = await adminAPI.uploadMedia(spuId, formData, (percent) => {
-            setUploadQueue((q) => ({ ...q, percent }))
-          })
-          setSavedItems((prev) => [...prev, newMedia])
-          advanceQueue()
+          // 编辑模式：暂存项并入待保存列表（提交时统一上传）
+          setPendingItems((prev) => [...prev, { ...staged, id: stagedId }])
         } else {
-          // 创建模式：暂存 IndexedDB
-          const staged: StagedMediaItem = {
-            mediaType: 'image',
-            thumbBlob: result.thumb.blob,
-            listBlob: result.list.blob,
-            largeBlob: result.large.blob,
-            originalBlob: result.original.blob,
-            previewDataUrl: result.thumb.dataUrl,
-            fileName: sourceFile.name,
-            fileSize: sourceFile.size,
-            createdAt: Date.now(),
-          }
-          const stagedId = await addStagedItem(staged)
           const updated = [...items, { ...staged, id: stagedId }]
           notifyChange(updated)
-          advanceQueue()
         }
+        advanceQueue()
       } catch (err) {
-        // 任何异常都弹出可见错误，避免静默空白
+        // 任何异常都弹出明确错误，避免静默空白
         showToast(err instanceof Error ? err.message : t('admin.mediaManager.uploadFailed'), 'error')
         advanceQueue()
       }
@@ -264,7 +257,15 @@ export default function MediaManager({
   const handleRemove = useCallback(
     async (id: number) => {
       if (isEditMode) {
-        // 编辑模式：删除已保存媒体（active 需二次确认）
+        // 编辑模式：先判断是「已保存媒体」还是「新裁剪暂存项」
+        const isPending = pendingItems.some((p) => p.id === id)
+        if (isPending) {
+          // 暂存项：仅删 IndexedDB，不产生 R2 存储
+          await deleteStagedItem(id)
+          setPendingItems((prev) => prev.filter((p) => p.id !== id))
+          return
+        }
+        // 已保存媒体（active 需二次确认）
         const target = savedItems.find((mediaItem) => mediaItem.id === id)
         if (target && target.status === 'active') {
           setPendingDeleteActiveId(id)
@@ -282,7 +283,7 @@ export default function MediaManager({
         notifyChange(updated)
       }
     },
-    [isEditMode, savedItems, items, notifyChange]
+    [isEditMode, savedItems, pendingItems, items, notifyChange]
   )
 
   const handleConfirmDeleteActive = useCallback(async () => {
@@ -407,7 +408,7 @@ export default function MediaManager({
 
   // ── 计数 ──
   const imageCount = isEditMode
-    ? savedItems.filter((i) => i.media_type === 'image').length
+    ? savedItems.filter((i) => i.media_type === 'image').length + pendingItems.filter((i) => i.mediaType === 'image').length
     : items.filter((item) => item.mediaType === 'image').length
   const videoCount = isEditMode
     ? savedItems.filter((i) => i.media_type === 'video').length
@@ -509,11 +510,11 @@ export default function MediaManager({
         onPointerCancel={() => { if (dragIndex !== null) handleDragEnd() }}
       >
         {isEditMode ? (
-          savedItems.length === 0 && !showProgress ? (
+          savedItems.length === 0 && pendingItems.length === 0 && !showProgress ? (
             <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
           ) : (
-            savedItems.map((item, idx) => (
-              <div key={item.id} data-media-index={idx} style={{ position: 'relative' }}>
+            [...savedItems, ...pendingItems].map((item, idx) => (
+              <div key={`${'media_type' in item ? 's' : 'p'}-${item.id}`} data-media-index={idx} style={{ position: 'relative' }}>
                 <MediaItem
                   item={item}
                   index={idx}
@@ -553,6 +554,7 @@ export default function MediaManager({
       <ImageUploadDialog
         open={showImageDialog}
         file={currentQueueFile}
+        isFirst={queueIndex === 0}
         onClose={() => { setShowImageDialog(false); setUploadQueue(INITIAL_QUEUE) }}
         onConfirm={handleCropConfirm}
         onSkip={handleSkip}

@@ -39,7 +39,8 @@ function mapSPUToProduct(spu: PublicSPU): Product {
     id: spu.id,
     name: spu.name,
     price: parseFloat(spu.min_price || '0') || 0,
-    image: resolveMediaUrl(spu.main_image) || spu.main_image || '',
+    // 列表/卡片用 400px 缩略图（快），详情用 main_image(2560px) 高清
+    image: resolveMediaUrl(spu.main_image_thumb || spu.main_image) || spu.main_image_thumb || spu.main_image || '',
     category: spu.category_name || '',
     description: spu.description || '',
     rating: 0,

@@ -59,13 +59,15 @@ def sync_main_image_on_media_active(sender, instance, **kwargs):
         return
     if not instance.spu_id:
         return
-    if not instance.large_url:
+    # 优先用 original（≤2560px 高清），保证主图在 Retina 屏放大不糊；回退 large/list/thumb
+    url = instance.original_url or instance.large_url or instance.list_url or instance.thumb_url
+    if not url:
         return
 
     spu = SPU.objects.filter(id=instance.spu_id).first()
-    if spu and spu.main_image != instance.large_url:
-        SPU.objects.filter(id=instance.spu_id).update(main_image=instance.large_url)
-        logger.info(f'信号: 已同步 SPU#{instance.spu_id} main_image: {instance.large_url}')
+    if spu and spu.main_image != url:
+        SPU.objects.filter(id=instance.spu_id).update(main_image=url)
+        logger.info(f'信号: 已同步 SPU#{instance.spu_id} main_image: {url}')
 
 # ── AdminGroupMember 信号：审核组成员身份 → RBAC 全局角色 ──
 #

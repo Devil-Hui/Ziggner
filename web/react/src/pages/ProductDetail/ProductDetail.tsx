@@ -550,21 +550,64 @@ const StarSelector = styled.div`
   }
 `
 
+/** 单个图集项：缩略图(小图) + 大图 + srcset（响应式按设备宽度选图，省带宽） */
+interface GalleryItem {
+  /** 缩略图列用：list(400px)，Retina 下清晰且省带宽 */
+  thumb: string
+  /** 主图 src 兜底：original(≤2560px) 高清 */
+  full: string
+  /** 主图 srcset：list 400w / large 800w / original 2560w，浏览器按设备宽度自动选 */
+  srcSet: string
+}
+
 /** 收集图集：SKU 图 → media 列表 → 主图，去重 */
-function collectGallery(detail: PublicSPUDetail | null): string[] {
+function collectGallery(detail: PublicSPUDetail | null): GalleryItem[] {
   if (!detail) return []
-  const list: string[] = []
+  const seen = new Set<string>()
+  const list: GalleryItem[] = []
   for (const m of detail.media || []) {
     if (m.media_type === 'video') {
       const thumb = m.video_large_url || m.video_list_url || m.video_thumb_url
-      if (thumb) list.push(resolveMediaUrl(thumb) || thumb)
+      if (thumb) {
+        const t = resolveMediaUrl(thumb) || thumb
+        if (!seen.has(t)) {
+          seen.add(t)
+          list.push({ thumb: t, full: t, srcSet: `${t} 800w` })
+        }
+      }
       continue
     }
-    const url = m.large_url || m.original_url || m.list_url || m.thumb_url
-    if (url) list.push(resolveMediaUrl(url) || url)
+    collectGalleryItem(m, list, seen)
   }
-  if (detail.main_image) list.push(resolveMediaUrl(detail.main_image) || detail.main_image)
-  return Array.from(new Set(list.filter(Boolean)))
+  if (detail.main_image) {
+    const full = resolveMediaUrl(detail.main_image) || detail.main_image
+    if (!seen.has(full)) {
+      seen.add(full)
+      list.push({ thumb: full, full, srcSet: `${full} 2560w` })
+    }
+  }
+  return list
+}
+
+function collectGalleryItem(
+  m: { original_url?: string; large_url?: string; list_url?: string; thumb_url?: string },
+  list: GalleryItem[],
+  seen: Set<string>,
+) {
+  const full = m.original_url || m.large_url || m.list_url || m.thumb_url
+  if (!full || seen.has(full)) return
+  seen.add(full)
+  const thumb = m.list_url || m.large_url || m.thumb_url || full
+  const r = (u: string) => resolveMediaUrl(u) || u
+  list.push({
+    thumb: r(thumb),
+    full: r(full),
+    srcSet: [
+      r(m.list_url || m.thumb_url || full) + ' 400w',
+      r(m.large_url || m.list_url || full) + ' 800w',
+      r(full) + ' 2560w',
+    ].join(', '),
+  })
 }
 
 export default function ProductDetail() {
@@ -616,7 +659,8 @@ export default function ProductDetail() {
   }, [product])
 
   const gallery = useMemo(() => collectGallery(product), [product])
-  const activeImageUrl = gallery[activeImage] || gallery[0] || ''
+  const activeImageItem = gallery[activeImage] || gallery[0]
+  const activeImageUrl = activeImageItem?.full || ''
 
   // Fetch product
   useEffect(() => {
@@ -856,15 +900,15 @@ export default function ProductDetail() {
             {/* 左：缩略图列 */}
             {gallery.length > 1 && (
               <ThumbCol>
-                {gallery.map((src, i) => (
+                {gallery.map((item, i) => (
                   <Thumb
-                    key={`${src}-${i}`}
+                    key={`${item.full}-${i}`}
                     $active={i === activeImage}
                     onClick={() => setActiveImage(i)}
                     type="button"
                     aria-label={`${product.name} ${i + 1}`}
                   >
-                    <img src={src} alt="" loading="lazy" />
+                    <img src={item.thumb} alt="" loading="lazy" />
                   </Thumb>
                 ))}
               </ThumbCol>
@@ -874,7 +918,12 @@ export default function ProductDetail() {
             <StageCol>
               {activeImageUrl ? (
                 <Stage>
-                  <img src={activeImageUrl} alt={product.name} />
+                  <img
+                    src={activeImageUrl}
+                    srcSet={activeImageItem?.srcSet}
+                    sizes="(max-width: 899px) 100vw, 60vw"
+                    alt={product.name}
+                  />
                 </Stage>
               ) : (
                 <EmptyStage aria-hidden="true">📦</EmptyStage>

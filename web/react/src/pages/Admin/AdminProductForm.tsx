@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useBlocker } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, Radius, Spacing, Transition, FontSize, FontWeight } from '../../theme/tokens'
 import { DEFAULT_TAG_COLOR } from '../../constants/tagColors'
@@ -548,6 +548,47 @@ const UploadOverlay = styled.div`
   z-index: 1200;
 `
 
+// ── 未保存离开确认对话框 ──
+
+const ConfirmOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1300;
+`
+
+const ConfirmCard = styled.div`
+  width: 400px;
+  max-width: 90vw;
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+`
+
+const ConfirmTitle = styled.div`
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 8px;
+`
+
+const ConfirmText = styled.div`
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 20px;
+`
+
+const ConfirmActions = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+`
+
 const UploadCard = styled.div`
   width: 360px;
   max-width: 90vw;
@@ -1075,6 +1116,9 @@ export default function AdminProductForm() {
   // 编辑模式已保存媒体（来自 SPUAdminDetailView）
   const [savedMedia, setSavedMedia] = useState<ProductMediaItem[]>([])
 
+  // 编辑模式：加载时后端返回的原始 SKU id 列表，用于提交时对比删除已被移除的 SKU
+  const [originalSkuIds, setOriginalSkuIds] = useState<number[]>([])
+
   // State
   const [_loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -1092,6 +1136,7 @@ export default function AdminProductForm() {
   const markDirty = useCallback(() => { setIsDirty(true) }, [])
 
   // ── Unsaved Changes Guard ──
+  // 浏览器关闭/刷新拦截
   useEffect(() => {
     if (!isDirty) return
     const handler = (e: BeforeUnloadEvent) => {
@@ -1101,6 +1146,23 @@ export default function AdminProductForm() {
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
   }, [isDirty])
+
+  // 路由跳转拦截：有未保存修改时弹出确认
+  const blocker = useBlocker(
+    useCallback(() => isDirty, [isDirty]),
+  )
+  const [confirmLeave, setConfirmLeave] = useState(false)
+  useEffect(() => {
+    if (blocker.state === 'blocked') setConfirmLeave(true)
+  }, [blocker.state])
+  const handleConfirmLeave = () => {
+    setConfirmLeave(false)
+    blocker.proceed?.()
+  }
+  const handleCancelLeave = () => {
+    setConfirmLeave(false)
+    blocker.reset?.()
+  }
 
   // ── Load Data ──
 
@@ -1145,6 +1207,7 @@ export default function AdminProductForm() {
               discount_price: String(s.discount_price ?? ''),
               track_inventory: String(s.track_inventory ?? 'true'),
             })))
+            setOriginalSkuIds(data.skus.map((s) => s.id).filter((x): x is number => x != null))
           }
           if (data.tags?.length) {
             setSelectedTags(data.tags.map((t) => t.id))
@@ -1326,6 +1389,13 @@ export default function AdminProductForm() {
         await adminAPI.updateSPU(Number(id), spuData)
         spuId = Number(id)
 
+        // 对比原始 SKU id，删除已被用户移除的 SKU
+        const currentSkuIds = skus.map((s) => s.id).filter((x): x is number => x != null)
+        const removedSkuIds = originalSkuIds.filter((oid) => !currentSkuIds.includes(oid))
+        for (const removedId of removedSkuIds) {
+          await adminAPI.deleteSKU(removedId)
+        }
+
         for (const sku of skus) {
           if (sku.id) {
             await adminAPI.updateSKU(sku.id, {
@@ -1357,11 +1427,45 @@ export default function AdminProductForm() {
           }
         }
 
-        if (submitForReview) {
-          await adminAPI.submitAudit(spuId)
+        // 编辑模式：上传「新裁剪、尚未提交」的暂存媒体（IndexedDB）到该 SPU。
+        // 裁剪时仅暂存浏览器端，点保存/提交才真正上传 R2，避免无效存储。
+        const editStaged = await getAllStagedItems()
+        const editImageItems = editStaged.filter(
+          (it) => it.mediaType === 'image' && it.thumbBlob && it.listBlob && it.largeBlob && it.originalBlob,
+        )
+        if (editImageItems.length > 0) {
+          setUploadState({ active: true, uploaded: 0, total: editImageItems.length, percent: 0, fileName: '' })
+          for (const item of editImageItems) {
+            const fd = new FormData()
+            const base = (item.fileName || 'image').replace(/\.[^.]+$/, '')
+            if (item.thumbBlob) fd.append('thumb', item.thumbBlob, `thumb_${base}.webp`)
+            if (item.listBlob) fd.append('list', item.listBlob, `list_${base}.webp`)
+            if (item.largeBlob) fd.append('large', item.largeBlob, `large_${base}.webp`)
+            if (item.originalBlob) fd.append('original', item.originalBlob, `original_${base}.webp`)
+            try {
+              await adminAPI.uploadMedia(spuId, fd, (p) => {
+                setUploadState((s) => ({ ...s, percent: p, fileName: item.fileName || 'image' }))
+              })
+            } catch (e) {
+              console.warn('[AdminProductForm] 编辑模式上传图片媒体失败 spu=%s:', spuId, e)
+            }
+            setUploadState((s) => ({ ...s, uploaded: s.uploaded + 1, percent: 0 }))
+          }
+          setUploadState((s) => ({ ...s, active: false }))
         }
+        await clearAllStaged()
       } else {
         // ── 新建模式 ──
+        // 先校验所有 SKU 价格，避免 createSPU 后才发现价格缺失而产生空壳商品
+        if (skus.length > 0) {
+          const invalidSkus = skus.filter(s => !s.price || s.price === '' || Number(s.price) <= 0)
+          if (invalidSkus.length > 0) {
+            setError(t('admin.productForm.priceRequired'))
+            setLoading(false)
+            return
+          }
+        }
+
         const stagedItems = await getAllStagedItems()
 
         // 新建商品：后端 /goods/spu/create 不处理媒体文件，必须先把 SPU 建出来拿到 spuId，
@@ -1406,13 +1510,6 @@ export default function AdminProductForm() {
         setUploadState((s) => ({ ...s, active: false }))
 
         if (skus.length > 0) {
-          // Validate all SKUs have prices
-          const invalidSkus = skus.filter(s => !s.price || s.price === '' || Number(s.price) <= 0)
-          if (invalidSkus.length > 0) {
-            setError(t('admin.productForm.priceRequired'))
-            setLoading(false)
-            return
-          }
           await adminAPI.batchCreateSKU({
             spu_id: spuId,
             skus: skus.map((s) => ({
@@ -1429,10 +1526,6 @@ export default function AdminProductForm() {
           })
         }
 
-        if (submitForReview) {
-          await adminAPI.submitAudit(spuId)
-        }
-
         await clearAllStaged()
       }
 
@@ -1443,6 +1536,11 @@ export default function AdminProductForm() {
           publish_at: publishAt ? new Date(publishAt).toISOString() : undefined,
           unpublish_at: unpublishAt ? new Date(unpublishAt).toISOString() : undefined,
         })
+      }
+
+      // 审核提交放在 setSPUTags / scheduleSPU 之后，确保标签与定时上下架已落库
+      if (submitForReview) {
+        await adminAPI.submitAudit(spuId)
       }
 
       navigate('/admin/products')
@@ -1513,6 +1611,19 @@ export default function AdminProductForm() {
             </UploadMeta>
           </UploadCard>
         </UploadOverlay>
+      )}
+
+      {confirmLeave && (
+        <ConfirmOverlay>
+          <ConfirmCard>
+            <ConfirmTitle>{t('admin.productForm.unsavedTitle')}</ConfirmTitle>
+            <ConfirmText>{t('admin.productForm.unsavedMessage')}</ConfirmText>
+            <ConfirmActions>
+              <SecondaryBtn onClick={handleCancelLeave}>{t('common.cancel')}</SecondaryBtn>
+              <PrimaryBtn onClick={handleConfirmLeave}>{t('admin.productForm.leaveAnyway')}</PrimaryBtn>
+            </ConfirmActions>
+          </ConfirmCard>
+        </ConfirmOverlay>
       )}
       <PageHeader>
         <HeaderLeft>

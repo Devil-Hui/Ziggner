@@ -27,6 +27,8 @@ export interface PublicSPU {
   max_price?: string;
   total_stock?: number;
   main_image?: string;
+  /** 列表/卡片用 400px 缩略图（快），详情用 main_image(2560px) 高清 */
+  main_image_thumb?: string;
   created_at?: string;
   /** 活动标签：活动价(primary) / 可领券(secondary) */
   promo_tags?: PromoTag[];

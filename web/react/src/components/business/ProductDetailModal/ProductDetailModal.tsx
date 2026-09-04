@@ -500,7 +500,9 @@ function collectImages(detail: PublicSPUDetail | null, selectedSku: PublicSKU | 
       if (thumb) list.push(resolveMediaUrl(thumb) || thumb)
       continue
     }
-    const url = m.large_url || m.original_url || m.list_url || m.thumb_url
+    // 详情大图优先用 original（≤2560px 高清），Retina 屏放大不糊；
+    // 回退 large(800) → list(400) → thumb(200)。
+    const url = m.original_url || m.large_url || m.list_url || m.thumb_url
     if (url) list.push(resolveMediaUrl(url) || url)
   }
   if (detail.main_image) list.push(resolveMediaUrl(detail.main_image) || detail.main_image)

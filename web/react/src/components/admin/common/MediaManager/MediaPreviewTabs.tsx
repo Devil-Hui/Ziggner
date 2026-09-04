@@ -54,7 +54,11 @@ export default function MediaPreviewTabs({ items }: Props) {
           <div style={{ flex: 1 }}>
             {images[selectedIndex] && (
               <S.PreviewImg
-                src={optionalMediaUrl(images[selectedIndex].previewDataUrl || (images[selectedIndex].largeBlob ? URL.createObjectURL(images[selectedIndex].largeBlob!) : undefined))}
+                src={optionalMediaUrl(
+                  (images[selectedIndex].originalBlob ? URL.createObjectURL(images[selectedIndex].originalBlob) : undefined) ||
+                  (images[selectedIndex].largeBlob ? URL.createObjectURL(images[selectedIndex].largeBlob) : undefined) ||
+                  images[selectedIndex].previewDataUrl
+                )}
                 style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }}
               />
             )}
@@ -83,7 +87,10 @@ export default function MediaPreviewTabs({ items }: Props) {
           {images.map((item, idx) => (
             <S.PreviewCard key={item.id ?? idx} $size={300}>
               <S.PreviewImg
-                src={optionalMediaUrl(item.previewDataUrl || (item.originalBlob ? URL.createObjectURL(item.originalBlob) : undefined))}
+                src={optionalMediaUrl(
+                  (item.originalBlob ? URL.createObjectURL(item.originalBlob) : undefined) ||
+                  item.previewDataUrl
+                )}
                 style={{ maxWidth: 300, maxHeight: 300, objectFit: 'contain' }}
               />
               <S.PreviewLabel>{item.fileName}</S.PreviewLabel>

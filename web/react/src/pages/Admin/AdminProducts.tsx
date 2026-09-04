@@ -281,6 +281,8 @@ interface SPUItem {
   category_path: string
   sku_count: number
   main_image?: string
+  /** 列表/卡片用 400px 缩略图（快），详情用 main_image(2560px) 高清 */
+  main_image_thumb?: string
   created_at: string
 }
 
@@ -458,7 +460,7 @@ export default function AdminProducts() {
       render: (_: unknown, r: SPUItem) => (
         <ProductCell>
           <CellThumb>
-            {r.main_image ? <img src={r.main_image} alt={r.name} loading="lazy" /> : <span>📦</span>}
+            {r.main_image_thumb || r.main_image ? <img src={r.main_image_thumb || r.main_image} alt={r.name} loading="lazy" /> : <span>📦</span>}
           </CellThumb>
           <CellName>{r.name}</CellName>
         </ProductCell>
@@ -700,7 +702,7 @@ const ProductCard = memo(function ProductCard({
     <Card $selected={isSelected}>
       <Checkbox checked={isSelected} onChange={() => onToggleSelect(item.id)} />
       <Thumb>
-        {item.main_image ? <img src={item.main_image} alt={item.name} loading="lazy" /> : <span className="ph">📦</span>}
+        {item.main_image_thumb || item.main_image ? <img src={item.main_image_thumb || item.main_image} alt={item.name} loading="lazy" /> : <span className="ph">📦</span>}
       </Thumb>
       <CardMain>
         <CardName>{item.name}</CardName>

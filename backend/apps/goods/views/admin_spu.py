@@ -87,6 +87,15 @@ class SPUAdminListView(BaseApiView):
             skus_qs = SKU.objects.filter(spu_id__in=spu_ids)
             for sku in skus_qs:
                 spu_id_to_skus.setdefault(sku.spu_id, []).append(sku)
+        # 批量取每个 SPU 首图（sort_order=0）的 list(400px) 缩略图，避免后台列表加载 2560px 大图
+        from .models import ProductMedia
+        main_thumb_map = {}
+        if spu_ids:
+            first_media = ProductMedia.objects.filter(
+                spu_id__in=spu_ids, media_type='image', status='active', sort_order=0
+            ).values('spu_id', 'list_url', 'large_url', 'thumb_url')
+            for fm in first_media:
+                main_thumb_map[fm['spu_id']] = fm['list_url'] or fm['large_url'] or fm['thumb_url'] or ''
         for spu in spu_list:
             skus = spu_id_to_skus.get(spu.id, [])
             price_range = None
@@ -101,6 +110,7 @@ class SPUAdminListView(BaseApiView):
                 'category_id': spu.category_id,
                 'category_path': self._get_category_path(spu.category),
                 'main_image': spu.main_image,
+                'main_image_thumb': main_thumb_map.get(spu.id, ''),
                 'status': spu.status,
                 'status_display': spu.get_status_display(),
                 'price_range': price_range,

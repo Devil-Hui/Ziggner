@@ -24,8 +24,17 @@ interface SPUDetail {
   main_image: string;
   description: string;
   status: string;
+  status_display?: string;
   submitted_by_name?: string;
   submitted_at?: string;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_comment?: string;
+  scheduled_publish_at?: string | null;
+  scheduled_unpublish_at?: string | null;
+  product_kind?: 'physical' | 'virtual';
+  created_at?: string;
+  updated_at?: string;
   skus?: Array<{
     id: number;
     spec_values: Record<string, string>;
@@ -526,6 +535,16 @@ export default function AdminProductAudit() {
                   <InfoValue>{spu.category_path || '-'}</InfoValue>
                 </InfoItem>
                 <InfoItem>
+                  <InfoLabel>{t('admin.productAudit.productKind')}</InfoLabel>
+                  <InfoValue>
+                    {spu.product_kind === 'virtual'
+                      ? t('admin.productAudit.kindVirtual')
+                      : spu.product_kind === 'physical'
+                        ? t('admin.productAudit.kindPhysical')
+                        : '-'}
+                  </InfoValue>
+                </InfoItem>
+                <InfoItem>
                   <InfoLabel>{t('admin.productAudit.submittedBy')}</InfoLabel>
                   <InfoValue>{spu.submitted_by_name || '-'}</InfoValue>
                 </InfoItem>
@@ -533,7 +552,29 @@ export default function AdminProductAudit() {
                   <InfoLabel>{t('admin.productAudit.submittedAt')}</InfoLabel>
                   <InfoValue>{formatDateTime(spu.submitted_at)}</InfoValue>
                 </InfoItem>
+                <InfoItem>
+                  <InfoLabel>{t('admin.productAudit.reviewedBy')}</InfoLabel>
+                  <InfoValue>{spu.reviewed_by || '-'}</InfoValue>
+                </InfoItem>
+                <InfoItem>
+                  <InfoLabel>{t('admin.productAudit.reviewedAt')}</InfoLabel>
+                  <InfoValue>{spu.reviewed_at ? formatDateTime(spu.reviewed_at) : '-'}</InfoValue>
+                </InfoItem>
+                <InfoItem>
+                  <InfoLabel>{t('admin.productAudit.scheduledPublishAt')}</InfoLabel>
+                  <InfoValue>{spu.scheduled_publish_at ? formatDateTime(spu.scheduled_publish_at) : '-'}</InfoValue>
+                </InfoItem>
+                <InfoItem>
+                  <InfoLabel>{t('admin.productAudit.scheduledUnpublishAt')}</InfoLabel>
+                  <InfoValue>{spu.scheduled_unpublish_at ? formatDateTime(spu.scheduled_unpublish_at) : '-'}</InfoValue>
+                </InfoItem>
               </InfoGrid>
+              {spu.review_comment && (
+                <div style={{ marginTop: 20 }}>
+                  <InfoLabel>{t('admin.productAudit.reviewComment')}</InfoLabel>
+                  <Description>{spu.review_comment}</Description>
+                </div>
+              )}
               <div style={{ marginTop: 20 }}>
                 <InfoLabel>{t('admin.productAudit.mainImage')}</InfoLabel>
                 <div style={{ marginTop: 8 }}>

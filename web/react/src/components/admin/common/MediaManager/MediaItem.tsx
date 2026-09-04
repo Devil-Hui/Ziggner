@@ -40,27 +40,40 @@ export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dr
   let src: string
   if (saved) {
     const mediaItem = item as ProductMediaItem
+    // 弹窗缩略图用 list(400px) 而非 thumb(200px)，Retina 屏放大不糊（兼顾清晰与带宽）
     const rawUrl = mediaItem.media_type === 'image'
-      ? (mediaItem.thumb_url || mediaItem.list_url || mediaItem.large_url || '')
-      : (mediaItem.video_thumb_url || mediaItem.video_url || '')
+      ? (mediaItem.list_url || mediaItem.large_url || mediaItem.thumb_url || '')
+      : (mediaItem.video_list_url || mediaItem.video_large_url || mediaItem.video_thumb_url || mediaItem.video_url || '')
     src = resolveMediaUrl(rawUrl) || rawUrl
   } else {
     const stagedItem = item as StagedMediaItem
     src = stagedItem.mediaType === 'image'
-      ? (stagedItem.previewDataUrl || (stagedItem.thumbBlob ? URL.createObjectURL(stagedItem.thumbBlob) : ''))
+      ? (stagedItem.previewDataUrl || (stagedItem.listBlob ? URL.createObjectURL(stagedItem.listBlob) : (stagedItem.thumbBlob ? URL.createObjectURL(stagedItem.thumbBlob) : '')))
       : (stagedItem.previewDataUrl || (stagedItem.videoBlob ? URL.createObjectURL(stagedItem.videoBlob) : ''))
   }
 
   const handlePreviewClick = () => {
     // 长按拖动结束后的 click（距按下 >1.5s）忽略，避免误弹预览
     if (Date.now() - pressStartRef.current > 1500) return
-    // 视频：优先用原视频 URL 播放；图片：用大图/原图预览
+    // 视频：优先用原视频 URL 播放；图片：用大图/原图预览（避免 200px 缩略图放大糊）
     let playUrl = src
     if (mediaType === 'video') {
       const videoUrl = saved
         ? resolveMediaUrl((item as ProductMediaItem).video_url || '') || (item as ProductMediaItem).video_url
         : (item as StagedMediaItem).videoBlob ? URL.createObjectURL((item as StagedMediaItem).videoBlob!) : src
       if (videoUrl) playUrl = videoUrl
+    } else if (saved) {
+      const mediaItem = item as ProductMediaItem
+      const rawUrl = mediaItem.original_url || mediaItem.large_url || mediaItem.list_url || mediaItem.thumb_url || ''
+      playUrl = resolveMediaUrl(rawUrl) || rawUrl
+    } else {
+      const stagedItem = item as StagedMediaItem
+      const big = stagedItem.originalBlob
+        ? URL.createObjectURL(stagedItem.originalBlob)
+        : stagedItem.largeBlob
+          ? URL.createObjectURL(stagedItem.largeBlob)
+          : ''
+      if (big) playUrl = big
     }
     onPreview?.(playUrl, mediaType, fileName)
   }

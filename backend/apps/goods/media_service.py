@@ -135,14 +135,21 @@ class MediaService:
 
     @classmethod
     def sync_main_image(cls, spu_id: int):
-        """同步 SPU.main_image = sort_order=0 的图片大图 URL"""
+        """同步 SPU.main_image = sort_order=0 的图片 URL。
+
+        优先用 original（≤2560px 高清），保证详情/卡片主图在 Retina 屏放大不糊；
+        回退 large(800) → list(400) → thumb(200)。
+        """
         from .models import ProductMedia, SPU
         first_image = ProductMedia.objects.filter(
             spu_id=spu_id, media_type='image', status='active'
         ).order_by('sort_order').first()
-        if first_image and first_image.large_url:
-            SPU.objects.filter(id=spu_id).update(main_image=first_image.large_url)
-            logger.info(f'已同步 SPU#{spu_id} main_image: {first_image.large_url}')
+        if not first_image:
+            return
+        url = first_image.original_url or first_image.large_url or first_image.list_url or first_image.thumb_url
+        if url:
+            SPU.objects.filter(id=spu_id).update(main_image=url)
+            logger.info(f'已同步 SPU#{spu_id} main_image: {url}')
 
     # ── 清理过期 ──
 

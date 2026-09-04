@@ -69,15 +69,10 @@ export async function compressImage(
     const bmp = await createImageBitmap(file)
     const { width, height } = bmp
 
-    // 仅在超过尺寸上限时等比缩放；未超限则不重编码，原样返回
-    // （保留原始画质，不再做有损 JPEG 压缩）
+    // 尺寸超限 → 等比缩放；未超限 → 保持原尺寸（仅重编码压缩体积）。
+    // 无论是否缩放，都重编码为 WebP q0.9 以压缩体积（视觉近无损）。
     const longest = Math.max(width, height)
-    if (longest <= config.maxWidthOrHeight) {
-      bmp.close()
-      return file
-    }
-
-    const ratio = config.maxWidthOrHeight / longest
+    const ratio = longest > config.maxWidthOrHeight ? config.maxWidthOrHeight / longest : 1
     const targetW = Math.max(1, Math.round(width * ratio))
     const targetH = Math.max(1, Math.round(height * ratio))
 
@@ -91,7 +86,7 @@ export async function compressImage(
     }
     ctx.imageSmoothingEnabled = true
     ctx.imageSmoothingQuality = 'high'
-    // WebP 支持 alpha，无需铺白底；透明 PNG 源经 WebP 保留透明通道
+    // WebP 支持 alpha；透明 PNG 源经 WebP 保留透明通道
     ctx.drawImage(bmp, 0, 0, targetW, targetH)
     bmp.close()
 
@@ -152,51 +147,28 @@ export async function prepareImageForUpload(
     return { ok: false }
   }
 
-  const MAX_BYTES = 15 * 1024 * 1024
-  if (file.size > MAX_BYTES) {
-    opts.onReject?.('图片过大（>15MB），请压缩后再上传')
-    return { ok: false }
-  }
-
-  // 轻量解码检查尺寸，>8192px 直接拒绝（避免后续 canvas 解码 OOM）
+  // 所有图片一律可上传：超限（体积/尺寸）不拒绝，而是强制压缩到 2560px 内 + WebP q0.9。
+  // 仅当「解码/压缩彻底失败」时才拒绝（避免超大原图送进裁剪器 OOM 闪退）。
   try {
-    const bmp = await createImageBitmap(file)
-    const { width, height } = bmp
-    bmp.close()
-    if (width > 8192 || height > 8192) {
-      opts.onReject?.(`图片尺寸过大（${width}×${height}），请先缩小至 8192px 以内`)
+    const compressed = await compressImage(file, {
+      maxWidthOrHeight: 2560,
+      initialQuality: 0.95,
+    })
+    // compressImage 仅在「尺寸超限」时返回新文件（WebP/PNG）；
+    // 未超限/异常时返回原 file。以「是否返回新对象」判定是否采用。
+    if (compressed !== file) {
+      const ratio = compressed.size < file.size
+        ? Number(((1 - compressed.size / file.size) * 100).toFixed(0))
+        : 0
+      return { ok: true, file: compressed, compressed: true, ratio }
+    }
+    return { ok: true, file }
+  } catch {
+    // 压缩失败：原图 >5MB 则拒绝（避免超大原图送进裁剪器再次 OOM），否则透传原图
+    if (file.size > 5 * 1024 * 1024) {
+      opts.onReject?.('图片处理失败且原图过大，请选择更小的图片')
       return { ok: false }
     }
-  } catch {
-    // 解码失败：交给压缩流程/后端兜底校验
+    return { ok: true, file }
   }
-
-  // 大图自动处理（>200KB 触发，compressImage 内部对更小文件直接透传）。
-  // WebP 路径：尺寸超限则缩放后出 WebP q0.9；未超限原样返回（后端归一化为 WebP）。
-  if (file.size > 200 * 1024) {
-    try {
-      const compressed = await compressImage(file, {
-        maxWidthOrHeight: 2560,
-        initialQuality: 0.95,
-      })
-      // compressImage 仅在「尺寸超限」时返回新文件（WebP/PNG）；
-      // 或在「未超限/异常」时返回原 file。故以「是否返回新对象」判定是否采用。
-      if (compressed !== file) {
-        const ratio = compressed.size < file.size
-          ? Number(((1 - compressed.size / file.size) * 100).toFixed(0))
-          : 0
-        return { ok: true, file: compressed, compressed: true, ratio }
-      }
-      return { ok: true, file }
-    } catch {
-      // 压缩失败：原图 >5MB 则拒绝（避免超大原图送进裁剪器再次 OOM），否则透传原图
-      if (file.size > 5 * 1024 * 1024) {
-        opts.onReject?.('压缩失败且原图过大，请选择更小的图片')
-        return { ok: false }
-      }
-      return { ok: true, file }
-    }
-  }
-
-  return { ok: true, file }
 }

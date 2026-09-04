@@ -631,6 +631,11 @@ export default function AdminApplications() {
   // ── Review ──
   const handleReview = async (action: 'approve' | 'reject') => {
     if (!reviewTarget) return;
+    // 驳回时必须填写意见
+    if (action === 'reject' && !reviewComment.trim()) {
+      showMsg('error', t('admin.applications.rejectReasonRequired'));
+      return;
+    }
     try {
       setReviewSubmitting(true);
       await adminAPI.reviewApplication(reviewTarget.id, {
