@@ -1,4 +1,4 @@
-import { BrowserRouter, useRoutes, useLocation } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Outlet, useLocation } from 'react-router-dom'
 import { I18nProvider } from './i18n'
 import { AppProvider } from './store/AppContext'
 import { AdminAuthProvider } from './store/AdminAuthContext'
@@ -12,10 +12,6 @@ import { routes } from './router'
 import AppErrorBoundary from './components/common/AppErrorBoundary/AppErrorBoundary'
 import ReauthModal from './components/common/ReauthModal'
 import CustomerServiceFAB from './components/common/CustomerServiceFAB'
-
-function AppRoutes() {
-  return useRoutes(routes)
-}
 
 /**
  * 电商全局浮层（登录失效弹窗 / 客服悬浮球 / 加购提示）。
@@ -33,6 +29,24 @@ function CommerceOverlays() {
   )
 }
 
+/** 无路径布局层：承载全局浮层 + 路由出口 */
+function AppShell() {
+  return (
+    <>
+      <CommerceOverlays />
+      <Outlet />
+    </>
+  )
+}
+
+// data router：useBlocker / loader 等 data API 的前置要求
+const router = createBrowserRouter([
+  {
+    element: <AppShell />,
+    children: routes,
+  },
+])
+
 function App() {
   return (
     <I18nProvider>
@@ -44,10 +58,7 @@ function App() {
       <UserProvider>
       <CartProvider>
         <AdminAuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-          <CommerceOverlays />
-        </BrowserRouter>
+          <RouterProvider router={router} />
         </AdminAuthProvider>
       </CartProvider>
       </UserProvider>
