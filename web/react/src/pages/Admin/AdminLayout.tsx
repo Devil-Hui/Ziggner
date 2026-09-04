@@ -417,6 +417,83 @@ const ActionBar = styled.div`
   flex-shrink: 0;
 `
 
+/* ── 最新更新面板 ── */
+const RecentWrap = styled.div`
+  position: relative;
+`
+
+const RecentPanel = styled.div`
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  max-height: 380px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.md}px;
+  box-shadow: ${Shadow.modal};
+  padding: ${Spacing.sm}px;
+  z-index: ${ZIndex.dropdown};
+`
+
+const RecentItem = styled.div`
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: ${Radius.sm}px;
+
+  &:hover {
+    background: ${Color.bg.page};
+  }
+`
+
+const RecentText = styled.div`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.body};
+  min-width: 0;
+`
+
+const RecentId = styled.span`
+  color: ${Color.text.muted};
+  margin-left: 4px;
+`
+
+const RecentTime = styled.span`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  flex-shrink: 0;
+`
+
+const RecentEmpty = styled.button`
+  display: block;
+  width: 100%;
+  padding: 20px 0;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.secondary};
+  cursor: pointer;
+`
+
+const RecentFooter = styled.div`
+  margin-top: 4px;
+  padding: 10px;
+  text-align: center;
+  font-size: ${FontSize.xs}px;
+  color: ${Color.primary};
+  cursor: pointer;
+  border-top: 1px solid ${Color.border.light};
+
+  &:hover {
+    background: ${Color.bg.page};
+  }
+`
+
 const ActionLeft = styled.div`
   display: flex;
   align-items: center;
@@ -647,10 +724,111 @@ function useActionBar() {
   return {
     left: found?.left ?? [],
     right: [
-      { label: t('admin.layout.action.recentUpdates'), to: '/admin/tasks' },
       { label: t('admin.layout.action.helpDocs'), action: () => toast.info(t('admin.layout.action.helpDocsWip')) },
     ],
   }
+}
+
+/* ── 最新更新面板：展示最近审计日志动态（点击头部「最新更新」展开） ── */
+interface AuditLogRow {
+  id: number
+  user: string | null
+  action: string
+  resource_type: string
+  resource_id: number
+  created_at: string
+}
+
+const ACTION_VERB_KEY: Record<string, string> = {
+  create: 'actionCreate',
+  update: 'actionUpdate',
+  delete: 'actionDelete',
+  submit: 'actionSubmit',
+  audit: 'actionAudit',
+  duplicate: 'actionDuplicate',
+}
+
+const RESOURCE_KEY: Record<string, string> = {
+  spu: 'resourceSpu',
+  sku: 'resourceSku',
+  media: 'resourceMedia',
+  tag: 'resourceTag',
+  brand: 'resourceBrand',
+}
+
+const fmtRecentTime = (iso: string) => {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+function RecentUpdates() {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
+  const [items, setItems] = useState<AuditLogRow[]>([])
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(false)
+    try {
+      const res = await adminAPI.getAuditLogs({ page: 1, page_size: 8 })
+      setItems((res as { items?: AuditLogRow[] }).items || [])
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    load()
+    const onDocMouseDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [open, load])
+
+  return (
+    <RecentWrap ref={wrapRef}>
+      <ActionGhostBtn onClick={() => setOpen(!open)}>{t('admin.layout.recentPanel.title')}</ActionGhostBtn>
+      {open && (
+        <RecentPanel>
+          {loading && <RecentEmpty>···</RecentEmpty>}
+          {!loading && error && (
+            <RecentEmpty as="button" onClick={load}>{t('admin.layout.recentPanel.loadFailed')}</RecentEmpty>
+          )}
+          {!loading && !error && items.length === 0 && (
+            <RecentEmpty>{t('admin.layout.recentPanel.empty')}</RecentEmpty>
+          )}
+          {!loading && !error && items.map((row) => {
+            const verbKey = ACTION_VERB_KEY[row.action]
+            const resKey = RESOURCE_KEY[row.resource_type]
+            const verb = verbKey ? t(`admin.layout.recentPanel.${verbKey}`) : row.action
+            const res = resKey ? t(`admin.layout.recentPanel.${resKey}`) : row.resource_type
+            return (
+              <RecentItem key={row.id}>
+                <RecentText>
+                  {row.user || '—'} {verb} {res}
+                  <RecentId>#{row.resource_id}</RecentId>
+                </RecentText>
+                <RecentTime>{fmtRecentTime(row.created_at)}</RecentTime>
+              </RecentItem>
+            )
+          })}
+          <RecentFooter onClick={() => { setOpen(false); navigate('/admin/audit-logs') }}>
+            {t('admin.layout.recentPanel.viewAll')} →
+          </RecentFooter>
+        </RecentPanel>
+      )}
+    </RecentWrap>
+  )
 }
 
 interface NotificationRow {
@@ -1013,13 +1191,10 @@ export default function AdminLayout() {
               )}
             </ActionLeft>
             <ActionRight>
-              {actionBar.right.map((b, i) =>
-                b.to ? (
-                  <ActionGhostBtn key={i} onClick={() => navigate(b.to!)}>{b.label}</ActionGhostBtn>
-                ) : (
-                  <ActionGhostBtn key={i} onClick={b.action}>{b.label}</ActionGhostBtn>
-                ),
-              )}
+              <RecentUpdates />
+              {actionBar.right.map((b, i) => (
+                <ActionGhostBtn key={i} onClick={b.action}>{b.label}</ActionGhostBtn>
+              ))}
             </ActionRight>
           </ActionBar>
 
