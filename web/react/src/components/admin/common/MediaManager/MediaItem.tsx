@@ -137,9 +137,10 @@ export default function MediaItem({ item, index, onRemove, onEdit, onPreview, dr
         <S.StatusDot $status={(item as ProductMediaItem).status} />
       )}
 
-      <S.ItemBadge $type={mediaType}>
-        {mediaType === 'video' ? 'VID' : 'IMG'}
-      </S.ItemBadge>
+      {/* 视频角标（图片序号/主图徽章由外层网格负责） */}
+      {mediaType === 'video' && (
+        <S.ItemBadge $type="video">{t('admin.mediaManager.videoBadge')}</S.ItemBadge>
+      )}
     </S.ItemWrap>
   )
 }

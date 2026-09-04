@@ -1,7 +1,9 @@
-/** MediaPreviewTabs —— 文字标签 Tab 切换预览 */
+/** MediaPreviewTabs —— 折叠式场景预览（默认收起）：
+ * 不再按内部尺寸（缩略图/列表图/原图）罗列，改为两个真实场景：
+ * 「列表页」= 商品卡片效果（list 图 + 骨架占位）；「详情页」= 图集主图 + 小图切换条。
+ */
 import { useState } from 'react'
 import * as S from './MediaManager.styles'
-import type { PreviewTab } from './MediaManager.types'
 import type { StagedMediaItem } from '../../../../utils/mediaStaging'
 import { optionalMediaUrl } from '../../../../utils/mediaUrl'
 import { useTranslation } from '@/i18n'
@@ -10,103 +12,84 @@ interface Props {
   items: StagedMediaItem[]
 }
 
-const TAB_CONFIG: { key: PreviewTab; labelKey: string }[] = [
-  { key: 1, labelKey: 'admin.mediaManager.tabThumb' },
-  { key: 2, labelKey: 'admin.mediaManager.tabList' },
-  { key: 3, labelKey: 'admin.mediaManager.tabOriginal' },
-]
-
 export default function MediaPreviewTabs({ items }: Props) {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<PreviewTab>(1)
-  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [open, setOpen] = useState(false)
+  const [activeIdx, setActiveIdx] = useState(0)
 
   const images = items.filter((i) => i.mediaType === 'image')
   const videos = items.filter((i) => i.mediaType === 'video')
 
-  if (items.length === 0) {
-    return <S.EmptyHint>{t('admin.mediaManager.noMedia')}</S.EmptyHint>
-  }
+  if (items.length === 0) return null
+
+  // 防越界：媒体被删除后 activeIdx 可能超限
+  const idx = Math.min(activeIdx, Math.max(images.length - 1, 0))
+  const activeImage = images[idx]
+
+  const listSrc = activeImage
+    ? optionalMediaUrl(activeImage.previewDataUrl || (activeImage.listBlob ? URL.createObjectURL(activeImage.listBlob) : undefined))
+    : ''
+  const detailSrc = activeImage
+    ? optionalMediaUrl(
+        (activeImage.originalBlob ? URL.createObjectURL(activeImage.originalBlob) : undefined) ||
+        (activeImage.largeBlob ? URL.createObjectURL(activeImage.largeBlob) : undefined) ||
+        activeImage.previewDataUrl
+      )
+    : ''
+  const videoSrc = videos[0]
+    ? optionalMediaUrl(videos[0].previewDataUrl || (videos[0].videoBlob ? URL.createObjectURL(videos[0].videoBlob) : undefined))
+    : ''
 
   return (
     <S.PreviewArea>
-      <S.TabBar>
-        {TAB_CONFIG.map((tab) => (
-          <S.TabBtn key={tab.key} $active={activeTab === tab.key} onClick={() => setActiveTab(tab.key)}>
-            {t(tab.labelKey)}
-          </S.TabBtn>
-        ))}
-      </S.TabBar>
+      <S.PreviewToggleRow type="button" onClick={() => setOpen(!open)}>
+        <S.PreviewChevron $open={open}>▶</S.PreviewChevron>
+        {t('admin.mediaManager.previewToggle')}
+      </S.PreviewToggleRow>
 
-      {/* Tab 1: 缩略图 + 大图并排 */}
-      {activeTab === 1 && (
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{ flex: '0 0 auto', maxHeight: 300, overflowY: 'auto' }}>
-            {images.map((item, idx) => (
-              <S.PreviewImg
-                key={item.id ?? idx}
-                src={optionalMediaUrl(item.previewDataUrl || (item.thumbBlob ? URL.createObjectURL(item.thumbBlob) : undefined))}
-                style={{ width: 60, height: 60, objectFit: 'cover', cursor: 'pointer', marginBottom: 4, border: selectedIndex === idx ? '2px solid #e74c3c' : '2px solid transparent' }}
-                onClick={() => setSelectedIndex(idx)}
-              />
-            ))}
-          </div>
-          <div style={{ flex: 1 }}>
-            {images[selectedIndex] && (
-              <S.PreviewImg
-                src={optionalMediaUrl(
-                  (images[selectedIndex].originalBlob ? URL.createObjectURL(images[selectedIndex].originalBlob) : undefined) ||
-                  (images[selectedIndex].largeBlob ? URL.createObjectURL(images[selectedIndex].largeBlob) : undefined) ||
-                  images[selectedIndex].previewDataUrl
-                )}
-                style={{ maxWidth: '100%', maxHeight: 300, objectFit: 'contain' }}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {open && (
+        <S.PreviewScenes>
+          {/* 场景一：列表页商品卡片 */}
+          <S.SceneCard>
+            <S.SceneCardInner>
+              {listSrc ? (
+                <S.SceneListImg src={listSrc} alt="" />
+              ) : videoSrc ? (
+                <video src={videoSrc} muted style={{ width: '100%', height: 180, objectFit: 'cover', borderRadius: 6, display: 'block' }} />
+              ) : null}
+              <S.SceneLines>
+                <S.SceneLine $w="80%" />
+                <S.SceneLine $w="45%" />
+              </S.SceneLines>
+            </S.SceneCardInner>
+            <S.SceneLabel>{t('admin.mediaManager.previewList')}</S.SceneLabel>
+          </S.SceneCard>
 
-      {/* Tab 2: 列表图 */}
-      {activeTab === 2 && (
-        <S.PreviewGrid>
-          {images.map((item, idx) => (
-            <S.PreviewCard key={item.id ?? idx} $size={200}>
-              <S.PreviewImg
-                src={optionalMediaUrl(item.previewDataUrl || (item.listBlob ? URL.createObjectURL(item.listBlob) : undefined))}
-                style={{ width: 200, height: 200, objectFit: 'cover' }}
-              />
-              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
-            </S.PreviewCard>
-          ))}
-        </S.PreviewGrid>
-      )}
-
-      {/* Tab 3: 原图/原视频 */}
-      {activeTab === 3 && (
-        <S.PreviewGrid>
-          {images.map((item, idx) => (
-            <S.PreviewCard key={item.id ?? idx} $size={300}>
-              <S.PreviewImg
-                src={optionalMediaUrl(
-                  (item.originalBlob ? URL.createObjectURL(item.originalBlob) : undefined) ||
-                  item.previewDataUrl
-                )}
-                style={{ maxWidth: 300, maxHeight: 300, objectFit: 'contain' }}
-              />
-              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
-            </S.PreviewCard>
-          ))}
-          {videos.map((item, idx) => (
-            <S.PreviewCard key={item.id ?? idx} $size={300}>
-              <video
-                src={optionalMediaUrl(item.previewDataUrl || (item.videoBlob ? URL.createObjectURL(item.videoBlob) : undefined))}
-                controls
-                style={{ maxWidth: 300, maxHeight: 300 }}
-              />
-              <S.PreviewLabel>{item.fileName}</S.PreviewLabel>
-            </S.PreviewCard>
-          ))}
-        </S.PreviewGrid>
+          {/* 场景二：详情页图集（主图 + 小图切换条） */}
+          <S.SceneCard>
+            <S.SceneCardInner>
+              {detailSrc ? (
+                <S.SceneDetailImg src={detailSrc} alt="" />
+              ) : videoSrc ? (
+                <video src={videoSrc} controls style={{ width: '100%', maxHeight: 240, borderRadius: 6, background: '#000', display: 'block' }} />
+              ) : null}
+              {images.length > 1 && (
+                <S.ThumbStrip>
+                  {images.map((it, i) => (
+                    <S.ThumbStripItem
+                      key={it.id ?? i}
+                      src={optionalMediaUrl(it.previewDataUrl || (it.thumbBlob ? URL.createObjectURL(it.thumbBlob) : undefined))}
+                      $active={i === idx}
+                      onClick={() => setActiveIdx(i)}
+                      alt=""
+                    />
+                  ))}
+                </S.ThumbStrip>
+              )}
+            </S.SceneCardInner>
+            <S.SceneLabel>{t('admin.mediaManager.previewDetail')}</S.SceneLabel>
+          </S.SceneCard>
+        </S.PreviewScenes>
       )}
     </S.PreviewArea>
   )

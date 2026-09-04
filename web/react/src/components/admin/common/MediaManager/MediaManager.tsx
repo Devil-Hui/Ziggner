@@ -414,6 +414,21 @@ export default function MediaManager({
     ? savedItems.filter((i) => i.media_type === 'video').length
     : items.filter((item) => item.mediaType === 'video').length
 
+  // 是否已有媒体（控制上传区紧凑态）
+  const hasMedia = isEditMode ? savedItems.length + pendingItems.length > 0 : items.length > 0
+
+  // 展示列表：合并编辑模式已保存+暂存项；图片按显示顺序编号，第 1 张为主图
+  const displayItems = (() => {
+    const list: (StagedMediaItem | ProductMediaItem)[] = isEditMode ? [...savedItems, ...pendingItems] : items
+    let imgNo = 0
+    return list.map((item) => {
+      const type = 'media_type' in item ? item.media_type : item.mediaType
+      if (type === 'video') return { item, order: null as number | null, main: false }
+      imgNo += 1
+      return { item, order: imgNo as number | null, main: imgNo === 1 }
+    })
+  })()
+
   // 当前队列文件
   const currentQueueFile = queueFiles[queueIndex] || null
   const showProgress = uploadQueue.status === 'processing' || uploadQueue.status === 'done'
@@ -425,31 +440,22 @@ export default function MediaManager({
   return (
     <S.Container>
       <S.Header>
-        <div>
+        <S.TitleBlock>
           <S.Title>{t('admin.mediaManager.title')}</S.Title>
-          <S.Hint>
-            {t('admin.mediaManager.mediaCount')
-              .replace('{imageCount}', String(imageCount))
-              .replace('{maxImages}', String(MAX_IMAGES))
-              .replace('{videoCount}', String(videoCount))
-              .replace('{maxVideos}', String(MAX_VIDEOS))}
-          </S.Hint>
-        </div>
-        <S.ButtonGroup>
-          <S.ActionBtn
-            $primary
-            disabled={imageCount >= MAX_IMAGES}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            + {t('admin.mediaManager.addImage')}
-          </S.ActionBtn>
-          <S.ActionBtn
-            disabled={videoCount >= MAX_VIDEOS}
-            onClick={() => setShowVideoDialog(true)}
-          >
-            + {t('admin.mediaManager.addVideo')}
-          </S.ActionBtn>
-        </S.ButtonGroup>
+          <S.Subtitle>{t('admin.mediaManager.subtitle')}</S.Subtitle>
+        </S.TitleBlock>
+        <S.PillGroup>
+          <S.Pill $warn={imageCount >= MAX_IMAGES}>
+            {t('admin.mediaManager.countImages')
+              .replace('{count}', String(imageCount))
+              .replace('{max}', String(MAX_IMAGES))}
+          </S.Pill>
+          <S.Pill $warn={videoCount >= MAX_VIDEOS}>
+            {t('admin.mediaManager.countVideos')
+              .replace('{count}', String(videoCount))
+              .replace('{max}', String(MAX_VIDEOS))}
+          </S.Pill>
+        </S.PillGroup>
       </S.Header>
 
       {/* 隐藏的文件选择 input */}
@@ -462,21 +468,47 @@ export default function MediaManager({
         style={{ display: 'none' }}
       />
 
-      {/* 拖拽上传区 */}
+      {/* 拖拽上传区：唯一主入口。无媒体时完整态（图标+按钮），有媒体后收缩为紧凑条 */}
       <S.Dropzone
         $dragging={dragging}
-        onClick={() => fileInputRef.current?.click()}
+        $compact={hasMedia}
+        onClick={() => imageCount < MAX_IMAGES && fileInputRef.current?.click()}
         onDragEnter={(e) => { e.preventDefault(); setDragging(true) }}
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={(e) => { e.preventDefault(); setDragging(false) }}
         onDrop={handleDrop}
       >
-        <S.DropzoneIcon><Icon name="upload" size={36} color="#bbb" /></S.DropzoneIcon>
-        <S.DropzoneText>{t('admin.mediaManager.dropzoneHint')}</S.DropzoneText>
-        <S.DropzoneSubText>
-          {t('admin.mediaManager.formatHint')}
-          {isEditMode ? t('admin.mediaManager.editModeHint') : t('admin.mediaManager.createModeHint')}
-        </S.DropzoneSubText>
+        {hasMedia ? (
+          <S.CompactRow>
+            <S.CompactText>{t('admin.mediaManager.compactAdd')}</S.CompactText>
+            <S.DropzoneGhostBtn
+              disabled={videoCount >= MAX_VIDEOS}
+              onClick={(e) => { e.stopPropagation(); setShowVideoDialog(true) }}
+            >
+              {t('admin.mediaManager.addVideo')}
+            </S.DropzoneGhostBtn>
+          </S.CompactRow>
+        ) : (
+          <S.DropzoneBody>
+            <S.DropzoneIcon><Icon name="upload" size={36} color="#bbb" /></S.DropzoneIcon>
+            <S.DropzoneText>{t('admin.mediaManager.dropzoneHint')}</S.DropzoneText>
+            <S.DropzoneSubText>{t('admin.mediaManager.formatHint')}</S.DropzoneSubText>
+            <S.DropzoneActions>
+              <S.DropzonePrimaryBtn
+                disabled={imageCount >= MAX_IMAGES}
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click() }}
+              >
+                {t('admin.mediaManager.addImage')}
+              </S.DropzonePrimaryBtn>
+              <S.DropzoneGhostBtn
+                disabled={videoCount >= MAX_VIDEOS}
+                onClick={(e) => { e.stopPropagation(); setShowVideoDialog(true) }}
+              >
+                {t('admin.mediaManager.addVideo')}
+              </S.DropzoneGhostBtn>
+            </S.DropzoneActions>
+          </S.DropzoneBody>
+        )}
       </S.Dropzone>
 
       {/* 上传/裁剪进度条 */}
@@ -501,51 +533,36 @@ export default function MediaManager({
         </S.QueueProgress>
       )}
 
-      {/* 媒体缩略图网格（长按 2s 进入拖动排序；点击视频/图片打开预览） */}
-      <S.MediaGrid
-        ref={listRef}
-        onPointerMove={handleGridPointerMove}
-        onPointerUp={handleDragEnd}
-        onPointerLeave={() => { if (dragIndex !== null) handleDragEnd() }}
-        onPointerCancel={() => { if (dragIndex !== null) handleDragEnd() }}
-      >
-        {isEditMode ? (
-          savedItems.length === 0 && pendingItems.length === 0 && !showProgress ? (
-            <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
-          ) : (
-            [...savedItems, ...pendingItems].map((item, idx) => (
-              <div key={`${'media_type' in item ? 's' : 'p'}-${item.id}`} data-media-index={idx} style={{ position: 'relative' }}>
-                <MediaItem
-                  item={item}
-                  index={idx}
-                  onRemove={handleRemove}
-                  onEdit={setEditingMedia}
-                  onPreview={(url, kind, name) => setPreview({ url, kind, name })}
-                  dragActive={dragIndex === idx}
-                  onDragHandleDown={handleDragHandleDown}
-                />
-              </div>
-            ))
-          )
-        ) : (
-          items.length === 0 && !showProgress ? (
-            <S.EmptyHint>{t('admin.mediaManager.emptyHint')}</S.EmptyHint>
-          ) : (
-            items.map((item, idx) => (
-              <div key={item.id ?? idx} data-media-index={idx} style={{ position: 'relative' }}>
-                <MediaItem
-                  item={item}
-                  index={idx}
-                  onRemove={handleRemove}
-                  onPreview={(url, kind, name) => setPreview({ url, kind, name })}
-                  dragActive={dragIndex === idx}
-                  onDragHandleDown={handleDragHandleDown}
-                />
-              </div>
-            ))
-          )
-        )}
-      </S.MediaGrid>
+      {/* 媒体缩略图网格：图片带序号角标（第 1 张=主图），长按 2s 拖动排序，点击预览 */}
+      {displayItems.length > 0 && (
+        <S.MediaGrid
+          ref={listRef}
+          onPointerMove={handleGridPointerMove}
+          onPointerUp={handleDragEnd}
+          onPointerLeave={() => { if (dragIndex !== null) handleDragEnd() }}
+          onPointerCancel={() => { if (dragIndex !== null) handleDragEnd() }}
+        >
+          {displayItems.map((entry, idx) => (
+            <div
+              key={`${'media_type' in entry.item ? 's' : 'p'}-${entry.item.id ?? idx}`}
+              data-media-index={idx}
+              style={{ position: 'relative' }}
+            >
+              {entry.main && <S.MainBadge>{t('admin.mediaManager.mainImageBadge')}</S.MainBadge>}
+              {entry.order != null && <S.OrderBadge>{entry.order}</S.OrderBadge>}
+              <MediaItem
+                item={entry.item}
+                index={idx}
+                onRemove={handleRemove}
+                onEdit={isEditMode ? setEditingMedia : undefined}
+                onPreview={(url, kind, name) => setPreview({ url, kind, name })}
+                dragActive={dragIndex === idx}
+                onDragHandleDown={handleDragHandleDown}
+              />
+            </div>
+          ))}
+        </S.MediaGrid>
+      )}
 
       {/* 预览区（创建模式） */}
       {!isEditMode && <MediaPreviewTabs items={items} />}

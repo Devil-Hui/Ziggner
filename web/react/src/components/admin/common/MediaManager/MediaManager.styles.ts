@@ -10,8 +10,17 @@ export const Container = styled.div`
 
 export const Header = styled.div`
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: ${Spacing.md}px;
+  flex-wrap: wrap;
+`
+
+export const TitleBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 `
 
 export const Title = styled.span`
@@ -20,10 +29,31 @@ export const Title = styled.span`
   color: ${Color.text.heading};
 `
 
-export const Hint = styled.span`
+/** 头部副标题：说明该环节的用途，替代括号参数文本 */
+export const Subtitle = styled.span`
   font-size: ${FontSize.xs}px;
-  color: ${Color.text.secondary};
-  margin-left: ${Spacing.sm}px;
+  color: ${Color.text.muted};
+  line-height: 1.4;
+`
+
+export const PillGroup = styled.div`
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+`
+
+/** 计数胶囊：接近上限时转为警示色 */
+export const Pill = styled.span<{ $warn?: boolean }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: ${Radius.full}px;
+  font-size: ${FontSize.xs}px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: ${(p) => (p.$warn ? '#b45309' : Color.text.secondary)};
+  background: ${(p) => (p.$warn ? 'rgba(245, 158, 11, 0.12)' : Color.bg.page)};
+  border: 1px solid ${(p) => (p.$warn ? 'rgba(245, 158, 11, 0.35)' : Color.border.light)};
 `
 
 export const ButtonGroup = styled.div`
@@ -80,10 +110,10 @@ export const TabBtn = styled.button<{ $active: boolean }>`
 
 // ── 拖拽上传区（Dropzone） ──
 
-export const Dropzone = styled.div<{ $dragging?: boolean }>`
+export const Dropzone = styled.div<{ $dragging?: boolean; $compact?: boolean }>`
   border: 2px dashed ${(p) => (p.$dragging ? Color.primary : Color.border.medium)};
   border-radius: ${Radius.md}px;
-  padding: 28px;
+  padding: ${(p) => (p.$compact ? '10px 16px' : '28px')};
   text-align: center;
   cursor: pointer;
   color: ${Color.text.secondary};
@@ -95,6 +125,78 @@ export const Dropzone = styled.div<{ $dragging?: boolean }>`
     color: ${Color.primary};
     background: ${Color.primaryLight};
   }
+`
+
+/** 完整态内容：图标 + 文案 + 按钮行 */
+export const DropzoneBody = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+`
+
+export const DropzoneActions = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${Spacing.sm}px;
+  margin-top: 6px;
+`
+
+export const DropzonePrimaryBtn = styled.button`
+  padding: 8px 20px;
+  border: none;
+  border-radius: ${Radius.sm}px;
+  background: ${Color.primary};
+  color: #fff;
+  font-size: ${FontSize.sm}px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.88;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+export const DropzoneGhostBtn = styled.button`
+  padding: 8px 14px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.sm}px;
+  background: #fff;
+  color: ${Color.text.body};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: ${Color.primary};
+    color: ${Color.primary};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+/** 紧凑态：一行式继续添加 */
+export const CompactRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: ${Spacing.sm}px;
+  flex-wrap: wrap;
+`
+
+export const CompactText = styled.span`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.secondary};
 `
 
 export const DropzoneIcon = styled.div`
@@ -191,11 +293,41 @@ export const MediaGrid = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: ${Spacing.sm}px;
-  min-height: 80px;
-  padding: ${Spacing.sm}px;
-  border: 1px solid ${Color.border.light};
-  border-radius: ${Radius.sm}px;
-  background: ${Color.bg.page};
+`
+
+/** 图片序号角标（第几张图），左下角 */
+export const OrderBadge = styled.span`
+  position: absolute;
+  bottom: 4px;
+  left: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: ${Radius.full}px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+`
+
+/** 主图徽章（第 1 张图片），左上角 */
+export const MainBadge = styled.span`
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: ${Color.primary};
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 2;
 `
 
 export const EmptyHint = styled.div`
@@ -337,8 +469,8 @@ export const ItemBadge = styled.span<{ $type: 'image' | 'video' }>`
 
 export const StatusDot = styled.span<{ $status: string }>`
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 5px;
+  right: 26px; /* 避开右上角 hover 删除按钮与左上角主图徽章 */
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -378,6 +510,111 @@ export const PreviewLabel = styled.div`
   font-size: ${FontSize.xs}px;
   color: ${Color.text.secondary};
   margin-top: 4px;
+`
+
+// ── 场景化预览（折叠式）：列表页卡片 + 详情页图集 ──
+
+export const PreviewToggleRow = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: ${Color.text.secondary};
+  font-size: ${FontSize.sm}px;
+  cursor: pointer;
+  transition: color 0.2s;
+
+  &:hover {
+    color: ${Color.primary};
+  }
+`
+
+export const PreviewChevron = styled.span<{ $open: boolean }>`
+  display: inline-block;
+  font-size: 11px;
+  transition: transform 0.2s;
+  transform: rotate(${(p) => (p.$open ? 90 : 0)}deg);
+`
+
+export const PreviewScenes = styled.div`
+  display: flex;
+  gap: ${Spacing.lg}px;
+  flex-wrap: wrap;
+  padding: ${Spacing.sm}px 4px 4px;
+`
+
+export const SceneCard = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+`
+
+export const SceneCardInner = styled.div`
+  width: 200px;
+  padding: 10px;
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.md}px;
+  background: #fff;
+  box-shadow: ${Shadow.card};
+`
+
+export const SceneLabel = styled.div`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  text-align: center;
+`
+
+export const SceneListImg = styled.img`
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  border-radius: ${Radius.sm}px;
+  display: block;
+`
+
+export const SceneDetailImg = styled.img`
+  width: 100%;
+  max-height: 240px;
+  object-fit: contain;
+  border-radius: ${Radius.sm}px;
+  display: block;
+  background: ${Color.bg.page};
+`
+
+/** 骨架线：模拟列表卡片下的商品名/价格 */
+export const SceneLines = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+`
+
+export const SceneLine = styled.div<{ $w: string }>`
+  height: 8px;
+  width: ${(p) => p.$w};
+  border-radius: ${Radius.full}px;
+  background: ${Color.border.light};
+`
+
+/** 详情场景：底部小图切换条 */
+export const ThumbStrip = styled.div`
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+`
+
+export const ThumbStripItem = styled.img<{ $active: boolean }>`
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: ${Radius.sm}px;
+  cursor: pointer;
+  border: 2px solid ${(p) => (p.$active ? Color.primary : 'transparent')};
+  box-sizing: border-box;
 `
 
 // ── 上传对话框 ──
