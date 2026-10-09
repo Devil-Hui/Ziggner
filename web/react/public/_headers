@@ -1,0 +1,4 @@
+# Cloudflare Pages 自定义响应头 — iframe 预览模板放行
+/templates/*
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self' www.ziggner.com admin.ziggner.com shop.ziggner.com http://localhost:* https://localhost:*

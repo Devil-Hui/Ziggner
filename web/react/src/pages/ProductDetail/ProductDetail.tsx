@@ -424,6 +424,33 @@ const SectionTitle = styled.h2`
   border-bottom: 1px solid ${Color.border.light};
 `
 
+/* ── 在线预览（网页搭建类虚拟商品） ────────────────────────── */
+const PreviewBlock = styled.section`
+  margin-top: 48px;
+  background: ${Color.bg.card};
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.lg}px;
+  padding: 24px;
+  box-shadow: ${Shadow.card};
+`
+
+const PreviewFrameInner = styled.div`
+  width: 100%;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  overflow: hidden;
+  background: ${Color.bg.page};
+
+  iframe {
+    display: block;
+    width: 100%;
+    min-height: 540px;
+    height: 70vh;
+    max-height: 900px;
+    border: none;
+  }
+`
+
 const DescriptionText = styled.p`
   font-size: 0.9rem;
   color: ${Color.text.body};
@@ -1025,6 +1052,22 @@ export default function ProductDetail() {
               </PromiseRow>
             </ParamCol>
           </PdpGrid>
+
+          {/* 在线预览（网页搭建类虚拟商品） */}
+          {product.preview_url && (
+            <PreviewBlock>
+              <SectionTitle>{t('store.product.onlinePreview')}</SectionTitle>
+              <PreviewFrameInner>
+                <iframe
+                  key={product.preview_url}
+                  src={product.preview_url}
+                  title={`${product.name} - ${t('store.product.onlinePreview')}`}
+                  loading="eager"
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                />
+              </PreviewFrameInner>
+            </PreviewBlock>
+          )}
 
           {/* 描述 */}
           <DetailBlock>

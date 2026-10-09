@@ -1,9 +1,9 @@
 // TypeScript strict mode enabled
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import styled from 'styled-components'
-import { Color, Radius, Shadow, Spacing, FontSize, Transition } from '../../theme/tokens'
+import { Color, Radius, Spacing, FontSize, Transition } from '../../theme/tokens'
 import { SecondaryBtn, PrimaryBtn } from '../../components/admin/common/ui'
-import { adminAPI } from '../../api/admin'
+import { adminAPI, type CategoryNode } from '../../api/admin'
 import { post } from '../../api/request'
 import PageHeader from '../../components/admin/common/PageHeader'
 import ErrorRetry from '../../components/admin/common/ErrorRetry'
@@ -22,16 +22,14 @@ const Card = styled.div`
   padding: ${Spacing.xxl}px;
 `
 
-// ── Upload Area ──
-
-const UploadArea = styled.div<{ $isDragging: boolean; $hasFile: boolean }>`
+const UploadArea = styled.div<{ $isDragging: boolean }>`
   border: 2px dashed ${({ $isDragging }) => ($isDragging ? Color.primary : '#ddd')};
   border-radius: 6px;
   padding: 48px 24px;
   text-align: center;
   background: ${({ $isDragging }) => ($isDragging ? '#f5f5f5' : '#f5f5f5')};
   cursor: pointer;
-  transition: ${Transition.normal};
+  transition: all 0.2s;
 
   &:hover {
     border-color: ${Color.primary};
@@ -62,8 +60,6 @@ const HiddenInput = styled.input`
   display: none;
 `
 
-// ── Parsing State ──
-
 const ParsingOverlay = styled.div`
   display: flex;
   flex-direction: column;
@@ -91,8 +87,6 @@ const ParsingText = styled.p`
   color: ${Color.text.secondary};
   margin: 0;
 `
-
-// ── Preview Table ──
 
 const PreviewSection = styled.div`
   margin-top: 20px;
@@ -156,8 +150,6 @@ const PreviewWrapper = styled.div`
   overflow: auto;
 `
 
-// ── Importing State ──
-
 const ImportingOverlay = styled.div`
   display: flex;
   flex-direction: column;
@@ -178,16 +170,11 @@ const ImportingSubText = styled.p`
   margin: 0;
 `
 
-// ── Buttons ──
-
 const ButtonRow = styled.div`
   display: flex;
   gap: 8px;
   margin-top: 16px;
 `
-
-
-// ── Result ──
 
 const ResultCard = styled.div<{ $success: boolean }>`
   padding: 20px 24px;
@@ -211,13 +198,103 @@ const ResultMessage = styled.p`
   margin: 0 0 12px 0;
 `
 
+// ── 品牌/分类选择 ──
+
+const OptionsRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+
+  @media (max-width: 600px) {
+    grid-template-columns: 1fr;
+  }
+`
+
+const Field = styled.div`
+  margin-bottom: 0;
+`
+
+const Label = styled.label`
+  display: block;
+  font-size: ${FontSize.sm}px;
+  color: ${Color.text.secondary};
+  margin-bottom: 6px;
+`
+
+const Select = styled.select`
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  font-size: ${FontSize.base}px;
+  box-sizing: border-box;
+  color: ${Color.text.body};
+  background: ${Color.bg.card};
+`
+
+// ── 图片文件夹上传 ─────────────────
+
+const MediaArea = styled.div`
+  border: 1px dashed ${Color.border.medium};
+  border-radius: 6px;
+  padding: 20px;
+  margin-top: 16px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(26, 23, 18, 0.02);
+
+  &:hover {
+    border-color: ${Color.primary};
+  }
+`
+
+const MediaHint = styled.p`
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.muted};
+  margin: 6px 0 0 0;
+`
+
+const MediaSummary = styled.div`
+  margin-top: 12px;
+  font-size: ${FontSize.xs}px;
+  color: ${Color.text.secondary};
+  text-align: left;
+`
+
+const ImageArea = styled.div`
+  border: 1px dashed ${Color.border.medium};
+  border-radius: 6px;
+  padding: 20px;
+  margin-top: 16px;
+  text-align: center;
+  cursor: pointer;
+  background: rgba(26, 23, 18, 0.02);
+
+  &:hover {
+    border-color: ${Color.primary};
+  }
+`
+
 // ── Types ──
 
 type PageState = 'upload' | 'parsing' | 'preview' | 'importing' | 'result'
 
 interface PreviewRow {
-  [key: string]: string | number
+  row: number
+  name: string
+  model: string
+  price: string
+  discount_price: string
+  sku_code: string
+  description: string
+  tags: string[]
+  valid: boolean
+  errors: string[]
 }
+
+interface BrandOption { id: number; name: string }
+interface CategoryOption { id: number; name: string; level: number }
 
 // ── Component ──
 
@@ -227,34 +304,45 @@ export default function AdminImport() {
   const [fileName, setFileName] = useState('')
   const [isDragging, setIsDragging] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewRow[]>([])
-  const [previewHeaders, setPreviewHeaders] = useState<string[]>([])
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null)
 
+  // 品牌/分类
+  const [brands, setBrands] = useState<CategoryOption[]>([])
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [brandId, setBrandId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+
+  // 图片文件夹
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imageDirName, setImageDirName] = useState('')
+
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // 加载品牌/分类
+  const loadOptions = useCallback(async () => {
+    try {
+      const b = (await adminAPI.getBrands()) as unknown as CategoryOption[]
+      setBrands(Array.isArray(b) ? b : [])
+      const c = (await adminAPI.getCategoryTree()) as unknown as CategoryNode[]
+      const flat: CategoryOption[] = []
+      const walk = (nodes: CategoryNode[], level: number) => {
+        nodes.forEach((n) => {
+          flat.push({ id: n.id, name: n.name, level })
+          if (n.children?.length) walk(n.children, level + 1)
+        })
+      }
+      if (Array.isArray(c)) walk(c, 1)
+      setCategories(flat)
+    } catch { /* ignore */ }
+  }, [])
+
+  // 挂载时加载品牌/分类
+  useEffect(() => { loadOptions() }, [loadOptions])
 
   // ── File Parsing ──
-
-  const parseCSV = (text: string): { headers: string[]; rows: PreviewRow[] } => {
-    const lines = text.trim().split('\n')
-    if (lines.length === 0) return { headers: [], rows: [] }
-
-    const headers = lines[0].split(',').map((header) => header.trim().replace(/^"|"$/g, ''))
-    const rows: PreviewRow[] = []
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = lines[i].split(',').map((v) => v.trim().replace(/^"|"$/g, ''))
-      if (values.length === 0 || values.every((v) => v === '')) continue
-      const row: PreviewRow = {}
-      headers.forEach((h, idx) => {
-        row[h] = values[idx] ?? ''
-      })
-      rows.push(row)
-    }
-
-    return { headers, rows }
-  }
 
   const handleFile = useCallback(async (selectedFile: File) => {
     setFileName(selectedFile.name)
@@ -263,26 +351,27 @@ export default function AdminImport() {
     setError(null)
 
     try {
-      const text = await selectedFile.text()
-      const { headers, rows } = parseCSV(text)
-
-      if (headers.length === 0) {
-        setError(t('admin.dataImport.emptyFile'))
-        setPageState('upload')
-        return
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      formData.append('preview', 'true')
+      const res = (await post('/goods/spu/import/', formData)) as {
+        preview: PreviewRow[]
+        total_rows: number
+        valid_rows: number
+        error_count: number
+        errors: string[]
       }
 
-      if (rows.length === 0) {
+      if (!res.preview || res.preview.length === 0) {
         setError(t('admin.dataImport.noDataRows'))
         setPageState('upload')
         return
       }
 
-      setPreviewHeaders(headers)
-      setPreviewData(rows)
+      setPreviewData(res.preview)
       setPageState('preview')
-    } catch {
-      setError(t('admin.dataImport.parseFailed'))
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('admin.dataImport.parseFailed'))
       setPageState('upload')
     }
   }, [t])
@@ -319,21 +408,38 @@ export default function AdminImport() {
     }
   }
 
+  // ── 图片文件夹上传 ──
+
+  const handleImageDirChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    setImageFiles(files)
+    setImageDirName(files[0].webkitRelativePath?.split('/')[0] || '')
+  }
+
   // ── Import ──
 
   const handleImport = async () => {
     if (!file) return
+    if (!brandId) { setError(t('admin.dataImport.brandRequired')); return }
+    if (!categoryId) { setError(t('admin.dataImport.categoryRequired')); return }
     setPageState('importing')
     setError(null)
 
     try {
       const formData = new FormData()
       formData.append('file', file)
-      const res = (await post('/goods/spu/import/', formData)) as { task_id?: string; message?: string }
+      formData.append('brand_id', brandId)
+      formData.append('category_id', categoryId)
+      // 图片文件夹：按商品名对应，文件名前缀匹配商品名
+      imageFiles.forEach((f) => {
+        formData.append('images', f, f.webkitRelativePath || f.name)
+      })
+      const res = (await post('/goods/spu/import/', formData)) as { message?: string; imported?: number; errors?: string[] }
 
       setResult({
         success: true,
-        message: res.message || t('admin.dataImport.importCreated').replace('{task_id}', res.task_id || '—'),
+        message: res.message || t('admin.dataImport.importCreated').replace('{task_id}', String(res.imported ?? 0)),
       })
       setPageState('result')
     } catch (err: unknown) {
@@ -347,10 +453,11 @@ export default function AdminImport() {
     setPageState('upload')
     setFileName('')
     setPreviewData([])
-    setPreviewHeaders([])
     setFile(null)
     setError(null)
     setResult(null)
+    setImageFiles([])
+    setImageDirName('')
   }
 
   // ── Render ──
@@ -367,7 +474,6 @@ export default function AdminImport() {
         {pageState === 'upload' && (
           <UploadArea
             $isDragging={isDragging}
-            $hasFile={false}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
@@ -402,23 +508,52 @@ export default function AdminImport() {
               </PreviewTitle>
               <PreviewCount>{t('admin.dataImport.totalRecords').replace('{count}', String(previewData.length))}</PreviewCount>
             </PreviewHeader>
+
+            {/* 品牌/分类选择 */}
+            <OptionsRow>
+              <Field>
+                <Label>{t('admin.productForm.brand')} *</Label>
+                <Select value={brandId} onChange={(e) => setBrandId(e.target.value)}>
+                  <option value="">{t('admin.productForm.selectBrand')}</option>
+                  {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </Select>
+              </Field>
+              <Field>
+                <Label>{t('admin.productForm.category')} *</Label>
+                <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                  <option value="">{t('admin.productForm.selectCategory')}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id} style={{ paddingLeft: `${c.level * 12}px` }}>
+                      {c.name}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </OptionsRow>
+
             <PreviewWrapper>
               <PreviewTable>
                 <thead>
                   <tr>
                     <PreviewTh style={{ width: 40 }}>#</PreviewTh>
-                    {previewHeaders.map((h) => (
-                      <PreviewTh key={h}>{h}</PreviewTh>
-                    ))}
+                    <PreviewTh>{t('admin.productForm.productName')}</PreviewTh>
+                    <PreviewTh>{t('admin.dataImport.model')}</PreviewTh>
+                    <PreviewTh>{t('admin.dataImport.price')}</PreviewTh>
+                    <PreviewTh>{t('admin.dataImport.discountPrice')}</PreviewTh>
+                    <PreviewTh>{t('admin.dataImport.skuCode')}</PreviewTh>
+                    <PreviewTh>{t('admin.dataImport.tags')}</PreviewTh>
                   </tr>
                 </thead>
                 <tbody>
                   {previewData.slice(0, 50).map((row, idx) => (
                     <tr key={idx}>
-                      <PreviewTd style={{ color: '#999' }}>{idx + 1}</PreviewTd>
-                      {previewHeaders.map((h) => (
-                        <PreviewTd key={h}>{String(row[h] ?? '')}</PreviewTd>
-                      ))}
+                      <PreviewTd style={{ color: '#999' }}>{row.row}</PreviewTd>
+                      <PreviewTd>{row.name}</PreviewTd>
+                      <PreviewTd>{row.model}</PreviewTd>
+                      <PreviewTd>{row.price}</PreviewTd>
+                      <PreviewTd>{row.discount_price}</PreviewTd>
+                      <PreviewTd>{row.sku_code}</PreviewTd>
+                      <PreviewTd>{(row.tags || []).slice(0, 2).join(' · ')}</PreviewTd>
                     </tr>
                   ))}
                 </tbody>
@@ -429,6 +564,30 @@ export default function AdminImport() {
                 {t('admin.dataImport.previewLimit').replace('{count}', String(previewData.length))}
               </p>
             )}
+
+            {/* 图片文件夹上传 */}
+            <ImageArea
+              onClick={() => imageInputRef.current?.click()}
+            >
+              <div style={{ fontSize: 24, marginBottom: 6 }}>🖼️</div>
+              <div style={{ fontSize: FontSize.sm, color: Color.primaryHover, fontWeight: 500 }}>
+                {imageDirName ? t('admin.dataImport.imageDirSelected') : t('admin.dataImport.imageDirUpload')}
+              </div>
+              <MediaHint>{t('admin.dataImport.imageDirHint')}</MediaHint>
+              {imageFiles.length > 0 && (
+                <MediaSummary>
+                  {t('admin.dataImport.imageCount').replace('{count}', String(imageFiles.length))}
+                </MediaSummary>
+              )}
+              <HiddenInput
+                ref={imageInputRef}
+                type="file"
+                multiple
+                {...({ webkitdirectory: '', directory: '' } as React.InputHTMLAttributes<HTMLInputElement>)}
+                onChange={handleImageDirChange}
+              />
+            </ImageArea>
+
             <ButtonRow>
               <PrimaryBtn onClick={handleImport}>{t('admin.dataImport.confirmImport')}</PrimaryBtn>
               <SecondaryBtn onClick={handleReset}>{t('admin.dataImport.reselectFile')}</SecondaryBtn>

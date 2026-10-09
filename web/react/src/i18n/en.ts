@@ -1871,6 +1871,7 @@ const en = {
       noSpecs: 'No specifications available.',
       reviews: 'Reviews ({count})',
       noDescription: 'No description available.',
+      onlinePreview: 'Live Preview',
       productId: 'Product ID',
       spuPrefix: 'SPU-',
       price: 'Price',

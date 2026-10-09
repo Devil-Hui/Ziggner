@@ -45,6 +45,8 @@ from .views import (
     TaskProgressView, TaskListView,
     # Admin Import/Export
     ImportProductsView, ExportProductsView,
+    # Admin Translate
+    SPUTranslateView,
     # Admin Media
     MediaListBySPUView, MediaDeleteView, MediaReorderView, MediaUpdateView, MediaCreateView, MediaVideoCreateView,
 )
@@ -81,6 +83,7 @@ urlpatterns = [
     path('spu/batch/task/<str:task_id>', SPUAdminBatchTaskView.as_view(), name='admin-spu-batch-task'),
     path('spu/import', ImportProductsView.as_view(), name='admin-spu-import'),
     path('spu/export', ExportProductsView.as_view(), name='admin-spu-export'),
+    path('spu/translate', SPUTranslateView.as_view(), name='admin-spu-translate'),
 
     # ==================== Admin SKU ====================
     path('sku/admin', SKUAdminListView.as_view(), name='admin-sku-list'),

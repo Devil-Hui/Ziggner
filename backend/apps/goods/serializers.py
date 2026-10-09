@@ -66,6 +66,7 @@ class SPUDetailSerializer(serializers.Serializer):
     requires_shipping = serializers.BooleanField(required=False)
     taxable = serializers.BooleanField(required=False)
     product_kind = serializers.CharField(required=False, default='physical')
+    preview_url = serializers.CharField(required=False, allow_blank=True)
     submitted_by_name = serializers.CharField(required=False, allow_blank=True)
     submitted_at = serializers.DateTimeField(required=False)
 
@@ -88,6 +89,11 @@ class SPUCreateRequestSerializer(serializers.Serializer):
     product_kind = serializers.ChoiceField(
         choices=['physical', 'virtual'], required=False, default='physical',
     )
+    # 多语言字段
+    name_en = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    description_en = serializers.CharField(required=False, allow_blank=True)
+    name_ar = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    description_ar = serializers.CharField(required=False, allow_blank=True)
 
 
 class SPUUpdateRequestSerializer(serializers.Serializer):
@@ -106,6 +112,11 @@ class SPUUpdateRequestSerializer(serializers.Serializer):
     product_kind = serializers.ChoiceField(
         choices=['physical', 'virtual'], required=False,
     )
+    # 多语言字段
+    name_en = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    description_en = serializers.CharField(required=False, allow_blank=True)
+    name_ar = serializers.CharField(required=False, allow_blank=True, max_length=200)
+    description_ar = serializers.CharField(required=False, allow_blank=True)
 
 
 class SPUAdminDetailSerializer(serializers.Serializer):
@@ -117,6 +128,10 @@ class SPUAdminDetailSerializer(serializers.Serializer):
     category_id = serializers.IntegerField()
     category_path = serializers.CharField()
     description = serializers.CharField()
+    name_en = serializers.CharField(required=False, allow_blank=True)
+    description_en = serializers.CharField(required=False, allow_blank=True)
+    name_ar = serializers.CharField(required=False, allow_blank=True)
+    description_ar = serializers.CharField(required=False, allow_blank=True)
     main_image = serializers.CharField()
     specs = serializers.ListField()
     status = serializers.CharField()
@@ -132,6 +147,7 @@ class SPUAdminDetailSerializer(serializers.Serializer):
     tags = serializers.ListField()
     media = serializers.ListField()
     product_kind = serializers.CharField()
+    preview_url = serializers.CharField(required=False, allow_blank=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
 

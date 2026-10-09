@@ -536,6 +536,88 @@ const SpinIcon = styled.span`
   }
 `
 
+// ── 多语言翻译 ──
+
+const LabelRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`
+
+const TranslateBtn = styled.button`
+  padding: 6px 14px;
+  border: 1px solid ${Color.primary};
+  border-radius: ${Radius.md}px;
+  background: ${Color.primary};
+  color: #fff;
+  font-size: ${FontSize.xs}px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity ${Transition.fast};
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
+const LangBlock = styled.div`
+  border: 1px solid ${Color.border.light};
+  border-radius: ${Radius.md}px;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: rgba(26, 23, 18, 0.02);
+`
+
+const LangHead = styled.div`
+  font-size: ${FontSize.sm}px;
+  font-weight: 600;
+  color: ${Color.text.secondary};
+  margin-bottom: 8px;
+`
+
+const LangLabel = styled.div`
+  font-size: ${FontSize.sm}px;
+  font-weight: 600;
+  color: ${Color.text.secondary};
+  margin-bottom: 8px;
+`
+
+const LangRow = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  & > input {
+    flex: 1;
+  }
+`
+
+const LangBtn = styled.button`
+  padding: 6px 12px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: ${Radius.md}px;
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  font-size: ${FontSize.xs}px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: ${Transition.normal};
+
+  &:hover:not(:disabled) {
+    border-color: ${Color.primary};
+    color: ${Color.primary};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`
+
 // ── 新建模式：提交时图片上传进度遮罩 ──
 
 const UploadOverlay = styled.div`
@@ -1079,6 +1161,12 @@ export default function AdminProductForm() {
   const [brandId, setBrandId] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [description, setDescription] = useState('')
+  // 多语言字段（翻译）
+  const [nameEn, setNameEn] = useState('')
+  const [descriptionEn, setDescriptionEn] = useState('')
+  const [nameAr, setNameAr] = useState('')
+  const [descriptionAr, setDescriptionAr] = useState('')
+  const [translating, setTranslating] = useState(false)
   const [metaTitle, setMetaTitle] = useState('')
   const [metaDescription, setMetaDescription] = useState('')
   const [productType, setProductType] = useState('')
@@ -1196,6 +1284,10 @@ export default function AdminProductForm() {
           setBrandId(String(data.brand_id))
           setCategoryId(String(data.category_id))
           setDescription(data.description || '')
+          setNameEn((data as { name_en?: string }).name_en || '')
+          setDescriptionEn((data as { description_en?: string }).description_en || '')
+          setNameAr((data as { name_ar?: string }).name_ar || '')
+          setDescriptionAr((data as { description_ar?: string }).description_ar || '')
           if (data.specs?.length) {
             setSpecs(data.specs)
           }
@@ -1359,6 +1451,53 @@ export default function AdminProductForm() {
 
   // ── Submit ──
 
+  // ── 多语言翻译 ──
+  // 一键翻译：把 name/description 翻译到 en/ar 并回填表单（不落库，随表单一起提交）
+  const handleTranslate = async () => {
+    if (!name.trim()) { setError(t('admin.productForm.productNameRequired')); return }
+    setTranslating(true)
+    setError('')
+    try {
+      const res = await adminAPI.translateSPU({
+        name: name.trim(),
+        description: description.trim(),
+        source: 'zh',
+      })
+      if (res.name_en) setNameEn(res.name_en)
+      if (res.description_en) setDescriptionEn(res.description_en)
+      if (res.name_ar) setNameAr(res.name_ar)
+      if (res.description_ar) setDescriptionAr(res.description_ar)
+      markDirty()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('common.operationFailed'))
+    }
+    setTranslating(false)
+  }
+
+  // 单条同步翻译：翻译单个字段（如 name → name_en）
+  const handleTranslateField = async (field: 'name' | 'description', target: 'en' | 'ar') => {
+    const sourceText = field === 'name' ? name.trim() : description.trim()
+    if (!sourceText) return
+    setTranslating(true)
+    setError('')
+    try {
+      const res = await adminAPI.translateSPU({ name: field === 'name' ? sourceText : '', description: field === 'description' ? sourceText : '', source: 'zh' })
+      const value = target === 'en'
+        ? (field === 'name' ? res.name_en : res.description_en)
+        : (field === 'name' ? res.name_ar : res.description_ar)
+      if (value) {
+        if (field === 'name' && target === 'en') setNameEn(value)
+        if (field === 'name' && target === 'ar') setNameAr(value)
+        if (field === 'description' && target === 'en') setDescriptionEn(value)
+        if (field === 'description' && target === 'ar') setDescriptionAr(value)
+        markDirty()
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : t('common.operationFailed'))
+    }
+    setTranslating(false)
+  }
+
   const doSubmit = async (submitForReview = false) => {
     if (!name.trim()) { setError(t('admin.productForm.productNameRequired')); return }
     if (!brandId) { setError(t('admin.productForm.brandRequired')); return }
@@ -1373,6 +1512,10 @@ export default function AdminProductForm() {
         brand_id: Number(brandId),
         category_id: Number(categoryId),
         description: description.trim(),
+        name_en: nameEn.trim(),
+        description_en: descriptionEn.trim(),
+        name_ar: nameAr.trim(),
+        description_ar: descriptionAr.trim(),
         specs: validSpecs,
         meta_title: metaTitle.trim(),
         meta_description: metaDescription.trim(),
@@ -1685,6 +1828,35 @@ export default function AdminProductForm() {
               <Field>
                 <Label>{t('admin.productForm.descriptionLabel')}</Label>
                 <TextArea value={description} onChange={(e) => { setDescription(e.target.value); markDirty() }} placeholder={t('admin.productForm.descriptionPlaceholder')} />
+              </Field>
+
+              {/* ── 多语言翻译 ── */}
+              <Field>
+                <LabelRow>
+                  <Label>{t('admin.productForm.multilingual')}</Label>
+                  <TranslateBtn type="button" onClick={handleTranslate} disabled={translating || !name.trim()}>
+                    {translating ? t('admin.productForm.translating') : t('admin.productForm.translateAll')}
+                  </TranslateBtn>
+                </LabelRow>
+                <SectionDesc style={{ marginTop: 4, marginBottom: 10 }}>
+                  {t('admin.productForm.multilingualDesc')}
+                </SectionDesc>
+                <LangBlock>
+                  <LangHead>{t('admin.productForm.langEn')}</LangHead>
+                  <LangRow>
+                    <Input value={nameEn} onChange={(e) => { setNameEn(e.target.value); markDirty() }} placeholder={t('admin.productForm.nameEnPlaceholder')} />
+                    <SmallBtn type="button" onClick={() => handleTranslateField('name', 'en')} disabled={translating || !name.trim()}>{t('admin.productForm.translate')}</SmallBtn>
+                  </LangRow>
+                  <TextArea value={descriptionEn} onChange={(e) => { setDescriptionEn(e.target.value); markDirty() }} placeholder={t('admin.productForm.descEnPlaceholder')} />
+                </LangBlock>
+                <LangBlock>
+                  <LangLabel>{t('admin.productForm.langAr')}</LangLabel>
+                  <LangRow>
+                    <Input value={nameAr} onChange={(e) => { setNameAr(e.target.value); markDirty() }} placeholder={t('admin.productForm.nameArPlaceholder')} />
+                    <LangBtn type="button" onClick={() => handleTranslateField('name', 'ar')} disabled={translating || !name.trim()}>{t('admin.productForm.translate')}</LangBtn>
+                  </LangRow>
+                  <TextArea value={descriptionAr} onChange={(e) => { setDescriptionAr(e.target.value); markDirty() }} placeholder={t('admin.productForm.descArPlaceholder')} />
+                </LangBlock>
               </Field>
             </SectionBody>
           </SectionCard>

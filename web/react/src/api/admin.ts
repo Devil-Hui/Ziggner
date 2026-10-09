@@ -393,6 +393,9 @@ export const adminAPI = {
     post(`/goods/spu/${id}/schedule`, data),
   duplicateSPU: (id: number) =>
     post(`/goods/spu/${id}/duplicate`, {}),
+  /** 翻译 SPU 多语言字段（腾讯云 TMT）。传 spu_id 落库；传 name/description 仅返回译文 */
+  translateSPU: (data: { spu_id?: number; name?: string; description?: string; source?: string }) =>
+    post<{ name_en?: string; description_en?: string; name_ar?: string; description_ar?: string }>('/goods/spu/translate', data),
 
   // Batch
   batchSPU: (data: { action: string; spu_ids: number[]; data?: Record<string, unknown> }) =>

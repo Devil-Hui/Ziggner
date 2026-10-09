@@ -73,6 +73,9 @@ export interface PublicSPUDetail {
   promo_tags?: PromoTag[];
   submitted_by_name?: string;
   submitted_at?: string;
+  product_kind?: 'physical' | 'virtual';
+  /** 在线预览页 URL（网页搭建类虚拟商品） */
+  preview_url?: string;
 }
 
 /** 后台 SKU */
