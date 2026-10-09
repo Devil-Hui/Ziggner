@@ -38,7 +38,7 @@ export default function EspressoDemo() {
           {
             id: `tr_${Math.random().toString(36).slice(2, 7).toUpperCase()}`,
             customer: p.customer,
-            email: `${p.customer.toLowerCase().replace(/[^a-z]/g, "")}@mail.co`,
+            email: `${p.customer.toLowerCase().replace(/[^a-z]/g, "")}@ziggner.com`,
             method: p.method,
             amount: p.amount,
             currency: "€",

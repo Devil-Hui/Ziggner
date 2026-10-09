@@ -23,7 +23,7 @@ export function Download() {
 
         <div className="relative grid gap-10 px-6 py-12 sm:px-10 sm:py-16 lg:grid-cols-[1.35fr_1fr] lg:items-center lg:px-16 lg:py-20">
           <Reveal>
-            <p className="text-cap font-semibold uppercase tracking-[0.2em] text-mute">Get Bevel</p>
+            <p className="text-cap font-semibold uppercase tracking-[0.2em] text-mute">Get Ziggner</p>
             <h2 className="display mt-4 text-[clamp(34px,6vw,64px)] leading-[0.95]">
               Tonight's sleep is
               <br />
@@ -31,7 +31,7 @@ export function Download() {
             </h2>
             <p className="mt-5 max-w-[520px] text-[17px] leading-[1.4] text-mute sm:text-body sm:leading-body">
               Install on iPhone, pair the watch, and wear it to bed. Your first real readiness score lands in
-              fourteen mornings — before that, Bevel shows its working.
+              fourteen mornings — before that, Ziggner shows its working.
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-4">

@@ -153,7 +153,7 @@ export default function Hero() {
         </h1>
 
         <p className="mx-auto mt-8 max-w-[640px] text-[20px] leading-[1.3] text-body-gray sm:text-[24px]">
-          Bevel reads your heart rate, sleep, and recovery each morning and turns them into one calm plan for the day.
+          Ziggner reads your heart rate, sleep, and recovery each morning and turns them into one calm plan for the day.
         </p>
 
         <div className="mt-10 flex justify-center">

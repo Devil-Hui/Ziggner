@@ -1,17 +1,21 @@
 # =============================================================================
-# 网页搭建模板预览站 —— 构建
+# 网页搭建模板预览站 —— 构建 + 截图
 # =============================================================================
-# 触发：shop_templates/** 或模板构建脚本/封面脚本变更时；也可手动 dispatch。
+# 触发：shop_templates/** 或构建脚本变更时；也可手动 dispatch。
 #
-# 为什么在 CI 构建而不是源站：
-#   源站为 2GB 内存、常态已用 ~72%（MySQL + gunicorn + celery 常驻），
-#   5 个 React/Vite 模板的构建峰值内存会直接顶到上限。生产环境只做静态托管：
-#   templates_static/ 由 docker-compose.prod.yml 挂载进 nginx 的 /var/www/templates。
+# 为什么都在 CI 做而不是源站：
+#   源站为 2GB 内存、常态已用 ~72%（MySQL + gunicorn + celery 常驻）。
+#   5 个 React/Vite 模板的构建 + Chromium 截图会把占用顶到 80% 红线以上，
+#   所以重活一律放 CI，源站只做静态托管与反向代理。
 #
-# 产物：
-#   - 始终上传 artifact templates-static（可直接下载 rsync 到源站）
-#   - 配置了 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID 时，额外部署到
-#     Cloudflare Pages 项目 ziggner-templates（边缘托管，源站零负担）
+# 产物去向：
+#   web/react/public/templates/<slug>/index.html  单文件预览页（vite-plugin-singlefile）
+#   web/react/public/templates/<slug>/cover.jpg   真实渲染截图（商城卡片封面）
+#   Vite 会把 public/ 原样拷进 dist/，因此 Push 后由 Cloudflare Worker 在边缘直出：
+#     https://shop.ziggner.com/templates/<slug>/index.html
+#   对外不暴露 api.ziggner.com（内部 API 域名）。
+#
+# 防循环：paths 不含 web/react/public/templates/**，且回填提交带 [skip ci]。
 # =============================================================================
 name: Templates Build
 
@@ -20,15 +24,22 @@ on:
     branches: [master, main]
     paths:
       - 'shop_templates/**'
-      - 'templates_static/index.html'
       - 'scripts/build_shop_templates.sh'
-      - 'scripts/gen_template_covers.py'
+      - 'scripts/shot_template_covers.py'
+      - 'web/react/public/_headers'
       - '.github/workflows/templates-build.yml'
   workflow_dispatch:
+
+concurrency:
+  group: templates-build
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
     steps:
       - uses: actions/checkout@v4
 
@@ -36,29 +47,50 @@ jobs:
         with:
           node-version: '20'
 
-      - name: 构建模板并同步到 templates_static
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 构建模板 → web/react/public/templates/
         run: bash scripts/build_shop_templates.sh
 
-      - name: 校验产物齐备（每个模板必须有 index.html + cover.svg）
+      - name: 安装 Playwright + Chromium
+        run: |
+          pip install playwright
+          playwright install --with-deps chromium
+
+      - name: 真实渲染截图 → cover.jpg
+        run: python3 scripts/shot_template_covers.py
+
+      - name: 校验产物齐备（每个模板 index.html + cover.jpg）
         run: |
           missing=0
-          for d in templates_static/*/; do
+          for d in web/react/public/templates/*/; do
             [ -f "$d/index.html" ] || { echo "缺失 $d/index.html"; missing=1; }
-            [ -f "$d/cover.svg" ]  || { echo "缺失 $d/cover.svg";  missing=1; }
+            [ -f "$d/cover.jpg" ]  || { echo "缺失 $d/cover.jpg";  missing=1; }
           done
-          [ -f templates_static/index.html ] || { echo "缺失 templates_static/index.html（目录总览页）"; missing=1; }
+          [ -f web/react/public/templates/index.html ] || { echo "缺失目录总览页"; missing=1; }
+          # 兜底自检：对外 URL 绝不应出现内部 API 域名
+          if grep -rl "api\.ziggner\.com" web/react/public/templates/ ; then
+            echo "产物中出现 api.ziggner.com，禁止发布"; exit 1
+          fi
           exit $missing
 
       - uses: actions/upload-artifact@v4
         with:
-          name: templates-static
-          path: templates_static/
+          name: shop-templates
+          path: web/react/public/templates/
           if-no-files-found: error
 
-      # 可选：部署到 Cloudflare Pages。未配置 secrets 时整步跳过，不影响构建门禁。
-      - name: 部署到 Cloudflare Pages（可选）
-        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: npx wrangler@latest pages deploy templates_static --project-name=ziggner-templates
+      # 产物必须回仓：Cloudflare Worker 依据仓库内容构建 dist 并发布到 shop.ziggner.com
+      - name: 产物回填仓库
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add web/react/public/templates
+          if git diff --cached --quiet; then
+            echo "产物无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(templates): 重建模板预览产物与封面截图 [skip ci]"
+          git push

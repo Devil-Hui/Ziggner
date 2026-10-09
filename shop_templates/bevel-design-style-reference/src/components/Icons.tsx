@@ -16,12 +16,12 @@ export function Star({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
-export function BevelMark({ className = "h-7 w-7" }: IconProps) {
+export function ZiggnerMark({ className = "h-7 w-7" }: IconProps) {
   return (
     <span className={`inline-flex shrink-0 items-center justify-center rounded-full bg-charcoal ${className}`}>
       <svg viewBox="0 0 24 24" className="h-[60%] w-[60%]" fill="none" aria-hidden="true">
-        <path d="M4.5 17a7.5 7.5 0 0 1 15 0" stroke="#ebf0f8" strokeWidth="2.4" strokeLinecap="round" />
-        <circle cx="12" cy="17" r="2.2" fill="#ffab94" />
+        {/* Ziggner 首字母 Z：替换原 Bevel 品字形标记，保留圆形底衬与配色 */}
+        <path d="M7.5 7.5h9L7.5 16.5h9" stroke="#ebf0f8" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </span>
   );

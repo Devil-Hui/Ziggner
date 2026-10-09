@@ -1,0 +1,10 @@
+# Cloudflare Workers / Pages 自定义响应头
+#
+# 模板预览页要能被商城商品详情页以 iframe 嵌入，因此必须在此显式放行：
+# 一旦某个路径定义了自己的 X-Frame-Options / CSP， Workers 的全局头就不再继承，
+# 这里正是利用该特性让 /templates/* 对外可嵌入，而其余路径保持严格策略。
+/templates/*
+  X-Frame-Options: ALLOWALL
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'self' www.ziggner.com admin.ziggner.com shop.ziggner.com http://localhost:* https://localhost:*
+  Cache-Control: public, max-age=86400
+  X-Content-Type-Options: nosniff

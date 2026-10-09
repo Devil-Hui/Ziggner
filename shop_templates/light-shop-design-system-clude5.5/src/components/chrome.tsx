@@ -30,7 +30,7 @@ export function AppBanner({ onClose }: { onClose: () => void }) {
           <ShoppingBag size={13} strokeWidth={2.25} />
         </span>
         <span className="flex flex-col leading-[1.2]">
-          <span className="text-[14px] font-medium tracking-[-0.023em]">Download Shop app</span>
+          <span className="text-[14px] font-medium tracking-[-0.023em]">Download Ziggner app</span>
           <span className="text-[10px] tracking-[-0.01em] text-white/60">Available on iOS & Android</span>
         </span>
         <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
@@ -106,7 +106,7 @@ export function Sidebar() {
     <aside className="sticky top-0 z-30 hidden h-dvh w-16 shrink-0 flex-col items-center self-start bg-white py-5 md:flex">
       <button
         type="button"
-        aria-label="Shop home"
+        aria-label="Ziggner home"
         onClick={() => {
           closeDrawer();
           setView(null);

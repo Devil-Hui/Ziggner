@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Bevel color tokens */
+  /* Ziggner color tokens */
   --color-paper-white: #ffffff;
   --color-charcoal: #1f2025;
   --color-ink: #222326;

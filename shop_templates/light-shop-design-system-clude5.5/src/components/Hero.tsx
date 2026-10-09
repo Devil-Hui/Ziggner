@@ -140,7 +140,7 @@ export function Hero({ onCategory }: { onCategory: (id: CategoryId) => void }) {
 
       {/* Wordmark + search */}
       <div className="relative z-20 mt-8 flex flex-col items-center text-center lg:absolute lg:inset-x-0 lg:top-[282px] lg:mt-0">
-        <h1 aria-label="Shop">
+        <h1 aria-label="Ziggner">
           <Wordmark className="text-[88px] sm:text-[120px] lg:text-[length:clamp(96px,13cqw,168px)]" />
         </h1>
         <p className="mt-4 max-w-[420px] text-body-lg text-muted">Discover brands you'll love — all in one place.</p>

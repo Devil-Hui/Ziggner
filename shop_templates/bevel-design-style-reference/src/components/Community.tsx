@@ -58,7 +58,7 @@ export default function Community() {
           Mornings from members.
         </h2>
         <p className="mx-auto mt-6 max-w-[640px] text-[24px] leading-[1.3] text-body-gray">
-          Real streaks, real breakfasts, and first-light workouts shared by people who check Bevel before coffee.
+          Real streaks, real breakfasts, and first-light workouts shared by people who check Ziggner before coffee.
         </p>
       </div>
 

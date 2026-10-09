@@ -59,7 +59,7 @@ export const BOARD: Record<RangeKey, Board> = {
       {
         time: "22:41",
         title: "Lights out 31 min earlier",
-        body: "Bevel pulled bedtime from the watch. Consistency up two nights in a row.",
+        body: "Ziggner pulled bedtime from the watch. Consistency up two nights in a row.",
         tone: "lilac",
         tag: "Sleep",
       },
@@ -165,7 +165,7 @@ export const BOARD: Record<RangeKey, Board> = {
       {
         time: "W1",
         title: "Baseline established",
-        body: "Fourteen consistent nights gave Bevel a personal HRV band of 44–52 ms.",
+        body: "Fourteen consistent nights gave Ziggner a personal HRV band of 44–52 ms.",
         tone: "metric",
         tag: "Baseline",
       },
@@ -281,7 +281,7 @@ export const STORIES: Story[] = [
     image: px(12267777),
     name: "Elena Kaur",
     handle: "@elenaruns",
-    caption: "Bevel told me to go easy on Tuesday. I ignored it. It was right.",
+    caption: "Ziggner told me to go easy on Tuesday. I ignored it. It was right.",
     metric: "+19",
     metricLabel: "HRV ms",
     tone: "metric",
@@ -337,7 +337,7 @@ export const FOOTER_GROUPS = [
   },
   {
     title: "Company",
-    links: ["About Bevel", "Careers", "Press kit", "Science board", "Privacy promise"],
+    links: ["About Ziggner", "Careers", "Press kit", "Science board", "Privacy promise"],
   },
   {
     title: "Support",

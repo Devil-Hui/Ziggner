@@ -233,7 +233,7 @@ export function Board() {
                   <p className="num text-[12px] text-white/70">{RANGES.find((r) => r.key === range)?.note}</p>
                 </div>
                 <p className="text-cap font-semibold uppercase tracking-[0.2em] text-white/40">
-                  Bevel OS · watch relay
+                  Ziggner OS · watch relay
                 </p>
               </div>
 
@@ -379,7 +379,7 @@ export function Board() {
               </ol>
               <div className="mt-6 rounded-3xl bg-paper p-4 shadow-[0_1px_0_rgba(255,255,255,0.9)_inset]">
                 <p className="text-[13px] leading-[1.45] text-ink">
-                  <span className="font-semibold">Bevel's note:</span>{" "}
+                  <span className="font-semibold">Ziggner's note:</span>{" "}
                   {range === "day"
                     ? "Sleep debt is cleared. Protect tonight's bedtime and the readiness curve holds."
                     : range === "week"

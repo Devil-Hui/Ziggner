@@ -105,7 +105,7 @@ export function Partners() {
           read on your body.
         </h2>
         <p className="max-w-[560px] text-center text-[17px] leading-[1.4] text-mute sm:text-body">
-          Bevel keeps the raw data where it belongs — in the trends tab. What you see at 6am is a single
+          Ziggner keeps the raw data where it belongs — in the trends tab. What you see at 6am is a single
           sentence you can act on.
         </p>
       </Reveal>

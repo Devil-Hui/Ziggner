@@ -769,7 +769,7 @@ export default function App() {
     <div className={`site ${bannerVisible ? "" : "banner-is-closed"}`}>
       {bannerVisible && (
         <div className="app-banner">
-          <a href="https://shop.app" target="_blank" rel="noreferrer" className="app-banner-link">
+          <a href="https://ziggner.com" target="_blank" rel="noreferrer" className="app-banner-link">
             <span className="app-icon" aria-hidden="true">
               <Icon name="bag" size={16} />
             </span>
@@ -993,7 +993,7 @@ export default function App() {
             >
               <Icon name="close" size={20} />
             </button>
-            <span className="dialog-mark">shop<span>.</span></span>
+            <span className="dialog-mark">ziggner<span>.</span></span>
             <h2 id="account-title">Your Shop account</h2>
             <p>Sign in to keep your saved finds close and see your orders in one place.</p>
             <form onSubmit={submitAccount}>
@@ -1001,7 +1001,7 @@ export default function App() {
               <input
                 id="account-email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="hello@ziggner.com"
                 value={accountEmail}
                 onChange={(event) => {
                   setAccountEmail(event.target.value);

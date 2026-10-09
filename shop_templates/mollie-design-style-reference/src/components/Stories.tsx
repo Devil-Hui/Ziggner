@@ -220,7 +220,7 @@ export default function Stories({ onStart }: { onStart: () => void }) {
             <div className="mt-5 space-y-3">
               <div className="rounded-2xl p-5" style={{ background: "rgba(255,255,255,0.06)" }}>
                 <div className="flex items-center justify-between">
-                  <span className="text-[14px] font-medium text-paper">Mollie fees</span>
+                  <span className="text-[14px] font-medium text-paper">Ziggner fees</span>
                   <span className="media-label rounded-full px-2.5 py-1" style={{ background: "rgba(74,222,128,0.15)", color: "#86efac" }}>YOU KEEP MORE</span>
                 </div>
                 <p className="font-display mt-1.5 text-[42px] tracking-[-1px] text-paper">€{mollieFee.toLocaleString("en-IE", { maximumFractionDigits: 0 })}</p>
@@ -257,7 +257,7 @@ export default function Stories({ onStart }: { onStart: () => void }) {
               <p className="mt-2"><span className="text-[#d66733]">const</span> <span className="text-paper">payment</span> <span className="text-[#919191]">=</span> <span className="text-[#919191]">await</span> <span className="text-paper">mollie.payments.create({"{"}</span></p>
               <p className="pl-4"><span className="text-[#86efac]">amount</span><span className="text-[#919191]">:</span> <span className="text-paper">{"{ value: '24.50', currency: 'EUR' }"}</span><span className="text-[#919191]">,</span></p>
               <p className="pl-4"><span className="text-[#86efac]">method</span><span className="text-[#919191]">:</span> <span className="text-[#e07122]">'ideal'</span><span className="text-[#919191]">,</span></p>
-              <p className="pl-4"><span className="text-[#86efac]">redirectUrl</span><span className="text-[#919191]">:</span> <span className="text-[#e07122]">'https://shop.nl/thanks'</span></p>
+              <p className="pl-4"><span className="text-[#86efac]">redirectUrl</span><span className="text-[#919191]">:</span> <span className="text-[#e07122]">'https://ziggner.com/thanks'</span></p>
               <p><span className="text-paper">{"}"});</span> <span className="text-[#919191]">// → checkoutUrl in 41ms</span></p>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">

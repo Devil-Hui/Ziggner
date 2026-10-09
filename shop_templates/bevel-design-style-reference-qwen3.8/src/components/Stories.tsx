@@ -228,7 +228,7 @@ export function Stories() {
         <div className="flex items-center gap-3 rounded-3xl bg-cloud px-5 py-4">
           <Quote className="h-4 w-4 shrink-0 text-mute-soft" />
           <p className="max-w-[420px] text-[15px] leading-[1.45] text-mute">
-            “I've tried four of these. Bevel is the first that told me to{" "}
+            “I've tried four of these. Ziggner is the first that told me to{" "}
             <span className="font-semibold text-ink">go back to bed</span> — and was right.”
           </p>
           <p className="hidden text-cap font-medium text-mute-soft sm:block">— @runmayarun</p>

@@ -13,10 +13,12 @@
 
 约定
 ----
-模板静态产物由 nginx 直接托管：templates_static/<slug>/index.html 暴露为
-https://api.ziggner.com/templates/<slug>/index.html（见 web/react/nginx/default.conf）。
-封面图同目录 cover.svg，写入 SPU.main_image（CharField，前端 resolveMediaUrl 会把
-"/templates/..." 这类相对路径还原成 API 绝对 URL）。
+模板产物由 Cloudflare Worker 在边缘直出：web/react/public/templates/<slug>/index.html
+→ https://shop.ziggner.com/templates/<slug>/index.html。
+（源站 nginx 也挂载同一目录作兜底，但对外只用 shop 域名。）
+封面图同目录 cover.jpg（CI 真实渲染截图），写入 SPU.main_image。
+预览页与主图都存绝对 URL 且指向 shop.ziggner.com：
+main_image 若存相对路径会被前端补全成 api 域名，等于把内部域名泄漏到商品卡片的图片地址里。
 """
 
 import os
@@ -36,12 +38,11 @@ User = get_user_model()
 PARENT_CATEGORY = '网页搭建'
 CHILD_CATEGORIES = ['网页搭建-Bevel 设计', '网页搭建-Light Shop', '网页搭建-Mollie']
 
-# 模板静态站点根路径（nginx /templates/ location）
+# 模板预览站根目录：对外域名用 shop.ziggner.com（同前端一起由 Cloudflare 托管）。
+# 绝不使用 api.ziggner.com —— 那是内部 API 域名，不应出现在可售页面的任何 URL 里。
+# 需要改域名时设环境变量 TEMPLATE_PREVIEW_BASE（seed 幂等，改完重跑即可）。
+PREVIEW_BASE = os.getenv('TEMPLATE_PREVIEW_BASE', 'https://shop.ziggner.com').rstrip('/')
 TEMPLATE_ROOT = '/templates'
-
-# 封面图以相对路径存库：前端 resolveMediaUrl() 会补全成 API 绝对 URL，换域名无需改数据。
-# 而 preview_url 直接作为 <iframe src> 使用，必须存绝对 URL，故单独取底座域名。
-PREVIEW_BASE = os.getenv('TEMPLATE_PREVIEW_BASE', 'https://api.ziggner.com').rstrip('/')
 
 # ── 商品定义 ──
 # (slug, 名称, 名称en, 家族二级分类名, 品牌名, 描述, 描述en)
@@ -167,7 +168,7 @@ class Command(BaseCommand):
                 self.stdout.write(self.style.WARNING(f"  SKIP {p['name']}: 分类/品牌缺失"))
                 continue
             preview_url = f"{PREVIEW_BASE}{TEMPLATE_ROOT}/{p['slug']}/index.html"
-            cover_url = f"{TEMPLATE_ROOT}/{p['slug']}/cover.svg"
+            cover_url = f"{PREVIEW_BASE}{TEMPLATE_ROOT}/{p['slug']}/cover.jpg"
             spu, created = SPU.objects.get_or_create(
                 name=p['name'], brand=brand, category=child,
                 defaults=dict(
@@ -192,7 +193,7 @@ class Command(BaseCommand):
             patch = {}
             if spu.preview_url != preview_url:
                 patch['preview_url'] = preview_url
-            if not spu.main_image:
+            if spu.main_image != cover_url:
                 patch['main_image'] = cover_url
             if patch:
                 for field, value in patch.items():

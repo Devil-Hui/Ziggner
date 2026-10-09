@@ -49,7 +49,7 @@ export function Hero() {
           <Reveal className="mx-auto flex max-w-[720px] flex-col items-center text-center">
             <span className="inline-flex items-center gap-1.5 rounded-pill bg-white/70 px-3 py-1.5 text-cap font-semibold uppercase tracking-[0.16em] text-ink/70 ring-1 ring-white backdrop-blur">
               <Sparkles className="h-3 w-3 text-metric" strokeWidth={2.4} />
-              Bevel 4 · watchOS 12 companion
+              Ziggner 4 · watchOS 12 companion
             </span>
 
             <h1 className="display mt-6 text-[clamp(40px,8.6vw,80px)] leading-[0.95]">
@@ -64,7 +64,7 @@ export function Hero() {
               className="mt-6 max-w-[600px] text-[clamp(17px,2.1vw,24px)] leading-[1.35] text-mute"
               style={{ letterSpacing: "-0.01em" }}
             >
-              Bevel reads sleep, HRV, temperature and yesterday's load the moment you lift your wrist —
+              Ziggner reads sleep, HRV, temperature and yesterday's load the moment you lift your wrist —
               then hands you one honest number for the day.
             </p>
 

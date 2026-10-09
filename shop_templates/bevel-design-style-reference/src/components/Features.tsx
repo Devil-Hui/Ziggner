@@ -99,7 +99,7 @@ export default function Features() {
             Three numbers. One honest morning.
           </h2>
           <p className="mx-auto mt-6 max-w-[640px] text-[24px] leading-[1.3] text-body-gray">
-            Bevel keeps the signal and drops the noise, so every morning opens with a clear read on your body.
+            Ziggner keeps the signal and drops the noise, so every morning opens with a clear read on your body.
           </p>
         </div>
 

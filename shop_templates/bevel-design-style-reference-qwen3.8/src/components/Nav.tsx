@@ -39,7 +39,7 @@ export function Nav() {
                 <span className="absolute h-[13px] w-[13px] rounded-[4px] border-[2.5px] border-cloud" />
                 <span className="absolute h-[13px] w-[13px] rounded-[4px] border-[2.5px] border-recovery left-[9px] top-[9px]" />
               </span>
-              <span className="text-brand font-medium tracking-brand text-ink">Bevel</span>
+              <span className="text-brand font-medium tracking-brand text-ink">Ziggner</span>
             </a>
 
             <div className="hidden items-center gap-7 lg:flex">

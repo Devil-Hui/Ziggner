@@ -13,7 +13,7 @@ export function Footer() {
           className="display whitespace-nowrap text-center text-[clamp(80px,22vw,300px)] leading-[0.8] text-transparent"
           style={{ WebkitTextStroke: "1px rgba(31,32,37,0.10)" }}
         >
-          Bevel
+          Ziggner
         </p>
       </div>
 
@@ -24,7 +24,7 @@ export function Footer() {
               <span className="relative grid h-7 w-7 place-items-center rounded-[9px] bg-charcoal">
                 <span className="absolute left-[9px] top-[9px] h-[13px] w-[13px] rounded-[4px] border-[2.5px] border-recovery" />
               </span>
-              <span className="text-brand font-medium tracking-brand text-ink">Bevel</span>
+              <span className="text-brand font-medium tracking-brand text-ink">Ziggner</span>
             </div>
             <p className="mt-4 max-w-[280px] text-[14px] leading-[1.5] text-mute">
               Morning metrics for people who wear a watch to sleep. Built in Bristol, tested on 80,000
@@ -64,7 +64,7 @@ export function Footer() {
 
         <div className="mt-16 flex flex-col gap-4 border-t border-cloud-line pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[13px] text-mute">
-            © 2026 Bevel Health Ltd · Not a medical device. Nothing here diagnoses anything.
+            © 2026 Ziggner Ltd · Not a medical device. Nothing here diagnoses anything.
           </p>
           <div className="flex items-center gap-6">
             <a href="#top" className="text-[13px] font-medium text-mute transition-colors hover:text-ink">

@@ -1,4 +1,4 @@
-import { BevelMark } from "./Icons";
+import { ZiggnerMark } from "./Icons";
 
 const groups = [
   { title: "Product", links: ["Features", "Science", "Membership", "Devices"] },
@@ -14,8 +14,8 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-10 md:grid-cols-5">
           <div className="col-span-2 md:col-span-1">
             <a href="#top" className="flex items-center gap-2.5 text-[18px] font-medium leading-[25.2px] tracking-[0.16px] text-ink">
-              <BevelMark className="h-7 w-7" />
-              Bevel
+              <ZiggnerMark className="h-7 w-7" />
+              Ziggner
             </a>
           </div>
 
@@ -39,7 +39,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-20 flex flex-col items-center justify-between gap-4 border-t border-cloud-card pt-8 text-[12px] text-body-gray sm:flex-row">
-          <p>© 2026 Bevel Health, Inc. All rights reserved.</p>
+          <p>© 2026 Ziggner Ltd. All rights reserved.</p>
           <p>Made for mornings.</p>
         </div>
       </div>

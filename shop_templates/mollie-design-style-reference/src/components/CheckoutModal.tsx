@@ -10,7 +10,7 @@ const METHODS = [
 export default function CheckoutModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [step, setStep] = useState(0);
   const [method, setMethod] = useState("ideal");
-  const [email, setEmail] = useState("sanne@cafmaan.nl");
+  const [email, setEmail] = useState("sanne@ziggner.com");
   const [paying, setPaying] = useState(false);
 
   useEffect(() => {

@@ -98,7 +98,7 @@ export function Wordmark({ className, style }: { className?: string; style?: CSS
       className={cn('inline-block select-none font-semibold leading-none tracking-[-0.065em] text-shop', className)}
       style={style}
     >
-      shop
+      ziggner
     </span>
   );
 }

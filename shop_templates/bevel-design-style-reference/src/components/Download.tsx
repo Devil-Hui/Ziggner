@@ -41,7 +41,7 @@ function QRCode() {
   }
 
   return (
-    <svg viewBox={`-1 -1 ${GRID + 2} ${GRID + 2}`} className="h-full w-full fill-charcoal" shapeRendering="crispEdges" aria-label="Scan to download Bevel">
+    <svg viewBox={`-1 -1 ${GRID + 2} ${GRID + 2}`} className="h-full w-full fill-charcoal" shapeRendering="crispEdges" aria-label="Scan to download Ziggner">
       {rects}
     </svg>
   );
@@ -78,7 +78,7 @@ export default function Download() {
               Scan with your iPhone
             </p>
             <p className="mt-2 text-[14px] leading-[1.4] text-cloud-card/70">
-              Opens the App Store page for Bevel. Works with Apple Health, Garmin, Oura, and more.
+              Opens the App Store page for Ziggner. Works with Apple Health, Garmin, Oura, and more.
             </p>
           </div>
         </div>

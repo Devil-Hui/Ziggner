@@ -4,7 +4,7 @@ import { cn } from "../utils/cn";
 export function ApplePill({
   className,
   full = false,
-  label = "Download Bevel",
+  label = "Download Ziggner",
 }: {
   className?: string;
   full?: boolean;

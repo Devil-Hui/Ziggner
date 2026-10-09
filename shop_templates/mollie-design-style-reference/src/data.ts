@@ -44,11 +44,11 @@ export interface Tx {
 }
 
 export const INITIAL_TXS: Tx[] = [
-  { id: "tr_9KQ21x", customer: "Atelier Nord", email: "shop@ateliernord.dk", method: "iDEAL", amount: 184.0, currency: "€", status: "paid", time: "09:41" },
-  { id: "tr_9KQ20m", customer: "Café Maan", email: "hello@cafmaan.nl", method: "Apple Pay", amount: 24.5, currency: "€", status: "paid", time: "09:38" },
-  { id: "tr_9KQ1zZ", customer: "Freddy's Supply", email: "ops@freddys.co", method: "Visa", amount: 412.9, currency: "€", status: "pending", time: "09:31" },
-  { id: "tr_9KQ1yA", customer: "Bloom & Stem", email: "orders@bloomstem.be", method: "Bancontact", amount: 68.2, currency: "€", status: "paid", time: "09:24" },
-  { id: "tr_9KQ1wQ", customer: "Harbor Books", email: "till@harborbooks.uk", method: "Mastercard", amount: 96.0, currency: "£", status: "expired", time: "09:12" },
+  { id: "tr_9KQ21x", customer: "Atelier Nord", email: "shop@ziggner.com", method: "iDEAL", amount: 184.0, currency: "€", status: "paid", time: "09:41" },
+  { id: "tr_9KQ20m", customer: "Café Maan", email: "hello@ziggner.com", method: "Apple Pay", amount: 24.5, currency: "€", status: "paid", time: "09:38" },
+  { id: "tr_9KQ1zZ", customer: "Freddy's Supply", email: "ops@ziggner.com", method: "Visa", amount: 412.9, currency: "€", status: "pending", time: "09:31" },
+  { id: "tr_9KQ1yA", customer: "Bloom & Stem", email: "orders@ziggner.com", method: "Bancontact", amount: 68.2, currency: "€", status: "paid", time: "09:24" },
+  { id: "tr_9KQ1wQ", customer: "Harbor Books", email: "till@ziggner.com", method: "Mastercard", amount: 96.0, currency: "£", status: "expired", time: "09:12" },
   { id: "tr_9KQ1vE", customer: "LOOM Studio", email: "billing@loom.studio", method: "Klarna", amount: 289.0, currency: "€", status: "paid", time: "09:02" },
 ];
 
@@ -117,7 +117,7 @@ export const FAQS = [
     a: "Most businesses accept their first payment the same day. Create an account, verify your identity, and plug in checkout — no lengthy underwriting, no setup fee, no hardware lock-in.",
   },
   {
-    q: "What does Mollie-style pricing look like?",
+    q: "What does Ziggner-style pricing look like?",
     a: "Pay per successful transaction, nothing else. iDEAL from €0.29, cards from 1.5% + €0.25, Klarna from 2.99% + €0.25. Payouts, reporting, and support are included.",
   },
   {

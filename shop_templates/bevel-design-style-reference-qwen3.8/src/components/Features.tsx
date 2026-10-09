@@ -183,7 +183,7 @@ const EXTRAS = [
   { icon: Thermometer, title: "Illness signal", copy: "Temp and RHR drifts flagged 31 hours on average." },
   { icon: Timer, title: "Caffeine window", copy: "A cut-off time that moves with your sleep debt." },
   { icon: Droplets, title: "Hydration nudge", copy: "Weight swing from the overnight fast, in litres." },
-  { icon: ShieldCheck, title: "On-device first", copy: "HealthKit only. No ad SDK has ever touched a Bevel row." },
+  { icon: ShieldCheck, title: "On-device first", copy: "HealthKit only. No ad SDK has ever touched a Ziggner row." },
 ];
 
 export function Features() {
@@ -246,7 +246,7 @@ export function Features() {
           <Reveal delay={320} className="sm:col-span-2 lg:col-span-4">
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-cloud-line px-6 py-5">
               <p className="max-w-[620px] text-[15px] leading-[1.5] text-mute">
-                Every number on this page is real device output from Bevel's sample profile — HRV band, sleep
+                Every number on this page is real device output from Ziggner's sample profile — HRV band, sleep
                 stages and training load included. Export the whole dataset as CSV whenever you like.
               </p>
               <a

@@ -1,4 +1,4 @@
-import { AppleLogo, BevelMark } from "./Icons";
+import { AppleLogo, ZiggnerMark } from "./Icons";
 
 const links = [
   { label: "Features", href: "#features" },
@@ -12,8 +12,8 @@ export default function Nav() {
     <header className="fixed inset-x-0 top-4 z-50 px-4">
       <nav className="mx-auto flex h-16 w-full max-w-[1080px] items-center justify-between rounded-[32px] bg-white/80 px-5 shadow-[0_2px_16px_0_rgba(0,0,0,0.06)] backdrop-blur-xl sm:px-6">
         <a href="#top" className="flex items-center gap-2.5 text-[18px] font-medium leading-[25.2px] tracking-[0.16px] text-ink">
-          <BevelMark className="h-7 w-7" />
-          Bevel
+          <ZiggnerMark className="h-7 w-7" />
+          Ziggner
         </a>
 
         <div className="hidden items-center gap-8 md:flex">

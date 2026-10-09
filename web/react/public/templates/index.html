@@ -55,7 +55,7 @@
   <div class="grid" id="grid"></div>
 
   <footer>
-    模板静态托管：<a href="https://api.ziggner.com/templates/">api.ziggner.com/templates/</a>
+    模板由 Cloudflare 在边缘直出：<a href="/templates/">shop.ziggner.com/templates/</a>
   </footer>
 </div>
 
@@ -102,7 +102,9 @@ var TEMPLATES = [
     var t = TEMPLATES[i];
     var demo = t.slug + '/index.html';
     html += '<article class="card">'
-      + '<img class="thumb" src="' + t.slug + '/cover.svg" alt="' + t.name + '" loading="lazy" decoding="async">'
+      + '<img class="thumb" src="' + t.slug + '/cover.jpg" alt="' + t.name + '" loading="lazy" decoding="async"'
+      // 封面由 CI 真实渲染截图生成；若某次构建缺失则让出位给纯色底，不显示碎图
+      + ' onerror="this.style.visibility=\'hidden\'">'
       + '<div class="body">'
       + '<span class="tag">' + t.family + '</span>'
       + '<h2 class="name">' + t.name + '</h2>'

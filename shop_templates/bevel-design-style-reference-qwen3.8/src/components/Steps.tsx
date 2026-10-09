@@ -9,7 +9,7 @@ const STEPS = [
     icon: Watch,
     title: "Pair once, on the wrist",
     copy:
-      "Bevel reads the sensors Apple already trusts: optical HR, wrist temp, blood-oxygen spot checks and motion. No account, no cloud sign-up, no wearable to buy.",
+      "Ziggner reads the sensors Apple already trusts: optical HR, wrist temp, blood-oxygen spot checks and motion. No account, no cloud sign-up, no wearable to buy.",
     meta: "2 min",
   },
   {
@@ -17,7 +17,7 @@ const STEPS = [
     icon: BedDouble,
     title: "Sleep in it for fourteen nights",
     copy:
-      "Two weeks builds a personal HRV and temperature band. Until then Bevel shows the raw series and says plainly that it is still learning you.",
+      "Two weeks builds a personal HRV and temperature band. Until then Ziggner shows the raw series and says plainly that it is still learning you.",
     meta: "14 nights",
   },
   {
@@ -43,7 +43,7 @@ export function Steps() {
             <span className="text-mute/80">before it's honest.</span>
           </h2>
           <p className="mt-5 max-w-[380px] text-[17px] leading-[1.45] text-mute">
-            Most health apps guess for a month. Bevel refuses to score you until it has a baseline you earned —
+            Most health apps guess for a month. Ziggner refuses to score you until it has a baseline you earned —
             and it tells you exactly how far away that is.
           </p>
           <div className="mt-8 flex items-center gap-3 rounded-pill bg-cloud py-2 pl-2 pr-5">

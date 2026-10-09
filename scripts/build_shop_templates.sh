@@ -5,9 +5,10 @@
 # 做什么
 #   1. 逐个 shop_templates/<slug> 执行 npm ci + vite build（vite-plugin-singlefile
 #      → 产出自包含单文件 dist/index.html，可直接 iframe 嵌入）
-#   2. 把 dist/index.html 同步到 templates_static/<slug>/index.html
-#      （该目录由 docker-compose.prod.yml 挂进 nginx 的 /var/www/templates）
-#   3. 重新生成封面图 templates_static/<slug>/cover.svg
+#   2. 把 dist/index.html 同步到 web/react/public/templates/<slug>/index.html
+#      Vite 会把 public/ 原样拷进 dist/，因此产物由 Cloudflare Worker 在边缘直出：
+#        https://shop.ziggner.com/templates/<slug>/index.html
+#      （不用 api.ziggner.com —— 那是内部域名，不应对外暴露）
 #
 # 为什么不在源站上跑
 #   5 个模板的 vite 构建峰值内存远超 2GB 源站的余量（源站常态已用 ~72%，
@@ -17,13 +18,13 @@
 # 用法
 #   ./scripts/build_shop_templates.sh            # 全量重建
 #   ./scripts/build_shop_templates.sh bevel-design-style-reference   # 只重建一个
-#   SKIP_COVERS=1 ./scripts/build_shop_templates.sh                  # 跳过封面生成
+#   截图封面另见 scripts/shot_template_covers.py（同样只在 CI 跑）
 # =============================================================================
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_DIR="$REPO_ROOT/shop_templates"
-OUT_DIR="$REPO_ROOT/templates_static"
+OUT_DIR="$REPO_ROOT/web/react/public/templates"
 
 cd "$REPO_ROOT"
 
@@ -53,13 +54,13 @@ for slug in "${SLUGS[@]}"; do
 
   mkdir -p "$OUT_DIR/$slug"
   cp "$src/dist/index.html" "$OUT_DIR/$slug/index.html"
-  echo "  + templates_static/$slug/index.html ($(du -h "$OUT_DIR/$slug/index.html" | cut -f1))"
+  echo "  + public/templates/$slug/index.html ($(du -h "$OUT_DIR/$slug/index.html" | cut -f1))"
 done
 
-if [[ "${SKIP_COVERS:-0}" != "1" ]]; then
-  echo "── 生成封面图"
-  python3 "$REPO_ROOT/scripts/gen_template_covers.py"
-fi
-
-echo "完成。源站刷新（无需重建镜像，目录为宿主挂载）："
+echo "完成。封面截图（需 Chromium，只在 CI 跑）："
+echo "  python3 scripts/shot_template_covers.py"
+echo
+echo "产物由 Cloudflare Worker 在边缘直出，push 后自动生效："
+echo "  https://shop.ziggner.com/templates/<slug>/index.html"
+echo "源站 nginx 同步挂载同一目录作为兜底："
 echo "  docker exec ziggner-nginx-1 nginx -s reload"

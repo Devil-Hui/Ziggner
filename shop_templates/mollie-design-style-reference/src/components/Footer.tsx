@@ -61,7 +61,7 @@ export default function Footer({ onStart }: { onStart: () => void }) {
                 <path d="M7 23V9l5 9.5L17 9l5 9.5L27 9v14" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <span className="font-display text-[20px] font-medium tracking-[-0.5px]">Mollie</span>
+            <span className="font-display text-[20px] font-medium tracking-[-0.5px]">Ziggner</span>
           </span>
           <p className="mt-3 max-w-[220px] text-[13px] leading-relaxed text-quiet-graphite">
             Cashmere counter, dark ledger. Payments for the good kind of growth.
@@ -89,7 +89,7 @@ export default function Footer({ onStart }: { onStart: () => void }) {
       </div>
 
       <div className="flex flex-col items-center justify-between gap-3 border-t border-oat-line py-6 sm:flex-row">
-        <p className="text-[12px] text-soft-gray">© 2026 Mollie-style concept. Crafted as a design study — not affiliated with Mollie B.V.</p>
+        <p className="text-[12px] text-soft-gray">© 2026 Ziggner. All rights reserved.</p>
         <div className="flex items-center gap-5">
           {["Privacy", "Terms", "Cookies", "EN ⌄"].map((l) => (
             <a key={l} href="#top" className="text-[12px] font-medium text-quiet-graphite hover:text-ink">{l}</a>

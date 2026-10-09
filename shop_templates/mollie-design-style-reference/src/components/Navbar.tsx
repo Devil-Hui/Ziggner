@@ -36,7 +36,7 @@ export default function Navbar({ onStart }: { onStart: () => void }) {
               <path d="M7 23V9l5 9.5L17 9l5 9.5L27 9v14" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </span>
-          <span className="font-display text-[21px] font-medium tracking-[-0.5px]">Mollie</span>
+          <span className="font-display text-[21px] font-medium tracking-[-0.5px]">Ziggner</span>
           <span className="media-label mt-0.5 hidden rounded-full bg-oat-surface px-2 py-1 text-quiet-graphite sm:inline-block">
             EU · UK · US
           </span>
@@ -116,7 +116,7 @@ export default function Navbar({ onStart }: { onStart: () => void }) {
               </div>
             )}
           </div>
-          <a href="#stories" className="nav-link text-ink transition-colors hover:text-quiet-graphite">Why Mollie</a>
+          <a href="#stories" className="nav-link text-ink transition-colors hover:text-quiet-graphite">Why Ziggner</a>
         </div>
 
         {/* Right */}
@@ -143,7 +143,7 @@ export default function Navbar({ onStart }: { onStart: () => void }) {
       {/* Mobile */}
       {mobile && (
         <div className="border-t border-oat-line bg-paper px-5 pb-6 pt-3 lg:hidden">
-          {["Products", "Pricing", "Customers", "Developers", "Why Mollie"].map((l) => (
+          {["Products", "Pricing", "Customers", "Developers", "Why Ziggner"].map((l) => (
             <a
               key={l}
               href={l === "Pricing" ? "#pricing" : l === "Customers" ? "#customers" : "#products"}
