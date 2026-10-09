@@ -45,6 +45,8 @@ services:
       - media_data:/var/www/media:ro
       # 网页搭建类模板预览：宿主目录直接映射，更新模板无需重建镜像
       - ./templates_static:/var/www/templates:ro
+      # 站点配置随仓库走：改路由只需 reload，不必重建镜像
+      - ./web/react/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     tmpfs:
       - /tmp:size=4m,mode=1777
       - /var/cache/nginx:size=16m,uid=101,gid=101
@@ -274,11 +276,12 @@ services:
     image: nginx:alpine
     restart: unless-stopped
     logging: *default-logging
+    # cloudflared ingress 为 http://localhost:5443（明文），故映射到容器内 80。
+    # 此前映射到 443（ssl）导致明文请求打到 HTTPS 端口 → 公网全站 400。
     ports:
-      - "127.0.0.1:5443:443"
+      - "127.0.0.1:5443:80"
     volumes:
       - ./deploy/nginx-tunnel/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./deploy/nginx-certs:/etc/nginx/certs:ro
     depends_on:
       - nginx
     networks: [edge]

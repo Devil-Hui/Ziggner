@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  /* Bevel color tokens */
+  --color-paper-white: #ffffff;
+  --color-charcoal: #1f2025;
+  --color-ink: #222326;
+  --color-cloud-card: #ebf0f8;
+  --color-body-gray: #747679;
+  --color-signal-gold: #ffca00;
+  --color-coral-signal: #ffab94;
+  --color-recovery-green: #31ce01;
+  --color-metric-blue: #415eee;
+  --color-sleep-lilac: #b9a6ff;
+  --color-hero-sky: #d2e5ff;
+  --color-hero-warm: #fff9ee;
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+
+  --text-caption: 12px;
+  --text-nav: 16px;
+  --text-brand-nav: 18px;
+  --text-body: 24px;
+  --text-section-label: 24px;
+  --text-card-heading: 40px;
+  --text-display: 64px;
+  --text-hero-display: 80px;
+
+  /* Shadows */
+  --shadow-lift: rgba(0, 0, 0, 0.25) 0px 0px 16px -8px;
+  --shadow-qr: rgba(0, 0, 0, 0.15) 0px 2px 16px 0px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background: #ffffff;
+    color: #222326;
+    font-family: var(--font-sans);
+  }
+  ::selection {
+    background: #d2e5ff;
+  }
+}
+
+/* Hide scrollbar on horizontal community strip while keeping it scrollable */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

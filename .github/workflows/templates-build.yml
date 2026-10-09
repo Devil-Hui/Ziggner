@@ -1,0 +1,64 @@
+# =============================================================================
+# 网页搭建模板预览站 —— 构建
+# =============================================================================
+# 触发：shop_templates/** 或模板构建脚本/封面脚本变更时；也可手动 dispatch。
+#
+# 为什么在 CI 构建而不是源站：
+#   源站为 2GB 内存、常态已用 ~72%（MySQL + gunicorn + celery 常驻），
+#   5 个 React/Vite 模板的构建峰值内存会直接顶到上限。生产环境只做静态托管：
+#   templates_static/ 由 docker-compose.prod.yml 挂载进 nginx 的 /var/www/templates。
+#
+# 产物：
+#   - 始终上传 artifact templates-static（可直接下载 rsync 到源站）
+#   - 配置了 CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID 时，额外部署到
+#     Cloudflare Pages 项目 ziggner-templates（边缘托管，源站零负担）
+# =============================================================================
+name: Templates Build
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - 'shop_templates/**'
+      - 'templates_static/index.html'
+      - 'scripts/build_shop_templates.sh'
+      - 'scripts/gen_template_covers.py'
+      - '.github/workflows/templates-build.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 构建模板并同步到 templates_static
+        run: bash scripts/build_shop_templates.sh
+
+      - name: 校验产物齐备（每个模板必须有 index.html + cover.svg）
+        run: |
+          missing=0
+          for d in templates_static/*/; do
+            [ -f "$d/index.html" ] || { echo "缺失 $d/index.html"; missing=1; }
+            [ -f "$d/cover.svg" ]  || { echo "缺失 $d/cover.svg";  missing=1; }
+          done
+          [ -f templates_static/index.html ] || { echo "缺失 templates_static/index.html（目录总览页）"; missing=1; }
+          exit $missing
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: templates-static
+          path: templates_static/
+          if-no-files-found: error
+
+      # 可选：部署到 Cloudflare Pages。未配置 secrets 时整步跳过，不影响构建门禁。
+      - name: 部署到 Cloudflare Pages（可选）
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@latest pages deploy templates_static --project-name=ziggner-templates

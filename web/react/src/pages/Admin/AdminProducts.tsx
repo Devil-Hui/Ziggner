@@ -22,6 +22,7 @@ import type { SmartColumn, BulkAction } from '../../components/admin/design-syst
 import { productTone, type ProductStatus } from '../../theme/business'
 import { useUrlState } from '../../hooks/useUrlState'
 import { formatDateTime } from '../../utils/helpers'
+import { resolveMediaUrl } from '../../api/chat'
 
 /* ── 布局 ── */
 const PageHeader = styled.div`
@@ -215,6 +216,27 @@ const ActionBtn = styled.button<{ $danger?: boolean }>`
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 `
 
+/* 与 ActionBtn 同外观的链接：预览页是独立站点，需新窗口打开 */
+const ActionLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid ${Color.border.medium};
+  background: ${Color.bg.card};
+  color: ${Color.text.secondary};
+  border-radius: ${Radius.sm}px;
+  font-size: 0.75rem;
+  text-decoration: none;
+  transition: ${Transition.fast};
+
+  &:hover {
+    background: ${Color.primary};
+    color: #fff;
+    border-color: ${Color.primary};
+  }
+`
+
 const Checkbox = styled.input.attrs({ type: 'checkbox' })`
   margin: 0;
   width: 16px;
@@ -283,11 +305,16 @@ interface SPUItem {
   main_image?: string
   /** 列表/卡片用 400px 缩略图（快），详情用 main_image(2560px) 高清 */
   main_image_thumb?: string
+  /** 虚拟商品在线预览页 URL（网页搭建类模板），为空则不显示预览入口 */
+  preview_url?: string
   created_at: string
 }
 
 const PAGE_SIZE = 20
 const fmtPrice = (v: string) => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 })
+/** 预览地址：库里可能存相对路径，统一补全成绝对 URL；无预览页时返回空串（不渲染入口） */
+const previewHrefOf = (item: SPUItem) =>
+  item.preview_url ? resolveMediaUrl(item.preview_url) || item.preview_url : ''
 
 export default function AdminProducts() {
   const { t } = useTranslation()
@@ -443,6 +470,11 @@ export default function AdminProducts() {
       )}
       {item.status === 'off_sale' && canPublish && (
         <ActionBtn disabled={shelfingIds.has(item.id)} onClick={() => doShelfAction(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+      )}
+      {previewHrefOf(item) && (
+        <ActionLink href={previewHrefOf(item)} target="_blank" rel="noopener noreferrer">
+          {t('admin.products.preview')}
+        </ActionLink>
       )}
       {canDelete && (
         <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>
@@ -738,6 +770,11 @@ const ProductCard = memo(function ProductCard({
           )}
           {item.status === 'off_sale' && canPublish && (
             <ActionBtn disabled={isShelfing} onClick={() => onShelf(item.id, 'put_on_sale')}>{t('admin.products.onSale')}</ActionBtn>
+          )}
+          {previewHrefOf(item) && (
+            <ActionLink href={previewHrefOf(item)} target="_blank" rel="noopener noreferrer">
+              {t('admin.products.preview')}
+            </ActionLink>
           )}
           {canDelete && (
             <ActionBtn $danger onClick={() => onDelete(item.id)}>{t('common.delete')}</ActionBtn>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ziggner 网页搭建模板 · 在线预览</title>
+<meta name="description" content="Ziggner 网页搭建类模板在线预览目录，点击任一模板即可全屏查看完整动效演示。">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #0e1116; color: #e8ecf1; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 48px 24px 72px; }
+  header { margin-bottom: 40px; }
+  h1 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -0.02em; }
+  .sub { margin-top: 12px; color: #97a3b4; font-size: 16px; max-width: 720px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; }
+  .card {
+    background: #161b22; border: 1px solid #232a34; border-radius: 16px; overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: #3d4a63; box-shadow: 0 16px 40px rgba(0,0,0,.45); }
+  .thumb { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; background: #1b212b; }
+  .body { padding: 20px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+  .tag {
+    align-self: flex-start; font-size: 12px; font-weight: 700; letter-spacing: .04em;
+    padding: 4px 10px; border-radius: 999px; background: #232a34; color: #b8c4d4;
+  }
+  .name { font-size: 18px; font-weight: 700; }
+  .desc { font-size: 14px; color: #97a3b4; flex: 1; }
+  .actions { display: flex; gap: 10px; margin-top: 6px; }
+  .btn {
+    flex: 1; text-align: center; text-decoration: none; font-size: 14px; font-weight: 600;
+    padding: 10px 14px; border-radius: 10px; transition: background .18s ease, border-color .18s ease;
+  }
+  .btn-primary { background: #ffca00; color: #1b1d22; }
+  .btn-primary:hover { background: #ffd633; }
+  .btn-ghost { border: 1px solid #2c3542; color: #cbd5e1; }
+  .btn-ghost:hover { border-color: #4a586b; }
+  footer { margin-top: 48px; font-size: 13px; color: #6b7686; }
+  footer a { color: #97a3b4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>网页搭建模板 · 在线预览</h1>
+    <p class="sub">以下 5 套 React + Vite 单文件模板均已在 Ziggner 商城上架。点击「查看演示」进入完整页面，动效与交互与成品一致。</p>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <footer>
+    模板静态托管：<a href="https://api.ziggner.com/templates/">api.ziggner.com/templates/</a>
+  </footer>
+</div>
+
+<script>
+// 模板清单：新增模板时只需往这里追加一条，无需改动页面结构。
+// slug 必须与 templates_static/<slug>/ 目录名一致（seed_web_templates 亦按此约定写入 preview_url）。
+var TEMPLATES = [
+  {
+    slug: 'bevel-design-style-reference',
+    name: 'Bevel 设计风格参考模板',
+    family: 'Bevel',
+    desc: 'Bevel 设计风格电商模板，React 19 + Vite + Tailwind 构建，单文件打包即开即用。'
+  },
+  {
+    slug: 'bevel-design-style-reference-qwen3.8',
+    name: 'Bevel 设计风格参考模板 (Qwen 3.8)',
+    family: 'Bevel',
+    desc: 'Qwen 3.8 版本，含 chart.js 图表与 lucide 图标组件，适合数据看板类页面。'
+  },
+  {
+    slug: 'light-shop-design-system-clude5.5',
+    name: 'Light Shop 设计系统 (Cluade 5.5)',
+    family: 'Light Shop',
+    desc: '极简设计系统，内置 Drawer / Hero / ProductModal / SearchBar 等组件。'
+  },
+  {
+    slug: 'light-shop-design-system-gpt-6-luna-max',
+    name: 'Light Shop 设计系统 (GPT-6-Luna-Max)',
+    family: 'Light Shop',
+    desc: '超大单文件 App 组件 + 全局样式，适合需要高度定制页面的场景。'
+  },
+  {
+    slug: 'mollie-design-style-reference',
+    name: 'Mollie 设计风格参考模板',
+    family: 'Mollie',
+    desc: '内置 espresso 演示组件（CheckoutModal / EspressoDemo / Navbar），咖啡品牌风。'
+  }
+];
+
+(function render() {
+  var grid = document.getElementById('grid');
+  var html = '';
+  for (var i = 0; i < TEMPLATES.length; i++) {
+    var t = TEMPLATES[i];
+    var demo = t.slug + '/index.html';
+    html += '<article class="card">'
+      + '<img class="thumb" src="' + t.slug + '/cover.svg" alt="' + t.name + '" loading="lazy" decoding="async">'
+      + '<div class="body">'
+      + '<span class="tag">' + t.family + '</span>'
+      + '<h2 class="name">' + t.name + '</h2>'
+      + '<p class="desc">' + t.desc + '</p>'
+      + '<div class="actions">'
+      + '<a class="btn btn-primary" href="' + demo + '">查看演示</a>'
+      + '<a class="btn btn-ghost" href="' + demo + '" target="_blank" rel="noopener">新窗口</a>'
+      + '</div>'
+      + '</div>'
+      + '</article>';
+  }
+  grid.innerHTML = html;
+})();
+</script>
+</body>
+</html>

@@ -100,8 +100,12 @@ deploy/monitoring/smtp_password
 
 # 原始归档与解压临时目录（体积大，不入库）
 *.7z
-shop_templates/
 templates_extracted/
-# 模板预览静态产物（构建生成，由后端 nginx 托管，不入库）
-templates_static/
+# 网页搭建模板：源码入库（可从零重建），构建产物 ignore
+shop_templates/*/node_modules/
+shop_templates/*/dist/
+# 模板预览静态站点：产物（单文件 index.html + cover.svg，合计 ~1.6MB）入库，
+# 这样新机器 clone 后直接 docker compose up 即可复现 /templates/ 预览站，
+# 无需在本机跑 vite 构建（2GB 内存源站跑构建会顶到内存上限）。
+# 重新构建见 scripts/build_shop_templates.sh（CI 亦可调用）。
 web/react/public/templates/

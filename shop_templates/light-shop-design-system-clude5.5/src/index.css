@@ -1,0 +1,177 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------
+   Shop — design tokens
+   Floating shopping constellation on white marble
+------------------------------------------------------------------- */
+@theme {
+  /* Typography — GT Standard → Inter substitute (optical sizing on) */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-system: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  /* Colors */
+  --color-canvas: #f2f4f5;
+  --color-ink: #000000;
+  --color-hairline: #ebebeb;
+  --color-muted: #787574;
+  --color-stone: #cccccc;
+  --color-fog: #acb0aa;
+  --color-shop: #5433eb;
+  --color-shop-wash: #c0b5f3;
+  --color-umber: #332f2d;
+  --color-ash: #665a54;
+
+  /* Type scale — size pulls tracking tight, small text breathes */
+  --text-micro: 9px;
+  --text-micro--line-height: 1.2;
+  --text-micro--letter-spacing: -0.02em;
+  --text-caption: 11px;
+  --text-caption--line-height: 1.33;
+  --text-caption--letter-spacing: -0.017em;
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 1.33;
+  --text-body-sm--letter-spacing: -0.017em;
+  --text-body: 14px;
+  --text-body--line-height: 1.38;
+  --text-body--letter-spacing: -0.014em;
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 1.33;
+  --text-body-lg--letter-spacing: -0.031em;
+  --text-title: 20px;
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.05em;
+
+  /* Radii — pillow-soft */
+  --radius-card: 28px;
+  --radius-img: 20px;
+  --radius-chip: 12px;
+
+  /* Elevation */
+  --shadow-pill: 0 2px 8px 0 rgba(0, 0, 0, 0.06);
+  --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-float: 0 4px 24px 0 rgba(0, 0, 0, 0.12);
+  --shadow-violet: 0 4px 24px 0 rgba(69, 36, 219, 0.34);
+
+  /* Motion */
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-pop-in: pop-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-up: fade-up 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-fade-in: fade-in 0.25s ease-out both;
+  --animate-modal-in: modal-in 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  --animate-drawer-in: drawer-in 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+
+  @keyframes float {
+    0%,
+    100% {
+      transform: rotate(var(--r, 0deg)) translate3d(0, 0, 0);
+    }
+    50% {
+      transform: rotate(var(--r, 0deg)) translate3d(0, -10px, 0);
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 22px, 0) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 10px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes modal-in {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 28px, 0) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes drawer-in {
+    from {
+      opacity: 0;
+      transform: translate3d(28px, 0, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+@layer base {
+  html {
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.33;
+    letter-spacing: -0.031em;
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-shop-wash);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 2px;
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

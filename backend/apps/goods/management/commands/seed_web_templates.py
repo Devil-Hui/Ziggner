@@ -10,7 +10,16 @@
 用法:
   docker exec ziggner-web-1 python manage.py seed_web_templates
   docker exec ziggner-web-1 python manage.py seed_web_templates --dry-run
+
+约定
+----
+模板静态产物由 nginx 直接托管：templates_static/<slug>/index.html 暴露为
+https://api.ziggner.com/templates/<slug>/index.html（见 web/react/nginx/default.conf）。
+封面图同目录 cover.svg，写入 SPU.main_image（CharField，前端 resolveMediaUrl 会把
+"/templates/..." 这类相对路径还原成 API 绝对 URL）。
 """
+
+import os
 
 from django.core.management.base import BaseCommand
 from django.contrib.auth import get_user_model
@@ -27,8 +36,16 @@ User = get_user_model()
 PARENT_CATEGORY = '网页搭建'
 CHILD_CATEGORIES = ['网页搭建-Bevel 设计', '网页搭建-Light Shop', '网页搭建-Mollie']
 
+# 模板静态站点根路径（nginx /templates/ location）
+TEMPLATE_ROOT = '/templates'
+
+# 封面图以相对路径存库：前端 resolveMediaUrl() 会补全成 API 绝对 URL，换域名无需改数据。
+# 而 preview_url 直接作为 <iframe src> 使用，必须存绝对 URL，故单独取底座域名。
+PREVIEW_BASE = os.getenv('TEMPLATE_PREVIEW_BASE', 'https://api.ziggner.com').rstrip('/')
+
 # ── 商品定义 ──
-# (slug, 名称, 名称en, 家族二级分类名, 品牌名, 描述, 描述en, preview_url)
+# (slug, 名称, 名称en, 家族二级分类名, 品牌名, 描述, 描述en)
+# preview_url / main_image 由 slug 推导，避免域名硬编码进数据。
 PRODUCTS = [
     dict(
         slug='bevel-design-style-reference',
@@ -44,7 +61,6 @@ PRODUCTS = [
             'Bevel design style e-commerce template built with React 19 + Vite + Tailwind. '
             'Self-contained single-file output, ready to embed anywhere.'
         ),
-        preview_url='https://api.ziggner.com/templates/bevel-design-style-reference/index.html',
     ),
     dict(
         slug='bevel-design-style-reference-qwen3.8',
@@ -56,7 +72,6 @@ PRODUCTS = [
             'Qwen 3.8 版本 Bevel 设计风格模板，React 19 + Vite + Tailwind 构建，'
             '包含 chart.js 图表与 lucide 图标组件，单文件打包即开即用。'
         ),
-        preview_url='https://api.ziggner.com/templates/bevel-design-style-reference-qwen3.8/index.html',
     ),
     dict(
         slug='light-shop-design-system-clude5.5',
@@ -69,7 +84,6 @@ PRODUCTS = [
             '内置 Drawer / Hero / ProductModal / SearchBar 等组件，'
             '单文件打包，适合轻量电商页面快速搭建。'
         ),
-        preview_url='https://api.ziggner.com/templates/light-shop-design-system-clude5.5/index.html',
     ),
     dict(
         slug='light-shop-design-system-gpt-6-luna-max',
@@ -81,7 +95,6 @@ PRODUCTS = [
             'GPT-6-Luna-Max 版本 Light Shop 设计系统，'
             '超大单文件 App 组件 + 全局样式，适合需要高度定制页面的场景。'
         ),
-        preview_url='https://api.ziggner.com/templates/light-shop-design-system-gpt-6-luna-max/index.html',
     ),
     dict(
         slug='mollie-design-style-reference',
@@ -93,7 +106,6 @@ PRODUCTS = [
             'Mollie 设计风格电商模板，内置 espresso 演示组件（CheckoutModal / EspressoDemo / Navbar），'
             'React + Vite 构建，单文件打包即开即用。'
         ),
-        preview_url='https://api.ziggner.com/templates/mollie-design-style-reference/index.html',
     ),
 ]
 
@@ -154,14 +166,16 @@ class Command(BaseCommand):
             if not child or not brand:
                 self.stdout.write(self.style.WARNING(f"  SKIP {p['name']}: 分类/品牌缺失"))
                 continue
-            preview_cat = p.get('preview_cat')
+            preview_url = f"{PREVIEW_BASE}{TEMPLATE_ROOT}/{p['slug']}/index.html"
+            cover_url = f"{TEMPLATE_ROOT}/{p['slug']}/cover.svg"
             spu, created = SPU.objects.get_or_create(
                 name=p['name'], brand=brand, category=child,
                 defaults=dict(
                     description=p['description'],
                     name_en=p['name_en'],
                     description_en=p.get('description_en', ''),
-                    preview_url=p['preview_url'],
+                    preview_url=preview_url,
+                    main_image=cover_url,
                     status=SPUStatus.ON_SALE,
                     requires_shipping=False,
                     product_kind='virtual',
@@ -170,8 +184,21 @@ class Command(BaseCommand):
                 ),
             )
             if dry_run:
-                self.stdout.write(f"  [dry] SPU: {spu.name}  preview={p['preview_url']}")
+                self.stdout.write(f"  [dry] SPU: {spu.name}  preview={preview_url}  cover={cover_url}")
                 continue
+
+            # 幂等补齐：历史数据可能缺 preview_url / 封面（早期 seed 未写 main_image，
+            # 商城列表会渲染成空白卡片）。这里把已存在的 SPU 一并纠正到当前约定。
+            patch = {}
+            if spu.preview_url != preview_url:
+                patch['preview_url'] = preview_url
+            if not spu.main_image:
+                patch['main_image'] = cover_url
+            if patch:
+                for field, value in patch.items():
+                    setattr(spu, field, value)
+                spu.save(update_fields=list(patch.keys()))
+
             # 幂等创建默认 SKU
             SKU.objects.get_or_create(
                 spu=spu, spec_values={},
@@ -181,6 +208,10 @@ class Command(BaseCommand):
                     'shelf_status': ShelfStatus.ON,
                 },
             )
-            self.stdout.write(f"  {'+' if created else '='} SPU: {spu.name}  id={spu.id}  preview={p['preview_url']}")
+            self.stdout.write(
+                f"  {'+' if created else '='} SPU: {spu.name}  id={spu.id}  "
+                f"preview={preview_url}"
+                + (f"  patched={','.join(patch.keys())}" if patch else '')
+            )
 
         self.stdout.write(self.style.SUCCESS('seed 完成'))

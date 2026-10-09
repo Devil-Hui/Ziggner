@@ -434,7 +434,47 @@ const PreviewBlock = styled.section`
   box-shadow: ${Shadow.card};
 `
 
+const PreviewHint = styled.p`
+  font-size: 0.82rem;
+  color: ${Color.text.muted};
+  margin: 0 0 14px;
+`
+
+const PreviewToolbar = styled.div`
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+
+  /* 与 PrimaryBtn/SecondaryBtn 的 width:100% 对齐到工具条内的自适应宽度 */
+  > button {
+    width: auto;
+    min-width: 132px;
+    padding-inline: 20px;
+  }
+`
+
+const PreviewLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding-inline: 20px;
+  border: 1px solid ${Color.border.medium};
+  border-radius: 999px;
+  background: ${Color.bg.card};
+  color: ${Color.text.primary};
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color ${Transition.fast};
+
+  &:hover {
+    border-color: ${Color.text.primary};
+  }
+`
+
 const PreviewFrameInner = styled.div`
+  margin-top: 16px;
   width: 100%;
   border: 1px solid ${Color.border.medium};
   border-radius: ${Radius.md}px;
@@ -667,6 +707,10 @@ export default function ProductDetail() {
   const [isFavorited, setIsFavorited] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
 
+  // 在线预览：默认收起，点击才挂载 iframe —— 模板是 240KB~500KB 的单文件 React 应用，
+  // 页面初始化就加载会把首屏拉到数秒；按需加载既护住首屏（8 秒原则）也省流量。
+  const [previewOpen, setPreviewOpen] = useState(false)
+
   // ── Derive dynamic spec groups from SKU specs ──
   const specGroups = useMemo(() => {
     if (!product?.skus) return []
@@ -689,6 +733,11 @@ export default function ProductDetail() {
   const activeImageItem = gallery[activeImage] || gallery[0]
   const activeImageUrl = activeImageItem?.full || ''
 
+  // 预览地址：库里可能存相对路径（/templates/<slug>/index.html）或绝对 URL，统一补全成可嵌入的绝对地址
+  const previewHref = product?.preview_url
+    ? resolveMediaUrl(product.preview_url) || product.preview_url
+    : ''
+
   // Fetch product
   useEffect(() => {
     const pid = Number(id)
@@ -699,6 +748,7 @@ export default function ProductDetail() {
       .then(data => {
         setProduct(data)
         setActiveImage(0)
+        setPreviewOpen(false)
         // Auto-select first spec value from derived spec groups
         if (data.skus && data.skus.length > 0) {
           const defaults: Record<string, string> = {}
@@ -1053,19 +1103,30 @@ export default function ProductDetail() {
             </ParamCol>
           </PdpGrid>
 
-          {/* 在线预览（网页搭建类虚拟商品） */}
-          {product.preview_url && (
+          {/* 在线预览（网页搭建类虚拟商品）：按钮触发，点击后才加载模板 */}
+          {previewHref && (
             <PreviewBlock>
               <SectionTitle>{t('store.product.onlinePreview')}</SectionTitle>
-              <PreviewFrameInner>
-                <iframe
-                  key={product.preview_url}
-                  src={product.preview_url}
-                  title={`${product.name} - ${t('store.product.onlinePreview')}`}
-                  loading="eager"
-                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
-                />
-              </PreviewFrameInner>
+              <PreviewHint>{t('store.product.previewHint')}</PreviewHint>
+              <PreviewToolbar>
+                <SecondaryBtn type="button" onClick={() => setPreviewOpen(o => !o)}>
+                  {previewOpen ? t('store.product.previewHide') : t('store.product.previewOpen')}
+                </SecondaryBtn>
+                <PreviewLink href={previewHref} target="_blank" rel="noopener noreferrer">
+                  {t('store.product.previewNewTab')}
+                </PreviewLink>
+              </PreviewToolbar>
+              {previewOpen && (
+                <PreviewFrameInner>
+                  <iframe
+                    key={previewHref}
+                    src={previewHref}
+                    title={`${product.name} - ${t('store.product.onlinePreview')}`}
+                    loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-presentation"
+                  />
+                </PreviewFrameInner>
+              )}
             </PreviewBlock>
           )}
 
