@@ -827,6 +827,9 @@ class PaymentService:
             return (payload.get('resource') or {}).get('id', '')
         if gateway == 'alipay':
             return payload.get('trade_no', '')
+        if gateway == 'creem':
+            # Creem 的 payload 形如 {"eventType":..., "object":{"id":"ch_..."}}
+            return (payload.get('object') or {}).get('id', '')
         return ''
 
     @staticmethod
@@ -837,6 +840,9 @@ class PaymentService:
             return payload.get('notify_id', '')
         if gateway == 'mock':
             return payload.get('event_id', '')
+        if gateway == 'creem':
+            # Creem 未提供独立事件 id，用「事件类型 + checkout id」组合保证幂等
+            return f"{payload.get('eventType', '')}:{(payload.get('object') or {}).get('id', '')}"
         return ''
 
     # 各网关事件类型 → 内部事件的严格白名单映射。
@@ -875,6 +881,14 @@ class PaymentService:
             'timeout': 'payment_timeout',
             'refund': 'refund_completed',
         },
+        'creem': {
+            # Creem 只订阅三个必要事件即可；其余订阅会产生无意义通知。
+            # dispute.created 映射成 dispute_created（而不是 payment_failed）——
+            # 拒付不等于支付失败，不能反转已完成的支付状态。
+            'checkout.completed': 'payment_completed',
+            'refund.created': 'refund_completed',
+            'dispute.created': 'dispute_created',
+        },
     }
 
     @staticmethod
@@ -886,6 +900,7 @@ class PaymentService:
             'stripe': payload.get('type', ''),
             'paypal': payload.get('event_type', ''),
             'alipay': payload.get('trade_status', ''),
+            'creem': payload.get('eventType', ''),
         }.get(gateway, '')
         mapped = PaymentService._WEBHOOK_EVENT_MAP.get(gateway, {}).get(event)
         if mapped:

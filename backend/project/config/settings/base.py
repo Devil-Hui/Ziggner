@@ -914,6 +914,16 @@ PAYPAL_BASE_URL = os.getenv('PAYPAL_BASE_URL', 'https://api-m.paypal.com')
 STRIPE_SECRET_KEY = os.getenv('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.getenv('STRIPE_WEBHOOK_SECRET', '')
 
+# Creem（Merchant of Record：全球 190+ 国家的收款/税务/拒付由 Creem 兜��，
+# 中国大陆个人可开通。费率 3.9% + $0.40/笔，无月费）
+CREEM_API_KEY = os.getenv('CREEM_API_KEY', '')
+CREEM_API_BASE = os.getenv('CREEM_API_BASE', 'https://api.creem.io')
+CREEM_WEBHOOK_SECRET = os.getenv('CREEM_WEBHOOK_SECRET', '')
+# SPU id -> Creem product_id 映射（JSON字符串）。Creem 的 checkout 必须绑定一个
+# 已存在的 product，而本项目的下单入口只传订单号，所以在网关内按订单首个商品反查。
+# 例：{"1": "prod_xxxx", "2": "prod_yyyy"}
+CREEM_PRODUCT_MAP = json.loads(os.getenv('CREEM_PRODUCT_MAP', '{}') or '{}')
+
 # 支付默认币种
 DEFAULT_CURRENCY = os.getenv('DEFAULT_CURRENCY', 'USD')
 

@@ -115,6 +115,9 @@ class PaymentWebhookView(PublicApiView):
                 except Exception:
                     body_data = {}
             signature = body_data.get('sign', '')
+        elif gateway == 'creem':
+            # Creem: hex(HMAC-SHA256(secret, raw_body))
+            signature = request.headers.get('creem-signature', '')
         else:
             signature = (
                 request.headers.get('Stripe-Signature', '')

@@ -15,6 +15,7 @@ def generate_payment_no():
 class PaymentMethod(models.TextChoices):
     PAYPAL = 'paypal', 'PayPal'
     STRIPE = 'stripe', 'Stripe'
+    CREEM = 'creem', 'Creem'
 
 
 class PaymentStatus(models.TextChoices):

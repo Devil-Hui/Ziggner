@@ -5,4 +5,5 @@ from payment.gateways.base import BasePaymentGateway, PaymentGatewayFactory
 from payment.gateways import stripe     # noqa: F401, F811
 from payment.gateways import paypal     # noqa: F401, F811
 from payment.gateways import alipay     # noqa: F401, F811
+from payment.gateways import creem      # noqa: F401, F811
 from payment.gateways import mock       # noqa: F401, F811
