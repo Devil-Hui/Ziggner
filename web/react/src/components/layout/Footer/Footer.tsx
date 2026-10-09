@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { Color, FontSize, Radius, Shadow } from '../../../theme/tokens'
 import { useTranslation } from '../../../i18n'
-import { useCurrency, CURRENCIES } from '../../../store/CurrencyContext'
+import { useCurrency, CURRENCIES, SYMBOLS } from '../../../store/CurrencyContext'
 
 /* 深色底上的文字层级（深色区不能用中性灰令牌，统一在此定义） */
 const ON_DARK = Color.text.inverse
@@ -102,7 +102,9 @@ const MenuItem = styled.button<{ $active?: boolean }>`
   &:hover { background: ${Color.bg.page}; }
 `
 
-const SYMBOL: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', CNY: '¥', JPY: '¥' }
+// 符号统一从 CurrencyContext 取：此前这里多写了 CNY / GBP 两个上下文根本不支持的币种，
+// 一旦被选中，价格会因 SYMBOLS 缺失渲染成 undefined。
+const SYMBOL: Record<string, string> = SYMBOLS
 
 export default function Footer() {
   const { t, lang, setLang } = useTranslation()

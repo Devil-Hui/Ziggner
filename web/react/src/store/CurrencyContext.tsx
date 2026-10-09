@@ -1,23 +1,24 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
 // 货币上下文：驱动顶部 "$ USD" 切换器与价格格式化。
-// 注意：汇率为静态占位（以 USD 为基准），并非实时汇率；接真实汇率需后端 /settings 端点。
-export type CurrencyCode = 'USD' | 'EUR' | 'JPY'
+//
+// 全站统一以 USD 计价、以 $ 显示：商品价格存的就是美元值（如 49.90），
+// 之前列表里还有 EUR / JPY，切换后整站价格会带上 € / ¥，与结算币种不一致，
+// 而且汇率只是静态占位（并非实时汇率），展示出来反而是误导。故币种收敛为 USD，
+// 汇率换算逻辑保留 —— 将来接了真实汇率只需往下面两张表加币种即可。
+export type CurrencyCode = 'USD'
 
-const SYMBOLS: Record<CurrencyCode, string> = {
+/** 币种符号：全站货币符号的唯一来源（页脚 / 顶部栏都从这里取，不再各自定义） */
+export const SYMBOLS: Record<CurrencyCode, string> = {
   USD: '$',
-  EUR: '€',
-  JPY: '¥',
 }
 
-// 相对 USD 的占位汇率（1 USD = rate * 目标币种）
+// 相对 USD 的汇率（1 USD = rate * 目标币种）
 const RATES: Record<CurrencyCode, number> = {
   USD: 1,
-  EUR: 0.92,
-  JPY: 150,
 }
 
-export const CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'JPY']
+export const CURRENCIES: CurrencyCode[] = ['USD']
 
 interface CurrencyContextValue {
   currency: CurrencyCode
@@ -33,7 +34,9 @@ const STORAGE_KEY = 'ziggner_currency'
 export function CurrencyProvider({ children }: { children: ReactNode }) {
   const [currency, setCurrencyState] = useState<CurrencyCode>(() => {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null
-    return (saved as CurrencyCode) || 'USD'
+    // 必须校验白名单：老用户 localStorage 里可能存着已下线的 EUR / JPY，
+    // 直接采信会让 SYMBOLS[saved] 取不到值，价格渲染成 "undefined49.90"。
+    return CURRENCIES.includes(saved as CurrencyCode) ? (saved as CurrencyCode) : 'USD'
   })
 
   useEffect(() => {
@@ -49,7 +52,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
       symbol,
       format: (amountUsd: number) => {
         const converted = amountUsd * rate
-        const digits = currency === 'JPY' ? 0 : 2
+        const digits = 2
         return `${symbol}${converted.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits })}`
       },
     }

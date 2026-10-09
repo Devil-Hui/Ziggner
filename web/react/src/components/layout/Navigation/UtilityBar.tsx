@@ -4,7 +4,7 @@ import styled from 'styled-components'
 import { Color, FontSize, Shadow } from '../../../theme/tokens'
 import { useTranslation } from '../../../i18n'
 import { useUser } from '../../../store/UserContext'
-import { useCurrency, CURRENCIES } from '../../../store/CurrencyContext'
+import { useCurrency, CURRENCIES, SYMBOLS } from '../../../store/CurrencyContext'
 
 const Bar = styled.div`
   background: ${Color.bg.page};
@@ -95,7 +95,8 @@ const MenuItem = styled.button<{ $active?: boolean }>`
   ${({ $active }) => $active && `background: ${Color.primaryLight};`}
 `
 
-const SYMBOL: Record<string, string> = { USD: '$', EUR: '€', JPY: '¥' }
+// 与页脚共用同一份符号表，避免各处币种/符号定义不一致
+const SYMBOL: Record<string, string> = SYMBOLS
 
 export default function UtilityBar() {
   const { t } = useTranslation()

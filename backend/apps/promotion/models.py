@@ -424,4 +424,4 @@ class ActivitySKURelation(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.activity.name} → SKU#{self.sku_id} ¥{self.activity_price}'
+        return f'{self.activity.name} → SKU#{self.sku_id} ${self.activity_price}'

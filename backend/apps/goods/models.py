@@ -767,7 +767,7 @@ class PriceHistory(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.sku} ¥{self.old_price} → ¥{self.new_price}'
+        return f'{self.sku} ${self.old_price} → ${self.new_price}'
 
 
 # ==================== 操作日志 ====================
