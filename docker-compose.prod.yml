@@ -43,6 +43,8 @@ services:
     volumes:
       - static_data:/var/www/static:ro
       - media_data:/var/www/media:ro
+      # 网页搭建类模板预览：宿主目录直接映射，更新模板无需重建镜像
+      - ./templates_static:/var/www/templates:ro
     tmpfs:
       - /tmp:size=4m,mode=1777
       - /var/cache/nginx:size=16m,uid=101,gid=101
@@ -279,7 +281,7 @@ services:
       - ./deploy/nginx-certs:/etc/nginx/certs:ro
     depends_on:
       - nginx
-    networks: [internal]
+    networks: [edge]
     mem_limit: 64m
     mem_reservation: 32m
     memswap_limit: 64m

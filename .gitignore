@@ -97,3 +97,11 @@ __pycache__/
 # 监控凭据（SMTP/钉钉 webhook，绝不入库）
 deploy/monitoring/.env.monitoring
 deploy/monitoring/smtp_password
+
+# 原始归档与解压临时目录（体积大，不入库）
+*.7z
+shop_templates/
+templates_extracted/
+# 模板预览静态产物（构建生成，由后端 nginx 托管，不入库）
+templates_static/
+web/react/public/templates/
