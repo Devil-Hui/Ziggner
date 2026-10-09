@@ -1871,6 +1871,7 @@ const zhCN = {
       category: '分类：',
       share: '分享：',
       description: '商品描述',
+      onlinePreview: '在线预览',
       specifications: '规格参数',
       attributes: '产品属性',
       noSpecs: '暂无规格参数。',

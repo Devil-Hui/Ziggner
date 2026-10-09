@@ -71,6 +71,8 @@ export interface PublicSPUDetail {
   tags?: { id: number; name: string }[];
   /** 活动标签：活动价(primary) / 可领券(secondary) */
   promo_tags?: PromoTag[];
+  /** 虚拟商品在线预览页 URL（网页搭建类） */
+  preview_url?: string;
   submitted_by_name?: string;
   submitted_at?: string;
 }

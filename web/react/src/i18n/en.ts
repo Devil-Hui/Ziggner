@@ -1866,6 +1866,7 @@ const en = {
       category: 'Category:',
       share: 'Share:',
       description: 'Description',
+      onlinePreview: 'Live Preview',
       specifications: 'Specifications',
       attributes: 'Attributes',
       noSpecs: 'No specifications available.',
