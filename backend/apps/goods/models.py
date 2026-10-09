@@ -261,6 +261,9 @@ class SPU(models.Model):
     )
     description = models.TextField(blank=True, default='', verbose_name='商品描述')
     main_image = models.CharField(max_length=500, blank=True, default='', verbose_name='主图 URL')
+    # ── 虚拟商品在线预览页 ──
+    # 网页搭建类虚拟商品可挂载在线预览地址（内置单文件 HTML 模板，如 /templates/bevel/index.html，或任意外部 URL）
+    preview_url = models.CharField(max_length=500, blank=True, default='', verbose_name='在线预览 URL')
 
     # ── 规格定义（动态多规格） ──
     # 格式: [{"name": "颜色", "values": ["红色", "蓝色"]}, {"name": "尺寸", "values": ["S", "M", "L"]}]
@@ -320,6 +323,12 @@ class SPU(models.Model):
         verbose_name='商品类型',
         help_text='physical=实体商品（需图片/物流）/ virtual=虚拟商品（隐藏图片区）',
     )
+
+    # ── 多语言字段（翻译） ──
+    name_en = models.CharField(max_length=200, blank=True, default='', verbose_name='商品名称（英文）')
+    description_en = models.TextField(blank=True, default='', verbose_name='商品描述（英文）')
+    name_ar = models.CharField(max_length=200, blank=True, default='', verbose_name='商品名称（阿拉伯语）')
+    description_ar = models.TextField(blank=True, default='', verbose_name='商品描述（阿拉伯语）')
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')

@@ -62,6 +62,12 @@ if ENABLE_MOCK_PAYMENT and not MOCK_PAYMENT_SECRET:
 TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '')
 TURNSTILE_VERIFY_TIMEOUT = float(os.getenv('TURNSTILE_VERIFY_TIMEOUT', '3.0'))
 
+# 腾讯云机器翻译（TMT）— 商品多语言翻译
+TENCENT_TMT_SECRET_ID = os.getenv('TENCENT_TMT_SECRET_ID', '')
+TENCENT_TMT_SECRET_KEY = os.getenv('TENCENT_TMT_SECRET_KEY', '')
+TENCENT_TMT_REGION = os.getenv('TENCENT_TMT_REGION', 'ap-guangzhou')
+TENCENT_TMT_PROJECT_ID = int(os.getenv('TENCENT_TMT_PROJECT_ID', '0'))
+
 # 平台与前端相关配置（欢迎邮件 / 验证链接使用）
 PLATFORM_NAME = os.getenv('PLATFORM_NAME', 'Ziggner')
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://admin.ziggner.com')

@@ -171,8 +171,12 @@ class SPUAdminCreateView(BaseApiView):
         requires_shipping = request.data.get('requires_shipping', True)
         taxable = request.data.get('taxable', True)
         product_kind = request.data.get('product_kind', 'physical')
+        name_en = request.data.get('name_en', '')
+        description_en = request.data.get('description_en', '')
+        name_ar = request.data.get('name_ar', '')
+        description_ar = request.data.get('description_ar', '')
 
-        # Handle specs: JSON string (from FormData) or list (from JSON body)
+        # Handle specs: 接受 JSON string (from FormData) or list (from JSON body)
         specs_raw = request.data.get('specs', [])
         if isinstance(specs_raw, str):
             import json
@@ -211,6 +215,8 @@ class SPUAdminCreateView(BaseApiView):
             product_type=product_type, tags=tags,
             requires_shipping=requires_shipping, taxable=taxable,
             product_kind=product_kind,
+            name_en=name_en, description_en=description_en,
+            name_ar=name_ar, description_ar=description_ar,
             status=SPUStatus.DRAFT,
             specs=specs_raw,
         )
@@ -268,7 +274,12 @@ class SPUAdminUpdateView(BaseApiView):
         if not can_operate_spu(request.user, spu):
             return Response({'detail': Messages.ADMIN_SPU_NOT_IN_GROUP}, status=status.HTTP_403_FORBIDDEN)
 
-        for field in ['name', 'description', 'main_image', 'specs', 'meta_title', 'meta_description', 'product_type', 'tags', 'requires_shipping', 'taxable', 'product_kind']:
+        _SPU_EDITABLE_FIELDS = (
+            'name', 'description', 'main_image', 'specs', 'meta_title', 'meta_description',
+            'product_type', 'tags', 'requires_shipping', 'taxable', 'product_kind',
+            'name_en', 'description_en', 'name_ar', 'description_ar',
+        )
+        for field in _SPU_EDITABLE_FIELDS:
             if field in request.data:
                 setattr(spu, field, request.data[field])
         if 'brand_id' in request.data:
@@ -282,11 +293,11 @@ class SPUAdminUpdateView(BaseApiView):
             except Category.DoesNotExist:
                 return Response({'detail': Messages.SPU_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
-        spu.save(update_fields=[f for f in request.data if f in ('name', 'description', 'main_image', 'specs', 'brand_id', 'category_id', 'meta_title', 'meta_description', 'product_type', 'tags', 'requires_shipping', 'taxable', 'product_kind')])
+        spu.save(update_fields=[f for f in request.data if f in _SPU_EDITABLE_FIELDS])
         create_audit_log(request.user, 'update', 'spu', spu.id,
-                         changes={k: str(v) for k, v in request.data.items() if k in ('name', 'description', 'main_image', 'brand_id', 'category_id', 'meta_title', 'meta_description', 'product_type', 'tags', 'requires_shipping', 'taxable', 'product_kind')},
+                         changes={k: str(v) for k, v in request.data.items() if k in _SPU_EDITABLE_FIELDS},
                          ip_address=request.META.get('REMOTE_ADDR'))
-        create_operation_log(spu, request.user, 'update', field_name=', '.join(k for k in request.data if k in ('name', 'description', 'main_image', 'specs', 'brand_id', 'category_id', 'meta_title', 'meta_description', 'product_type', 'tags', 'requires_shipping', 'taxable', 'product_kind')))
+        create_operation_log(spu, request.user, 'update', field_name=', '.join(k for k in request.data if k in _SPU_EDITABLE_FIELDS))
         # 失效 SPU 商品类型缓存 + SPU 详情缓存
         GoodsCacheService.invalidate_spu_kind(spu_id)
         GoodsCacheService.invalidate_spu(spu_id)
@@ -395,6 +406,10 @@ class SPUAdminDetailView(BaseApiView):
             'category_id': spu.category_id,
             'category_path': SPUAdminListView._get_category_path(spu.category),
             'description': spu.description,
+            'name_en': spu.name_en,
+            'description_en': spu.description_en,
+            'name_ar': spu.name_ar,
+            'description_ar': spu.description_ar,
             'main_image': spu.main_image,
             'specs': spu.specs,
             'status': spu.status,

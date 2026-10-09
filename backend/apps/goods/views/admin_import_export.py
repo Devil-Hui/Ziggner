@@ -1,21 +1,169 @@
 import csv
 import io
+import logging
 from rest_framework import status
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, OpenApiResponse, OpenApiTypes
 from django.http import StreamingHttpResponse
-from utils.api_base_view import BaseApiView
-from utils.response_codes import Messages
 from ..models import SPU, SPUStatus, SKU, Brand, Category
 from apps.rbac.permissions import HasPerm
 from apps.rbac.services import has_role
 from apps.rbac.constants import Role
 from ..admin_permissions import get_group_managed_category_ids
+from utils.api_base_view import BaseApiView
+from utils.response_codes import Messages
 from utils.upload_security import UploadValidationError, escape_csv_cell, parse_csv_upload
+
+_logger = logging.getLogger('biz')
+
+# Excel 列名 → 内部字段映射（兼容中英文表头）
+COLUMN_MAP = {
+    'sku编码': 'sku_code', 'sku': 'sku_code', 'sku_code': 'sku_code',
+    '产品型号': 'model', '型号': 'model', 'model': 'model',
+    '原价': 'price', 'price': 'price',
+    '现价': 'discount_price', 'discount_price': 'discount_price',
+    '标题': 'name', '商品名': 'name', 'name': 'name',
+    '详情描述': 'description', '描述': 'description', 'description': 'description',
+    '服务': 'services', 'service': 'services',
+}
+
+
+def _parse_upload_rows(uploaded):
+    """解析上传文件为行字典列表，支持 xlsx / csv。"""
+    filename = (uploaded.name or '').lower()
+    if filename.endswith('.xlsx') or filename.endswith('.xlsm'):
+        return _parse_xlsx(uploaded)
+    return parse_csv_upload(uploaded)
+
+
+def _parse_xlsx(uploaded):
+    """用 openpyxl 解析 xlsx，返回 [{列名: 值}]。"""
+    import openpyxl
+    uploaded.seek(0)
+    wb = openpyxl.load_workbook(uploaded, data_only=True)
+    ws = wb.active
+    if ws.max_row < 2:
+        return []
+    headers = []
+    for cell in ws[1]:
+        headers.append(str(cell.value).strip() if cell.value is not None else '')
+    rows = []
+    for r in range(2, ws.max_row + 1):
+        row = {}
+        for c, header in enumerate(headers, start=1):
+            if not header:
+                continue
+            val = ws.cell(r, c).value
+            row[header] = '' if val is None else str(val)
+        if any(v.strip() for v in row.values()):
+            rows.append(row)
+    return rows
+
+
+def _normalize_row(row):
+    """将原始行（任意表头）映射为内部字段。"""
+    out = {}
+    for raw_key, value in row.items():
+        key = COLUMN_MAP.get((raw_key or '').strip().lower(), (raw_key or '').strip())
+        if key not in out or not out[key]:
+            out[key] = (value or '').strip()
+    return out
+
+
+def _split_services(services_text):
+    """把服务列文本按换行拆成标签列表（忽略空行）。"""
+    tags = []
+    for line in (services_text or '').split('\n'):
+        line = line.strip()
+        if line:
+            tags.append(line)
+    return tags
+
+
+def _save_image_to_spu(spu, upload_file, sort_order):
+    """把单张原始图片转成四尺寸 WebP 并挂到 SPU 的 ProductMedia。
+
+    复用 MediaCreateView 的转码逻辑（thumb/list/large/original 四尺寸）。
+    返回 (ok, error)。
+    """
+    from io import BytesIO
+    from django.core.files.base import ContentFile
+    from django.core.files.storage import default_storage
+    from PIL import Image, ImageOps
+    from utils.storage import media_key
+    from ..models import ProductMedia
+    from ..media_service import MediaService
+    from ..services import GoodsCacheService
+
+    WEBP_QUALITY = 90
+    try:
+        upload_file.seek(0)
+        with Image.open(upload_file) as img:
+            img = ImageOps.exif_transpose(img)
+            img.load()
+            if img.mode in ('RGBA', 'LA', 'P', 'PA'):
+                img = img.convert('RGBA')
+            else:
+                img = img.convert('RGB')
+
+            def _save_size(size):
+                buf = BytesIO()
+                resized = img.copy()
+                if size:
+                    resized.thumbnail((size, size), Image.LANCZOS)
+                resized.save(buf, 'WEBP', lossless=False, quality=WEBP_QUALITY, method=4)
+                buf.seek(0)
+                path = default_storage.save(media_key('products', '.webp'), ContentFile(buf.getvalue()))
+                return default_storage.url(path)
+
+            thumb_url = _save_size(200)
+            list_url = _save_size(400)
+            large_url = _save_size(800)
+            original_url = _save_size(0)
+
+        total_size = upload_file.size
+        ProductMedia.objects.create(
+            spu=spu,
+            media_type='image',
+            thumb_url=thumb_url,
+            list_url=list_url,
+            large_url=large_url,
+            original_url=original_url,
+            sort_order=sort_order,
+            status='active',
+            file_size=total_size,
+        )
+        MediaService.sync_main_image(spu.id)
+        GoodsCacheService.invalidate_media_list(spu.id)
+        GoodsCacheService.invalidate_spu(spu.id)
+        GoodsCacheService.invalidate_spu_list()
+        return True, ''
+    except Exception as e:  # noqa: BLE001
+        _logger.warning('导入图片处理失败 spu=%s: %s', spu.id, e)
+        return False, str(e)
+
+
+def _match_images_to_spu(images, spu_name):
+    """按商品名匹配图片文件（文件名前缀包含商品名）。返回匹配的图片列表。"""
+    name = (spu_name or '').strip().lower()
+    if not name:
+        return []
+    matched = []
+    for f in images:
+        fname = (f.name or '').lower()
+        # 文件名前缀匹配商品名（忽略扩展名）
+        base = fname.rsplit('.', 1)[0] if '.' in fname else fname
+        if name in base or base in name:
+            matched.append(f)
+    return matched
 
 
 class ImportProductsView(BaseApiView):
-    """CSV 导入商品 — 上传 → 预览 → 确认导入"""
+    """Excel/CSV 导入商品 — 上传 → 预览 → 确认导入。
+
+    支持列：sku编码、产品型号、原价、现价、标题、详情描述、服务。
+    一行 = 一个 SPU + 一个 SKU；服务列按换行拆成标签；导入后创建草稿。
+    """
     permission_classes = [HasPerm('goods.import.execute')]
 
     @extend_schema(
@@ -28,10 +176,15 @@ class ImportProductsView(BaseApiView):
             return Response({'detail': Messages.ADMIN_IMPORT_INVALID_FORMAT}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            rows = parse_csv_upload(uploaded)
+            raw_rows = _parse_upload_rows(uploaded)
         except UploadValidationError:
             return Response({'detail': Messages.ADMIN_IMPORT_PREVIEW_FAILED}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:  # noqa: BLE001
+            _logger.warning('导入文件解析失败: %s', e)
+            return Response({'detail': Messages.ADMIN_IMPORT_PREVIEW_FAILED}, status=status.HTTP_400_BAD_REQUEST)
 
+        rows = [_normalize_row(r) for r in raw_rows]
+        rows = [r for r in rows if r.get('name')]
         if not rows:
             return Response({'detail': Messages.ADMIN_IMPORT_NO_DATA}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -40,25 +193,18 @@ class ImportProductsView(BaseApiView):
             preview = []
             errors = []
             for i, row in enumerate(rows):
-                name = row.get('name', '').strip()
-                brand_name = row.get('brand', '').strip()
-                category_path = row.get('category', '').strip()
-                price = row.get('price', '0').strip()
-                stock = row.get('stock', '0').strip()
-                description = row.get('description', '').strip()
-
                 row_errors = []
-                if not name:
+                if not row.get('name'):
                     row_errors.append('Name is required')
-                if not brand_name:
-                    row_errors.append('Brand is required')
-                if not category_path:
-                    row_errors.append('Category is required')
-
                 preview.append({
-                    'row': i + 1, 'name': name, 'brand': brand_name,
-                    'category': category_path, 'price': price, 'stock': stock,
-                    'description': description,
+                    'row': i + 1,
+                    'name': row.get('name', ''),
+                    'model': row.get('model', ''),
+                    'price': row.get('price', ''),
+                    'discount_price': row.get('discount_price', ''),
+                    'sku_code': row.get('sku_code', ''),
+                    'description': row.get('description', ''),
+                    'tags': _split_services(row.get('services', '')),
                     'valid': len(row_errors) == 0,
                     'errors': row_errors,
                 })
@@ -74,52 +220,64 @@ class ImportProductsView(BaseApiView):
             })
 
         # 确认导入模式
+        brand_id = request.data.get('brand_id')
+        category_id = request.data.get('category_id')
+        brand = None
+        category = None
+        if brand_id:
+            brand = Brand.objects.filter(id=brand_id, is_active=True).first()
+        if category_id:
+            category = Category.objects.filter(id=category_id, is_active=True).first()
+        if not brand:
+            brand = Brand.objects.filter(is_active=True).first()
+        if not category:
+            category = Category.objects.filter(is_active=True).first()
+
+        # 图片文件夹：按商品名匹配（文件名前缀包含商品名）
+        images = request.FILES.getlist('images')
+
         imported = 0
         errors = []
         for i, row in enumerate(rows):
             try:
-                name = row.get('name', '').strip()
-                brand_name = row.get('brand', '').strip()
-                category_path = row.get('category', '').strip()
-                price = row.get('price', '0').strip()
-                stock = row.get('stock', '0').strip()
-                description = row.get('description', '').strip()
-                main_image = row.get('main_image', '').strip()
-
+                name = row.get('name', '')
                 if not name:
                     continue
-
-                # 查找或创建品牌
-                brand, _ = Brand.objects.get_or_create(
-                    name=brand_name,
-                    defaults={'is_active': True},
-                )
-
-                # 查找分类（按路径最后一段）
-                category_name = category_path.split('/')[-1].strip() if '/' in category_path else category_path
-                category = Category.objects.filter(name__iexact=category_name, is_active=True).first()
-                if not category:
-                    category = Category.objects.filter(is_active=True).first()
-                if not category:
+                if not brand or not category:
+                    errors.append(f'Row {i+1}: 缺少品牌或分类')
                     continue
 
                 spu = SPU.objects.create(
-                    name=name, brand=brand, category=category,
-                    description=description or '',
-                    main_image=main_image or '',
+                    name=name,
+                    brand=brand,
+                    category=category,
+                    description=row.get('description', ''),
+                    tags=_split_services(row.get('services', '')),
                     status=SPUStatus.DRAFT,
                 )
 
-                # 创建默认 SKU
+                # 创建 SKU：产品型号作为规格值，原价/现价映射 price/discount_price
+                spec_values = {}
+                if row.get('model'):
+                    spec_values['型号'] = row['model']
                 SKU.objects.create(
                     spu=spu,
-                    spec_values={},
-                    price=float(price) if price else 0,
-                    stock=int(stock) if stock else 0,
+                    spec_values=spec_values,
+                    price=float(row['price']) if row.get('price') else 0,
+                    discount_price=float(row['discount_price']) if row.get('discount_price') else None,
+                    stock=0,
+                    sku_code=row.get('sku_code', ''),
                     shelf_status='on',
                 )
+
+                # 按商品名匹配图片并上传（图片按文件名顺序，视频在前由前端控制）
+                if images:
+                    matched = _match_images_to_spu(images, name)
+                    for sort_idx, img_file in enumerate(matched):
+                        _save_image_to_spu(spu, img_file, sort_idx)
+
                 imported += 1
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001
                 errors.append(f'Row {i+1}: {str(e)}')
 
         return Response({
