@@ -94,6 +94,10 @@ backend/static/
 *.pyc
 __pycache__/
 
+# Cloudflare Origin CA 证书与私钥（从 CF 后台下载到仓库根目录，绝不入库）
+cr.txt
+pr.txt
+
 # 监控凭据（SMTP/钉钉 webhook，绝不入库）
 deploy/monitoring/.env.monitoring
 deploy/monitoring/smtp_password
